@@ -20,7 +20,7 @@ Definition f2val (pq: ftype Tdouble * ftype Tdouble) : val*val :=
 
 Definition TwoSum := TwoSumF Tdouble.
 
-Definition twoSum_spec_lowlevel := 
+Definition twoSum_spec := 
   DECLARE _twoSum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr st_state, tdouble, tdouble ] (* c lang types *)
@@ -33,10 +33,10 @@ Definition twoSum_spec_lowlevel :=
     SEP(data_at Tsh st_state (f2val (TwoSum a b)) s).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := [twoSum_spec_lowlevel].
+Definition Gprog : funspecs := [twoSum_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_twoSum: semax_body Vprog Gprog f_twoSum twoSum_spec_lowlevel.
+Lemma body_twoSum: semax_body Vprog Gprog f_twoSum twoSum_spec.
 Proof.
 start_function.
 forward.

@@ -1253,7 +1253,7 @@ case:(Rle_lt_dec (xh + y) 2)=> sh2.
     by rewrite bpow_plus /u /= IZR_Zpower_pos /=; lra.
   pose x := xh + xl.
   have spos: 0< xh +xl +y by move/Rabs_le_inv: xlu;lra.
-  rewrite Rabs_mult  Rabs_Rinv //; last lra.
+  rewrite Rabs_mult  Rabs_inv //; last lra.
   rewrite (Rabs_pos_eq (_ +_)); last lra.
   case: (Rlt_le_dec (xh + xl + y) (/2))=> s2; last first.
     clear - s2 spos he.
@@ -1389,7 +1389,7 @@ have bdxy: 2 - u <= Rabs (xh + xl + y).
   right.
   suff : - u <= xl by lra.
   by move/Rabs_le_inv:   xlu => [h _].
-rewrite Rabs_Rinv.
+rewrite Rabs_inv.
 apply: Rinv_le=>//.
 case: (Req_dec   (xh + xl + y ) 0) =>// h0.
 by rewrite h0  Rabs_R0 in   bdxy; lra.
@@ -2184,7 +2184,7 @@ lra.
     apply:Rmult_le_compat_r; last by lra.
     by rewrite /u /= Rmult_1_r -bpow_plus; apply : bpow_ge_0.
   have xy0: 0 < x + y by  lra.
-  rewrite -/x -/y Rabs_Rinv ; try lra; rewrite (Rabs_pos_eq (x + y)); try lra.
+  rewrite -/x -/y Rabs_inv ; try lra; rewrite (Rabs_pos_eq (x + y)); try lra.
    apply:(Rmult_le_reg_r (x + y)); rewrite // Rmult_assoc Rinv_l; last by lra.
    rewrite Rmult_1_r.
   have: Rabs (xl + yl) < Rabs (x + y).
@@ -2631,7 +2631,7 @@ case:(Rle_lt_dec (xh + yh) (2 - 4*u))=> hu' hd'.
     rewrite /Rdiv Rabs_mult.
     apply:(Rle_trans _ ((3/2*u*u)*/(/2 -3*u/2))).
       apply: Rmult_le_compat; try apply: Rabs_pos; try lra.
-      rewrite Rabs_Rinv; try lra.
+      rewrite Rabs_inv; try lra.
       rewrite Rabs_pos_eq; try lra.
       apply: Rinv_le;  lra.
     field_simplify.
@@ -2670,7 +2670,7 @@ case:(Rle_lt_dec (xh + yh) (2 - 4*u))=> hu' hd'.
   apply:(Rlt_trans _ (1 - 4 * u ))=>//.
   rewrite /Rdiv Rabs_mult.
   apply: Rmult_le_compat; try apply: Rabs_pos; try lra.
-  rewrite Rabs_Rinv; try lra.
+  rewrite Rabs_inv; try lra.
   rewrite Rabs_pos_eq; try lra.
   apply: Rinv_le; lra.
 
@@ -2858,7 +2858,7 @@ have hl6: zh + zl = vh + w.
   rewrite   f2sc fstE ; ring.
 have -> : relative_errorDWDW  = Rabs((e1 + e2)/(x + y)).
   by apply: rel_errorDWDWe_abs.
-rewrite /Rdiv Rabs_mult Rabs_Rinv //.
+rewrite /Rdiv Rabs_mult Rabs_inv //.
 have:   Rabs (e1 + e2) <= 3 * u * u.
   apply:(Rle_trans _ (Rabs e1 + Rabs e2)); first apply: Rabs_triang; lra.
 have xyd: (xh - u) + (yh - u) <= x + y.
