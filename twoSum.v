@@ -81,10 +81,10 @@ Definition _b : ident := $"b".
 Definition _bp : ident := $"bp".
 Definition _da : ident := $"da".
 Definition _db : ident := $"db".
+Definition _dd_struct : ident := $"dd_struct".
 Definition _main : ident := $"main".
 Definition _s : ident := $"s".
 Definition _st : ident := $"st".
-Definition _state : ident := $"state".
 Definition _t : ident := $"t".
 Definition _twoSum : ident := $"twoSum".
 Definition _t'1 : ident := 128%positive.
@@ -93,7 +93,7 @@ Definition _t'2 : ident := 129%positive.
 Definition f_twoSum := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
-  fn_params := ((_st, (tptr (Tstruct _state noattr))) :: (_a, tdouble) ::
+  fn_params := ((_st, (tptr (Tstruct _dd_struct noattr))) :: (_a, tdouble) ::
                 (_b, tdouble) :: nil);
   fn_vars := nil;
   fn_temps := ((_ap, tdouble) :: (_bp, tdouble) :: (_da, tdouble) ::
@@ -102,23 +102,23 @@ Definition f_twoSum := {|
 (Ssequence
   (Sassign
     (Efield
-      (Ederef (Etempvar _st (tptr (Tstruct _state noattr)))
-        (Tstruct _state noattr)) _s tdouble)
+      (Ederef (Etempvar _st (tptr (Tstruct _dd_struct noattr)))
+        (Tstruct _dd_struct noattr)) _s tdouble)
     (Ebinop Oadd (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
   (Ssequence
     (Ssequence
       (Sset _t'2
         (Efield
-          (Ederef (Etempvar _st (tptr (Tstruct _state noattr)))
-            (Tstruct _state noattr)) _s tdouble))
+          (Ederef (Etempvar _st (tptr (Tstruct _dd_struct noattr)))
+            (Tstruct _dd_struct noattr)) _s tdouble))
       (Sset _ap
         (Ebinop Osub (Etempvar _t'2 tdouble) (Etempvar _b tdouble) tdouble)))
     (Ssequence
       (Ssequence
         (Sset _t'1
           (Efield
-            (Ederef (Etempvar _st (tptr (Tstruct _state noattr)))
-              (Tstruct _state noattr)) _s tdouble))
+            (Ederef (Etempvar _st (tptr (Tstruct _dd_struct noattr)))
+              (Tstruct _dd_struct noattr)) _s tdouble))
         (Sset _bp
           (Ebinop Osub (Etempvar _t'1 tdouble) (Etempvar _ap tdouble)
             tdouble)))
@@ -131,14 +131,14 @@ Definition f_twoSum := {|
               tdouble))
           (Sassign
             (Efield
-              (Ederef (Etempvar _st (tptr (Tstruct _state noattr)))
-                (Tstruct _state noattr)) _t tdouble)
+              (Ederef (Etempvar _st (tptr (Tstruct _dd_struct noattr)))
+                (Tstruct _dd_struct noattr)) _t tdouble)
             (Ebinop Oadd (Etempvar _da tdouble) (Etempvar _db tdouble)
               tdouble)))))))
 |}.
 
 Definition composites : list composite_definition :=
-(Composite _state Struct
+(Composite _dd_struct Struct
    (Member_plain _s tdouble :: Member_plain _t tdouble :: nil)
    noattr :: nil).
 

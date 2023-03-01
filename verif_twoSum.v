@@ -13,7 +13,7 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-Definition st_state := Tstruct _state noattr.
+Definition st := Tstruct _dd_struct noattr.
 
 Definition f2val (pq: ftype Tdouble * ftype Tdouble) : val*val :=
  (Vfloat (fst pq), Vfloat (snd pq)).
@@ -23,14 +23,14 @@ Definition TwoSum := TwoSumF Tdouble.
 Definition twoSum_spec := 
   DECLARE _twoSum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
-  PRE [ tptr st_state, tdouble, tdouble ] (* c lang types *)
+  PRE [ tptr st, tdouble, tdouble ] (* c lang types *)
     PROP()
     PARAMS (s; Vfloat a; Vfloat b)
-    SEP(data_at_ Tsh st_state s) (* preds on mem *)
+    SEP(data_at_ Tsh st s) (* preds on mem *)
   POST [ tvoid ]
     PROP()
     RETURN()
-    SEP(data_at Tsh st_state (f2val (TwoSum a b)) s).
+    SEP(data_at Tsh st (f2val (TwoSum a b)) s).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
 Definition Gprog : funspecs := [twoSum_spec].
