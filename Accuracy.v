@@ -7,6 +7,7 @@ Require Import float_acc_lems op_defs.
 Require Import DDModels.
 From Flocq Require Import Pff2Flocq.
 
+Require Import mathcomp.ssreflect.ssreflect.
 
 Section Accuracy.
 
@@ -186,4 +187,17 @@ rewrite Binary.B2R_Bopp; auto.
 Admitted.
 
 End Accuracy.
+
+Section DWord.
+Context {NANS: Nans} {t : type}.
+
+Lemma DW_TwoSum (a b : ftype t) (Hfin: is_finite_p (TwoSumF a b)) : 
+  double_word (TwoSumF_sum a b) (TwoSumF_err a b).
+Proof.
+  rewrite /double_word TwoSumF_correct // /TwoSumF_sum /= /common.rounded.
+  have FIN: Binary.is_finite _ _ (TwoSumF_sum a b) = true by apply Hfin.
+  admit.
+Admitted.
+
+End DWord.
 
