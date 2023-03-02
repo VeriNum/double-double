@@ -2,7 +2,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import TwoSumModel.
+Require Import DDModels.
 Require Import twoSum.
 
 #[export] Instance CompSpecs : 
@@ -18,8 +18,6 @@ Definition st := Tstruct _dd_struct noattr.
 Definition f2val (pq: ftype Tdouble * ftype Tdouble) : val*val :=
  (Vfloat (fst pq), Vfloat (snd pq)).
 
-Definition TwoSum := TwoSumF Tdouble.
-
 Definition twoSum_spec := 
   DECLARE _twoSum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
@@ -30,7 +28,7 @@ Definition twoSum_spec :=
   POST [ tvoid ]
     PROP()
     RETURN()
-    SEP(data_at Tsh st (f2val (TwoSum a b)) s).
+    SEP(data_at Tsh st (f2val (TwoSumF a b)) s).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
 Definition Gprog : funspecs := [twoSum_spec].
@@ -48,7 +46,7 @@ forward.
 forward.
 forward.
 autorewrite with float_elim in *. (* for view only *)
-unfold TwoSum, f2val, TwoSumF, fst, snd.
+unfold f2val, TwoSumF, fst, snd.
 entailer!.
 Qed.
 

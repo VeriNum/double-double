@@ -2,7 +2,7 @@
   format for the 2Sum and Fast2Mult implementations.*)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs.
+Require Import float_acc_lems op_defs common.
 
 Section Format.
 Context {t : type}.
@@ -47,3 +47,13 @@ Definition Fast2Mult_err (a b : ftype t) := snd (Fast2Mult a b).
 Definition Fast2Mult_mul (a b : ftype t) := fst (Fast2Mult a b).
 
 End Fast2MultModel.
+
+
+Section DWord.
+Context {NANS: Nans} {t : type}.
+
+Definition double_word x : ftype t -> ftype t -> Prop :=
+  fun xh xl => x = rounded t (FT2R xh + FT2R xl).
+
+End DWord.
+

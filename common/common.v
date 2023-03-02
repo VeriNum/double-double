@@ -3,7 +3,7 @@
 
 Require Import vcfloat.VCFloat.
 
-Definition rounded t r:=
+Definition rounded (t : type) r:=
 (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
      (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) r).
 
