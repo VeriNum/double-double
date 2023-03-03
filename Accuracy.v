@@ -9,6 +9,33 @@ From Flocq Require Import Pff2Flocq.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
+Ltac field_simplify_round :=
+  match goal with |- context[Generic_fmt.round _ _ _ ?a] =>
+  try field_simplify a
+end. 
+
+Ltac BPLUS_correct t :=
+match goal with | FIN : is_finite_p ?A |- context [FT2R (BPLUS ?a ?b)] =>
+  let  FINs := fresh in let FINd:= fresh in 
+  destruct FIN as (FINs & FINd); simpl in FINs; simpl in FINd;
+  let H4 := fresh in pose proof (is_finite_sum_no_overflow a b FINs) as H4; apply Rlt_bool_true in H4;
+  unfold FT2R in H4;
+  let H := fresh in 
+  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
+  [destruct a; destruct b; 
+      simpl in FINs; split; try discriminate; auto;
+          match goal with | H: Binary.is_finite _ _
+                   (BPLUS (Binary.B754_infinity _ _ ?s)
+                      (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
+            destruct s; destruct s0; try discriminate; auto end 
+  | ]; 
+    let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
+    let H3 := fresh in pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
+    rewrite H4 in H3;
+    destruct H3 as (H3 & _) ; unfold FT2R, BPLUS, BINOP; try field_simplify_round; rewrite H3; reflexivity
+end.
+
 Section Accuracy.
 
 Context {NANS: Nans} {t : type}.
@@ -52,6 +79,8 @@ pose proof @generic_fmt_fexp_FLT t as Hgen; fold choice (@emin t)  in Hgen.
 (* invoke flocq binary op correctness theorems for rewrites *)
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd.
 fold s a' b' da db; unfold s.
+
+
 rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
 pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
   (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b FINa FINb) as S.
@@ -194,10 +223,9 @@ Context {NANS: Nans} {t : type}.
 Lemma DW_TwoSum (a b : ftype t) (Hfin: is_finite_p (TwoSumF a b)) : 
   double_word (TwoSumF_sum a b) (TwoSumF_err a b).
 Proof.
-  rewrite /double_word TwoSumF_correct // /TwoSumF_sum /= /common.rounded.
-  have FIN: Binary.is_finite _ _ (TwoSumF_sum a b) = true by apply Hfin.
-  admit.
-Admitted.
+  rewrite /double_word TwoSumF_correct // /TwoSumF_sum /= /common.rounded. 
+  BPLUS_correct t.
+Qed.
 
 End DWord.
 
