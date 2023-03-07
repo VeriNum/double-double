@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <math.h>
-#include "twoSum.h"
+#include "DWArith.h"
 
 int main(void) {
-    struct dd_struct st = {0.0,0.0};
+    dword st = {0.0,0.0};
     double a = 1.0;
     double b = -1 * pow(2,-3*54);
-    twoSum (&st, a, b);
+    TwoSum (&st, a, b);
     printf("%1.16g\n",st.s);
     printf("%1.16g\n",st.t);
     return 0;

@@ -3,7 +3,7 @@ CC = ccomp
 SRCS1 = Fast2Mult.c Fast2Mult_test.c
 OBJS1 = ${SRCS1:.c=.o}
 
-SRCS2 = twoSum.c twoSum_test.c
+SRCS2 = TwoSum.c TwoSum_test.c
 OBJS2 = ${SRCS2:.c=.o}
 
 LIBS = -lm

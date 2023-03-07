@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <math.h>
-#include "Fast2Mult.h"
+#include "DWArith.h"
 
 int main(void) {
-    struct dd_struct st = {0.0,0.0};
+    dword st = {0.0,0.0};
     double a = 1.0;
     double b = -1.0;
     Fast2Mult(&st, a, b);

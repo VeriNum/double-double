@@ -1,7 +1,7 @@
 #include <math.h>
-#include "twoSum.h"
+#include "DWArith.h"
 
-void twoSum(struct dd_struct *st, double a, double b) {
+void TwoSum(dword *st, double a, double b) {
    double ap; double bp; double da; double db;
    st->s  = a + b;
    ap     = st->s - b; 	   
