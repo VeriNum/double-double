@@ -14,7 +14,6 @@ Ltac field_simplify_round :=
   try field_simplify a
 end. 
 
-
 Ltac BPLUS_correct t a b :=
 unfold FT2R in *;
 match goal with | FIN : Binary.is_finite _ _ (BPLUS a b) = true |- context [Binary.B2R _ _ (BPLUS a b)] =>
@@ -91,33 +90,21 @@ replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
 (* rewrites from correctness theorems *)
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
 BPLUS_correct t a b.
-fold s a' b' da db in FINd.
-fold s a' b' da db.
-BPLUS_correct t da db.
-subst da.
-BMINUS_correct t a a'.
-subst db.
-BMINUS_correct t b b'.
-field_simplify.
-rewrite Rplus_comm.
-repeat f_equal. 
-subst b'.
-fold s in FINs.
-BMINUS_correct t s a'.
-subst s; rewrite H4.
+fold s a' b' da db in FINd; fold s a' b' da db; BPLUS_correct t da db.
+subst da; BMINUS_correct t a a'.
+subst db; BMINUS_correct t b b'.
+field_simplify;
+rewrite Rplus_comm;
 repeat f_equal.
-subst a'.
-BMINUS_correct t (BPLUS a b) b.
-unfold BPLUS; rewrite H4.
+{  
+subst b' s; BMINUS_correct t (BPLUS a b) a'; rewrite H4.
 repeat f_equal.
-subst a'.
-fold s in FINs.
-BMINUS_correct t s b.
-repeat f_equal.
-subst s; rewrite H4.
-repeat f_equal.
-apply Binary.generic_format_B2R.
-apply Binary.generic_format_B2R.
+subst a'; BMINUS_correct t (BPLUS a b) b; rewrite H4.
+repeat f_equal. }
+{
+subst a' s. BMINUS_correct t (BPLUS a b) b; rewrite H4.
+repeat f_equal. }
+all: apply Binary.generic_format_B2R.
 Qed.
 
 Lemma Fast2MultModel_correct (a b : ftype t) (FIN : is_finite_p (Fast2Mult a b) ) :
