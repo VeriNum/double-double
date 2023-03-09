@@ -14,16 +14,17 @@ Ltac field_simplify_round :=
   try field_simplify a
 end. 
 
-Ltac BPLUS_correct t :=
-match goal with | FIN : is_finite_p ?A |- context [FT2R (BPLUS ?a ?b)] =>
-  let  FINs := fresh in let FINd:= fresh in 
-  destruct FIN as (FINs & FINd); simpl in FINs; simpl in FINd;
-  let H4 := fresh in pose proof (is_finite_sum_no_overflow a b FINs) as H4; apply Rlt_bool_true in H4;
+
+Ltac BPLUS_correct t a b :=
+unfold FT2R in *;
+match goal with | FIN : Binary.is_finite _ _ (BPLUS a b) = true |- context [Binary.B2R _ _ (BPLUS a b)] =>
+  let X:= fresh in set (X:= FT2R (BPLUS a b)); unfold FT2R, BPLUS, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_sum_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
   unfold FT2R in H4;
   let H := fresh in 
   assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
   [destruct a; destruct b; 
-      simpl in FINs; split; try discriminate; auto;
+      simpl in FIN; split; try discriminate; auto;
           match goal with | H: Binary.is_finite _ _
                    (BPLUS (Binary.B754_infinity _ _ ?s)
                       (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
@@ -32,9 +33,39 @@ match goal with | FIN : is_finite_p ?A |- context [FT2R (BPLUS ?a ?b)] =>
     let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
     let H3 := fresh in pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
         (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
-    rewrite H4 in H3;
-    destruct H3 as (H3 & _) ; unfold FT2R, BPLUS, BINOP; try field_simplify_round; rewrite H3; reflexivity
+    rewrite H4 in H3 ;
+    destruct H3 as (H3 & _); clear H4; subst X; try field_simplify_round; rewrite H3; try reflexivity 
 end.
+
+Ltac BMINUS_correct t a b :=
+unfold FT2R in *;
+match goal with | FIN : Binary.is_finite _ _ (BMINUS a b) = true |- context [Binary.B2R _ _ (BMINUS a b)] =>
+  let X:= fresh in set (X:= FT2R (BPLUS a b)); unfold FT2R, BMINUS, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_minus_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
+  unfold FT2R in H4;
+  let H := fresh in 
+  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
+  [destruct a; destruct b; 
+      simpl in FIN; split; try discriminate; auto;
+          match goal with | H: Binary.is_finite _ _
+                   (BPLUS (Binary.B754_infinity _ _ ?s)
+                      (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
+            destruct s; destruct s0; try discriminate; auto end 
+  | ]; 
+    let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
+    let H3 := fresh in pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
+    rewrite H4 in H3 ;
+    destruct H3 as (H3 & _); clear H4; subst X; try field_simplify_round; rewrite H3; try reflexivity 
+end.
+
+Ltac rewrite_format :=
+repeat match goal with |- context [Generic_fmt.round Zaux.radix2 (FLT.FLT_exp emin (fprec ?t))
+  (Generic_fmt.Znearest choice) ?A] =>
+change (Generic_fmt.round Zaux.radix2 (FLT.FLT_exp emin (fprec t))
+  (Generic_fmt.Znearest choice) A) with
+(Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
+(BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) A) end.
 
 Section Accuracy.
 
@@ -50,92 +81,41 @@ set (b' := BMINUS s a').
 set (da := BMINUS a a').
 set (db := BMINUS b b').
 destruct FIN as (FINs & FINd).
-assert (FINab : 
-  Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true).
-{ unfold TwoSumF in FINs; simpl in FINs; destruct a; destruct b; 
-  simpl in FINs; split; try discriminate; auto; destruct s1; destruct s0;
-  try discriminate; auto. }
-destruct FINab as (FINa & FINb).
-assert (FINdab : 
-  Binary.is_finite _ _ da = true /\ Binary.is_finite _ _ db = true).
-{ unfold TwoSumF in FINd; fold s a' b' da db in FINd; simpl in FINd; destruct da; destruct db; 
-  simpl in FINd; split; try discriminate; auto; destruct s1; destruct s0;
-  try discriminate; auto. }
-destruct FINdab as (FINda & FINdb).
-assert (FINa' : 
-  Binary.is_finite _ _ a' = true).
-{ subst da. destruct a; destruct a'; try discriminate; auto; destruct s1; destruct s0;
-  try discriminate; auto. }
-assert (FINb' : 
-  Binary.is_finite _ _ b' = true).
-{ subst db. destruct b; destruct b'; try discriminate; auto; destruct s1; destruct s0;
-  try discriminate; auto. 
-(* end all steps are finite *) }
-(* invoke flocq 2Sum theorem over FLT *)
+(* use TwoSum correct from Flocq *)
 pose proof (TwoSum_correct (@emin t) (fprec t) choice 
     (fprec_gt_one t) emin_le_0 choiceP (FT2R b) (FT2R a)) as Hc.
-rewrite Rplus_comm; rewrite <- Hc; clear Hc.
-pose proof @generic_fmt_fexp_FLT t as Hgen; fold choice (@emin t)  in Hgen.
-(* invoke flocq binary op correctness theorems for rewrites *)
-unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd.
-fold s a' b' da db; unfold s.
-
-
+rewrite Rplus_comm; rewrite <- Hc; clear Hc; rewrite_format.
+(* algebra *)
 rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
-pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
-  (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b FINa FINb) as S.
-pose proof (is_finite_sum_no_overflow a b FINs) as HOV.
 replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
-apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in S; clear HOV; 
-  destruct S as (S & _); unfold BPLUS, BINOP, FT2R; 
-  rewrite Hgen in S; rewrite S; field_simplify.
-pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
-  (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE da db FINda FINdb) as D.
-pose proof (is_finite_sum_no_overflow  da db FINd) as HOV.
-apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in D; clear HOV;
-  destruct D as (D & _); unfold BPLUS, BINOP, FT2R; 
-  rewrite Hgen in D; rewrite D; f_equal.
-rewrite Rplus_comm; f_equal.
-subst db.
-pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-  (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE b b' FINb FINb') as DB.
-pose proof (is_finite_minus_no_overflow  b b' FINdb) as HOV.
-apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in DB; clear HOV;
-  destruct DB as (DB & _); unfold BMINUS, BINOP, FT2R; 
-  rewrite Hgen in DB; rewrite DB; repeat f_equal.
-subst b'.
-pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-  (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE s a' FINs FINa') as DB'.
-pose proof (is_finite_minus_no_overflow  s a' FINb') as HOV.
-apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in DB'; clear HOV;
-  destruct DB' as (DB' & _); unfold BMINUS, BINOP, FT2R; 
-  rewrite Hgen in DB'; rewrite DB'; repeat f_equal.
-{ subst s. unfold BPLUS, BINOP, FT2R. apply S. } 
-{ subst a'.
-  pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE s b FINs FINb) as DA'.
-  pose proof (is_finite_minus_no_overflow  s b FINa') as HOV.
-  apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in DA'; clear HOV;
-    destruct DA' as (DA' & _); unfold BMINUS, BINOP, FT2R; 
-    rewrite Hgen in DA'; rewrite DA'; repeat f_equal.
-  { subst s. unfold BPLUS, BINOP, FT2R; apply S. } 
-}
+(* rewrites from correctness theorems *)
+unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
+BPLUS_correct t a b.
+fold s a' b' da db in FINd.
+fold s a' b' da db.
+BPLUS_correct t da db.
 subst da.
-pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-  (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a a' FINa FINa') as DA.
-pose proof (is_finite_minus_no_overflow  a a' FINda) as HOV.
-apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in DA; clear HOV;
-  destruct DA as (DA & _); unfold BMINUS, BINOP, FT2R; 
-  rewrite Hgen in DA; rewrite DA; repeat f_equal.
-{ subst a'.
-  pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE s b FINs FINb) as DA'.
-  pose proof (is_finite_minus_no_overflow s b FINa') as HOV.
-  apply Rlt_bool_true in HOV; unfold FT2R in HOV; rewrite HOV in DA'; clear HOV;
-    destruct DA' as (DA' & _); unfold BMINUS, BINOP, FT2R; 
-    rewrite Hgen in DA'; rewrite DA'; repeat f_equal.
-  { subst s. unfold BPLUS, BINOP, FT2R; apply S. } 
-}
+BMINUS_correct t a a'.
+subst db.
+BMINUS_correct t b b'.
+field_simplify.
+rewrite Rplus_comm.
+repeat f_equal. 
+subst b'.
+fold s in FINs.
+BMINUS_correct t s a'.
+subst s; rewrite H4.
+repeat f_equal.
+subst a'.
+BMINUS_correct t (BPLUS a b) b.
+unfold BPLUS; rewrite H4.
+repeat f_equal.
+subst a'.
+fold s in FINs.
+BMINUS_correct t s b.
+repeat f_equal.
+subst s; rewrite H4.
+repeat f_equal.
 apply Binary.generic_format_B2R.
 apply Binary.generic_format_B2R.
 Qed.
@@ -224,7 +204,9 @@ Lemma DW_TwoSum (a b : ftype t) (Hfin: is_finite_p (TwoSumF a b)) :
   double_word (TwoSumF_sum a b) (TwoSumF_err a b).
 Proof.
   rewrite /double_word TwoSumF_correct // /TwoSumF_sum /= /common.rounded. 
-  BPLUS_correct t.
+destruct Hfin as (FINm & FINp).
+unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
+  BPLUS_correct t a b.
 Qed.
 
 End DWord.
