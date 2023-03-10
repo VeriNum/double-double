@@ -3,68 +3,11 @@
   correctness of the 2Sum algorithm *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs.
+Require Import float_acc_lems op_defs dd_tactics.
 Require Import DDModels.
 From Flocq Require Import Pff2Flocq.
 
 Require Import mathcomp.ssreflect.ssreflect.
-
-Ltac field_simplify_round :=
-  match goal with |- context[Generic_fmt.round _ _ _ ?a] =>
-  try field_simplify a
-end. 
-
-Ltac BPLUS_correct t a b :=
-unfold FT2R in *;
-match goal with | FIN : Binary.is_finite _ _ (BPLUS a b) = true |- context [Binary.B2R _ _ (BPLUS a b)] =>
-  let X:= fresh in set (X:= FT2R (BPLUS a b)); unfold FT2R, BPLUS, BINOP in X ;
-  let H4 := fresh in pose proof (is_finite_sum_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4;
-  let H := fresh in 
-  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
-  [destruct a; destruct b; 
-      simpl in FIN; split; try discriminate; auto;
-          match goal with | H: Binary.is_finite _ _
-                   (BPLUS (Binary.B754_infinity _ _ ?s)
-                      (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
-            destruct s; destruct s0; try discriminate; auto end 
-  | ]; 
-    let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
-    let H3 := fresh in pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
-    rewrite H4 in H3 ;
-    destruct H3 as (H3 & _); clear H4; subst X; try field_simplify_round; rewrite H3; try reflexivity 
-end.
-
-Ltac BMINUS_correct t a b :=
-unfold FT2R in *;
-match goal with | FIN : Binary.is_finite _ _ (BMINUS a b) = true |- context [Binary.B2R _ _ (BMINUS a b)] =>
-  let X:= fresh in set (X:= FT2R (BPLUS a b)); unfold FT2R, BMINUS, BINOP in X ;
-  let H4 := fresh in pose proof (is_finite_minus_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4;
-  let H := fresh in 
-  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
-  [destruct a; destruct b; 
-      simpl in FIN; split; try discriminate; auto;
-          match goal with | H: Binary.is_finite _ _
-                   (BPLUS (Binary.B754_infinity _ _ ?s)
-                      (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
-            destruct s; destruct s0; try discriminate; auto end 
-  | ]; 
-    let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
-    let H3 := fresh in pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
-    rewrite H4 in H3 ;
-    destruct H3 as (H3 & _); clear H4; subst X; try field_simplify_round; rewrite H3; try reflexivity 
-end.
-
-Ltac rewrite_format :=
-repeat match goal with |- context [Generic_fmt.round Zaux.radix2 (FLT.FLT_exp emin (fprec ?t))
-  (Generic_fmt.Znearest choice) ?A] =>
-change (Generic_fmt.round Zaux.radix2 (FLT.FLT_exp emin (fprec t))
-  (Generic_fmt.Znearest choice) A) with
-(Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
-(BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) A) end.
 
 Section Accuracy.
 
@@ -89,21 +32,17 @@ rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
 replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
 (* rewrites from correctness theorems *)
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
-BPLUS_correct t a b.
-fold s a' b' da db in FINd; fold s a' b' da db; BPLUS_correct t da db.
-subst da; BMINUS_correct t a a'.
-subst db; BMINUS_correct t b b'.
-field_simplify;
-rewrite Rplus_comm;
-repeat f_equal.
-{  
-subst b' s; BMINUS_correct t (BPLUS a b) a'; rewrite H4.
-repeat f_equal.
-subst a'; BMINUS_correct t (BPLUS a b) b; rewrite H4.
-repeat f_equal. }
-{
-subst a' s. BMINUS_correct t (BPLUS a b) b; rewrite H4.
-repeat f_equal. }
+BPLUS_correct t a b; field_simplify.
+fold s a' b' da db in FINd; fold s a' b' da db. BPLUS_correct t da db.
+rewrite Rplus_comm; repeat f_equal.
+{ subst db; BMINUS_correct t b b'.
+  subst b' s; BMINUS_correct t (BPLUS a b) a'; rewrite H4.
+  repeat f_equal.
+  subst a'. BMINUS_correct t (BPLUS a b) b; rewrite H4.
+  repeat f_equal. }
+{ subst da; BMINUS_correct t a a'.
+  subst a' s. BMINUS_correct t (BPLUS a b) b; rewrite H4.
+  repeat f_equal. }
 all: apply Binary.generic_format_B2R.
 Qed.
 

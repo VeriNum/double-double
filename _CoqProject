@@ -12,6 +12,7 @@ paper_proofs/DWPlus.v
 common/common.v
 common/op_defs.v
 common/float_acc_lems.v
+common/dd_tactics.v
 
 DDModels.v
 Accuracy.v
