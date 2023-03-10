@@ -146,3 +146,24 @@ Qed.
 
 End isDWord.
 
+Section AccuracyDWPlus.
+Context {NANS: Nans} {t : type}.
+
+Variables (a b c : ftype t).
+Notation zh := (FT2R (fst (DWPlusFP a b c))).
+Notation zl := (FT2R (snd (DWPlusFP a b c))).
+Notation x  := (FT2R a + FT2R b).
+Notation y  := (FT2R c).
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Notation u   := (bpow Zaux.radix2 (- fprec t)).
+
+Definition relative_errorDWPlusFP := Rabs (((zh + zl) - (x  + y)) / (x  + y)).
+
+Theorem relative_errorDWPlusFP_correct : relative_errorDWPlusFP <= 2 * u ^ 2.
+Admitted.
+
+
+
+End AccuracyDWPlus.
+

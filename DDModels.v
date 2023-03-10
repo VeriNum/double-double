@@ -66,11 +66,10 @@ Section DWord.
 Context  {t : type}.
 
 (** Definition 1.4 *) 
-Definition double_word : ftype t -> ftype t -> Prop :=
+Definition double_word : ftype t -> ftype t -> Type :=
   fun xh xl => FT2R xh = rounded t (FT2R xh + FT2R xl).
 
 End DWord.
-
 
 Section DWops.
 Context {NANS: Nans} {t : type}.
