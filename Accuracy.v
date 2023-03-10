@@ -9,7 +9,7 @@ From Flocq Require Import Pff2Flocq.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-Section Accuracy.
+Section AccuracyA13.
 
 Context {NANS: Nans} {t : type}.
 
@@ -121,7 +121,7 @@ unfold BOPP.
 rewrite Binary.B2R_Bopp; auto.
 Admitted.
 
-End Accuracy.
+End AccuracyA13.
 
 Section isDWord.
 Context {NANS: Nans} {t : type}.
