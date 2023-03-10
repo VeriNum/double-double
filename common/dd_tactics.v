@@ -54,6 +54,19 @@ match goal with | FIN : Binary.is_finite _ _ (BMINUS a b) = true |- context [Bin
     rewrite H3; try reflexivity 
 end.
 
+Ltac BMULT_correct t a b :=
+unfold FT2R;
+match goal with | FIN : Binary.is_finite _ _ (BMULT a b) = true |- context [Binary.B2R _ _ (BMULT a b)] =>
+  let X:= fresh in set (X:= Binary.B2R _ _ (BMULT a b)); unfold BMULT, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_BMULT_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
+  unfold FT2R in H4;
+    let H3 := fresh in try pose proof (Binary.Bmult_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan t) BinarySingleNaN.mode_NE a b) as H3;
+    unfold common.rounded in H4; rewrite H4 in H3 ;
+    destruct H3 as (H3 & _); clear H4 ; unfold BMULT, BINOP in X; subst X; try field_simplify_round; 
+    rewrite H3; try reflexivity 
+end.
+
 Ltac rewrite_format :=
 repeat match goal with |- context [Generic_fmt.round Zaux.radix2 (FLT.FLT_exp emin (fprec ?t))
   (Generic_fmt.Znearest choice) ?A] =>

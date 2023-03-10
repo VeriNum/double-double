@@ -16,7 +16,6 @@ Context {NANS: Nans} {t : type}.
 Lemma TwoSumF_correct (a b : ftype t) (FIN : is_finite_p (TwoSumF a b) ) :
   FT2R (TwoSumF_err a b) = FT2R a + FT2R b - FT2R (TwoSumF_sum a b).
 Proof.
-(* all steps are finite from FIN *)
 set (s  := BPLUS a b).
 set (a' := BMINUS s b).
 set (b' := BMINUS s a').
@@ -52,6 +51,7 @@ Proof.
 set (m := BMULT a b).
 set (p := BFMA a b (BOPP m)).
 destruct FIN as (FINm & FINp).
+
 assert (FINab : 
   Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true).
 { unfold Fast2Mult in FINm; simpl in FINm; destruct a; destruct b; 
@@ -123,10 +123,10 @@ Admitted.
 
 End Accuracy.
 
-Section DWord.
+Section isDWord.
 Context {NANS: Nans} {t : type}.
 
-Lemma DW_TwoSum (a b : ftype t) (Hfin: is_finite_p (TwoSumF a b)) : 
+Lemma TwoSum_is_DW (a b : ftype t) (Hfin: is_finite_p (TwoSumF a b)) : 
   double_word (TwoSumF_sum a b) (TwoSumF_err a b).
 Proof.
   rewrite /double_word TwoSumF_correct // /TwoSumF_sum /= /common.rounded. 
@@ -135,5 +135,14 @@ unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
   BPLUS_correct t a b.
 Qed.
 
-End DWord.
+Lemma TwoMult_is_DW (a b : ftype t) (Hfin: is_finite_p (Fast2Mult a b)) : 
+  double_word (Fast2Mult_mul a b) (Fast2Mult_err a b).
+Proof.
+  rewrite /double_word/common.rounded-Fast2MultModel_correct // /Fast2Mult_mul/Fast2Mult /=. 
+destruct Hfin as (FINm & FINp).
+unfold Fast2Mult, Fast2Mult_mul, Fast2Mult_err, fst, snd in *.
+  BMULT_correct t a b.
+Qed.
+
+End isDWord.
 
