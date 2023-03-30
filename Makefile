@@ -28,6 +28,7 @@ clean:
 	rm -f *.vo *.vos *.vok *.glob
 	rm -f paper_proofs/*.{vo,vos,vok,glob}
 	rm -f common/*.{vo,vos,vok,glob}
+	rm -f dd_lib/*.{vo,vos,vok,glob}
 
 # This should be the last rule, to handle any targets not declared above
 %: invoke-coqmakefile
