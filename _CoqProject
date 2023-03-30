@@ -15,4 +15,5 @@ common/float_acc_lems.v
 common/dd_tactics.v
 
 DDModels.v
-Accuracy.v
+TwoSum_acc.v
+TwoMult_acc.v
