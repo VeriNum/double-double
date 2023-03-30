@@ -1,7 +1,7 @@
 -R . DD
 
-twoSum.v
-verif_twoSum.v
+dd_lib/TwoSum.v
+verif_TwoSum.v
 
 paper_proofs/Bayleyaux.v
 paper_proofs/F2SumFLT.v

@@ -11,7 +11,7 @@ KNOWNFILES   := Makefile _CoqProject
 ifneq ($(MAKECMDGOALS),run-clightgen)
 ifneq ($(MAKECMDGOALS),clean)
 CoqMakefile: Makefile _CoqProject
-	$(COQBIN)coq_makefile -docroot error_analysis -f _CoqProject -o CoqMakefile
+	$(COQBIN)coq_makefile -f _CoqProject -o CoqMakefile
 
 invoke-coqmakefile: CoqMakefile
 	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
@@ -22,8 +22,6 @@ endif
 ####################################################################
 ##                      Your targets here                         ##
 ####################################################################
-
-run-clightgen: twoSum.v
 
 clean:
 	rm -f CoqMakefile CoqMakefile.conf
