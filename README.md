@@ -11,10 +11,15 @@ Public License) version 3 or any later version.
 - **TwoSum_acc.v**: correctness and accuracy of the TwoSum algorithm.
 - **Fast2Mult_acc.v**: correctness and accuracy of the TwoSum algorithm.
 - **verif_twoSum.v**: A VST proof of correctness of the TwoSum C implementation (i.e., /dd_lib/TwoSum.c). 
-- **common/**: files with lemmas and tactics used across main analysis files.
+- **common/**: files with lemmas and tactics used across the main analysis files.
 
 ## How to build 
-- ** 
+
+In a Coq Platform that already has CompCert and VST installed, you must also install [VCFloat](https://github.com/VeriNum/vcfloat):
+- Clone the repo https://github.com/VeriNum/vcfloat
+- cd vcfloat
+- make -j
+- make install # This will put things in your-coq-installation/coq/user-contrib/vcfloat
 
 ## References
 The relevant reference for the research effort is ["Formalization of Double-Word Arithmetic, and Comments
