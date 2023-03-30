@@ -5,7 +5,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics.
 Require Import DDModels.
-From Flocq Require Import Pff2Flocq.
+From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
@@ -58,3 +58,28 @@ unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
 Qed.
 
 End TwoSumCorrect.
+
+
+Section TwoSumAcc. 
+
+Context {NANS: Nans} {t : type}.
+
+Variables (a b : ftype t).
+Hypothesis (FIN : is_finite_p (TwoSumF a b)).
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Notation u   := (bpow Zaux.radix2 (- fprec t)).
+
+Theorem TwoSum_accuracy: 
+    Rabs (FT2R (TwoSumF_err a b))  <= /2 * ulp (FT2R a + FT2R b).
+Proof.
+rewrite TwoSumF_correct; auto. unfold TwoSumF_sum. simpl.
+rewrite Rabs_minus_sym. 
+pose proof error_le_half_ulp
+  Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) choice (FT2R a + FT2R b) as HE.
+destruct FIN as (FINs & FINd); simpl in FINs. 
+BPLUS_correct t a b. fold (@FT2R t); auto. 
+Qed.
+
+End TwoSumAcc.
+
