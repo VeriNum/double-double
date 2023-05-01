@@ -23,6 +23,16 @@ endif
 ##                      Your targets here                         ##
 ####################################################################
 
+OBJDIR = verif_objs
+OBJS = $(OBJDIR)/TwoSum.v
+OBJS += $(OBJDIR)/Fast2Mult.v
+
+run-clightgen: $(OBJS)
+	
+$(OBJS): $(OBJDIR)/%.v: dd_lib/%.c
+	clightgen -normalize $< -o $@
+	
+
 clean:
 	rm -f CoqMakefile CoqMakefile.conf
 	rm -f *.vo *.vos *.vok *.glob
@@ -33,3 +43,4 @@ clean:
 # This should be the last rule, to handle any targets not declared above
 %: invoke-coqmakefile
 	@true
+

@@ -1,6 +1,6 @@
 -R . DD
 
-dd_lib/TwoSum.v
+verif_objs/TwoSum.v
 verif_TwoSum.v
 
 paper_proofs/Bayleyaux.v

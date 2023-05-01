@@ -7,4 +7,8 @@ void Fast2Mult(dword *st, double a, double b);
 
 void TwoSum(dword *st, double a, double b);
 
+void Fast2Sum(dword *st, double a, double b);
+
+void SDWPFP(dword *st, dword *x, float a);
+
 #endif /* DWARITH_DOT_H */
