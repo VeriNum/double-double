@@ -1,35 +1,28 @@
 CC = ccomp
 
-SRCS1 = Fast2Mult.c Fast2Mult_test.c
+SRCS1 = two_sum.c fast_2sum.c fast_2mult.c dw_p_fp.c
 OBJS1 = ${SRCS1:.c=.o}
 
-SRCS2 = TwoSum.c TwoSum_test.c
+SRCS2 = dwp_test.c
 OBJS2 = ${SRCS2:.c=.o}
 
-SRCS3 = Fast2Sum.c 
-OBJS3 = ${SRCS3:.c=.o}
-
-SRCS4 = DWPFP.c dwp_test.c
-OBJS4 = ${SRCS4:.c=.o}
+SRCS3 =  ${SRCS1} 
+SRCS3 += ${SRCS2}
+OBJS3 =  ${SRCS3:.c=.o}
 
 LIBS = -lm
 INCLUDES = -I "./include"
 CFLAGS = -g -Wall ${INCLUDES}
 
-all: test_sum test_mult build test_dw 
+all: build test
 
-test_sum: ${OBJS2}
-	${CC} ${CFLAGS} -o $@ ${OBJS2} ${LIBS}
-
-test_mult: ${OBJS1}
-	${CC} ${CFLAGS} -o $@ ${OBJS1} ${LIBS}
-
-test_dwp: ${OBJS4}
-	${CC} ${CFLAGS} -o $@ ${OBJS4} ${LIBS}
-
-build: ${OBJS3}
+test: ${OBJS3}
 	${CC} ${CFLAGS} -o $@ ${OBJS3} ${LIBS}
 
+build: ${OBJS1}
+	${CC} -c ${INCLUDES} -o $@ ${OBJS1} ${LIBS}
+
+.PHONY: clean
 
 clean:
-	rm *.o test_sum test_mult
+	rm *.o test
