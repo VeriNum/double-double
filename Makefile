@@ -26,11 +26,13 @@ endif
 OBJDIR = verif_objs
 OBJS = $(OBJDIR)/two_sum.v
 OBJS += $(OBJDIR)/fast_2mult.v
+SRCDIR = dd_lib
+INCLUDES = -I $(SRCDIR)/include
 
 run-clightgen: $(OBJS)
 	
-$(OBJS): $(OBJDIR)/%.v: dd_lib/%.c
-	clightgen -normalize $< -o $@
+$(OBJS): $(OBJDIR)/%.v: $(SRCDIR)/%.c
+	clightgen -normalize $(INCLUDES) $< -o $@
 
 clean:
 	rm -f CoqMakefile CoqMakefile.conf
