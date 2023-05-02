@@ -6,7 +6,7 @@ int main(void) {
     struct dword st = {0.0,0.0};
     double a = 1.0;
     double b = -1.0;
-    Fast2Mult(&st, a, b);
+    fast_2mult(&st, a, b);
     printf("%1.16g\n",st.s);
     printf("%1.16g\n",st.t);
     return 0;
