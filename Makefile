@@ -24,21 +24,20 @@ endif
 ####################################################################
 
 OBJDIR = verif_objs
-OBJS = $(OBJDIR)/TwoSum.v
-OBJS += $(OBJDIR)/Fast2Mult.v
+OBJS = $(OBJDIR)/two_sum.v
+OBJS += $(OBJDIR)/fast_2mult.v
 
 run-clightgen: $(OBJS)
 	
 $(OBJS): $(OBJDIR)/%.v: dd_lib/%.c
 	clightgen -normalize $< -o $@
-	
 
 clean:
 	rm -f CoqMakefile CoqMakefile.conf
 	rm -f *.vo *.vos *.vok *.glob
 	rm -f paper_proofs/*.{vo,vos,vok,glob}
 	rm -f common/*.{vo,vos,vok,glob}
-	rm -f dd_lib/*.{vo,vos,vok,glob}
+	rm -f verif_objs/*.{vo,vos,vok,glob}
 
 # This should be the last rule, to handle any targets not declared above
 %: invoke-coqmakefile
