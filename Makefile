@@ -27,6 +27,7 @@ OBJDIR = verif_objs
 OBJS = $(OBJDIR)/two_sum.v
 OBJS += $(OBJDIR)/fast_2mult.v
 OBJS += $(OBJDIR)/fast_2sum.v
+OBJS += $(OBJDIR)/dw_plus_fp.v
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include
 
