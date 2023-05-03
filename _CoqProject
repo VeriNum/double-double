@@ -6,6 +6,9 @@ verif_two_sum.v
 verif_objs/fast_2mult.v
 verif_fast_2mult.v
 
+verif_objs/fast_2sum.v
+verif_fast_2sum.v
+
 paper_proofs/Bayleyaux.v
 paper_proofs/F2SumFLT.v
 paper_proofs/F2SumFLX.v
