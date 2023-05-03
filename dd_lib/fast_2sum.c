@@ -5,5 +5,5 @@ void fast_2sum(struct dword *st, double a, double b) {
    double z;
    st->s  = a + b;
    z      = st->s - a;
-   st->t  = b + z;
+   st->t  = b - z;
 }
