@@ -1,6 +1,6 @@
 CC = ccomp
 
-SRCS1 = two_sum.c fast_2sum.c fast_2mult.c dw_p_fp.c
+SRCS1 = two_sum.c fast_2sum.c fast_2mult.c dw_plus_fp.c
 OBJS1 = ${SRCS1:.c=.o}
 
 SRCS2 = dwp_test.c

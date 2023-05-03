@@ -20,6 +20,6 @@ void two_sum(struct dword *st, double a, double b);
 
 void fast_2sum(struct dword *st, double a, double b);
 
-void dw_plus_sfp(struct dword *st, struct dword *x, float a);
+void dw_plus_fp(struct dword *st, struct dword *x, double a);
 
 #endif /* DWARITH_DOT_H */
