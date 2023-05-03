@@ -3,7 +3,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
 Require Import DDModels.
-Require Import TwoSum.
+Require Import two_sum.
 
 #[export] Instance CompSpecs : 
   compspecs. make_compspecs prog. Defined.
@@ -13,13 +13,13 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-Definition st := Tstruct __1017 noattr.
+Definition st := Tstruct _dword noattr.
 
 Definition f2val (pq: ftype Tdouble * ftype Tdouble) : val*val :=
  (Vfloat (fst pq), Vfloat (snd pq)).
 
-Definition TwoSum_spec := 
-  DECLARE _TwoSum
+Definition two_sum_spec := 
+  DECLARE _two_sum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr st, tdouble, tdouble ] (* c lang types *)
     PROP()
@@ -31,10 +31,10 @@ Definition TwoSum_spec :=
     SEP(data_at Tsh st (f2val (TwoSumF a b)) s).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := [TwoSum_spec].
+Definition Gprog : funspecs := [two_sum_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_twoSum: semax_body Vprog Gprog f_TwoSum TwoSum_spec.
+Lemma body_twoSum: semax_body Vprog Gprog f_two_sum two_sum_spec.
 Proof.
 start_function.
 forward.
