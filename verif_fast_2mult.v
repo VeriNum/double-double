@@ -40,14 +40,10 @@ Proof.
 start_function.
 forward.
 forward.
-autorewrite with float_elim in *. (* for view only *)
-forward.
-forward.
-forward.
-forward.
+forward_call.
 forward.
 autorewrite with float_elim in *. (* for view only *)
-unfold f2val, TwoSumF, fst, snd.
+unfold f2val, Fast2Mult, fst, snd.
 entailer!.
 Qed.
 
