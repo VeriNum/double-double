@@ -15,6 +15,9 @@ verif_dw_plus_fp.v
 verif_objs/dw_plus_dw.v
 verif_dw_plus_dw.v
 
+verif_objs/dw_mult_dw.v
+verif_dw_mult_dw.v
+
 paper_proofs/Bayleyaux.v
 paper_proofs/F2SumFLT.v
 paper_proofs/F2SumFLX.v
