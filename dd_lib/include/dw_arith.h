@@ -22,4 +22,8 @@ void fast_2sum(struct dword *st, double a, double b);
 
 void dw_plus_fp(struct dword *st, struct dword *x, double a);
 
+void dw_plus_dw1(struct dword *st, struct dword *x, struct dword *y);
+
+void dw_plus_dw2(struct dword *st, struct dword *x, struct dword *y);
+
 #endif /* DWARITH_DOT_H */
