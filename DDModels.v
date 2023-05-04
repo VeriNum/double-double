@@ -52,6 +52,7 @@ End FastTwoSumModel.
 Section Fast2MultModel.
 Context {NANS: Nans} {t : type}.
 
+(** Algorithm 3 : Fast2Mult *)
 Definition Fast2Mult (a b : ftype t) :=
 let m := BMULT a b in
 let p := BFMA a b (BOPP m) in (m, p).
@@ -127,11 +128,21 @@ let cl3 := BPLUS cl1 cl2 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
 (** Algorithm 11 : Multiplication of a DW number by a DW number*)
-Definition DWTimesDW2 := True.
-
+Definition DWTimesDW2 (xh xl yh yl : ftype t) := 
+let (ch, cl1) := Fast2Mult xh yh in
+let tl        := BMULT xh yl in
+let cl2       := BFMA  xl yh tl in
+let cl3       := BPLUS cl1 cl2 in
+let (zh,zl)   := Fast2Sum ch cl3 in (zh, zl).
 
 (** Algorithm 12 : Multiplication of a DW number by a DW number *)
-Definition DWTimesDW3 := True.
+Definition DWTimesDW3 (xh xl yh yl : ftype t) := 
+let (ch, cl1) := Fast2Mult xh yh in
+let tl0 := BMULT xl yl in 
+let tl1 := BFMA xh yl tl0 in
+let cl2 := BFMA xl yh tl1 in
+let cl3 := BPLUS cl1 cl2 in
+let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
 (** Algorithm 13 : Division of a DW number by a FP number*)
 Definition DWDivFP1 := True.
