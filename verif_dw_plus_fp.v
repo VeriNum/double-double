@@ -38,7 +38,7 @@ Definition dw_plus_fp_spec :=
 Definition Gprog : funspecs := [fast_2sum_spec; two_sum_spec; dw_plus_fp_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_twoSum: semax_body Vprog Gprog f_dw_plus_fp dw_plus_fp_spec.
+Lemma body_dw_plus_fp: semax_body Vprog Gprog f_dw_plus_fp dw_plus_fp_spec.
 Proof.
 start_function.
 forward.

@@ -34,7 +34,7 @@ Definition two_sum_spec :=
 Definition Gprog : funspecs := [two_sum_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_twoSum: semax_body Vprog Gprog f_two_sum two_sum_spec.
+Lemma body_two_sum: semax_body Vprog Gprog f_two_sum two_sum_spec.
 Proof.
 start_function.
 forward.

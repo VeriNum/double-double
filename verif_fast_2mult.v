@@ -35,7 +35,7 @@ Definition fast_2mult_spec :=
 Definition Gprog : funspecs := MathASI ++ [fast_2mult_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_twoSum: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
+Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
 Proof.
 start_function.
 forward.
