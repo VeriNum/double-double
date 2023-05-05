@@ -29,6 +29,7 @@ OBJS += $(OBJDIR)/fast_2mult.v
 OBJS += $(OBJDIR)/fast_2sum.v
 OBJS += $(OBJDIR)/dw_plus_fp.v
 OBJS += $(OBJDIR)/dw_plus_dw.v
+OBJS += $(OBJDIR)/dw_mult_fp.v
 OBJS += $(OBJDIR)/dw_mult_dw.v
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include
