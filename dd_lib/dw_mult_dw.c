@@ -8,6 +8,7 @@ void dw_mult_dw12(struct dword *zh, struct dword *x, struct dword *y) {
    t0     = x->t * y->t;
    t1	  = fma(x->s,y->t,t0);
    c2     = fma(x->t,y->s,t1);
+   c3     = ch.t + c2; 
    fast_2sum(zh,ch.s,c3);
 }
 
