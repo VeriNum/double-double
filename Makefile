@@ -23,14 +23,11 @@ endif
 ##                      Your targets here                         ##
 ####################################################################
 
-OBJDIR = verif_objs
-OBJS = $(OBJDIR)/two_sum.v
-OBJS += $(OBJDIR)/fast_2mult.v
-OBJS += $(OBJDIR)/fast_2sum.v
-OBJS += $(OBJDIR)/dw_plus_fp.v
-OBJS += $(OBJDIR)/dw_plus_dw.v
-OBJS += $(OBJDIR)/dw_mult_fp.v
-OBJS += $(OBJDIR)/dw_mult_dw.v
+OBJDIR = verif_proofs/verif_objs
+OBJ = two_sum.v fast_2mult.v fast_2sum.v
+OBJ += dw_plus_fp.v dw_plus_dw.v
+OBJ += dw_mult_fp.v dw_mult_dw.v
+OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include
 
