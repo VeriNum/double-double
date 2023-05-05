@@ -33,6 +33,6 @@ common/float_acc_lems.v
 common/dd_tactics.v
 
 DDModels.v
-TwoSum_acc.v
-TwoMult_acc.v
-Accuracy.v
+accuracy_proofs/TwoSum_acc.v
+accuracy_proofs/Fast2Mult_acc.v
+accuracy_proofs/DWPlus_acc.v
