@@ -88,8 +88,11 @@ Section FastTwoSumCorrect.
 
 Context {NANS: Nans} {t : type}.
 
+Notation FE := (FLT_exp (@emin t) (fprec t)).
+
 Variables (a b : ftype t).
-Hypothesis (FIN : is_finite_p (Fast2Sum a b)).
+Hypothesis FIN : is_finite_p (Fast2Sum a b).
+Hypothesis Hle : Rabs (FT2R b) <= Rabs (FT2R a).
 
 Theorem FastTwoSum_correct :
   FT2R (Fast2Sum_err a b) = FT2R a + FT2R b - FT2R (Fast2Sum_sum a b).
@@ -101,15 +104,51 @@ rewrite /Fast2Sum_err/Fast2Sum_sum/Fast2Sum/fst/snd/=.
 move => []; rewrite /fst/snd; fold s z; move => FINs FINd.
 BMINUS_correct t b z; field_simplify. clear H4.
 unfold z.
-have FINsa: Binary.is_finite (fprec t) (femax t) (BMINUS s a) = true by admit.
-BMINUS_correct t s a; field_simplify. clear H6. fold (@FT2R t).
-unfold s in *.
-BPLUS_correct t a b; field_simplify. clear H8. fold (@FT2R t).
-pose proof @Fast2Sum_correct_proof_flt radix2 
-  (@emin t) (fprec t) choice (fprec_gt_one t) (fprec_gt_0 t) (FT2R a) (FT2R b).
-Search Binary.B2R F2R.
-Admitted.
+have FINsa: Binary.is_finite (fprec t) (femax t) (BMINUS s a) = true.
+{ move : FINd. fold z; destruct z => /=; destruct b => /= ; try discriminate; auto. } 
+BMINUS_correct t s a; field_simplify. unfold s in *. BPLUS_correct t a b; field_simplify.
+have Ga: generic_format radix2 (FLT_exp (@emin t) (fprec t)) (FT2R a) by
+  apply (Binary.generic_format_B2R (fprec t) (femax t)).
+have Gb: generic_format radix2 (FLT_exp (@emin t) (fprec t)) (FT2R b) by
+  apply (Binary.generic_format_B2R (fprec t) (femax t)).
+have Hr : (radix2 <= 3)%Z by (simpl; auto).
+(** apply lemmas from paper_proofs.F2SumFLT *)
+have: Fast2Sum_correct_flt radix2 (@emin t) (fprec t) choice (FT2R a) (FT2R b). 
+apply F2Sum_correct_abs_flt => //. apply (fprec_gt_one t).
+rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd; fold (@FT2R t); 
+  move => H; rewrite H; f_equal.
+Qed.
 
-End TwoSumCorrect.
+Theorem Fast2Sum_is_DW: 
+  double_word (Fast2Sum_sum a b) (Fast2Sum_err a b).
+Proof.
+  rewrite /double_word FastTwoSum_correct // /Fast2Sum_sum /= /common.rounded. 
+destruct FIN as (FINm & FINp).
+unfold Fast2Sum_err, Fast2Sum_sum, Fast2Sum, fst, snd in *.
+  BPLUS_correct t a b.
+Qed.
 
+End FastTwoSumCorrect.
 
+Section FastTwoSumAcc.
+Context {NANS: Nans} {t : type}.
+
+Variables (a b : ftype t).
+Hypothesis FIN : is_finite_p (Fast2Sum a b).
+Hypothesis Hle : Rabs (FT2R b) <= Rabs (FT2R a).
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Notation u   := (bpow Zaux.radix2 (- fprec t)).
+
+Theorem FastTwoSum_accuracy: 
+    Rabs (FT2R (Fast2Sum_err a b))  <= /2 * ulp (FT2R a + FT2R b).
+Proof.
+rewrite FastTwoSum_correct; auto. unfold Fast2Sum_sum. simpl.
+rewrite Rabs_minus_sym. 
+pose proof error_le_half_ulp
+  Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) choice (FT2R a + FT2R b) as HE.
+destruct FIN as (FINs & FINd); simpl in FINs. 
+BPLUS_correct t a b. fold (@FT2R t); auto. 
+Qed.
+
+End FastTwoSumAcc.
