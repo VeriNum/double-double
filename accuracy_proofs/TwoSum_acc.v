@@ -6,6 +6,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics.
 Require Import DDModels.
 From Flocq Require Import Pff2Flocq Core.
+Require Import F2SumFLT.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
@@ -82,4 +83,33 @@ BPLUS_correct t a b. fold (@FT2R t); auto.
 Qed.
 
 End TwoSumAcc.
+
+Section FastTwoSumCorrect.
+
+Context {NANS: Nans} {t : type}.
+
+Variables (a b : ftype t).
+Hypothesis (FIN : is_finite_p (Fast2Sum a b)).
+
+Theorem FastTwoSum_correct :
+  FT2R (Fast2Sum_err a b) = FT2R a + FT2R b - FT2R (Fast2Sum_sum a b).
+Proof.
+set (s := BPLUS a b).
+set (z := BMINUS s a).
+move: FIN.
+rewrite /Fast2Sum_err/Fast2Sum_sum/Fast2Sum/fst/snd/=.
+move => []; rewrite /fst/snd; fold s z; move => FINs FINd.
+BMINUS_correct t b z; field_simplify. clear H4.
+unfold z.
+have FINsa: Binary.is_finite (fprec t) (femax t) (BMINUS s a) = true by admit.
+BMINUS_correct t s a; field_simplify. clear H6. fold (@FT2R t).
+unfold s in *.
+BPLUS_correct t a b; field_simplify. clear H8. fold (@FT2R t).
+pose proof @Fast2Sum_correct_proof_flt radix2 
+  (@emin t) (fprec t) choice (fprec_gt_one t) (fprec_gt_0 t) (FT2R a) (FT2R b).
+Search Binary.B2R F2R.
+Admitted.
+
+End TwoSumCorrect.
+
 
