@@ -8,14 +8,6 @@ Require Import mathcomp.ssreflect.ssreflect.
 Section AccuracyDWPlusFP.
 Context {NANS: Nans} {t : type}.
 
-Definition F2Rp (a : ftype t * ftype t) := (FT2R (fst a), FT2R (snd a)).
-
-Lemma TwoSumEq : forall (a b : ftype t)
-(FIN : is_finite_p (TwoSumF a b)), 
-TwoSum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (TwoSumF a b).
-Proof.
-move => a b [] /= FIN1 FIN2. 
-rewrite /TwoSum/TwoSumF/F2Rp/fst/snd.
 
 
 
