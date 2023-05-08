@@ -11,6 +11,8 @@ Definition neg_zero {t: type} := Binary.B754_zero (fprec t) (femax t) true.
 
 Section NAN.
 
+Definition F2Rp {t} (a : ftype t * ftype t) := (FT2R (fst a), FT2R (snd a)).
+
 Definition default_rel (t: FPCore.type) : R :=
   / 2 * Raux.bpow Zaux.radix2 (- fprec t + 1).
 
