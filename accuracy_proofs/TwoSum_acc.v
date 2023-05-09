@@ -182,13 +182,10 @@ fst (DD.paper_proofs.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b)) = FT2R (
 BPLUS_correct t a b; field_simplify.  by rewrite H. }
 f_equal => //.
 rewrite DD.accuracy_proofs.TwoSum_acc.FastTwoSumCorrect.FastTwoSum_correct. 
-rewrite DD.paper_proofs.F2SumFLX.F2Sum_correct_proof => //. f_equal => //.
+rewrite DD.paper_proofs.F2SumFLX.F2Sum_correct_abs => //. f_equal => //.
 apply fprec_gt_one.
 apply Bayleyaux.rnd_p_sym. apply choiceP.
-1,2: apply (@generic_format_FLX_FLT radix2 emin); apply Binary.generic_format_B2R.
-have Ga: generic_format radix2 (FLX_exp (fprec t)) (FT2R a).
-apply (@generic_format_FLX_FLT radix2 emin); apply  Binary.generic_format_B2R.
-destruct (@getnum_fa radix2 (fprec t) (fprec_gt_one t) (FT2R a) (FT2R b) Ga (B2F a)).
+all: apply (@generic_format_FLX_FLT radix2 emin); apply Binary.generic_format_B2R.
 Qed.
 
 End FastTwoSumCorrect.
@@ -197,7 +194,7 @@ Section FastTwoSumAcc.
 Context {NANS: Nans} {t : type}.
 
 Variables (a b : ftype t).
-Hypothesis FIN : is_finite_p (Fast2Sum a b).
+Hypothesis FIN : is_finite_p (DD.DDModels.Fast2Sum a b).
 Hypothesis Hle : Rabs (FT2R b) <= Rabs (FT2R a).
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
