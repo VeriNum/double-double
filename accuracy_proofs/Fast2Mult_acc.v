@@ -5,10 +5,9 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-Context {NANS: Nans} {t : type}.
-Notation emin := (@emin t).
-
 Section TwoMultCorrect.
+Context {NANS: Nans} {t : type}.
+Notation emin := (@DD.DDModels.emin t).
 Variables (a b : ftype t).
 Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
 Hypothesis (UF  :  (FT2R a * FT2R b) <> 0 -> 
@@ -59,7 +58,8 @@ End TwoMultCorrect.
 
 
 Section TwoMultAcc. 
-
+Context {NANS: Nans} {t : type}.
+Notation emin := (@DD.DDModels.emin t).
 Variables (a b : ftype t).
 Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
 Hypothesis (UF  :  (FT2R a * FT2R b) <> 0 -> 
