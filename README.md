@@ -146,7 +146,7 @@ Definition dw_plus_fp_spec :=
 The proof that `dw_plus_dw` satisfies this specification is very straightforward as there aren’t any loops or tricky data structures in the C function. You can read more about using VST in [Software Foundations Volume 5](https://softwarefoundations.cis.upenn.edu/vc-current/index.html).
 
 ## Conclusion 
-It has been said that the speed advantage of double-word arithmetic makes it “‘an attractive nuisance,” like an unfenced backyard swimming pool”[^c2]. We note that a *verified* library for double-word arithmetic provides a *portable proof interface* for client programs, which we hope will make computing with double-words more attractive and less of a nuisance. 
+It has been said that the speed advantage of double-word arithmetic makes it “‘an attractive nuisance,' like an unfenced backyard swimming pool”[^c2]. We note that a *verified* library for double-word arithmetic provides a *portable proof interface* for client programs, which we hope will make computing with double-words more attractive and less of a nuisance. 
 
 Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conveys a sentiment that applies well here, if one replaces “system programmers” with “logicians.”
 
