@@ -11,7 +11,7 @@ Public License) version 3 or any later version.
 - **verif_proofs**: a directory containing VST proofs of correctness of the C functions from **dd_lib**. 
 - **common**: a directory with of Coq files with common lemmas and tactics.
 
-## How to build 
+## How to build the proofs
 In a Coq Platform that already has CompCert and VST installed, you must also install VSTlib and vcfloat.
 
 Clone the repo https://github.com/VeriNum/vcfloat. In the directory **vcfloat/vcfloat/**
