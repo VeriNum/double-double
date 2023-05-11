@@ -77,6 +77,8 @@ let (zh, zl) := Fast2Sum sh v in (zh, zl).
 ```
 The `BPLUS` operation in the above definition of `DWPlusFP` denotes the addition of IEEE 754 binary  floating-point numbers as defined by Flocq.
 
+#### Proving accuracy & correctness 
+
 Proving that the `DWPlusFP` algorithm is *correct* entails showing that it returns a double-word number according to our Coq definition of a double-word:
 
 ``` Coq
@@ -106,6 +108,9 @@ Notation u   := (bpow 2 (- precision t)).
 
 Theorem relative_error_DWPlusFP : relative_error_DWPlusFP <= 2 * u ^ 2. Proof. … Qed.
 ```
+
+#### Verifying the C function
+
 Finally, we prove that the following C function correctly implements the Coq function  `DWPlusFP` using VST.
 ``` C
 void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y) {
@@ -155,6 +160,13 @@ Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conv
 [^c6]: “Program Logics for Certified Compilers,” Cambridge University Press,
 USA (2014).
 [`c7]: “The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms,” Addison-Wesley Longman Publishing Co., Inc., USA (1997). 
+
+
+
+
+
+
+
 
 
 
