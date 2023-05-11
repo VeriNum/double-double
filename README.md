@@ -12,7 +12,7 @@ Public License) version 3 or any later version.
 - **common**: a directory with of Coq files with common lemmas and tactics.
 
 ## How to build the proofs
-In a Coq Platform that already has CompCert and VST installed, you must also install VSTlib and vcfloat.
+In a Coq Platform that already has CompCert and VST installed, you must also install VSTlib and VCFloat.
 
 Clone the repo https://github.com/VeriNum/vcfloat. In the directory **vcfloat/vcfloat/**
 - `make -j`
