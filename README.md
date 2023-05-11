@@ -148,7 +148,7 @@ The proof that `dw_plus_dw` satisfies this specification is very straightforward
 ## Conclusion 
 It has been said that the speed advantage of double-word arithmetic makes it “‘an attractive nuisance,' like an unfenced backyard swimming pool”[^c2]. We note that a *verified* library for double-word arithmetic provides a *portable proof interface* for client programs, which we hope will make computing with double-words more attractive and less of a nuisance. 
 
-Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conveys a sentiment that applies well here, if one replaces “system programmers” with “logicians.”
+Finally, we conclude by sharing a quote of Knuth’s[^c7], which we believe conveys a sentiment that applies well here, if one replaces “system programmers” with “logicians.”
 
 > *Some people working in “higher levels” of numerical analysis will regard the topic treated here as the domain of system programmers. Other people working in “higher levels” of systems programming will regard the topic treated here as the domain of numerical analysts. But I hope that there are a few people left who will want to look carefully at these basics. Although the methods reside perhaps on a low level, they underlie all of the more grandiose applications of computers to numerical problems, so it is important to know them well.* 
 
@@ -159,7 +159,7 @@ Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conv
 [^c5]: “Flocq: A Unified Library for Proving Floating-Point Algorithms in Coq,” in 2011 IEEE 20th Symposium on Computer Arithmetic, Tuebingen, Germany, 2011, pp. 243-252, doi: 10.1109/ARITH.2011.40.
 [^c6]: “Program Logics for Certified Compilers,” Cambridge University Press,
 USA (2014).
-[`c7]: “The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms,” Addison-Wesley Longman Publishing Co., Inc., USA (1997). 
+[^c7]: “The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms,” Addison-Wesley Longman Publishing Co., Inc., USA (1997). 
 
 
 
