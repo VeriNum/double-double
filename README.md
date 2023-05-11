@@ -26,7 +26,7 @@ Now, in the main directory **double_double**:
 - `make run-clightgen` to populate **verif_proofs/verif_objs/** with **.v** files containing the Clight ASTs from the C functions in **dd_lib** used in the VST proofs. 
 - `make` to build the VST proofs in **verif_proofs/** and the accuracy proofs in **accuracy_proofs/**.
 
-# Notes On Building A Verified Library for Double-Word Arithmetic
+# Notes on a Verified Library for Double-Word Arithmetic
 ## Introduction 
 
 The IEEE 754-2008 standard[^c1] for floating-point arithmetic defines three binary formats, with word lengths of 32, 64, and 128 bits. Each binary format can represent a unique set of floating-point data, and is characterized by its precision ${(p \ge 2)}$ and exponent range ${(e_{min} < 0  < e_{max})}$.
