@@ -26,7 +26,7 @@ Now, in the main directory **double_double**:
 - `make run-clightgen` to populate **verif_proofs/verif_objs/** with **.v** files containing the Clight ASTs from the C functions in **dd_lib** used in the VST proofs. 
 - `make` to build the VST proofs in **verif_proofs/** and the accuracy proofs in **accuracy_proofs/**.
 
-# Notes on a Verified Library for Double-Word Arithmetic
+# On Building A Verified Library for Double-Word Arithmetic
 ## Introduction 
 
 The IEEE 754-2008 standard[^c1] for floating-point arithmetic defines three binary formats, with word lengths of 32, 64, and 128 bits. Each binary format can represent a unique set of floating-point data, and is characterized by its precision ${(p \ge 2)}$ and exponent range ${(e_{min} < 0  < e_{max})}$.
@@ -47,7 +47,7 @@ In practice, full compliance with the standard can hinder performance. The binar
 
 ## Double-word arithmetic
 
-Double-word arithmetic represents extra precise floating-point numbers using a pair of IEEE 754 compliant precision $p$ numbers. In all existing implementations, the underlying floating-point format is binary64. For this reason, double-word arithmetic is commonly referred to as *double-double*. Formally, a double-word number $x$ is the unevaluated sum $x_h + x_l$ of two floating-point numbers $x_h$ and $x_l$ such that $x_h = rnd(x)$, where $rnd$ is denotes the application of an IEEE 754 compliant rounding operation. At first glance, this definition might appear a bit odd, but suppose we had an algorithm `2Sum` that computed both the result of adding two floating-point numbers $a$ and $b$ and the rounding error $s$ resulting from the addition. In this case, the sum $a + b + (-s)$ is a double-word: $a + b = rnd(a + b + (-s))$.   
+Double-word arithmetic represents extra precise floating-point numbers using a pair of IEEE 754 compliant precision $p$ numbers. In all existing implementations, the underlying floating-point format is binary64. For this reason, double-word arithmetic is commonly referred to as *double-double*. Formally, a double-word number $x$ is the unevaluated sum $x_h + x_l$ of two floating-point numbers $x_h$ and $x_l$ such that $x_h = rnd(x)$, where $rnd$ denotes the application of an IEEE 754 compliant rounding operation. At first glance, this definition might appear a bit odd, but suppose we had an algorithm `2Sum` that computed both the result of adding two floating-point numbers $a$ and $b$ and the rounding error $s$ resulting from the addition. In this case, $a + b + s$ is a double-word: $a + b = rnd(a + b + s)$.   
 ## The Trouble with Double-Double
 
 The trouble with double-double is that there is no well defined notion of *correct rounding*, which “breaks the logic and validity of error analyses”[^c2]. Consider the following example. 
@@ -141,7 +141,7 @@ Definition dw_plus_fp_spec :=
 The proof that `dw_plus_dw` satisfies this specification is very straightforward as there aren’t any loops or tricky data structures in the C function. You can read more about using VST in [Software Foundations Volume 5](https://softwarefoundations.cis.upenn.edu/vc-current/index.html).
 
 ## Conclusion 
-It has been said that the speed advantage of double-word arithmetic makes it “‘an attractive nuisance,” like an unfenced backyard swimming pool”[^c2]. We note that a *verified* library for double-word arithmetic provides a *portable proof interface* for clients programs, which we hope will make computing with double-words more attractive and less of a nuisance. 
+It has been said that the speed advantage of double-word arithmetic makes it “‘an attractive nuisance,” like an unfenced backyard swimming pool”[^c2]. We note that a *verified* library for double-word arithmetic provides a *portable proof interface* for client programs, which we hope will make computing with double-words more attractive and less of a nuisance. 
 
 Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conveys a sentiment that applies well here, if one replaces “system programmers” with “logicians.”
 
@@ -155,6 +155,13 @@ Finally, we conclude by sharing a quote of Knuth’s[`c7], which we believe conv
 [^c6]: “Program Logics for Certified Compilers,” Cambridge University Press,
 USA (2014).
 [`c7]: “The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms,” Addison-Wesley Longman Publishing Co., Inc., USA (1997). 
+
+
+
+
+
+
+
 
 
 
