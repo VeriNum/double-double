@@ -48,7 +48,7 @@ In practice, full compliance with the standard can hinder performance. The binar
 ## Double-word arithmetic
 
 Double-word arithmetic represents extra precise floating-point numbers using a pair of IEEE 754 compliant precision $p$ numbers. In all existing implementations, the underlying floating-point format is binary64. For this reason, double-word arithmetic is commonly referred to as *double-double*. Formally, a double-word number $x$ is the unevaluated sum $x_h + x_l$ of two floating-point numbers $x_h$ and $x_l$ such that $x_h = rnd(x)$, where $rnd$ denotes the application of an IEEE 754 compliant rounding operation. At first glance, this definition might appear a bit odd, but suppose we had an algorithm `2Sum` that computed both the result of adding two floating-point numbers $a$ and $b$ and the rounding error $s$ resulting from the addition. In this case, $a + b + s$ is a double-word: $a + b = rnd(a + b + s)$.   
-## The Trouble with Double-Double
+## Double-Double Trouble
 
 The trouble with double-double is that there is no well defined notion of *correct rounding*, which “breaks the logic and validity of error analyses”[^c2]. Consider the following example. 
 
