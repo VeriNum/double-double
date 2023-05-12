@@ -89,7 +89,7 @@ Definition double_word : ftype t -> ftype t -> Type :=
 The function `FT2R` in the above definition of `double_word` is an injection from floating-point numbers to real numbers. 
 
 Proving the  *accuracy* of the `DWPlusFP` algorithm follows by connecting our Coq implementation of `DWPlusFP` to previous work[^c4]. There is a complication to this: previous work does not use the IEEE 754 binary format defined in Flocq, it instead uses a Flocq format with no minimum exponent (see [Flocq formats](https://flocq.gitlabpages.inria.fr/theos.html#formats
-) for more details). We therefore have to explicitly handle the treatment of underflow and overflow; if we suppose some conditions on underflow, then we are able to prove the theorem `relative_error_DWPlusFP` using the previous formalization, which bounds the rounding error of the operation by twice the unit roundoff squared. 
+) for more details). We therefore have to explicitly handle the treatment of underflow and overflow; if we assume some conditions on underflow, then we are able to prove the theorem `relative_error_DWPlusFP` using the previous formalization, which bounds the rounding error of the operation by twice the unit roundoff squared. 
 
 ``` Coq
 Variables (xh xl y : ftype t).
