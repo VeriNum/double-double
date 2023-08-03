@@ -49,6 +49,22 @@ rewrite Rplus_comm; repeat f_equal.
 all: apply Binary.generic_format_B2R.
 Qed.
 
+Theorem TwoSumF_error :
+  exists del, 
+  FT2R (TwoSumF_err a b) = (FT2R a + FT2R b) * del /\
+  Rabs del <= /2 * bpow radix2(-fprec t + 1). 
+Proof.
+rewrite TwoSumF_correct.
+rewrite /TwoSumF_sum/TwoSumF/fst/snd.
+destruct FIN as (FINs & _).
+simpl in FINs.
+destruct (BPLUS_accurate' a b FINs) as (del & A & B).
+rewrite B; exists (-del); split; [field_simplify; nra|].
+rewrite Rabs_Ropp.
+refine (Rle_trans _ _ _ A _ ).
+now apply Req_le; rewrite /default_rel.
+Qed.
+
 Theorem TwoSum_is_DW: 
   double_word (TwoSumF_sum a b) (TwoSumF_err a b).
 Proof.
@@ -213,3 +229,28 @@ Qed.
 
 
 End FastTwoSumAcc.
+
+Section FastTwoSumFacts.
+
+Context {NANS: Nans} {t : type}.
+
+Notation FE := (FLT_exp (@emin t) (fprec t)).
+Notation emin := (@DD.DDModels.emin t).
+
+Variables (a b : ftype t).
+Hypothesis FIN : is_finite_p (DD.DDModels.Fast2Sum a b).
+Hypothesis Hle : Rabs (FT2R b) <= Rabs (FT2R a).
+
+Fact Fast2Sumf0 : F2Rp (DDModels.Fast2Sum a (Zconst t 0) ) = F2Rp (a, Zconst t 0).
+Proof. 
+rewrite /DDModels.Fast2Sum/F2Rp/fst/snd !BPLUS_B2R_zero. 
+Search Binary.Bplus (0).
+
+!(Rplus_0_r, Rminus_0_l, round_0) !round_generic //.
+  ring_simplify(FT2R a- FT2R a)%R; rewrite ?Ropp_0 // ;
+  try apply: generic_format_0.
+unfold FT2R. apply: Binary.generic_format_B2R.
+Qed.
+
+
+End FastTwoSumFacts. 

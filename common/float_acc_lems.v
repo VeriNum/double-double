@@ -400,5 +400,76 @@ Generic_fmt.round Zaux.radix2 (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) 
 (Generic_fmt.Znearest (fun x0 : Z => negb (Z.even x0))) x.
 Proof. auto. Qed. 
 
+Definition emin t := (SpecFloat.emin (fprec t) (femax t)).
+Notation rnd := Generic_fmt.round.
+Notation beta := Zaux.radix2.
+Definition mode := (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
+
+(* denormal error term *)
+Theorem absolute_error_FLT_UF {t} :
+  forall x (choice : Z -> bool),
+  forall (uf: Rabs x < bpow beta (emin t + fprec t - 1) ),
+  exists eta, Rabs eta <= /2 * bpow beta (emin t) /\ 
+    rnd beta (SpecFloat.fexp (fprec t) (femax t)) mode x = x + eta. 
+Proof.
+intros.
+set (rx := rnd _ _ _ x).
+destruct (@generic_round_property t x) as (del & eta & A & B & C & D).
+destruct (Rlt_or_le (Rabs (del * x)) (Rabs eta)) as [HdxLte|HeLedx].
+{ exists eta; split.
+refine (Rle_trans _ _ _ _ C); apply Rle_refl.
+subst rx ; unfold mode. rewrite D.
+destruct (Rmult_integral _ _ A) as [Zd|Ze].
+{ now rewrite Zd, Rplus_0_r, Rmult_1_r. }
+exfalso; revert HdxLte; rewrite Ze, Rabs_R0; apply Rle_not_lt, Rabs_pos. }
+exists (x * del); split.
+rewrite Rabs_mult.
+refine (Rle_trans _ _ _ _ _); 
+  [apply Rmult_le_compat; try apply Rabs_pos | ]. 
+refine (Rlt_le _ _ uf). apply B.
+unfold default_rel. field_simplify.
+  rewrite <- bpow_plus. 
+apply Rcomplements.Rle_div_r; field_simplify; try lra.
+apply bpow_le; lia.
+destruct (Rmult_integral _ _ A) as [Zd|Ze].
+{ assert ( Rabs eta = 0). apply Rle_antisym; [|apply Rabs_pos].
+now revert HeLedx; rewrite Zd, Rmult_0_l, Rabs_R0. 
+apply Rabs_eq_R0 in H. subst rx ; unfold mode. rewrite D.
+rewrite H, Zd; nra. } 
+subst rx ; unfold mode. rewrite D, Ze; nra.
+Qed.
+
+(* normal error term *)
+Theorem relative_error_FLT {t} :
+  forall x (choice : Z -> bool), 
+  forall (no_uf: bpow beta (emin t + fprec t - 1) <=  Rabs x ),
+  exists del, Rabs del <= / 2 * bpow beta (- fprec t + 1) /\ 
+    rnd beta (SpecFloat.fexp (fprec t) (femax t)) mode x = x * (1 + del). 
+Proof.
+intros.
+apply Relative.relative_error_N_FLT_ex.
+apply (fprec_gt_0 t).
+now unfold emin in no_uf.
+Qed.
+
+Lemma relative_er_ub_FLT t del:
+Rabs del <= / 2 * bpow beta (- fprec t + 1) -> 
+Rabs (1 + del) <= 3/2.
+Proof.
+intros A.
+assert (Rabs del <= /2).
+refine (Rle_trans _ _ _ A _).
+refine (Rle_trans _ _ _ (Rmult_le_compat_l _ _ (bpow beta 0) _ _) _); 
+  try nra.
+replace (- fprec t + 1)%Z with ( 1 - fprec t)%Z by lia.
+apply bpow_le.
+apply Z.le_sub_le_add_r; apply  Z.lt_le_incl.
+simpl. apply fprec_gt_one.
+rewrite bpow_powerRZ. rewrite powerRZ_O;
+nra.
+refine (Rle_trans _ _ _ (Rabs_triang _ _ ) _).
+refine (Rle_trans _ _ _ (Rplus_le_compat_l  _ _ _ H) _); 
+  rewrite Rabs_R1; nra.
+Qed.
 
 End NAN.
