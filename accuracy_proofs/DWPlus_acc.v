@@ -101,18 +101,25 @@ Proof.
 rewrite /relative_error_DWPlusFP /errorDWFP /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
 Qed.
 
+Fact null_sl_aux
+  (sl0: FT2R sl = 0):  FT2R v =  FT2R xl.
+Proof.
+subst v. 
+pose proof FIN2 xh xl y FIN as H1. 
+fold sl in H1. unfold p in *. 
+BPLUS_correct t xl sl. unfold FT2R in sl0.
+rewrite sl0 Rplus_0_r round_generic; auto.
+apply Binary.generic_format_B2R. 
+Qed.
+
 Fact null_sl 
   (sl0: FT2R sl = 0):  errorDWFP = 0.
 Proof.
-have Fsh:= Fsh;  have Fv:= Fv;  have Fx := Fxl.
-pose proof FIN2 xh xl y FIN. 
-pose proof FIN3 xh xl y FIN. 
-have vE: FT2R v =  FT2R xl.
-{ subst v. 
-fold sl in H. unfold p in H.
-BPLUS_correct t xl sl. unfold FT2R in sl0.
-rewrite sl0 Rplus_0_r round_generic; auto.
-apply Binary.generic_format_B2R. } 
+pose proof FIN1 xh xl y FIN as H. 
+pose proof FIN2 xh xl y FIN as H1. 
+pose proof FIN3 xh xl y FIN as H2.
+fold sl in H1. unfold p in *. 
+have vE: FT2R v =  FT2R xl; [by apply: null_sl_aux | ].
 have xhye : (FT2R xh + FT2R y) = rnd (FT2R xh + FT2R y).
 { move: (TwoSumF_correct xh y (FIN1 xh xl y FIN)); rewrite sl0. 
 rewrite /TwoSumF_sum/fst/TwoSumF.
@@ -120,39 +127,105 @@ BPLUS_correct t xh y. rewrite /rnd; intros.
 symmetry in TwoSumF_correct. 
 by apply Rminus_diag_uniq_sym in TwoSumF_correct. }  
 case:(Req_dec (FT2R xl) 0)=> xl0.
-  rewrite /errorDWFP  xl0. 
-subst zh zl.
-rewrite /fst/snd/DWPlusFP/Fast2Sum.
+{ have Hv: (FT2R v = 0). 
+  { subst v. BPLUS_correct t xl sl.
+  unfold FT2R in xl0, sl0; rewrite xl0 sl0 => //=.
+  by rewrite Rplus_0_l round_0. }  
 
-unfold DWPlusFP.
-Fast2Sumf0 //= TwoSum_sumE -xhye; ring.
-case:(Req_dec (xh + y) 0)=> xhy0.
-  have sh0: sh = 0  by rewrite  TwoSum_sumE  xhy0 round_0.
-  rewrite /errorDWFP sh0 Fast2Sum0f //= vE; lra.
-  rewrite /errorDWFP F2Sum_correct_abs //= ?vE;
-    try (apply/rnd_p_sym/choiceP).
-  rewrite TwoSum_sumE -xhye; ring.
-have he:=(roundN_plus_ulp Fxh Fy xhy0).
-apply:(Rle_trans _ (ulp radix2 fexp xh / 2)).
-  by move/dw_ulp:  xDW; lra.
-rewrite TwoSum_sumE; 
-apply:(Rle_trans _ (Rmax (ulp radix2 fexp xh / 2) (ulp radix2 fexp y / 2))); try lra.
-by apply:Rmax_l.
-Qed.
+ 
+rewrite /errorDWFP xl0.
+subst zh.
+rewrite /DWPlusFP/fst.
+move: FIN. 
+rewrite /is_finite_p/DWPlusFP.
+replace (TwoSumF xh y) with 
+  (TwoSumF_sum xh y, sl) => //= FIN1.
+destruct FIN1 as (FIN1 & FIN2).
+subst v. move: Hv.
+BPLUS_correct t (TwoSumF_sum xh y) (BPLUS xl sl).
+BPLUS_correct t xl sl => H0.
+rewrite H0. clear H10 H7.
+
+have Hzl : (zl = 0).
+{ subst zl. rewrite /snd/DWPlusFP.
+replace (TwoSumF xh y) with 
+  (TwoSumF_sum xh y, sl) => //=.
+set (b:=(BMINUS (BPLUS (TwoSumF_sum xh y) (BPLUS xl sl)) 
+  (TwoSumF_sum xh y))) in *.
+BMINUS_correct t (BPLUS xl sl) b.
+unfold FT2R in vE, xl0. rewrite vE xl0.
+rewrite <- (round_0 radix2
+  (SpecFloat.fexp p (femax t)) 
+  (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)).
+f_equal.
+rewrite !round_0 Rminus_0_l -Ropp_0; f_equal. 
+subst b.
+set (b:= (BPLUS (TwoSumF_sum xh y) (BPLUS xl sl))) in *.
+BMINUS_correct t b (TwoSumF_sum xh y).
+move : H0.
+rewrite <- (round_0 radix2
+  (SpecFloat.fexp p (femax t)) 
+  (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)) => H0.
+f_equal. subst b.
+set (k :=(BPLUS xl sl)) in *.
+BPLUS_correct t (TwoSumF_sum xh y) k.
+clear H18 H15 H12.
+apply Rminus_diag_eq.
+replace (Binary.B2R _ _ (TwoSumF_sum xh y)) with
+  (rnd (FT2R xh + FT2R y)).
+unfold rnd at 2.
+f_equal. set (x:= rnd (FT2R xh + FT2R y)).
+rewrite xhye. subst x.
+match goal with |- context [_ + ?a = _] => 
+replace a with 0; try nra end.
+move : (TwoSum_exact xh y H xhye).
+move => He. 
+move: (TwoSumF_correct xh y H). rewrite He.
+move => He2.
+rewrite xhye in He2.
+unfold FT2R in He2. 
+symmetry in He2.
+by apply Rminus_diag_uniq. } 
+rewrite Hzl.
+field_simplify_round.
+field_simplify.
+admit. } 
+
+case:(Req_dec (FT2R xh + FT2R y) 0)=> xhy0.
+{ have sh0: FT2R (fst (TwoSumF xh y)) = 0.
+  { rewrite /TwoSumF/fst. BPLUS_correct t xh y.
+    unfold FT2R in xhy0. by rewrite xhy0 round_0. }  
+
+rewrite /errorDWFP. subst zh zl. 
+rewrite /fst/snd/DWPlusFP.
+move : sh0.
+move: (TwoSum0 xh y H xhy0).
+replace (TwoSumF xh y) with 
+  ((fst (TwoSumF xh y)), sl) => //= sh0 s0.
+
+admit. } 
+
+
+
+Admitted.
 
 Fact null_sl_rel 
-  (sl0: (TwoSum_err (fprec t) choice (FT2R xh) (FT2R y)) = 0):  relative_error_DWPlusFP = 0.
+  (sl0: FT2R (TwoSumF_err xh y) = 0):  relative_error_DWPlusFP = 0.
 Proof.
-by rewrite rel_errorE null_sl // Rabs_R0 Rmult_0_l.
+rewrite rel_errorE null_sl //. by rewrite Rabs_R0 Rmult_0_l.
 Qed.
 
 Fact null_xh_rel (xh0: FT2R xh = 0): relative_error_DWPlusFP = 0.
 Proof.
-  apply:null_sl_rel; case: xDW; case=> Fxh Fxl _.
-  rewrite  TwoSum_correct //= TwoSum_sumE  xh0 Rplus_0_l round_generic //; ring.
+apply: null_sl_rel.
+pose proof FIN1 xh xl y FIN. 
+rewrite TwoSumF_correct //= /TwoSumF_sum/TwoSumF/fst.
+pose proof FIN3 xh xl y FIN. 
+BPLUS_correct t xh y. 
+unfold FT2R in xh0; rewrite xh0 Rplus_0_l round_generic //; [ring | ].
+apply Binary.generic_format_B2R. 
 Qed.
 
-Lemma
 
 Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u^2.
 Proof.
@@ -160,10 +233,14 @@ have rn_sym:= (round_opp radix2 (SpecFloat.fexp (fprec t) (femax t))
    (Generic_fmt.Znearest choice)).
 have boundDWFP_ge_0 : 0 <= 2*u^2 by rewrite /u; move: (bpow_ge_0 radix2 (-p)); nra.
 case:(Req_dec (FT2R xh) 0)=> hxh0.
-{ rewrite /relative_error_DWPlusFP; subst xr zh zl. 
+{ rewrite /relative_error_DWPlusFP; 
+pose proof null_xh_rel hxh0. 
+unfold relative_error_DWPlusFP in H.
+by rewrite H. } 
+
 rewrite /DWPlusFP/fst/snd.
 rewrite hxh0.
-rewrite ?null_xh_rel.
+pose proof null_xh_rel.
   rewrite hxh0  DWPlusFP0f //=.
     split; [split |] =>//; try apply:generic_format_0.
     by rewrite Rplus_0_r round_generic.

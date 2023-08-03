@@ -124,6 +124,37 @@ destruct FIN as (FINs & FINd); simpl in FINs.
 BPLUS_correct t a b. fold (@FT2R t); auto. 
 Qed.
 
+Local Notation p := (fprec t).
+Definition rnd := 
+  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
+
+Lemma TwoSum_exact:
+FT2R a + FT2R b = rnd (FT2R a + FT2R b) -> 
+FT2R (TwoSumF_err a b) = 0.
+Proof.
+unfold rnd.
+rewrite TwoSumF_correct; auto. unfold TwoSumF_sum. simpl.
+destruct FIN as (FINs & FINd); simpl in FINs. 
+BPLUS_correct t a b => H. rewrite -H; nra. 
+Qed.
+
+Lemma TwoSum0 :
+FT2R a + FT2R b = 0 -> 
+F2Rp (TwoSumF a b) = (0,0).
+Proof.
+move=> H0. 
+have H1 : FT2R (TwoSumF_err a b) = 0.
+apply TwoSum_exact; rewrite H0.
+rewrite /rnd. symmetry. apply round_0, valid_rnd_N.
+replace (TwoSumF a b) with (TwoSumF_sum a b, TwoSumF_err a b) => //.
+rewrite /F2Rp/fst/snd; f_equal; auto.
+rewrite /TwoSumF_sum/fst/TwoSumF.
+destruct FIN as (FINs & FINd); simpl in FINs. 
+BPLUS_correct t a b. unfold FT2R in H0. rewrite H0.
+apply round_0, valid_rnd_N.
+Qed.
+
+
 End TwoSumAcc.
 
 Section FastTwoSumCorrect.
@@ -227,7 +258,6 @@ destruct FIN as (FINs & FINd); simpl in FINs.
 BPLUS_correct t a b. fold (@FT2R t); auto. 
 Qed.
 
-
 End FastTwoSumAcc.
 
 Section FastTwoSumFacts.
@@ -244,13 +274,7 @@ Hypothesis Hle : Rabs (FT2R b) <= Rabs (FT2R a).
 Fact Fast2Sumf0 : F2Rp (DDModels.Fast2Sum a (Zconst t 0) ) = F2Rp (a, Zconst t 0).
 Proof. 
 rewrite /DDModels.Fast2Sum/F2Rp/fst/snd !BPLUS_B2R_zero. 
-Search Binary.Bplus (0).
-
-!(Rplus_0_r, Rminus_0_l, round_0) !round_generic //.
-  ring_simplify(FT2R a- FT2R a)%R; rewrite ?Ropp_0 // ;
-  try apply: generic_format_0.
-unfold FT2R. apply: Binary.generic_format_B2R.
-Qed.
+Admitted.
 
 
 End FastTwoSumFacts. 
