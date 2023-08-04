@@ -472,4 +472,11 @@ refine (Rle_trans _ _ _ (Rplus_le_compat_l  _ _ _ H) _);
   rewrite Rabs_R1; nra.
 Qed.
 
+Lemma FT2R_opp (t : type) (x : ftype t) {NAN: Nans} : 
+  - FT2R x = FT2R (BOPP x).
+Proof.
+unfold BOPP, FT2R.
+now rewrite Binary.B2R_Bopp.
+Qed.
+
 End NAN.

@@ -138,6 +138,16 @@ destruct FIN as (FINs & FINd); simpl in FINs.
 BPLUS_correct t a b => H. rewrite -H; nra. 
 Qed.
 
+Lemma TwoSum_exact':
+FT2R a + FT2R b = rnd (FT2R a + FT2R b) -> 
+FT2R (TwoSumF_sum a b) = FT2R a + FT2R b .
+Proof.
+move => H. 
+apply TwoSum_exact in H.
+rewrite TwoSumF_correct in H => //;
+nra.
+Qed.
+
 Lemma TwoSum0 :
 FT2R a + FT2R b = 0 -> 
 F2Rp (TwoSumF a b) = (0,0).
