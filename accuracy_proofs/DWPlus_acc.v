@@ -22,10 +22,19 @@ replace (Fast2Sum (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y))) with
   (Fast2Sum_sum (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y)), 
   Fast2Sum_err (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y))) => //.
 intros.
-destruct FIN0 as (FINm & FINp); clear FIN. 
+destruct FIN0 as (FINm & _); clear FIN. 
 unfold Fast2Mult_mul, Fast2Mult_err, fst, snd in *; simpl in *.
+unfold Fast2Sum_sum, fst, Fast2Sum in FINm.
+set (f1 :=(TwoSumF_err xh y)) in *.
+set (f2:= (TwoSumF_sum xh y)) in *.
 split; simpl; auto.
-Admitted.
+set (f3:= (BPLUS xl f1)) in *.
+destruct f2; destruct f3; destruct s; destruct s0;
+ auto; try contradiction. 
+destruct f2; destruct f1;   destruct xl; 
+  destruct s; destruct s0; destruct s1; 
+ auto; try contradiction. 
+Qed.
 
 Let sh := fst (TwoSumF xh y).
 Let sl := snd (TwoSumF xh y).
@@ -50,28 +59,568 @@ destruct (BPLUS xl sl); destruct (BPLUS xh y); destruct s;
   destruct s0; try contradiction; auto.
 Qed.
 
-(* check that the necessary ordering for Fast2Sum holds *)
-Lemma Fast2Sum_CorrectDWPlusFP
-  (Hy:  Rabs (FT2R y) <=  Rabs (FT2R xh) \/ Rabs (FT2R xh) <=  Rabs (FT2R y)): 
-  Rabs (FT2R v) <= Rabs (FT2R sh).
-Proof.
-destruct Hy as [Hy | Hy].
-apply Rabs_le_inv in Hy.
-destruct (Rlt_or_le (FT2R xh) 0) as [Hx|Hx].
-apply Rabs_left in Hx; rewrite Hx Ropp_involutive in Hy.
-destruct (Rle_or_lt (FT2R y) (- Rabs (FT2R xh) /2)) as [Hy2|Hy2].
-{ assert (FT2R sh = FT2R xh + FT2R y). 
-pose proof Sterbenz.sterbenz radix2 (SpecFloat.fexp (fprec t) (femax t))
- (FT2R y) (- (FT2R xh)).
-subst sh; rewrite /TwoSumF/fst.
-pose proof FIN1.
-destruct H0 as (FIN1 &  FIN2).
-simpl in FIN1; BPLUS_correct t xh y.
+End CorrectDWPlusFP.
 
-assert (FT2R sl = 0). 
+Section  CorrectDWPlusFP'.
+
+Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
+Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Notation u   := (bpow Zaux.radix2 (- fprec t)).
+
+Fact fexp_not_FTZ :  Exp_not_FTZ fexp.
+Proof.
+rewrite /Exp_not_FTZ/fexp; intros.
+have H1: (1 - fprec t <= 0)%Z.
+pose proof (@fprec_lb t); lia.
+destruct (Z.le_ge_cases  (e - fprec t) (SpecFloat.emin (fprec t) (femax t))).
+apply Z.max_r in H; rewrite H => //.
+destruct (Z.le_ge_cases  (SpecFloat.emin (fprec t) (femax t) + 1 - fprec t)
+   (SpecFloat.emin (fprec t) (femax t))) => //.
+apply Z.max_r in H0; rewrite H0; try lia => //.
+apply Z.max_l in H0; rewrite H0; try lia => //.
+apply Z.max_l in H; rewrite H => //.
+destruct (Z.le_ge_cases  (e - fprec t + 1 - fprec t) 
+  (SpecFloat.emin (fprec t) (femax t))) .
+apply Z.max_r in H0; rewrite H0; try lia => //.
+apply Z.max_l in H0; rewrite H0; try lia => //.
+Qed.
+
+(* Lemma 2.1 *)
+Lemma roundN_plus_ulp_FLT  (a b : ftype t) : 
+      ( (FT2R a + FT2R b) <> 0) ->
+        Rmax (ulp (FT2R a) /2) (ulp (FT2R b)/ 2) <= Rabs (rounded t (FT2R a + FT2R b)).
+Proof.
+move=> sn0.
+have Hv: Valid_exp fexp by apply FLT.FLT_exp_valid.
+have Hexp: Exp_not_FTZ fexp by apply  fexp_not_FTZ.
+have Hv2: 
+Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
+  by apply BinarySingleNaN.valid_rnd_round_mode.
+have Ha: generic_format radix2 fexp (FT2R a) by
+  rewrite /FT2R; apply Binary.generic_format_B2R. 
+have Hb: generic_format radix2 fexp (FT2R b) by 
+  rewrite /FT2R; apply Binary.generic_format_B2R. 
+have Hrnd: rounded t (FT2R a + FT2R b) <> 0.
+rewrite /rounded; apply Plus_error.round_plus_neq_0 => //.
+have Hbpow : 
+bpow radix2 (@emin t) / 2 <=
+bpow radix2 (@emin t) .
+  apply Rdiv_le_left; try nra.
+  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
+  try nra. apply bpow_ge_0.
+destruct (Req_dec (FT2R a) 0). 
+{ move : sn0. rewrite H Rplus_0_l. 
+  move=> sn0. 
+  rewrite /rounded round_generic => //.
+  apply Rmax_lub.
+  refine (Rle_trans _ (ulp 0) _ _ _ ).
+  rewrite /ulp ulp_FLT_0 => //. 
+  refine (Rle_trans _ _ _ _ (ulp_le_abs radix2 fexp _ _ _)) => //.
+  apply ulp_ge_ulp_0 => //.
+  apply Rdiv_le_left; try nra.
+  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
+    try nra.  rewrite Rmult_1_r. apply ulp_le_abs => //. 
+  apply Rabs_pos. } 
+destruct (Req_dec (FT2R b) 0). 
+{ move : sn0. rewrite H0 Rplus_0_r. 
+  move=> sn0. 
+  rewrite /rounded round_generic => //.
+  apply Rmax_lub.
+  apply Rdiv_le_left; try nra.
+  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
+    try nra.  rewrite Rmult_1_r. apply ulp_le_abs => //. 
+  apply Rabs_pos.
+  refine (Rle_trans _ (ulp 0) _ _ _ ).
+  rewrite /ulp ulp_FLT_0 => //.
+  refine (Rle_trans _ _ _ _ (ulp_le_abs radix2 fexp _ _ _)) => //.
+  apply ulp_ge_ulp_0 => //. } 
+unfold Rmax.
+destruct (Rle_dec (ulp (FT2R a) /2) (ulp (FT2R b) / 2)).
+destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t)) (Rabs (FT2R b))).
+{ rewrite Rplus_comm.
+  refine (Rle_trans _ _ _ _  _).
+  2: apply round_plus_ge_ulp => //.
+  replace (FT2R b / IZR radix2) with (FT2R b  * bpow radix2 (-1)) => //.
+  rewrite ulp_FLT_exact_shift /ulp/fexp/FLT_exp => //=. 
+  field_simplify; try nra. 
+  apply mag_ge_bpow => //.
+  eapply Rle_trans.
+  2: apply H1. apply bpow_le. rewrite /emin. lia.
+  have : 
+  (SpecFloat.emin (fprec t) (femax t) + fprec t + 1  <= mag radix2 (FT2R b))%Z.
+  apply mag_ge_bpow => //.
+  eapply Rle_trans.
+  2: apply H1. apply bpow_le. rewrite /emin. lia.
+  lia. rewrite Rplus_comm => //. } 
+rewrite Rplus_comm.
+  refine (Rle_trans _ _ _ _  _).
+2: apply round_plus_ge_ulp => //.
+rewrite /ulp !ulp_FLT_small => //.
+  refine (Rlt_trans _ _ _ _ H1). 
+rewrite Rabs_div_Raux.
+apply Rdiv_lt_left.
+apply Rabs_pos_lt.
+apply not_0_IZR => //.
+  refine (Rle_lt_trans _ _ _ _  (Rmult_lt_compat_l _ 1 _ _ _ ));
+    try nra.  
+apply Rabs_pos_lt => //.
+simpl; rewrite Rabs_right; try nra.
+apply not_0_IZR => //.
+rewrite Rplus_comm => //.
+apply Rnot_le_lt in n.
+destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t)) (Rabs (FT2R a))).
+{ refine (Rle_trans _ _ _ _  _).
+  2: apply round_plus_ge_ulp => //.
+  replace (FT2R a / IZR radix2) with (FT2R a  * bpow radix2 (-1)) => //.
+  rewrite ulp_FLT_exact_shift /ulp/fexp/FLT_exp => //=. 
+  field_simplify; try nra. 
+  apply mag_ge_bpow => //.
+  eapply Rle_trans.
+  2: apply H1. apply bpow_le. rewrite /emin. lia.
+  have : 
+  (SpecFloat.emin (fprec t) (femax t) + fprec t + 1  <= mag radix2 (FT2R a))%Z.
+  apply mag_ge_bpow => //.
+  eapply Rle_trans.
+  2: apply H1. apply bpow_le. rewrite /emin. lia.
+  lia. } 
+refine (Rle_trans _ _ _ _  _).
+2: apply round_plus_ge_ulp => //.
+rewrite /ulp !ulp_FLT_small => //.
+  refine (Rlt_trans _ _ _ _ H1). 
+rewrite Rabs_div_Raux.
+apply Rdiv_lt_left.
+apply Rabs_pos_lt.
+apply not_0_IZR => //.
+  refine (Rle_lt_trans _ _ _ _  (Rmult_lt_compat_l _ 1 _ _ _ ));
+    try nra.  
+apply Rabs_pos_lt => //.
+simpl; rewrite Rabs_right; try nra.
+apply not_0_IZR => //.
+Qed.
+
+Let rnd_p {t} := 
+round radix2 (FLX_exp (fprec t)) (Znearest choice).
+
+
+
+
+(* the necessary ordering for Fast2Sum holds *)
+Lemma Fast2Sum_CorrectDWPlusFP (xh y xl: ftype t): 
+  Binary.is_finite _ _ (BPLUS xl (snd (TwoSumF xh y))) = true -> 
+  is_finite_p (TwoSumF xh y) -> 
+  FT2R xh + FT2R y <> 0 -> 
+  double_word xh xl->
+  Rabs (FT2R (BPLUS xl (snd (TwoSumF xh y)))) <= Rabs (FT2R (fst (TwoSumF xh y))).
+Proof.
+intros FIN1 FIN2 S0 DWx.
+
+have Hv: Valid_exp fexp by apply FLT.FLT_exp_valid.
+have Hexp: Exp_not_FTZ fexp by apply  fexp_not_FTZ.
+have Hv2: 
+Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
+  by apply BinarySingleNaN.valid_rnd_round_mode.
+have Ha: generic_format radix2 fexp (FT2R xh) by
+  rewrite /FT2R; apply Binary.generic_format_B2R. 
+have Hb: generic_format radix2 fexp (FT2R y) by 
+  rewrite /FT2R; apply Binary.generic_format_B2R. 
+have Hc: generic_format radix2 fexp (FT2R xl) by 
+  rewrite /FT2R; apply Binary.generic_format_B2R. 
+have Hrnd: rounded t (FT2R xh + FT2R y) <> 0.
+rewrite /rounded; apply Plus_error.round_plus_neq_0 => //.
+
+
+case:(Req_dec (FT2R xh) 0)=> hxh0.
+{ pose proof TwoSum0 xh y FIN2 hxh0 as H.
+  BPLUS_correct t xl (snd (TwoSumF xh y)); clear H5.
+  inversion H. rewrite /fst/snd/TwoSumF; 
+  fold (@FT2R t); rewrite H1 H2 Rplus_0_r.
+  have H0 : FT2R xl = 0.
+  { move: DWx. rewrite /double_word hxh0 => DWx.
+    rewrite -(Rplus_0_l (FT2R xl)). 
+    symmetry in DWx; rewrite /rounded in DWx.
+    apply: (Plus_error.round_plus_eq_0
+        radix2 (SpecFloat.fexp (fprec t) (femax t))
+        (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) );
+    unfold FT2R ;
+    try apply:generic_format_0;
+    try apply Binary.generic_format_B2R;
+    try apply DWx. }
+  rewrite H0 round_0 Rabs_R0. apply: Rabs_pos. }
+
+have FIN3: Binary.is_finite (fprec t) (femax t) (BPLUS xh y) = true. admit.
+
+(* cases on underflow *)
+destruct (Rlt_or_le 
+  (Rabs (FT2R xh + FT2R y))
+  (bpow radix2 (@emin t + fprec t - 1))).
+{ 
+refine (Rle_trans _ _ _ _ _ ).
+2: rewrite /fst/TwoSumF; BPLUS_correct t xh y.
+2: apply roundN_plus_ulp_FLT => //.
+
+set (g:= snd (TwoSumF xh y)) in *.
+BPLUS_correct t xl g; subst g; clear H4.
+fold (TwoSumF_err xh y) (TwoSumF_sum xh y) (@FT2R t).
+rewrite TwoSumF_correct /TwoSumF_sum/fst/TwoSumF.
+rewrite BPLUS_UF_exact => //=.
+
+have xle:= (dw_ulp xh xl DWx).
+rewrite round_generic. field_simplify_Rabs.
+unfold Rmax.
+fold ulp in xle.
+destruct (Rle_dec (ulp (FT2R xh) /2) (ulp (FT2R y) / 2)).
+refine (Rle_trans _ _ _ xle _ ) .
+refine (Rle_trans _ (ulp (FT2R xh) / 2) _ _ _ ) => //.
+apply Req_le; field_simplify => //.
+refine (Rle_trans _ (/ 2 * ulp (FT2R xh)) _ _ _ ) => //.
+apply Req_le; field_simplify => //.
+match goal with |- context[generic_format _ _ ?a] => 
+  field_simplify a
+end.
+  rewrite /FT2R; apply Binary.generic_format_B2R.
+admit.
+}
+
+(* cases on underflow *)
+destruct (Rlt_or_le 
+  (Rabs (FT2R xh + FT2R xl))
+  (bpow radix2 (@emin t + fprec t - 1))).
+{ have hxl : FT2R xl = 0.
+move : DWx. rewrite /double_word. 
+rewrite /rounded round_generic. 
+move => DWx; nra.
+apply Plus_error.FLT_format_plus_small => //.
+refine (Rle_trans _ _ _ (Rlt_le _ _ H0) _).
+apply bpow_le. fold (@emin t); lia.
+BPLUS_correct t xl (snd (TwoSumF xh y)).
+fold (@FT2R t); rewrite hxl Rplus_0_l round_generic.
+fold (TwoSumF_err xh y) (TwoSumF_sum xh y). 
+  rewrite TwoSumF_correct /TwoSumF_sum/fst/TwoSumF => //.
+rewrite Rabs_minus_sym.
+BPLUS_correct t xh y; fold (@FT2R t).
+refine (Rle_trans _ _ _ (error_le_ulp_round _ _ _ _ ) _).
+refine (Rle_trans _ _ _ _ _) .
+2: apply (ulp_le_abs radix2 fexp) => //.
+nra. admit. admit. } 
+
+(* cases on underflow *)
+destruct (Rlt_or_le 
+  (Rabs (FT2R xl + FT2R (snd (TwoSumF xh y))))
+  (bpow radix2 (@emin t + fprec t - 1))).
+admit.
+
+have DWx2 : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl).
+{ move : DWx. rewrite /double_word/DWPlus.double_word.
+rewrite /rounded round_FLT_FLX. move => DWx; repeat split => //;
+  try apply (generic_format_FLX_FLT radix2 (@emin t)) => //.
+  fold (@emin t); nra. } 
+
+set (g:= (snd (TwoSumF xh y))) in *.
+BPLUS_correct t xl g.
+subst g.
+
+pose proof @TwoSumEq_FLT NANS t _ _ FIN2 as H2;
+unfold F2Rp in H2.
+  
+fold (@FT2R t).
+replace (FT2R (snd (TwoSumF xh y)))
+  with (TwoSum_err (fprec t) choice (FT2R xh) (FT2R y)) by
+  inversion H2 => //.
+replace (FT2R (fst (TwoSumF xh y)))
+  with (TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y)) by
+inversion H2 => //.
+
+clear H5 H6 H7.
+
+rewrite /rounded !round_FLT_FLX => //.
+
+clear H2 DWx H H0 H1 FIN1 FIN2 FIN3.
+
+wlog xhy : y xh S0 Ha Hb Hc Hrnd hxh0 DWx2
+  /  Rabs (FT2R y) <= Rabs (FT2R xh).
+  move=> Hwlog.
+  case:(Rle_lt_dec (Rabs (FT2R y)) (Rabs (FT2R xh)))=> absyxh.
+    by apply: ( Hwlog y xh)=>//.
+
+(* we can use Hwlog as long as (xl + xh) and (xl + y) are DWs *) 
+
+  have yn0: FT2R y <> 0.
+    by move=>y0; move:  absyxh; rewrite y0 Rabs_R0; move:(Rabs_pos (FT2R xh)); lra. 
+
+have hf : (1 < fprec t)%Z by pose proof @fprec_lb t; lia.
+
+have xle:= (@DWPlus.dw_ulp _ hf choice (FT2R xh) (FT2R xl) DWx2).
+
+have xluy: Ulp.ulp radix2 (FLX_exp (fprec t)) (FT2R xh) <=
+              Ulp.ulp radix2 (FLX_exp (fprec t)) (FT2R y).
+    apply ulp_le => //; try nra. 
+    apply FLX_exp_valid.
+    apply fprec_gt_0.
+    apply FLX_exp_monotone.
+
+case:  xluy=> xluy.
+    have yE: FT2R y = @rnd_p t (FT2R y + FT2R xl). rewrite /rnd_p. 
+    have Hch: choice = (fun n : Z => negb (Z.even n)). admit.
+    symmetry.  
+    apply: (@rulp2p' (fprec t) hf choice Hch (FT2R xh) (FT2R y) (FT2R xl)) => //.
+    admit.
+
+ 
+move : DWx2. rewrite /DWPlus.double_word. 
+  repeat move => []. move =>  A B DWx2.
+
+case:  (Hwlog xh y)=>//; try lra. 
+rewrite Rplus_comm => //.
+rewrite /DWPlus.double_word; repeat split => //.
+
+admit.  admit. admit.
+
+case:(Rle_lt_or_eq_dec  _  _  xle)=> xel'.
+
+have HB: ~ Bayleyaux.is_pow radix2 (FT2R y).
+    move => [ey yE].
+ move:  (absyxh)  (xluy).
+    have-> :  Ulp.ulp radix2 (FLX_exp (fprec t)) (FT2R y) = 
+            bpow radix2 (ey + 1 - fprec t) => //.
+      move: yE; rewrite -(Rabs_pos_eq (bpow radix2 ey)); last by apply: bpow_ge_0.
+      case/Rabs_eq_Rabs => // H. 
+      rewrite H  ulp_bpow /FLX_exp //=.
+      rewrite H ulp_opp  ulp_bpow /FLX_exp //=.
+    rewrite yE ulp_neq_0 // /cexp /FLX_exp.
+    move=> h1. move /bpow_inj => h2.
+    have {} h2:  ((ey + 1 ) = mag radix2 (FT2R xh) )%Z by lia.
+    have : bpow radix2 ey <= Rabs (FT2R xh).
+      have ->: (ey = (mag radix2 (FT2R xh) - 1))%Z by lia.
+      apply:(bpow_mag_le radix2 (FT2R xh)); lra.
+    lra.
+
+case:  (Hwlog xh y)=>//; try lra. 
+rewrite Rplus_comm => //.
+rewrite /DWPlus.double_word; repeat split.
+admit. admit. symmetry.
+apply rulp2p => //; last lra. admit. admit. admit.
+
+{ 
+
+have Hch: choice = (fun n : Z => negb (Z.even n)).
+admit.
+have Hbn :  (3 <= fprec t)%Z.
+admit.
+have Hy: generic_format beta (FLX_exp (fprec t)) (FT2R y).
+admit.
+
+fold (@FT2R t).
+
+pose proof (part_case_ulps
+  (fprec_gt_one t) Hch Hbn DWx2 Hy).
+
+
+refine (Rle_trans _ _ _ _ _).
+apply H.
+
+(FT2R xh) (FT2R xl).
+
+Search ( _ <= fprec _)%Z.
+
+ apply round_le. admit. admit.
+fold (@FT2R t). Search Rplus round.
+(*refine (Rle_trans _ _ _ _ (ulp_le_abs radix2 fexp _ _ _)).
+refine (Rle_trans _ _ _ (Rabs_triang _ _) _).
+refine (Rle_trans _ _ _ (Rplus_le_compat _ _ _ _ _ _) _).
+apply xle.
+rewrite /snd/TwoSum.
+fold (TwoSumF_err xh y).
+apply TwoSum_accuracy.
+
+
+
+
+Search Rle Ulp.ulp Rabs. 
+
+Search (~ Bayleyaux.is_pow _ _).
+
+have HB: ~ Bayleyaux.is_pow radix2 (FT2R y).
+    move => [ey yE].
+ move:  (absyxh)  (xluy).
+    have-> :  Ulp.ulp radix2 (FLX_exp (fprec t)) (FT2R y) = 
+            bpow radix2 (ey + 1 - fprec t) => //.
+      move: yE; rewrite -(Rabs_pos_eq (bpow radix2 ey)); last by apply: bpow_ge_0.
+      case/Rabs_eq_Rabs => // H. 
+      rewrite H  ulp_bpow /FLX_exp //=.
+      rewrite H ulp_opp  ulp_bpow /FLX_exp //=.
+    rewrite yE ulp_neq_0 // /cexp /FLX_exp.
+    move=> h1. move /bpow_inj => h2.
+    have {} h2:  ((ey + 1 ) = mag radix2 (FT2R xh) )%Z by lia.
+    have : bpow radix2 ey <= Rabs (FT2R xh).
+      have ->: (ey = (mag radix2 (FT2R xh) - 1))%Z by lia.
+      apply:(bpow_mag_le radix2 (FT2R xh)); lra.
+    lra.
+
+
+destruct (Bayleyaux.is_pow_dec radix2 (FT2R y)) as [Hi|Hi].
+{ 
+ have yE: FT2R y = @rnd_p t (FT2R y + FT2R xl). rewrite /rnd_p.
+  symmetry. apply rulp2p => //; last lra. admit.
+    move => [ey yE].
+ move:  (absyxh)  (xluy).
+    have-> :  Ulp.ulp radix2 (FLX_exp (fprec t)) (FT2R y) = 
+            bpow radix2 (ey + 1 - fprec t) => //.
+      move: yE; rewrite -(Rabs_pos_eq (bpow radix2 ey)); last by apply: bpow_ge_0.
+      case/Rabs_eq_Rabs => // H. 
+      rewrite H  ulp_bpow /FLX_exp //=.
+      rewrite H ulp_opp  ulp_bpow /FLX_exp //=.
+    rewrite yE ulp_neq_0 // /cexp /FLX_exp.
+    move=> h1. move /bpow_inj => h2.
+    have {} h2:  ((ey + 1 ) = mag radix2 (FT2R xh) )%Z by lia.
+    have : bpow radix2 ey <= Rabs (FT2R xh).
+      have ->: (ey = (mag radix2 (FT2R xh) - 1))%Z by lia.
+      apply:(bpow_mag_le radix2 (FT2R xh)); lra.
+    lra.
+
+case:  (Hwlog xh y)=>//; try lra. admit. 
+admit. admit. admit.
+
+case:  (Hwlog xh y)=>//; try lra. admit. 
+rewrite /DWPlus.double_word; repeat split.
+admit. admit. symmetry.
+apply rulp2p => //. admit. admit. admit. admit.
+
+destruct (Bayleyaux.is_pow_dec radix2 (FT2R y)) as [Hi|Hi].
+ 
+    have Hch: choice = (fun n : Z => negb (Z.even n)). admit.
+    symmetry.  
+    apply: (@rulp2p (fprec t) hf choice Hch ) => //.
+
+Search (Bayleyaux.is_pow).
+    admit.
+
+Bayleyaux.rbpowpuW
+rulp2p Bayleyaux.rbpowpu
+case:  (Hwlog xh y)=>//; try lra. admit.  
+
+
+admit. admit. admit. admit.  admit. admit.
+case:  (Hwlog y xh)=>//; try lra. 
+  
+Search Ulp.ulp Rabs (_ = _).
+
+admit.  admit. admit. admit. admit.  admit. admit.
+  
+   rewrite rulp2p //; last lra.
+    move => [ey yE].
+    move:  (absyxh)  (xluy).
+    have->: ulp y = pow (ey + 1 -p).
+      move: yE; rewrite -(Rabs_pos_eq (pow ey)); last by apply: bpow_ge_0.
+      by case/Rabs_eq_Rabs => ->; rewrite 1?(ulp_opp) ulp_bpow /fexp.
+    rewrite yE ulp_neq_0 // /cexp /fexp.
+    move=>h /bpow_inj => h2.
+    have {} h2:  ((ey + 1 ) = mag radix2 xh )%Z by lia.
+    have : (pow ey) <= Rabs xh.
+      have ->: (ey = (mag radix2 xh - 1))%Z by lia.
+      apply:(bpow_mag_le two xh); lra.
+    lra.
+  case:(part_case_ulp  DWx Fy)=>//; first lra.
+  move=> he f2sc.
+  split.    suff ->: relative_errorDWFP xh xl y = 0 by apply:  boundDWFP_ge_0.
+  rewrite rel_errorE he  Rabs_R0; ring.
+  by apply:F2Sum_correct_DW'.
+
+
+
+
+*) *)
 Admitted.
 
-End CorrectDWPlusFP.
+Let emin :=  (@DDModels.emin t).
+
+
+Variables (xh xl y : ftype t).
+Hypothesis  xE : double_word xh xl.
+Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
+
+
+Theorem DWPlusFP_eq :
+  DWPlus.DWPlusFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y) = F2Rp (DWPlusFP xh xl y).
+Proof.
+move : FIN. move => [].
+rewrite /DWPlus.DWPlusFP/DWPlusFP/fst/snd.
+replace  (TwoSumF xh y ) with
+  (fst (TwoSumF xh y), snd (TwoSumF xh y )) => //.
+replace
+(Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y))))
+with 
+(fst (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y)))),
+snd (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y))))) => //.
+move => FIN1 FIN2. 
+have FIN3: (is_finite_p (TwoSumF xh y)) by admit. 
+have FIN4 : Binary.is_finite _ _ (BPLUS xl (snd (TwoSumF xh y))) = true by admit.
+have Heq: (TwoSum (fprec t) choice (FT2R xh) (FT2R y)) =
+  (TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) ,
+    TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) ) => //.
+have Herr : TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) = FT2R (snd (TwoSumF xh y)).
+{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
+inversion H. rewrite H2 /TwoSumF => //. } 
+have Hsum : TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) = FT2R (fst (TwoSumF xh y)).
+{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
+inversion H. rewrite H1 /TwoSumF => //. } 
+
+
+rewrite Herr Hsum.
+
+destruct (Req_dec (FT2R xh + FT2R y) 0).
+{ 
+apply TwoSumF_eq in H => //.
+inversion H.
+rewrite Fast2Sum_2sum0' => //; 
+rewrite /TwoSumF/fst/snd.
+rewrite H2 H1 Rplus_0_r.
+rewrite F2Sum.Fast2Sum0f round_generic => //. 
+all: try apply (generic_format_FLX_FLT radix2 emin);
+try apply Binary.generic_format_B2R.
+now rewrite H2 H1. } 
+
+destruct (Rle_or_lt 
+(bpow radix2 (emin + fprec t - 1))  
+(Rabs
+  (Binary.B2R (fprec t) (femax t) xl +
+   Binary.B2R (fprec t) (femax t) (snd (TwoSumF xh y))))) as [HUF|HUF].
+
+{ 
+rewrite -FastTwoSumEq_FLT => //; f_equal.
+{ BPLUS_correct t xl (snd (TwoSumF xh y)).
+rewrite (round_FLT_FLX radix2 (@DDModels.emin t)) => //. } 
+ (*
+bpow radix2 (emin + fprec t - 1) <=
+      Rabs
+        (Binary.B2R (fprec t) (femax t) xl +
+         Binary.B2R (fprec t) (femax t) (snd (TwoSumF xh y))) -> 
+Rabs (FT2R (BPLUS xl (snd (TwoSumF xh y)))) <= Rabs (FT2R (fst (TwoSumF xh y))) *)
+admit. }
+
+
+rewrite -FastTwoSumEq_FLT => //. f_equal.
+
+rewrite BPLUS_UF_exact => //.
+rewrite round_generic => //; f_equal.
+apply: (generic_format_FLX_FLT _ emin).
+apply: Plus_error.FLT_format_plus_small. 
+admit. admit.
+refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
+apply bpow_le; lia.
+
+rewrite BPLUS_UF_exact => //. 
+(* Rabs
+        (Binary.B2R (fprec t) (femax t) xl +
+         Binary.B2R (fprec t) (femax t) (snd (TwoSumF xh y))) <
+      bpow radix2 (emin + fprec t - 1) -> 
+Rabs (FT2R xl + FT2R (snd (TwoSumF xh y))) <= Rabs (FT2R (fst (TwoSumF xh y))) *)
+
+(* go by cases on RHS equals 0 *) admit. 
+
+Admitted. 
+
+End CorrectDWPlusFP'.
+
 
 Section AccuracyDWPlusFP.
 
@@ -152,7 +701,6 @@ Proof.
   rewrite  TwoSum_correct //= TwoSum_sumE  xh0 Rplus_0_l round_generic //; ring.
 Qed.
 
-Lemma
 
 Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u^2.
 Proof.

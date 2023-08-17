@@ -4,8 +4,7 @@
 Require Import vcfloat.VCFloat.
 Require Import common op_defs.
 
-Section NAN.
-
+Require Import mathcomp.ssreflect.ssreflect.
 
 Definition is_finite_p {t} (xy : ftype t * ftype t) : Prop :=
   Binary.is_finite _ _ (fst xy) = true /\ Binary.is_finite _ _ (snd xy) = true.
@@ -420,8 +419,8 @@ destruct (Rlt_or_le (Rabs (del * x)) (Rabs eta)) as [HdxLte|HeLedx].
 refine (Rle_trans _ _ _ _ C); apply Rle_refl.
 subst rx ; unfold mode. rewrite D.
 destruct (Rmult_integral _ _ A) as [Zd|Ze].
-{ now rewrite Zd, Rplus_0_r, Rmult_1_r. }
-exfalso; revert HdxLte; rewrite Ze, Rabs_R0; apply Rle_not_lt, Rabs_pos. }
+{ now rewrite Zd Rplus_0_r Rmult_1_r. }
+exfalso; revert HdxLte; rewrite Ze Rabs_R0; apply Rle_not_lt, Rabs_pos. }
 exists (x * del); split.
 rewrite Rabs_mult.
 refine (Rle_trans _ _ _ _ _); 
@@ -433,10 +432,10 @@ apply Rcomplements.Rle_div_r; field_simplify; try lra.
 apply bpow_le; lia.
 destruct (Rmult_integral _ _ A) as [Zd|Ze].
 { assert ( Rabs eta = 0). apply Rle_antisym; [|apply Rabs_pos].
-now revert HeLedx; rewrite Zd, Rmult_0_l, Rabs_R0. 
+now revert HeLedx; rewrite Zd Rmult_0_l Rabs_R0. 
 apply Rabs_eq_R0 in H. subst rx ; unfold mode. rewrite D.
-rewrite H, Zd; nra. } 
-subst rx ; unfold mode. rewrite D, Ze; nra.
+rewrite H Zd; nra. } 
+subst rx ; unfold mode. rewrite D Ze; nra.
 Qed.
 
 (* normal error term *)
@@ -472,4 +471,52 @@ refine (Rle_trans _ _ _ (Rplus_le_compat_l  _ _ _ H) _);
   rewrite Rabs_R1; nra.
 Qed.
 
-End NAN.
+Lemma BPLUS_is_finite_comm {NAN : Nans } {t} (a b : ftype t): 
+Binary.is_finite (fprec t) (femax t) (BPLUS a b) = true -> 
+Binary.is_finite (fprec t) (femax t) (BPLUS b a) = true.
+Proof.
+move => FIN1.
+assert (Binary.is_finite _ _ a = true /\ 
+  Binary.is_finite _ _ b = true). 
+  apply BPLUS_finite_e => //.
+move : H; move => [] FINa FINb.
+have: @Bplus_no_overflow t (FT2R b) (FT2R a).
+  apply is_finite_sum_no_overflow in FIN1.
+  move : FIN1.   rewrite /Bplus_no_overflow. 
+  move => FIN1. rewrite Rplus_comm => //.
+pose proof 
+  Binary.Bplus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax _)
+  (plus_nan _) BinarySingleNaN.mode_NE b a FINb FINa.
+rewrite /Bplus_no_overflow/FT2R. move => Hov.
+apply Rlt_bool_true in Hov. rewrite Hov in H.
+simpl in H; destruct H as ( _ & B &  _) => //.
+Qed.
+
+Lemma BPLUS_comm_R  {NAN : Nans } {t} (a b : ftype t): 
+Binary.is_finite (fprec t) (femax t) (BPLUS a b) = true -> 
+FT2R (BPLUS a b) = FT2R (BPLUS b a). 
+Proof.
+move => FIN1.
+assert (Binary.is_finite _ _ a = true /\ 
+  Binary.is_finite _ _ b = true). 
+  apply BPLUS_finite_e => //.
+move : H; move => [] FINa FINb.
+pose proof 
+  Binary.Bplus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax _)
+  (plus_nan _) BinarySingleNaN.mode_NE b a FINb FINa.
+pose proof 
+  Binary.Bplus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax _)
+  (plus_nan _) BinarySingleNaN.mode_NE a b FINa FINb.
+have: @Bplus_no_overflow t (FT2R b) (FT2R a).
+  apply is_finite_sum_no_overflow in FIN1.
+  move : FIN1. rewrite /Bplus_no_overflow. 
+  move => FIN1. rewrite Rplus_comm => //.
+have: @Bplus_no_overflow t (FT2R a) (FT2R b).
+  apply is_finite_sum_no_overflow in FIN1 => //.
+rewrite /Bplus_no_overflow/FT2R. move => Hov1 Hov2.
+apply Rlt_bool_true in Hov2, Hov1. 
+  rewrite Hov2 in H; rewrite Hov1 in H0.
+simpl in H, H0; destruct H as ( A &  _);
+  destruct H0 as ( B &  _).
+rewrite A B Rplus_comm => //. 
+Qed.

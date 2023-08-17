@@ -70,6 +70,42 @@ Context  {t : type}.
 Definition double_word : ftype t -> ftype t -> Type :=
   fun xh xl => FT2R xh = rounded t (FT2R xh + FT2R xl).
 
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+
+Fact dw_ulp xh xl: 
+  double_word xh xl -> Rabs (FT2R xl) <= /2 * ulp (FT2R xh).
+Proof.
+unfold double_word; intros.
+assert (FT2R xl = - (rounded t (FT2R xh + FT2R xl) 
+  - (FT2R xh + FT2R xl))).
+{ rewrite <-H; nra. } 
+rewrite H0, Rabs_Ropp.
+eapply Rle_trans.
+apply Ulp.error_le_half_ulp_round.
+apply FLT.FLT_exp_valid.
+apply (fprec_gt_0 t).
+apply FLT.FLT_exp_monotone.
+fold choice.
+rewrite H at 2; unfold rounded.
+now apply Req_le.
+Qed.
+
+
+Fact dw_le xh xl: FT2R xh <> 0 -> 
+  double_word xh xl -> Rabs (FT2R xl) <= Rabs (FT2R xh).
+Proof.
+intros. 
+apply dw_ulp in X.
+refine (Rle_trans _ _ _ X _).
+refine (Rle_trans _ _ _ _ 
+  (Ulp.ulp_le_abs Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
+         _ H _)).
+refine (Rle_trans _ _ _ (Rmult_le_compat _ 1 _ _ _ _ _ _) _); try nra.
+apply Ulp.ulp_ge_0.
+apply Rle_refl. nra.
+apply Binary.generic_format_B2R.
+Qed.
+
 End DWord.
 
 Section DWops.
