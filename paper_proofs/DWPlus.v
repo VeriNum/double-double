@@ -912,6 +912,7 @@ have Fsxl: format (sign xl  * /2).
   rewrite /sign; case(Rlt_bool xl 0); try apply/generic_format_opp;
   change (format (pow 0)); apply/generic_format_bpow; rewrite /fexp;lia.
 
+
 have F1m_2:   format (- / 2).
   by  apply/generic_format_opp; change (format (pow (-1))); apply/format_bpow.
 have F1_2:    format ( / 2).
@@ -925,10 +926,11 @@ have F3: format 3.
   by apply:bpow_le; lia.
 pose v' := xl + sl xh y.
 have v'E':  v' = /2 * ulp xh \/ v'= -(/2) * ulp xh \/
- (v' = 3/2 * ulp xh  /\ pow p <= Rabs  (IZR (Mxh + My)))
-\/ (v' = -(3/2) * ulp xh  /\ pow p <= Rabs  (IZR (Mxh + My))).
+ (v' = 3/2 * ulp xh  /\ pow p - 1 <= Rabs (rnd_p (IZR (Mxh + My))))
+\/ (v' = -(3/2) * ulp xh  /\ pow p - 2 <= Rabs (rnd_p (IZR (Mxh + My)))).
   rewrite /v' v'E.
-  case: (Rle_lt_dec  (Rabs (IZR (Mxh + My))) (pow p -1))=> hMs.
+
+ case: (Rle_lt_dec  (Rabs (IZR (Mxh + My))) (pow p - 1 ))=> hMs.
     rewrite (round_generic _ _ _ (IZR _)).
       have-> : (IZR (Mxh + My) - IZR (Mxh + My) + sign xl * / 2) = 
                  sign xl * / 2  by ring.
@@ -1006,14 +1008,104 @@ have v'E':  v' = /2 * ulp xh \/ v'= -(/2) * ulp xh \/
     by apply/not_0_IZR; lia.
 
   case:(round_DN_or_UP two fexp (Znearest choice) (IZR (2 * M + 1))); 
-     rewrite ?rDN ?rUP => ->; rewrite ?Z.mul_add_distr_l !plus_IZR /sign; 
+     rewrite ?rDN ?rUP => ->; rewrite ?Z.mul_add_distr_l !plus_IZR /sign;
      case (Rlt_bool xl 0).
      + have->:  (IZR (2 * M) + 1 - IZR (2 * M) + -1 * / 2) = /2 by field.
        by left.
      + have->: (IZR (2 * M) + 1 - IZR (2 * M) + 1 * / 2) = 3* /2 by field.
-       by right; right; left;  rewrite -plus_IZR  -ME. 
+       right; right; left; split => //.
+        have Hp': pow p <= Rabs (IZR(2*M) + 1).
+        refine (Rle_trans _ _ _ _ _ ).  apply hMs'. rewrite ME.
+rewrite -plus_IZR ; nra.
+        have : pow p <= Rabs (IZR(2*M)) + 1 ; try nra.
+              refine (Rle_trans _ _ _ Hp' _ ).  
+              refine (Rle_trans _ _ _ (Rabs_triang _ _ ) _ ); rewrite Rabs_R1; nra. 
      + have ->: (IZR (2 * M) + 1 - (IZR (2 * M) + IZR (2 * 1)) + -1 * / 2) = 
              -(3 */2) by rewrite Zmult_1_r; field.
+       right; right; right; split => //.
+
+rewrite -plus_IZR Zmult_1_r.
+{ 
+destruct (Rlt_or_le (IZR (2 * M + 2)) 0).
+have Hn:  (IZR (2*M+1) < 0).
+refine (Rlt_trans  _ _ _ _ H); lra.
+apply Rabs_left in H => //. rewrite H.
+rewrite plus_IZR. field_simplify.
+have : (pow p  <= -IZR (2 * M)); try nra.
+refine (Rle_trans  _ _ _ hMs' _).
+rewrite ME.
+apply Rabs_left in Hn => //. rewrite Hn; nra.
+
+
+rewrite Rabs_pos_eq => //.
+refine (Rle_trans  _ (pow p) _ _ _); try nra.
+
+destruct (Rlt_or_le (IZR (2 * M + 1)) 0).
+
+refine (Rle_trans  _ _ _ hMs' _); try nra.
+rewrite ME.
+apply Rabs_le; split; try nra.
+
+destruct (Rlt_or_le (IZR (2 * M + 1)) 0).
+apply Rge_le.
+refine (Rge_trans _ 0 _ _ _ ); try nra.
+
+
+refine (Rle_trans  _ (IZR (2 * M)) _ _ _); try nra.
+rewrite -opp_IZR. 
+apply IZR_le. rewrite Z.opp_add_distr => //. 
+Search (IZR _ <= IZR _).
+
+apply Rlt_le. 
+Search (_ <= _ <= _ -> Rabs _ <= _).
+rewrite ME.
+destruct (Rlt_or_le (IZR (2 * M + 1)) 0).
+apply Rabs_left in H0 => //. rewrite H0. 
+refine (Rle_trans  _ _ _ _ _); apply Rlt_le. 
+apply H0.
+try nra.
+rewrite Rabs_pos_eq => //; try nra.
+
+Search ( _ <= _ - _)%R.
+refine (Rle_lt_trans  _ _ _ _ _).
+
+have Hu : forall a b, Rabs (a + b) = Rabs a + Rabs b \/ Rabs (a+b) = Rabs a - Rabs b.
+intros.
+destruct (Rlt_or_le (a+b) 0).
+right.
+assert (Rabs (a + b) = - (a + b)) by
+apply Rabs_left in H => //. rewrite H0.
+destruct (Rlt_or_le b 0).
+destruct (Rlt_or_le a 0).
+
+
+        have Hp': pow p <= Rabs (IZR(2*M) + 2).
+        refine (Rle_trans _ _ _ _ _ ).  apply hMs'. rewrite ME.
+rewrite -plus_IZR ; nra.
+        have : pow p <= Rabs (IZR(2*M)) + 2 ; try nra.
+              refine (Rle_trans _ _ _ Hp' _ ).  
+              refine (Rle_trans _ _ _ (Rabs_triang _ _ ) _ ); rewrite Rabs_R1; nra. 
+
+
+
+
+        have Hp': pow p <= Rabs (IZR(2*M) + 1).
+        refine (Rle_trans _ _ _ _ _ ).  apply hMs'. rewrite ME.
+rewrite -plus_IZR ; nra.
+refine (Rle_trans _ (pow p) _ _ _). lra.
+refine (Rle_trans _ _ _ Hp' _). 
+replace (IZR (2 * M) + IZR (2 * 1)) with (IZR (2 * M +2)). 
+     case (Req_dec (IZR M) 0); move => H0.
+rewrite plus_IZR !mult_IZR H0 Rmult_0_r !Rplus_0_l !Rabs_pos_eq; nra.
+
+assert (0 < IZR M \/ IZR M < 0). lra. destruct H.
+rewrite plus_IZR !mult_IZR  !Rabs_pos_eq; nra.
+
+        have : pow p <= Rabs (IZR(2*M)) + 1 ; try nra.
+              refine (Rle_trans _ _ _ Hp' _ ).  
+              refine (Rle_trans _ _ _ (Rabs_triang _ _ ) _ ); rewrite Rabs_R1; nra. 
+
+
        by right; right; right; rewrite -plus_IZR  -ME.  
   have ->: (IZR (2 * M) + 1 - (IZR (2 * M) + IZR (2 * 1)) + 1 * / 2)= -/2 
    by  rewrite Zmult_1_r; field.
@@ -1027,36 +1119,24 @@ have Mpos:   (1 <= Z.abs (Mxh + My))%Z.
   move => hm0; rewrite hm0 Rmult_0_l in sE; lra.
 move/IZR_le:(Mpos); rewrite abs_IZR=> Mge1.
 
-have Hf: 
-format (IZR (Mxh + My)).
-assert (format (sh xh y)) => //.
-rewrite shE in H.
-rewrite plus_IZR.
-have Hxh: (xh * pow (-cexp y) = IZR Mxh) .
-rewrite xhE. rewrite Rmult_assoc -bpow_plus.
-replace (cexp y + - cexp y)%Z with 0%Z by lia .
-simpl; nra.
-have Hy: (y * pow (-cexp y) = IZR My) .
-set g:= pow (-cexp y). rewrite yE. 
-rewrite Rmult_assoc -bpow_plus.
-replace (cexp y + - cexp y)%Z with 0%Z by lia .
-simpl; nra.
-rewrite -Hxh -Hy.
-admit.
-
 
 suff->: rnd_p (xl + sl xh y) = (xl + sl xh y); ring_simplify.
+
+pose proof DW_TwoSum Fxh Fy.
+unfold double_word in H.
+
+
 2: by rewrite round_generic. 
 fold v'.
 destruct v'E'. 
-{ rewrite H.
+{ rewrite H0.
 refine (Rle_trans _ _ _ _ (roundN_plus_ulp _ _ _) ) => //.
 rewrite Rabs_pos_eq.
 refine (Rle_trans _  _ _ (Rmax_l _ (ulp y / 2)) _).
 apply Rle_max_compat_r; nra.
 apply Rmult_le_pos; [nra| apply ulp_ge_0]. } 
-destruct H.
-{ rewrite H.
+destruct H0.
+{ rewrite H0.
 refine (Rle_trans _ _ _ _ (roundN_plus_ulp _ _ _) ) => //.
 refine (Rle_trans _  (Rabs ( / 2 * ulp xh)) _ _ _).
 apply Req_le.
@@ -1066,10 +1146,11 @@ rewrite Rabs_pos_eq.
 refine (Rle_trans _  _ _ (Rmax_l _ (ulp y / 2)) _).
 apply Rle_max_compat_r; nra.
 apply Rmult_le_pos; [nra| apply ulp_ge_0]. } 
-destruct H.
-{ destruct H as (A & B).
-rewrite shE !round_generic.
+destruct H0.
+{ destruct H0 as (A & B).
+rewrite shE. 
 rewrite A Rabs_mult.
+Search (round _ _ _ IZR.
 eapply Rle_trans.
 2: rewrite Rabs_mult.
 2: 
