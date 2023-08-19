@@ -90,7 +90,6 @@ rewrite H at 2; unfold rounded.
 now apply Req_le.
 Qed.
 
-
 Fact dw_le xh xl: FT2R xh <> 0 -> 
   double_word xh xl -> Rabs (FT2R xl) <= Rabs (FT2R xh).
 Proof.

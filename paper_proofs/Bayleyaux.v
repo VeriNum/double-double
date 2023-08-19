@@ -332,6 +332,52 @@ rewrite -Zodd_even_bool {1}Z.sub_1_r Z.odd_pred Z.even_pow /=; try lia.
 apply:Zceil_imp ; rewrite plus_IZR IZR_Zpower_pos/= ;split;lra.
 Qed.
 
+Lemma r1mu2_2 (ZNE : choice = fun n => negb (Z.even n)): 
+                  rnd_p (2 * (1 - u)) = (2 - pow (1 - p)).
+Proof.
+rewrite /round  /ulp /scaled_mantissa /cexp /fexp /= /F2R /=.
+have D:  (mag radix2 (1 - u)  = 0%Z :> Z).
+  apply:mag_unique_pos;rewrite /= /u; split.
+    rewrite IZR_Zpower_pos /=. 
+    suff:pow (-p) <= /2; try lra.
+    replace (/2) with (pow (-1)) by (simpl; lra).
+    apply bpow_le. apply Z.opp_le_mono. 
+    rewrite !Z.opp_involutive; simpl; lia. 
+    apply Rminus_lt; field_simplify. 
+    replace 0 with (-0) by nra.
+    apply Ropp_lt_contravar.
+    apply bpow_gt_0. 
+change 2 with (bpow radix2 1).
+replace (pow 1 * (1 - u )) with
+  ((1 - u ) * pow 1) by nra.
+rewrite mag_mult_bpow.
+rewrite D Z.add_0_l.
+have h1e: (2 - pow (1 - p)) = (IZR (Zpower radix2 p - 1) * bpow radix2 (1 - p)).
+  change 2 with (bpow radix2 1). Search (IZR ( _ - _)).
+  rewrite minus_IZR IZR_Zpower ?bpow_plus; try lia. field_simplify. 
+  rewrite Rplus_comm. replace (pow 1 + - pow 1 * pow (- p)) with
+      (pow 1  - pow 1 * pow (- p)) by nra. f_equal.  rewrite -!bpow_plus.  
+  ring_simplify (1 + - p + p)%Z => //.
+rewrite [RHS] h1e; congr (_ *_); congr IZR.
+rewrite /u Rmult_plus_distr_r Rmult_1_l.   
+have ->: -(pow (- p)) * pow 1 = -(pow (-p + 1)).
+   by rewrite Ropp_mult_distr_l_reverse -!bpow_plus; ring_simplify(- p + -1 + 1)%Z.
+ ring_simplify((pow 1 + - pow (- p + 1)) * pow (- (1 - p))). rewrite -!bpow_plus.
+ ring_simplify (- p + 1 +- (1-p))%Z. ring_simplify(1 + - (1 - p))%Z.
+simpl.
+rewrite -IZR_Zpower /=;[| lia]; rewrite ZNE /Znearest;  set z := Zfloor _.
+have ->: z=  (Zpower radix2 (p)  - 1)%Z. subst z.
+replace (IZR ( 2 ^ p) -1) with (IZR (2^p - 1)).
+rewrite Zfloor_IZR => //. rewrite minus_IZR => //.
+rewrite Rcompare_Lt /=; try lia ; last rewrite plus_IZR  /=; field_simplify; lra.
+rewrite /u. 
+apply Rgt_not_eq.
+apply Rgt_minus.
+have Hp1 : ( -1 > -p)%Z  by lia.
+apply Rlt_gt.
+apply bpow_lt_1; lia. 
+Qed.
+
 Lemma r1pug x : 0 <= x < u->  rnd_p (1 + x) = 1.
 Proof.
 have F1 : format 1.
