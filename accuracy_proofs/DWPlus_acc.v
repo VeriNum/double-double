@@ -706,6 +706,7 @@ Let sl := snd (TwoSumF xh y).
 Let v  := BPLUS xl sl.
 
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
+Hypothesis Hp3 : (3 <= fprec t)%Z.
 
 Notation u   := (bpow Zaux.radix2 (- fprec t)).
 
@@ -722,10 +723,78 @@ Proof.
 rewrite /relative_error_DWPlusFP /errorDWFP /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
 Qed.
 
+Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0.
+Proof.
+move => H0. 
+pose proof DWPlusFP_eq xh xl y xE FIN Hp3.
+rewrite /F2Rp in H. 
+destruct (Req_dec xr 0).
+{ have xh0: FT2R xh = 0.
+move: xE; rewrite /double_word. 
+fold xr; by rewrite H1 /rounded round_0.
+(* cases on underflow *)
+destruct (Rle_or_lt (bpow beta (@emin t + fprec t - 1)) (Rabs xr)).
+{  have Hv2: 
+Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
+  by apply BinarySingleNaN.valid_rnd_round_mode.
+have Hxl: FT2R xl = 0.
+move: H2 xE; subst xr; rewrite /double_word xh0; move => H2.
+rewrite /rounded round_FLT_FLX Rplus_0_l => //. move => Hz. 
+apply: (@eq_0_round_0_FLX radix2 (fprec t) _ 
+  (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) Hv2) => //.
+fold (@emin t); by rewrite Rplus_0_l in H2.
+rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
+inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
+rewrite /DWPlus.double_word; repeat split.
+1,2 : rewrite /FT2R;
+apply: generic_format_FLX_FLT;
+  apply: Binary.generic_format_B2R.
+by rewrite xh0 Hxl Rplus_0_l round_0.
+rewrite /FT2R;
+apply: generic_format_FLX_FLT;
+  apply: Binary.generic_format_B2R. }  
+have Hxl : FT2R xl = 0.
+{  move: xE; subst xr; rewrite /double_word. 
+rewrite /rounded round_generic. rewrite xh0 Rplus_0_l => //.
+apply Plus_error.FLT_format_plus_small.
+apply fprec_gt_0.
+1,2 : rewrite /FT2R;
+  apply: Binary.generic_format_B2R.
+fold (@emin t). eapply Rle_trans. apply Rlt_le, H2.
+apply bpow_le; lia. } 
 
-Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0. Admitted.
+rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
+inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
+rewrite /DWPlus.double_word; repeat split.
+1,2 : rewrite /FT2R;
+apply: generic_format_FLX_FLT;
+  apply: Binary.generic_format_B2R.
+by rewrite xh0 Hxl Rplus_0_l round_0.
+rewrite /FT2R;
+apply: generic_format_FLX_FLT;
+  apply: Binary.generic_format_B2R. }  
 
-Hypothesis Hp3: (3 <= p)%Z.
+
+move: H. 
+unfold DWPlus.DWPlusFP.
+rewrite DWPlus.TwoSum_correct => //.
+rewrite -!Rplus_assoc.
+replace (FT2R xl + FT2R xh) with xr. fold yr.
+rewrite H0 Rplus_0_l. 
+rewrite F2Sum.Fast2Sum0 => //. fold zl zh. move => Hz.
+inversion Hz => //=; lra.
+move => x.
+apply round_NE_opp.
+apply Fth; lia.
+rewrite /TwoSum_sum/fst/TwoSum.
+rewrite round_NE_opp.
+rewrite Bayleyaux.round_round => //; lia.
+subst xr. rewrite Rplus_comm => //. lia.
+1,2 : rewrite /FT2R;
+apply: generic_format_FLX_FLT;
+  apply: Binary.generic_format_B2R.
+Qed.
+
 Hypothesis DWx: DWPlus.double_word p choice (FT2R xh) (FT2R xl).
 
 Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u ^ 2.
@@ -738,7 +807,8 @@ destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl
 apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
 apply Req_le.
 rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-have DWx2: double_word xh xl by admit.
+have DWx2: double_word xh xl .
+(* need lemma for iff on defs *) admit.
 pose proof DWPlusFP_eq xh  xl y DWx2 FIN.
  rewrite /F2Rp/DWPlus.DWPlusFP in H1.
 repeat f_equal.
