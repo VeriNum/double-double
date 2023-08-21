@@ -35,6 +35,39 @@ apply: generic_format_FLX_FLT. apply Hg. }
 rewrite /rounded round_FLT_FLX => //.
 Qed.
 
+Theorem dw_word_DWdouble:
+double_word xh xl -> 
+DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl).
+Proof.
+rewrite /DWPlus.double_word/double_word.
+destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
+                (bpow beta (@emin t + fprec t -1))).
+{ have Hg: 
+  generic_format beta (FLT_exp (@emin t) (fprec t)) (FT2R xh + FT2R xl).
+  { apply Plus_error.FLT_format_plus_small.
+  apply fprec_gt_0.
+  1,2 : rewrite /FT2R;
+    apply: Binary.generic_format_B2R.
+  eapply Rle_trans. apply Rlt_le. apply H.
+  apply bpow_le; fold (@emin t); lia. }
+rewrite /rounded round_generic => //.
+move=> H1. have Hx0 : FT2R xl = 0.
+assert (FT2R xh + 0 = FT2R xh + FT2R xl) by nra.
+apply Rplus_eq_reg_l in H0 => //.
+rewrite Hx0 ; repeat split => //.
+rewrite Hx0 Rplus_0_r in Hg.
+apply: generic_format_FLX_FLT. apply Hg. 
+apply generic_format_0.
+rewrite round_generic; try lra.
+rewrite Hx0 Rplus_0_r in Hg.
+rewrite Rplus_0_r.
+apply: generic_format_FLX_FLT. apply Hg. } 
+rewrite /rounded round_FLT_FLX => //.
+move => H1; repeat split => //.
+all: rewrite /FT2R; apply (generic_format_FLX_FLT radix2 (@emin t));
+ apply Binary.generic_format_B2R.
+Qed.
+
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 
 Fact FIN1 : is_finite_p (TwoSumF xh y).
@@ -726,7 +759,6 @@ End CorrectDWPlusFP'.
 Section AccuracyDWPlusFP.
 
 Variables (xh xl y : ftype t).
-Hypothesis  xE : double_word xh xl.
 Let zh := (FT2R (fst (DWPlusFP xh xl y))).
 Let zl := (FT2R (snd (DWPlusFP xh xl y))).
 Let xr := (FT2R xh + FT2R xl).
@@ -734,15 +766,15 @@ Let yr := (FT2R y).
 Let sl := snd (TwoSumF xh y).
 Let v  := BPLUS xl sl.
 
+(* start section hyps *)
+Hypothesis  xE : double_word xh xl.
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 Hypothesis Hp3 : (3 <= fprec t)%Z.
+(* end section hyps *)
 
 Notation u   := (bpow Zaux.radix2 (- fprec t)).
-
 Definition relative_error_DWPlusFP := Rabs (((zh + zl) - (xr  + yr)) / (xr  + yr)).
-
 Definition errorDWFP := (FT2R xh + FT2R xl + FT2R y) - (zh + zl).
-
 Local Notation p := (fprec t).
 Definition rnd := 
   (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
@@ -803,7 +835,6 @@ rewrite /FT2R;
 apply: generic_format_FLX_FLT;
   apply: Binary.generic_format_B2R. }  
 
-
 move: H. 
 unfold DWPlus.DWPlusFP.
 rewrite DWPlus.TwoSum_correct => //.
@@ -824,8 +855,6 @@ apply: generic_format_FLX_FLT;
   apply: Binary.generic_format_B2R.
 Qed.
 
-Hypothesis DWx: DWPlus.double_word p choice (FT2R xh) (FT2R xl).
-
 Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u ^ 2.
 Proof.
 have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
@@ -833,11 +862,11 @@ have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
   apply (Binary.generic_format_B2R (fprec t) (femax t) y). }  
 destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
   Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
+apply dw_word_DWdouble => //.
 apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
 apply Req_le.
 rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-have DWx2: double_word xh xl  by apply DWdouble_word_dw.
-pose proof DWPlusFP_eq xh  xl y DWx2 FIN.
+pose proof DWPlusFP_eq xh  xl y xE FIN.
  rewrite /F2Rp/DWPlus.DWPlusFP in H1.
 repeat f_equal.
 all: by rewrite H1.
@@ -852,6 +881,7 @@ have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
   apply (Binary.generic_format_B2R (fprec t) (femax t) y). }  
 destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
   Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
+apply dw_word_DWdouble => //.
 destruct (Req_dec (xr + yr) 0) as [Hx0|Hx0].
 { exists 0; rewrite Hx0; split; [field_simplify; 
   now rewrite DWPlusFP_0 | now rewrite Rabs_R0; nra]. } 
