@@ -14,6 +14,27 @@ Section CorrectDWPlusFP.
 
 Variables (xh xl y : ftype t).
 
+Theorem DWdouble_word_dw:
+DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl) -> 
+double_word xh xl.
+Proof.
+rewrite /DWPlus.double_word/double_word => [] [] [].
+move => Fxh Fxl .
+destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
+                (bpow beta (@emin t + fprec t -1))).
+{ have Hg: 
+  generic_format beta (FLT_exp (@emin t) (fprec t)) (FT2R xh + FT2R xl).
+  { apply Plus_error.FLT_format_plus_small.
+  apply fprec_gt_0.
+  1,2 : rewrite /FT2R;
+    apply: Binary.generic_format_B2R.
+  eapply Rle_trans. apply Rlt_le. apply H.
+  apply bpow_le; fold (@emin t); lia. }
+rewrite /rounded !round_generic => //. 
+apply: generic_format_FLX_FLT. apply Hg. } 
+rewrite /rounded round_FLT_FLX => //.
+Qed.
+
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 
 Fact FIN1 : is_finite_p (TwoSumF xh y).
@@ -615,7 +636,17 @@ rewrite Rabs_mult; rewrite Rabs_mult.
 apply Rmult_le_reg_r. apply Rabs_pos_lt. apply not_eq_sym,  Rlt_not_eq => //.
 apply H => //.
 
-Admitted.
+rewrite -Rmult_plus_distr_r.
+apply Rmult_integral_contrapositive_currified => //.
+apply Stdlib.Rlt_neq_sym. apply bpow_gt_0.
+
+apply DW_S => //; try lia.
+rewrite !Rabs_mult. 
+apply Rmult_le_compat_r => //.
+apply Rabs_pos.
+
+apply formatS => //.
+Qed.
 
 Let emin :=  (@DDModels.emin t).
 
@@ -628,6 +659,10 @@ Hypothesis Hp3 : (3 <= fprec t)%Z.
 Theorem DWPlusFP_eq :
   DWPlus.DWPlusFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y) = F2Rp (DWPlusFP xh xl y).
 Proof.
+have FIN3: (is_finite_p (TwoSumF xh y)) by
+apply: (FIN1 _ xl _) => //.
+have FIN4 : Binary.is_finite _ _ (BPLUS xl (snd (TwoSumF xh y))) = true by
+apply: FIN2 => //.
 move : FIN. move => [].
 rewrite /DWPlus.DWPlusFP/DWPlusFP/fst/snd.
 replace  (TwoSumF xh y ) with
@@ -638,8 +673,6 @@ with
 (fst (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y)))),
 snd (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y))))) => //.
 move => FIN1 FIN2. 
-have FIN3: (is_finite_p (TwoSumF xh y)) by admit. 
-have FIN4 : Binary.is_finite _ _ (BPLUS xl (snd (TwoSumF xh y))) = true by admit.
 have Heq: (TwoSum (fprec t) choice (FT2R xh) (FT2R y)) =
   (TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) ,
     TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) ) => //.
@@ -650,12 +683,9 @@ have Hsum : TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) = FT2R (fst (TwoSumF 
 { pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
 inversion H. rewrite H1 /TwoSumF => //. } 
 
-
 rewrite Herr Hsum.
-
 destruct (Req_dec (FT2R xh + FT2R y) 0).
-{ 
-apply TwoSumF_eq in H => //.
+{ apply TwoSumF_eq in H => //.
 inversion H.
 rewrite Fast2Sum_2sum0' => //; 
 rewrite /TwoSumF/fst/snd.
@@ -671,25 +701,24 @@ destruct (Rle_or_lt
   (Binary.B2R (fprec t) (femax t) xl +
    Binary.B2R (fprec t) (femax t) (snd (TwoSumF xh y))))) as [HUF|HUF].
 
-{ 
-rewrite -FastTwoSumEq_FLT => //; f_equal.
+{ rewrite -FastTwoSumEq_FLT => //; f_equal.
 { BPLUS_correct t xl (snd (TwoSumF xh y)).
 rewrite (round_FLT_FLX radix2 (@DDModels.emin t)) => //. } 
 apply Fast2Sum_CorrectDWPlusFP => //. }
 
-
 rewrite -FastTwoSumEq_FLT => //. f_equal.
-
 rewrite BPLUS_UF_exact => //.
 rewrite round_generic => //; f_equal.
 apply: (generic_format_FLX_FLT _ emin).
-apply: Plus_error.FLT_format_plus_small. 
-admit. admit.
+apply: Plus_error.FLT_format_plus_small.
+1,2 : rewrite /FT2R;
+  apply: Binary.generic_format_B2R.
+ 
 refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
 apply bpow_le; lia.
 
 apply Fast2Sum_CorrectDWPlusFP => //.
-Admitted. 
+Qed.
 
 End CorrectDWPlusFP'.
 
@@ -807,13 +836,12 @@ destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl
 apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
 apply Req_le.
 rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-have DWx2: double_word xh xl .
-(* need lemma for iff on defs *) admit.
+have DWx2: double_word xh xl  by apply DWdouble_word_dw.
 pose proof DWPlusFP_eq xh  xl y DWx2 FIN.
  rewrite /F2Rp/DWPlus.DWPlusFP in H1.
 repeat f_equal.
 all: by rewrite H1.
-Admitted.
+Qed.
 
 Theorem relative_errorDWPlusFP_correct' : 
   exists del, (zh + zl) = (xr + yr) * (1 + del) /\
@@ -831,8 +859,6 @@ exists (((zh + zl) - (xr  + yr)) / (xr  + yr)); split.
 { now field_simplify. } 
 apply relative_errorDWPlusFP_correct.
 Qed.
-
-
 
 End AccuracyDWPlusFP.
 
