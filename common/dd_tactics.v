@@ -8,85 +8,101 @@ Ltac field_simplify_round :=
 end. 
 
 Ltac BPLUS_correct t a b :=
-unfold FT2R;
-match goal with | FIN : Binary.is_finite _ _ (BPLUS a b) = true |- context [Binary.B2R _ _ (BPLUS a b)] =>
-  let X:= fresh in set (X:= Binary.B2R _ _ (BPLUS a b)); unfold BPLUS, BINOP in X ;
-  let H4 := fresh in pose proof (is_finite_sum_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4;
+match goal with | FIN : is_finite (BPLUS a b) = true |- context [FT2R (BPLUS a b)] =>  
+  let X:= fresh in set 
+        (X:=  FT2R (BPLUS a b)); unfold BPLUS, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_sum_no_overflow t a b FIN) as H4; apply Rlt_bool_true in H4 ;
   let H := fresh in 
-  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
-  [destruct a; destruct b; 
-      simpl in FIN; split; try discriminate; auto;
+  assert (H : is_finite a = true /\ is_finite b = true) ;
+  [rewrite !is_finite_Binary; rewrite !is_finite_Binary in FIN ;
+    unfold BPLUS, BINOP in FIN; rewrite float_of_ftype_of_float in FIN;
+    destruct (float_of_ftype a); destruct (float_of_ftype b); 
+       simpl in FIN; split; try discriminate; auto ;
           match goal with | H: Binary.is_finite _ _
-                   (BPLUS (Binary.B754_infinity _ _ ?s)
+                   (Binary.Bplus _ _ _ _ _ _ (Binary.B754_infinity _ _ ?s)
                       (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
             destruct s; destruct s0; try discriminate; auto end 
-  | ]; 
+  | ]; rewrite !is_finite_Binary in H; 
     let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
     let H3 := fresh in pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE 
+        (float_of_ftype a) (float_of_ftype b) H1 H2) as H3;
+        rewrite !B2R_float_of_ftype in H3;
     rewrite H4 in H3 ;
-    destruct H3 as (H3 & _); clear H4; unfold BPLUS, BINOP in X; subst X; try field_simplify_round;
-    rewrite H3; try reflexivity 
+    destruct H3 as (H3 & _); clear H4; unfold BPLUS, BINOP in X; subst X; 
+    try field_simplify_round; rewrite <- !B2R_float_of_ftype; rewrite float_of_ftype_of_float;
+    rewrite H3; try reflexivity
 end.
 
 Ltac BMINUS_correct t a b :=
-unfold FT2R;
-match goal with | FIN : Binary.is_finite _ _ (BMINUS a b) = true |- context [Binary.B2R _ _ (BMINUS a b)] =>
-  let X:= fresh in set (X:= Binary.B2R _ _ (BMINUS a b)); unfold BMINUS, BINOP in X ;
-  let H4 := fresh in pose proof (is_finite_minus_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4;
+match goal with | FIN : is_finite (BMINUS a b) = true |- context [FT2R (BMINUS a b)] =>
+  let X:= fresh in set (X:= FT2R (BMINUS a b)); unfold BMINUS, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_minus_no_overflow t a b FIN) as H4; apply Rlt_bool_true in H4 ;
   let H := fresh in 
-  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true);
-  [destruct a; destruct b; 
+  assert (H : is_finite a = true /\ is_finite b = true) ;
+  [rewrite !is_finite_Binary; rewrite !is_finite_Binary in FIN ;
+    unfold BMINUS, BINOP in FIN; rewrite float_of_ftype_of_float in FIN;
+    destruct (float_of_ftype a); destruct (float_of_ftype b); 
       simpl in FIN; split; try discriminate; auto;
           match goal with | H: Binary.is_finite _ _
-                   (BMINUS (Binary.B754_infinity _ _ ?s)
+                   (Binary.Bminus _ _ _ _ _ _ (Binary.B754_infinity _ _ ?s)
                       (Binary.B754_infinity _ _ ?s0)) = _ |- Binary.is_finite _ _ _ = _ =>
             destruct s; destruct s0; try discriminate; auto end 
-  | ]; 
+  | ]; rewrite !is_finite_Binary in H ; 
     let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2);
-    let H3 := fresh in pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE a b H1 H2) as H3;
+    let H3 := fresh in pose proof (Binary.Bminus_correct (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE 
+        (float_of_ftype a) (float_of_ftype b) H1 H2) as H3 ;
+    rewrite !B2R_float_of_ftype in H3;
     rewrite H4 in H3 ;
-    destruct H3 as (H3 & _); clear H4 ; unfold BMINUS, BINOP in X; subst X; try field_simplify_round; 
+    destruct H3 as (H3 & _); clear H4 ; unfold BMINUS, BINOP in X; subst X; 
+    try field_simplify_round; rewrite <- !B2R_float_of_ftype; rewrite float_of_ftype_of_float;
     rewrite H3; try reflexivity 
 end.
 
 Ltac BMULT_correct t a b :=
-unfold FT2R;
-match goal with | FIN : Binary.is_finite _ _ (BMULT a b) = true |- context [Binary.B2R _ _ (BMULT a b)] =>
-  let X:= fresh in set (X:= Binary.B2R _ _ (BMULT a b)); unfold BMULT, BINOP in X ;
-  let H4 := fresh in pose proof (is_finite_BMULT_no_overflow a b FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4;
+match goal with | FIN : is_finite (BMULT a b) = true |- context [FT2R (BMULT a b)] =>
+  let X:= fresh in set (X:= FT2R (BMULT a b)); unfold BMULT, BINOP in X ;
+  let H4 := fresh in pose proof (is_finite_BMULT_no_overflow t a b FIN) as H4; apply Rlt_bool_true in H4 ;
     let H3 := fresh in try pose proof (Binary.Bmult_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan t) BinarySingleNaN.mode_NE a b) as H3;
-    unfold common.rounded in H4; rewrite H4 in H3 ;
-    destruct H3 as (H3 & _); clear H4 ; unfold BMULT, BINOP in X; subst X; try field_simplify_round; 
+        (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan t) BinarySingleNaN.mode_NE 
+        (float_of_ftype a) (float_of_ftype b)) as H3 ;
+    unfold common.rounded in H4; rewrite !B2R_float_of_ftype in H3; rewrite H4 in H3;
+    destruct H3 as (H3 & _); clear H4 ; unfold BMULT, BINOP in X; subst X; 
+    try field_simplify_round; rewrite <- !B2R_float_of_ftype; rewrite float_of_ftype_of_float; 
     rewrite H3; try reflexivity 
 end.
 
 Ltac BFMA_correct t a b s:=
-unfold FT2R;
-match goal with | FIN : Binary.is_finite _ _ (BFMA a b s) = true |- context [Binary.B2R _ _ (BFMA a b s)] =>
-  let X:= fresh in set (X:= Binary.B2R _ _ (BFMA a b s)); unfold BFMA in X ;
-  let H4 := fresh in pose proof (is_finite_fma_no_overflow a b s FIN) as H4; apply Rlt_bool_true in H4;
-  unfold FT2R in H4; unfold common.rounded in H4;
+match goal with | FIN : is_finite (BFMA a b s) = true |- context [FT2R (BFMA a b s)] =>
+  let X:= fresh in set (X:= FT2R (BFMA a b s)); unfold BFMA in X ;
+  let H4 := fresh in pose proof (is_finite_fma_no_overflow t a b s FIN) as H4; apply Rlt_bool_true in H4;
+  unfold common.rounded in H4;
   let H := fresh in 
-  assert (H : Binary.is_finite _ _ a = true /\ Binary.is_finite _ _ b = true /\ Binary.is_finite _ _ s = true);
-  [destruct a; destruct b; destruct s; 
-      simpl in FIN; split; try discriminate; auto;
+  assert (H : is_finite a = true /\ is_finite b = true /\ is_finite s = true);
+ [rewrite !is_finite_Binary; rewrite !is_finite_Binary in FIN ;
+    unfold BFMA, BINOP in FIN; rewrite float_of_ftype_of_float in FIN;
+    destruct (float_of_ftype a); destruct (float_of_ftype b); destruct (float_of_ftype s); 
+      simpl in FIN; repeat split; try discriminate; auto;
           match goal with | H: Binary.is_finite _ _
-                   (BFMA (Binary.B754_infinity _ _ ?s4)
-                      (Binary.B754_infinity _ _ ?s0) (Binary.B754_infinity _ _ ?s3)) = _ |- Binary.is_finite _ _ _ = _ =>
-            destruct s4; destruct s0; destruct s3; try discriminate; auto end 
-  | ]; 
+                   (Binary.Bfma _ _ _ _ _ _ ?A ?B ?C) = _ |- Binary.is_finite _ _ _ = _ =>
+            match A with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
+                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
+            match B with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
+                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
+            match C with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
+                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
+          try discriminate; auto end
+  | ]; rewrite !is_finite_Binary in H; 
     let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2 & HS);
     let H3 := fresh in pose proof (Binary.Bfma_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE a b s H1 H2 HS) as H3; cbv zeta in H3;
+        (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan t) BinarySingleNaN.mode_NE 
+        (float_of_ftype a) (float_of_ftype b) (float_of_ftype s) H1 H2 HS) as H3; cbv zeta in H3;
+    rewrite !B2R_float_of_ftype in H3;
     rewrite H4 in H3 ;
     destruct H3 as (H3 & _); clear H4 ; unfold BFMA in X; subst X; try field_simplify_round; 
-    rewrite H3; try reflexivity 
+    rewrite <- !B2R_float_of_ftype; rewrite float_of_ftype_of_float;
+    rewrite H3; try reflexivity
 end.
 
 Ltac rewrite_format :=

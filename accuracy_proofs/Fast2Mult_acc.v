@@ -1,12 +1,12 @@
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics.
+Require Import float_acc_lems op_defs common dd_tactics.
 Require Import DDModels.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
 Section TwoMultCorrect.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (@DD.DDModels.emin t).
 Variables (a b : ftype t).
 Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
@@ -24,22 +24,32 @@ unfold Fast2Mult_mul, Fast2Mult_err, fst, snd in *; simpl in *.
 fold m in FINp. fold m.
 BFMA_correct t a b (BOPP m).
 unfold m.
+rewrite -!B2R_float_of_ftype.
+unfold BOPP. rewrite float_of_ftype_of_float.
 rewrite Binary.B2R_Bopp.
-BMULT_correct t a b. 
+rewrite !B2R_float_of_ftype.
+BMULT_correct t a b.
 (* rewriting correctly here requires some careful manipulation *)
-set (y:= Generic_fmt.round _ _ _ (Binary.B2R _ _ a * Binary.B2R _ _ b) ).
-set (x:= (Binary.B2R _ _ a * Binary.B2R _ _ b - y)).
+set (y:= round radix2 
+        (SpecFloat.fexp (fprec t) (femax t)) 
+      (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) (Binary.B2R _ _ 
+    (float_of_ftype a) * Binary.B2R _ _ (float_of_ftype b)) ).
+set (x:= (Binary.B2R _ _ 
+        (float_of_ftype a) * Binary.B2R _ _ (float_of_ftype b) - y)).
 rewrite (Generic_fmt.round_generic (Zaux.radix2) (FLT.FLT_exp emin (fprec t))
   (Generic_fmt.Znearest choice)); auto.
 subst y; subst x. 
-set (x1:= Binary.B2R _ _ a * Binary.B2R _ _ b).
-set (x2:= Generic_fmt.round _ _ _ x1).
+rewrite !B2R_float_of_ftype.
+set (x1:= FT2R a * FT2R b).
+set (x2:= round radix2 
+        (SpecFloat.fexp (fprec t) (femax t)) 
+      (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) x1).
 replace (x1 - x2) with ( - (x2 - x1)) by nra.
 apply Generic_fmt.generic_format_opp.
 subst x1 x2.
 apply (Mult_error.mult_error_FLT (Zaux.radix2) emin (fprec t)
-  (Generic_fmt.Znearest choice) (FT2R a) (FT2R b)). 
-apply Binary.generic_format_B2R.
+  (Generic_fmt.Znearest choice) (FT2R a) (FT2R b)).
+1,2: rewrite -!B2R_float_of_ftype;
 apply Binary.generic_format_B2R.
 (* use hyp of no underflow *)
 apply UF.
@@ -52,12 +62,13 @@ Proof.
 destruct FIN as (FINm & FINp).
 unfold Fast2Mult_mul, Fast2Mult_err, Fast2Mult, fst, snd in *.
   BMULT_correct t a b.
+by rewrite -!B2R_float_of_ftype.
 Qed.
 
 End TwoMultCorrect.
 
 Section TwoMultAcc. 
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (@DD.DDModels.emin t).
 Variables (a b : ftype t).
 Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
@@ -75,7 +86,8 @@ rewrite Rabs_minus_sym.
 pose proof error_le_half_ulp
   Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) choice (FT2R a * FT2R b) as HE.
 destruct FIN as (FINs & FINd); simpl in FINs. 
-BMULT_correct t a b. fold (@FT2R t); auto.
+BMULT_correct t a b. 
+by rewrite !B2R_float_of_ftype.
 Qed.
 
 (*
