@@ -10,7 +10,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 
 Section TwoSumCorrect.
 
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin := (@DD.DDModels.emin t).
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
@@ -24,9 +24,9 @@ Theorem round_plus_ge_ulp :
 Proof with auto with typeclass_instances.
 intros.
 have HGy: generic_format radix2 fexp (FT2R y) by
-  rewrite /FT2R; apply Binary.generic_format_B2R. 
+  rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R. 
 have HGx: generic_format radix2 fexp (FT2R x) by
-  rewrite /FT2R; apply Binary.generic_format_B2R. 
+  rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R. 
 case (Req_dec (FT2R x) 0); intros Zx.
 { rewrite Zx Rplus_0_l.
 rewrite /rounded round_generic => //.
@@ -82,23 +82,33 @@ move => H. rewrite /F2Rp/TwoSumF/is_finite_p/fst/snd.
 move => [] FIN1 FIN2. 
 set (a:= (BMINUS xh (BMINUS (BPLUS xh y) y))) in *.
 set (b:= (BMINUS y (BMINUS (BPLUS xh y) (BMINUS (BPLUS xh y) y)))) in *.
-BPLUS_correct t a b; clear H5; subst a b.
+BPLUS_correct t a b.
+clear H5; subst a b.
 set (c:= (BMINUS (BPLUS xh y) y)) in *.
-BMINUS_correct t xh c; clear H7; subst c.
+rewrite -is_finite_Binary in H3.
+BMINUS_correct t xh c. clear H7; subst c.
 set (d:= (BMINUS (BPLUS xh y) (BMINUS (BPLUS xh y) y))) in *. 
+rewrite -is_finite_Binary in H4.
+rewrite !B2R_float_of_ftype.
 BMINUS_correct t y d; clear H9; subst d.
 set (a:= BPLUS xh y) in *. 
 set (b:= (BMINUS a y)) in *.
+rewrite -is_finite_Binary in H8.
 BMINUS_correct t a b; clear H11; subst b.
+rewrite -is_finite_Binary in H10.
+rewrite !B2R_float_of_ftype.
 BMINUS_correct t a y; clear H13; subst a.
+rewrite -is_finite_Binary in H11.
+rewrite !B2R_float_of_ftype.
 BPLUS_correct t xh y; clear H15. 
-fold (@FT2R t). rewrite H round_0 
+rewrite H round_0
   !Rminus_0_l round_NE_opp Ropp_involutive.
 f_equal.
 rewrite -(round_0 radix2 fexp 
   (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)).
 f_equal.
 apply Rplus_opp_r_uniq in H.
+rewrite !B2R_float_of_ftype.
 rewrite H !round_NE_opp Ropp_involutive.
 rewrite -Rcomplements.Ropp_plus_minus_distr 
   round_NE_opp !Rplus_opp .
@@ -112,17 +122,19 @@ Qed.
 Variables (a b : ftype t).
 
 Lemma BPLUS_UF_exact:
-  Binary.is_finite _ _ (BPLUS a b) = true -> 
+  is_finite (BPLUS a b) = true -> 
   Rabs (FT2R a + FT2R b) < bpow radix2 (emin + fprec t - 1) -> 
    FT2R (BPLUS a b) = FT2R a + FT2R b.
 Proof.
 intros FIN BND. 
 BPLUS_correct t a b.
 rewrite round_generic => //.
-apply Plus_error.FLT_format_plus_small;
+by rewrite !B2R_float_of_ftype.
+apply Plus_error.FLT_format_plus_small => //;
+rewrite -B2R_float_of_ftype;
 try apply (Binary.generic_format_B2R (fprec t) (femax t)).
-apply (fprec_gt_0 t).
 apply Rlt_le.
+rewrite B2R_float_of_ftype.
 refine (Rlt_le_trans _ _ _ BND _). 
 apply bpow_le; fold emin; lia.
 Qed.
@@ -147,18 +159,27 @@ rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
 replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
 (* rewrites from correctness theorems *)
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
-BPLUS_correct t a b; field_simplify.
-fold s a' b' da db in FINd; fold s a' b' da db. BPLUS_correct t da db.
+BPLUS_correct t a b; rewrite !B2R_float_of_ftype; field_simplify.
+fold s a' b' da db in FINd; fold s a' b' da db.
+BPLUS_correct t da db. 
 rewrite Rplus_comm; repeat f_equal.
-{ subst db; BMINUS_correct t b b'.
-  subst b' s; BMINUS_correct t (BPLUS a b) a'; rewrite H4.
-  repeat f_equal.
-  subst a'. BMINUS_correct t (BPLUS a b) b; rewrite H4.
-  repeat f_equal. }
-{ subst da; BMINUS_correct t a a'.
-  subst a' s. BMINUS_correct t (BPLUS a b) b; rewrite H4.
-  repeat f_equal. }
-all: apply Binary.generic_format_B2R.
+{ subst db; rewrite -is_finite_Binary in H6. 
+  BMINUS_correct t b b'.
+  subst b' s; rewrite -is_finite_Binary in H9. 
+  BMINUS_correct t (BPLUS a b) a'. 
+  unfold BPLUS, BINOP. rewrite FT2R_ftype_of_float H4.
+  repeat f_equal; try rewrite B2R_float_of_ftype => //.
+  subst a'; rewrite -is_finite_Binary in H12. 
+  BMINUS_correct t (BPLUS a b) b.
+  unfold BPLUS, BINOP. rewrite FT2R_ftype_of_float H4.
+  repeat f_equal; try rewrite B2R_float_of_ftype => //. } 
+{ subst da; rewrite -is_finite_Binary in H5.  
+  BMINUS_correct t a a'.
+  subst a' s; rewrite -is_finite_Binary in H9.  
+  BMINUS_correct t (BPLUS a b) b.
+  unfold BPLUS, BINOP. rewrite FT2R_ftype_of_float H4.
+  repeat f_equal; try rewrite B2R_float_of_ftype => //. }
+all: rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
 Qed.
 
 Theorem TwoSumF_error :
@@ -170,7 +191,7 @@ rewrite TwoSumF_correct.
 rewrite /TwoSumF_sum/TwoSumF/fst/snd.
 destruct FIN as (FINs & _).
 simpl in FINs.
-destruct (BPLUS_accurate' a b FINs) as (del & A & B).
+destruct (BPLUS_accurate' t a b FINs) as (del & A & B).
 rewrite B; exists (-del); split; [field_simplify; nra|].
 rewrite Rabs_Ropp.
 refine (Rle_trans _ _ _ A _ ).
@@ -184,6 +205,7 @@ Proof.
 destruct FIN as (FINm & FINp).
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
   BPLUS_correct t a b.
+by rewrite !B2R_float_of_ftype.
 Qed.
 
 Lemma TwoSumEq_no_underflow 
@@ -205,11 +227,13 @@ move => FIN1 FIN2 /=.
 have Heq : 
 TwoSum_sum (fprec t) choice (FT2R a) (FT2R b) = FT2R (TwoSumF_sum a b).
 { move: FIN1. rewrite /TwoSum_sum/TwoSumF_sum/F2Rp/fst/snd/=. move => FIN1.
-BPLUS_correct t a b; field_simplify.  by rewrite H. }
+BPLUS_correct t a b; field_simplify. rewrite H => //. rewrite !B2R_float_of_ftype => //. }
 f_equal => //.
 rewrite TwoSumF_correct DWPlus.TwoSum_correct => //. f_equal => //.
 apply fprec_gt_one.
-all: apply (@generic_format_FLX_FLT radix2 emin); apply Binary.generic_format_B2R.
+all: apply (@generic_format_FLX_FLT radix2 emin); 
+rewrite -B2R_float_of_ftype;
+apply Binary.generic_format_B2R.
 Qed.
 
 (* results of FLT and FLX algorithms are equal regardless of underflow *) 
@@ -223,8 +247,10 @@ destruct (Rlt_or_le (Rabs (FT2R a + FT2R b)) (bpow radix2 (emin + fprec t - 1)) 
    [BND | BND].
 { have A : generic_format radix2 (FLT_exp emin (fprec t)) (FT2R a + FT2R b).
   { apply Plus_error.FLT_format_plus_small;
+    try rewrite -B2R_float_of_ftype;
     try apply (Binary.generic_format_B2R (fprec t) (femax t)).
-    apply (fprec_gt_0 t). apply Rlt_le.
+    apply (fprec_gt_0 t). apply Rlt_le. 
+    try rewrite -FT2R_ftype_of_float ftype_of_float_of_ftype.
     refine (Rlt_le_trans _ _ _ BND _). 
     apply bpow_le; fold emin; lia. } 
 rewrite !BPLUS_UF_exact => //. f_equal.
@@ -232,28 +258,36 @@ rewrite round_generic => //.
 by apply (generic_format_FLX_FLT _ emin).
 set (f1:= (BMINUS a (BMINUS (BPLUS a b) b))) in *.
 set (f2:= (BMINUS b (BMINUS (BPLUS a b) 
-  (BMINUS (BPLUS a b) b)))) in *. 
+  (BMINUS (BPLUS a b) b)))) in *.
 BPLUS_correct t f1 f2; subst f1 f2; clear H4.
-set (f3:= (BMINUS (BPLUS a b) b)) in *. 
+set (f3:= (BMINUS (BPLUS a b) b)) in *.
+rewrite -is_finite_Binary in H2. 
 BMINUS_correct t a f3; subst f3; clear H6. 
 set (f4:= (BPLUS a b)) in *.
+rewrite -is_finite_Binary in H5. 
 BMINUS_correct t f4 b; subst f4; clear H8.
 set (f5:= (BMINUS (BPLUS a b) 
   (BMINUS (BPLUS a b) b))) in *.
+rewrite -is_finite_Binary in H3.
+ rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
 BMINUS_correct t b f5; subst f5; clear H10.
 set (f4:= (BPLUS a b)) in *.
 set (f6:= (BMINUS f4 b)) in *. 
+rewrite -is_finite_Binary in H9.
 BMINUS_correct t f4 f6; subst f6; clear H12.
+rewrite -is_finite_Binary in H11.
 BMINUS_correct t f4 b; subst f4; clear H14. 
-fold (@FT2R t).
-rewrite !BPLUS_UF_exact => //. 
+ rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
+rewrite !BPLUS_UF_exact => //.
+rewrite -!B2R_float_of_ftype.
+rewrite -!B2R_float_of_ftype in A.
 rewrite !round_generic => //;
 match goal with |- context [generic_format _ _ ?A] =>
     try field_simplify A end; 
-by (try apply: Binary.generic_format_B2R;
+(try apply: Binary.generic_format_B2R;
 try apply (generic_format_FLX_FLT _ emin);
 try apply: Binary.generic_format_B2R;
-try apply: generic_format_0). }
+try apply: generic_format_0) => //. }
 by apply TwoSumEq_no_underflow.
 Qed.
 
@@ -266,34 +300,42 @@ rewrite /F2Rp/fst/snd/TwoSumF/is_finite_p/fst/snd.
 move => [] FIN1 FIN2 H. 
 f_equal. BPLUS_correct t a b. clear H5.  
 fold (@FT2R t); rewrite H Rplus_0_l.
+rewrite -!B2R_float_of_ftype.
 apply round_generic. 
 apply BinarySingleNaN.valid_rnd_round_mode.
 try apply Binary.generic_format_B2R. 
 set (y3:= (BMINUS (BPLUS a b) b)) in *. 
 set (y1:= (BMINUS a y3)) in *. 
 set (y2:= (BMINUS b (BMINUS (BPLUS a b) y3))) in *. 
-BPLUS_correct t y1 y2; clear H5; subst y1 y2. 
-BMINUS_correct t a y3; clear H7. 
-fold (@FT2R t); rewrite H Rminus_0_l round_NE_opp.
+BPLUS_correct t y1 y2; clear H5; subst y1 y2.
+rewrite -is_finite_Binary in H3.
+BMINUS_correct t a y3; clear H7.
+ rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
+rewrite H Rminus_0_l round_NE_opp.
 rewrite -(round_0
 radix2 (SpecFloat.fexp (fprec t) (femax t))
         (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)).
 f_equal.
 set (y5:= (BMINUS (BPLUS a b) y3)) in *.
+rewrite -is_finite_Binary in H4.
 BMINUS_correct t b y5. clear H9.
 rewrite Rplus_comm Rplus_opp.
 apply Rminus_diag_eq. f_equal; subst y5.
+rewrite -is_finite_Binary in H8.
 BMINUS_correct t (BPLUS a b) y3. clear H11.
-BPLUS_correct t a b. fold (@FT2R t); 
+BPLUS_correct t a b. 
+ rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
   rewrite H Rplus_0_l; clear H13.
 subst y3.
+rewrite -is_finite_Binary in H10.
 BMINUS_correct t (BPLUS a b) b; clear H15.
 BPLUS_correct t a b.
-fold (@FT2R t); rewrite H Rplus_0_l.
+ rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype;
+rewrite H Rplus_0_l.
 rewrite !round_generic; try nra;
 match goal with |-context [generic_format _ _ ?a] => 
   field_simplify a
-end;
+end; try rewrite -B2R_float_of_ftype;
     try apply Binary.generic_format_B2R;
     try apply:generic_format_0.
 Qed.
@@ -302,7 +344,7 @@ End TwoSumCorrect.
 
 Section TwoSumAcc. 
 
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (a b : ftype t).
 
@@ -321,14 +363,15 @@ rewrite Rabs_minus_sym.
 pose proof error_le_half_ulp
   Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) choice (FT2R a + FT2R b) as HE.
 destruct FIN as (FINs & FINd); simpl in FINs. 
-BPLUS_correct t a b. fold (@FT2R t); auto. 
+BPLUS_correct t a b. 
+rewrite !B2R_float_of_ftype; auto. 
 Qed.
 
 End TwoSumAcc.
 
 Section FastTwoSumCorrect.
 
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation FE := (FLT_exp (@emin t) (fprec t)).
 Notation emin := (@DD.DDModels.emin t).
@@ -342,6 +385,7 @@ rewrite /F2Sum.Fast2Sum/Fast2Sum
   Rplus_0_l Rminus_0_r !round_generic.
 f_equal; nra.
 all: apply (generic_format_FLX_FLT radix2 emin);
+try rewrite -B2R_float_of_ftype;
 try apply Binary.generic_format_B2R.
 rewrite Rminus_eq_0; 
   apply generic_format_0.
@@ -359,26 +403,35 @@ set (f:= (BPLUS xl b)) in *.
 f_equal.
 { BPLUS_correct t a f; fold (@FT2R t).
 rewrite H1 Rplus_0_l; subst f.
-BPLUS_correct t xl b; fold (@FT2R t); 
+rewrite -is_finite_Binary in H5.
+BPLUS_correct t xl b; 
+try rewrite -B2R_float_of_ftype;
 rewrite H2 Rplus_0_r !round_generic; try nra.
 all: try apply (generic_format_FLX_FLT radix2 emin);
 try apply Binary.generic_format_B2R. } 
 set (f1:= (BMINUS (BPLUS a f) a)) in *. 
-BMINUS_correct t f f1; subst f. 
+BMINUS_correct t f f1; subst f.
+rewrite -is_finite_Binary in H4.
 BPLUS_correct t xl b; fold (@FT2R t); 
 rewrite H2 Rplus_0_r.
 subst f1.
 set (f1:= BPLUS a (BPLUS xl b)) in *.
-BMINUS_correct t f1 a. fold (@FT2R t); 
+rewrite -is_finite_Binary in H5.
+try rewrite B2R_float_of_ftype.
+BMINUS_correct t f1 a. 
+try rewrite B2R_float_of_ftype.
   rewrite H1 Rminus_0_r. 
 subst f1.  
 set (f1:= (BPLUS xl b)) in *.
+rewrite -is_finite_Binary in H10.
 BPLUS_correct t a f1. subst f1;
-fold (@FT2R t); 
+try rewrite B2R_float_of_ftype.
   rewrite H1 Rplus_0_l. 
-BPLUS_correct t xl b; fold (@FT2R t); 
+BPLUS_correct t xl b; 
+try rewrite B2R_float_of_ftype;
 rewrite H2 Rplus_0_r !round_generic; try nra.
-all: try apply (generic_format_FLX_FLT radix2 emin);
+all: try rewrite -B2R_float_of_ftype;
+  try apply (generic_format_FLX_FLT radix2 emin);
 try apply Binary.generic_format_B2R. 
 rewrite Rminus_eq_0; apply generic_format_0.
 Qed.
@@ -398,19 +451,24 @@ rewrite /Fast2Sum_err/Fast2Sum_sum/DDModels.Fast2Sum/fst/snd/=.
 move => []; rewrite /fst/snd; fold s z; move => FINs FINd.
 BMINUS_correct t b z; field_simplify. clear H4.
 unfold z.
-have FINsa: Binary.is_finite (fprec t) (femax t) (BMINUS s a) = true.
-{ move : FINd. fold z; destruct z => /=; destruct b => /= ; try discriminate; auto. } 
+have FINsa: is_finite z = true by rewrite is_finite_Binary.
+unfold z in FINsa.
 BMINUS_correct t s a; field_simplify. unfold s in *. BPLUS_correct t a b; field_simplify.
 have Ga: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R a) by
+  rewrite -B2R_float_of_ftype;
   apply (Binary.generic_format_B2R (fprec t) (femax t)).
 have Gb: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R b) by
+  rewrite -B2R_float_of_ftype;
   apply (Binary.generic_format_B2R (fprec t) (femax t)).
 have Hr : (radix2 <= 3)%Z by (simpl; auto).
 (** apply lemmas from paper_proofs.F2SumFLT *)
 have: Fast2Sum_correct_flt radix2 emin (fprec t) choice (FT2R a) (FT2R b). 
 apply F2Sum_correct_abs_flt => //. apply (fprec_gt_one t).
-rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd; fold (@FT2R t); 
-  move => H; rewrite H; f_equal.
+rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd; 
+  rewrite -!B2R_float_of_ftype;
+  move => H. rewrite H; f_equal.
+  rewrite -!B2R_float_of_ftype in H9.
+  rewrite /BPLUS/BINOP float_of_ftype_of_float => //.
 Qed.
 
 Theorem Fast2Sum_is_DW: 
@@ -420,6 +478,7 @@ Proof.
 destruct FIN as (FINm & FINp).
 unfold Fast2Sum_err, Fast2Sum_sum, DDModels.Fast2Sum, fst, snd in *.
   BPLUS_correct t a b.
+by rewrite -!B2R_float_of_ftype.
 Qed.
 
 Lemma FastTwoSumEq_no_underflow  
@@ -445,13 +504,17 @@ move => FIN1 FIN2.
 have Heq : 
 fst (DD.paper_proofs.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b)) = FT2R (DD.DDModels.Fast2Sum_sum a b).
 { move: FIN1. rewrite /DD.DDModels.Fast2Sum_err/DD.DDModels.Fast2Sum_sum/F2Rp/fst/snd/=. move => FIN1.
-BPLUS_correct t a b; field_simplify.  by rewrite H. }
+BPLUS_correct t a b; field_simplify. 
+rewrite -!B2R_float_of_ftype H => //. 
+by rewrite !B2R_float_of_ftype.  }
 f_equal => //.
 rewrite DD.accuracy_proofs.TwoSum_acc.FastTwoSumCorrect.FastTwoSum_correct. 
 rewrite DD.paper_proofs.F2SumFLX.F2Sum_correct_abs => //. f_equal => //.
 apply fprec_gt_one.
 apply Bayleyaux.rnd_p_sym. apply choiceP.
-all: apply (@generic_format_FLX_FLT radix2 emin); apply Binary.generic_format_B2R.
+all: apply (@generic_format_FLX_FLT radix2 emin); 
+rewrite -B2R_float_of_ftype;
+apply Binary.generic_format_B2R.
 Qed.
 
 (* the result of the FLT format algorithm and the FLX format algorithm are 
@@ -466,8 +529,10 @@ destruct (Rlt_or_le (Rabs (FT2R a + FT2R b)) (bpow radix2 (emin + fprec t - 1)) 
    [BND | BND].
 { have A : generic_format radix2 (FLT_exp emin (fprec t)) (FT2R a + FT2R b).
   { apply Plus_error.FLT_format_plus_small;
+    try rewrite -B2R_float_of_ftype;    
     try apply (Binary.generic_format_B2R (fprec t) (femax t)).
     apply (fprec_gt_0 t). apply Rlt_le.
+    rewrite B2R_float_of_ftype.
     refine (Rlt_le_trans _ _ _ BND _). 
     apply bpow_le; fold emin; lia. } 
 rewrite !BPLUS_UF_exact => //. f_equal.
@@ -476,23 +541,26 @@ by apply (generic_format_FLX_FLT _ emin).
 set (y:= (BMINUS (BPLUS a b) a)) in *.
 BMINUS_correct t b y.
 subst y.
+rewrite -is_finite_Binary in H3.
 BMINUS_correct t (BPLUS a b) a.
-fold (@FT2R t).
-rewrite !BPLUS_UF_exact => //. 
+    rewrite B2R_float_of_ftype.
+rewrite !BPLUS_UF_exact => //.
+rewrite -!B2R_float_of_ftype.
+rewrite -!B2R_float_of_ftype in A.
 rewrite !round_generic => //;
 match goal with |- context [generic_format _ _ ?A] =>
     try field_simplify A end; 
-by (try apply: Binary.generic_format_B2R;
+(try apply: Binary.generic_format_B2R;
 try apply (generic_format_FLX_FLT _ emin);
 try apply: Binary.generic_format_B2R;
-try apply: generic_format_0). } 
+try apply: generic_format_0) => //. }
 by apply FastTwoSumEq_no_underflow.
 Qed.
 
 End FastTwoSumCorrect.
 
 Section FastTwoSumAcc.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (a b : ftype t).
 Hypothesis FIN : is_finite_p (DD.DDModels.Fast2Sum a b).
@@ -509,7 +577,8 @@ rewrite Rabs_minus_sym.
 pose proof error_le_half_ulp
   Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) choice (FT2R a + FT2R b) as HE.
 destruct FIN as (FINs & FINd); simpl in FINs. 
-BPLUS_correct t a b. fold (@FT2R t); auto. 
+BPLUS_correct t a b. 
+by rewrite !B2R_float_of_ftype.
 Qed.
 
 
