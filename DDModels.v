@@ -21,7 +21,7 @@ End Format.
 
 
 Section TwoSumModel.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Definition TwoSumF (a b : ftype t) :=
 let s  := BPLUS a b in
@@ -36,7 +36,7 @@ Definition TwoSumF_sum (a b : ftype t) := fst (TwoSumF a b).
 End TwoSumModel.
 
 Section FastTwoSumModel.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Definition Fast2Sum (a b : ftype t) :=
 let s := BPLUS a b in
@@ -50,7 +50,7 @@ End FastTwoSumModel.
 
 
 Section Fast2MultModel.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (** Algorithm 3 : Fast2Mult *)
 Definition Fast2Mult (a b : ftype t) :=
@@ -64,7 +64,7 @@ End Fast2MultModel.
 
 
 Section DWord.
-Context  {t : type}.
+Context  {t : type} {STD: is_standard t}.
 
 (** Definition 1.4 *) 
 Definition double_word : ftype t -> ftype t -> Type :=
@@ -102,13 +102,14 @@ refine (Rle_trans _ _ _ _
 refine (Rle_trans _ _ _ (Rmult_le_compat _ 1 _ _ _ _ _ _) _); try nra.
 apply Ulp.ulp_ge_0.
 apply Rle_refl. nra.
+rewrite <- B2R_float_of_ftype.
 apply Binary.generic_format_B2R.
 Qed.
 
 End DWord.
 
 Section DWops.
-Context {NANS: Nans} {t : type}.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (** Algorithm 4 : Addition of DW number and FP number *)
 Definition DWPlusFP (xh xl y : ftype t) := 
