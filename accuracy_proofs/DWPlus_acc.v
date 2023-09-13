@@ -8,9 +8,8 @@ Require Import mathcomp.ssreflect.ssreflect.
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 Require Import Logic.FunctionalExtensionality.
 
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-
 Section CorrectDWPlusFP.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl y : ftype t).
 
@@ -136,6 +135,7 @@ Qed.
 End CorrectDWPlusFP.
 
 Section  CorrectDWPlusFP'.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
@@ -322,7 +322,7 @@ case:(Req_dec (FT2R xh) 0)=> hxh0.
 
 (* facts *)
 have FIN3: is_finite (BPLUS xh y) = true.
-destruct FIN2; move: FIN2 => //=.
+destruct FIN2. simpl in H => //.
 have Hp0 : Prec_gt_0 (fprec t) by apply fprec_gt_0.
 have Hvd : Valid_exp fexp by apply FLT_exp_valid.
 have Hrn : Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) by
@@ -366,7 +366,7 @@ match goal with |- context[generic_format _ _ ?a] =>
 field_simplify a
 end. 
 rewrite -!B2R_float_of_ftype; apply Binary.generic_format_B2R.
-destruct FIN2; move: FIN2 => //=. 
+simpl in FIN2 => //.
 }
 
 (* cases on underflow (xh + xl) *)
@@ -790,6 +790,7 @@ End CorrectDWPlusFP'.
 
 
 Section AccuracyDWPlusFP.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl y : ftype t).
 Let zh := (FT2R (fst (DWPlusFP xh xl y))).
@@ -927,4 +928,143 @@ apply relative_errorDWPlusFP_correct.
 Qed.
 
 End AccuracyDWPlusFP.
+
+Require Import List.
+Import ListNotations.
+Section VCFloat.
+
+Definition fprecDD := 106%Z.
+Fact fprec_le_femax_DD : FPCore.ZLT fprecDD (femax Tdouble). 
+  Proof. rewrite //fprecDD; simpl. Qed.
+Fact nstd_prf2 : Is_true (negb (106 =? 1)%positive). 
+  Proof. by simpl. Qed.
+
+(** the higher order term is the float value of a 
+   double word *)
+Definition DD2F (x : ftype Tdouble * ftype Tdouble ) 
+  : option (float radix2):= 
+match is_finite (fst x) with 
+| true => Some (FT2F (fst x))
+| false => None
+end.
+
+(**  a double word number is an unevaluated sum *)
+Definition DD2R (x : ftype Tdouble * ftype Tdouble ) := 
+    FT2R (fst x) + FT2R (snd x).
+
+(**  compare using higher-order terms only *)
+Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
+    option comparison :=
+match DD2F x with
+| Some xh => 
+  match DD2F y with 
+  | Some yh => Some (Rcompare (F2R xh) (F2R yh))
+  | _   => None end
+| _ => None
+end.
+
+Definition DD_is_finite (x : ftype Tdouble * ftype Tdouble ) := 
+  match DD2F x with
+  | Some xh => if is_finite (fst x) then True else False
+  | None => False 
+  end.
+
+Definition DD_is_finite_compare x :
+  match DD2F x with 
+  | Some xh => DD_compare x x = Some Eq 
+  | _ => True 
+  end.
+destruct x, f, f0; 
+  rewrite /DD_compare/DD2R/FT2R => //=; f_equal.
+all: by apply Rcompare_Eq. 
+Defined.
+
+Definition DD_compare_correct x y a b :
+      DD2F x = Some a ->
+      DD2F y = Some b ->
+      DD_compare x y = Some (Rcompare (F2R a) (F2R b)).
+rewrite /DD2F. destruct x, y => //=. 
+destruct f, f1, f0, f2 => //=; move => H1 H2;
+inversion H1; inversion H2 => //=.
+Defined.
+
+Definition DD_zero := 
+  (Zconst Tdouble 0, Zconst Tdouble 0).
+
+Definition DD_nonstd_nonempty_finite :
+match DD2F DD_zero with
+| Some xh => True 
+| _ => False
+end.
+by rewrite /DD2F/DD_zero.
+Defined.
+
+Definition DD_bounds x :
+(-(bpow radix2 (femax Tdouble) - 
+      bpow radix2 ((femax Tdouble) - Z.pos 106%positive)) <=
+match DD2F x with Some f => F2R f | None => R0 end <=
+bpow radix2 (femax Tdouble) - 
+    bpow radix2 ((femax Tdouble) - Z.pos 106%positive)).
+rewrite /DD2F. remember (is_finite (fst x)) as b.
+destruct b => //=; try nra. apply Stdlib.Rabs_def2_le.
+pose proof Binary.bounded_le_emax_minus_prec.
+destruct x,f,f0 => //=; simpl in Heqb; try discriminate.
+Admitted.
+
+Definition double_double : type. 
+pose (NONSTD 106 (femax Tdouble) fprec_le_femax_DD nstd_prf2
+  (ftype Tdouble * ftype Tdouble) DD_zero DD2F DD_compare 
+  DD_is_finite_compare DD_compare_correct 
+  DD_nonstd_nonempty_finite DD_bounds).
+pose (GTYPE 106 (femax Tdouble) fprec_le_femax_DD nstd_prf2
+  (Some n)).
+assumption.
+Defined.
+
+Definition f_lb : ftype Tdouble :=
+ ftype_of_float (Binary.B754_infinity _ _ true).
+
+Definition f_ub : ftype Tdouble :=
+ ftype_of_float (Binary.B754_infinity _ _ false).
+
+Definition finite_bnds := 
+    ((f_lb, true), (f_ub, true)).
+
+Definition dd_lb : ftype double_double :=
+(ftype_of_float (Binary.B754_infinity _ _ true),
+      (ftype_of_float (Binary.B754_infinity _ _ true))).
+
+Definition dd_ub : ftype double_double :=
+(ftype_of_float (Binary.B754_infinity _ _ false),
+      (ftype_of_float (Binary.B754_infinity _ _ false))).
+
+Definition finite_bnds2 := 
+    ((dd_lb, true), (dd_ub, true)).
+
+Definition DWplusFP_bnds : klist bounds [double_double; Tdouble]:=
+   Kcons (finite_bnds2) (Kcons (finite_bnds) Knil).
+
+Definition DWPlusFP' {NANS: Nans}
+  (x : ftype double_double) (y : ftype Tdouble) :=
+  DWPlusFP (fst x) (snd x) y.
+
+Definition DWPlus_ff {NANS: Nans} : floatfunc 
+                  [double_double;Tdouble] double_double
+    DWplusFP_bnds (fun xhl y => xhl + y)%R.
+apply (Build_floatfunc [double_double;Tdouble] 
+                double_double _ _ 
+          (DWPlusFP')
+           1%N 0%N).
+intros x ? y ?.
+simpl in H0. 
+move : H.
+rewrite/interp_bounds/finite_bnds2.
+move => H.
+set v:= @compare double_double Lt true dd_lb x.
+cbv [compare extend_comp compare'] in v.
+cbv beta zeta iota delta in v.
+Admitted.
+
+End VCFloat.
+
 
