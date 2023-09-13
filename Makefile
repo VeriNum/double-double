@@ -40,7 +40,7 @@ clean:
 	rm -f CoqMakefile CoqMakefile.conf
 	rm -f *.vo *.vos *.vok *.glob
 	rm -f paper_proofs/*.{vo,vos,vok,glob}
-	rm -f common/*.{vo,vos,vok,glob}
+	rm -f common/*.vo
 	rm -f verif_objs/*.{vo,vos,vok,glob}
 
 # This should be the last rule, to handle any targets not declared above

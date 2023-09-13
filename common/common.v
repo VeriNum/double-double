@@ -11,6 +11,9 @@ Definition neg_zero {t: type} := Binary.B754_zero (fprec t) (femax t) true.
 
 Section NAN.
 
+Definition is_finite_p {t : type} {STD: is_standard t} 
+  (a : ftype t * ftype t)  := is_finite (fst a) = true /\ is_finite (snd a) = true.
+
 Definition F2Rp {t} (a : ftype t * ftype t) := (FT2R (fst a), FT2R (snd a)).
 
 Definition default_rel (t: FPCore.type) : R :=
@@ -347,5 +350,6 @@ Definition error_rel (t: type) (n: nat) (r : R) : R :=
   if (1 <=? Z.of_nat n) then 
     (g t (n-1)) * (Rabs r + e/d)
   else 0%R.
+
 
 End NAN.
