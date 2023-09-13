@@ -952,7 +952,7 @@ end.
 Definition DD2R (x : ftype Tdouble * ftype Tdouble ) := 
     FT2R (fst x) + FT2R (snd x).
 
-(**  compare using higher-order terms only *)
+(**  comparison uses higher-order terms only *)
 Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
     option comparison :=
 match DD2F x with
@@ -963,6 +963,7 @@ match DD2F x with
 | _ => None
 end.
 
+(** finite check uses injection to floats *)
 Definition DD_is_finite (x : ftype Tdouble * ftype Tdouble ) := 
   match DD2F x with
   | Some xh => if is_finite (fst x) then True else False
@@ -999,6 +1000,7 @@ end.
 by rewrite /DD2F/DD_zero.
 Defined.
 
+(** TODO *)
 Definition DD_bounds x :
 (-(bpow radix2 (femax Tdouble) - 
       bpow radix2 ((femax Tdouble) - Z.pos 106%positive)) <=
@@ -1048,6 +1050,8 @@ Definition DWPlusFP' {NANS: Nans}
   (x : ftype double_double) (y : ftype Tdouble) :=
   DWPlusFP (fst x) (snd x) y.
 
+(** TODO notice that the double-double comparison
+  evals to false *)
 Definition DWPlus_ff {NANS: Nans} : floatfunc 
                   [double_double;Tdouble] double_double
     DWplusFP_bnds (fun xhl y => xhl + y)%R.
