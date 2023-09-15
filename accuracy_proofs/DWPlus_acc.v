@@ -929,8 +929,51 @@ Qed.
 
 End AccuracyDWPlusFP.
 
+Section FiniteDWPlusFP.
+
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+Variables (xh xl y : ftype Tdouble).
+
+(* start section hyps *)
+Hypothesis  xE : double_word xh xl.
+
+Definition ov := Raux.bpow Zaux.radix2 (femax Tdouble).
+
+Theorem is_finite_DWPlusFP_ex  
+  (Hx : Binary.is_finite _ _ (xh + xl + y)%F64 = true) : 
+  is_finite_p (DWPlusFP xh xl y).
+Proof.
+rewrite /DWPlusFP/is_finite_p. 
+replace (TwoSumF xh y) with
+  (TwoSumF_sum xh y, TwoSumF_err xh y) => //.
+remember (xl + TwoSumF_err xh y)%F64 as f1.
+replace (Fast2Sum (TwoSumF_sum xh y) f1) with
+  (Fast2Sum_sum (TwoSumF_sum xh y) f1, 
+      Fast2Sum_err (TwoSumF_sum xh y) f1) => //;
+rewrite /fst/snd.
+unfold double_word in xE.
+assert (Binary.is_finite _ _ (xh + y)%F64 = true).
+{ move: Hx. Search BPLUS.
+
+
+destruct xh, y, xl, s, s1, s0; simpl; auto;
+  move => Hx; try discriminate.
+   simpl in Hx. 
+   simpl in Hx; try discriminate => //=. auto.
+
+assert (Binary.is_finite _ _ (TwoSumF_err xh y) = true).
+{ rewrite /TwoSumF_err/TwoSumF/snd.
+
+
+rewrite /TwoSumF_sum/fst/TwoSumF
+  /Fast2Sum_sum/fst/Fast2Sum.
+Search Fast2Sum_err.
+
+End FiniteDWPlusFP.
+
 Require Import List.
 Import ListNotations.
+
 Section VCFloat.
 
 Definition fprecDD := 106%Z.
@@ -951,18 +994,14 @@ if is_finite xhi && is_finite xlo then
 Definition DD2R (x : ftype Tdouble * ftype Tdouble ) := 
     FT2R (fst x) + FT2R (snd x).
 
+Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) : 
+      option comparison := 
+  let xhi := fst x in let xlo := snd x in
+  let yhi := fst y in let ylo := snd y in
+  let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
+  let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
+  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')).
 
-Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
-    option comparison :=
-match DD2F x with
-| Some x' => 
-  match DD2F y with 
-  | Some y' => Some (Rcompare (F2R x') (F2R y'))
-  | _   => None end
-| _ => None
-end.
-
-(** finite check uses injection to floats *)
 Definition DD_is_finite (x : ftype Tdouble * ftype Tdouble ) := 
   match DD2F x with
   | Some xh => if is_finite (fst x) then True else False
@@ -983,9 +1022,16 @@ Definition DD_compare_correct x y a b :
       DD2F x = Some a ->
       DD2F y = Some b ->
       DD_compare x y = Some (Rcompare (F2R a) (F2R b)).
-rewrite /DD2F. destruct x, y => //=. 
-destruct f, f1, f0, f2 => //=; move => H1 H2;
-inversion H1; inversion H2 => //=.
+rewrite /DD2F/DD_compare. destruct x, y => //=.
+move => H1 H2. 
+destruct f, f0, f1, f2 => //=;
+simpl in H1, H2;
+inversion H1; inversion H2 => //=;
+try rewrite Rmult_0_l;
+try rewrite !FPCore.F2R_eq=> //=; 
+f_equal => //=;
+rewrite !Operations.F2R_plus F2R_0 => //=;
+try rewrite !Rplus_0_l => //=.
 Defined.
 
 Definition DD_zero := 
@@ -1059,20 +1105,34 @@ apply (Build_floatfunc [double_double;Tdouble]
           (DWPlusFP')
            1%N 1%N).
 intros x ? y ?.
-simpl. repeat split; auto. admit. 
+simpl in H, H0.
+rewrite !andb_true_iff in H H0.
+destruct H as [HA HB].
+destruct H0 as [HC HD].
+rewrite/DWPlusFP'.
+repeat split; intros; 
+  try discriminate.
+admit.
+destruct x.
+destruct (
+  relative_errorDWPlusFP_correct' f f0 y) 
+as (del & A & B)=> //.
+admit. admit.
+exists del, 0.
+  repeat split; try nra.
+simpl. rewrite /FPCore.default_rel.
+move : B.
+simpl;
+cbv [fprec double_double] => //=.
+move => B. 
+refine (Rle_trans _ _ _ B _).
+field_simplify; try lra. admit. admit.
 
-set v:= @compare double_double Lt true dd_lb x.
-unfold dd_lb in v.
-simpl ftype_of_float in v.
-unfold compare, compare', double_double in v.
-simpl fprecp in v. simpl femax in v.
-simpl fprec_lt_femax_bool in v;
-simpl fprecp_not_one_bool in v.
-unfold nonstd_compare in v.
-unfold DD_compare in v.
-cbv [compare extend_comp compare'] in v.
-cbv beta zeta iota delta in v.
+simpl. rewrite /FT2R/nonstd_to_R => //=.
+
+admit.
 Admitted.
+
 
 End VCFloat.
 
