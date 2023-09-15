@@ -939,26 +939,25 @@ Fact fprec_le_femax_DD : FPCore.ZLT fprecDD (femax Tdouble).
 Fact nstd_prf2 : Is_true (negb (106 =? 1)%positive). 
   Proof. by simpl. Qed.
 
-(** the higher order term is the float value of a 
-   double word *)
+
 Definition DD2F (x : ftype Tdouble * ftype Tdouble ) 
   : option (float radix2):= 
-match is_finite (fst x) with 
-| true => Some (FT2F (fst x))
-| false => None
-end.
+let xhi := fst x in let xlo := snd x in
+if is_finite xhi && is_finite xlo then
+ Some (Operations.Fplus (FT2F xhi) (FT2F xlo)) else None.
+
 
 (**  a double word number is an unevaluated sum *)
 Definition DD2R (x : ftype Tdouble * ftype Tdouble ) := 
     FT2R (fst x) + FT2R (snd x).
 
-(**  comparison uses higher-order terms only *)
+
 Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
     option comparison :=
 match DD2F x with
-| Some xh => 
+| Some x' => 
   match DD2F y with 
-  | Some yh => Some (Rcompare (F2R xh) (F2R yh))
+  | Some y' => Some (Rcompare (F2R x') (F2R y'))
   | _   => None end
 | _ => None
 end.
@@ -1052,19 +1051,25 @@ Definition DWPlusFP' {NANS: Nans}
 
 (** TODO notice that the double-double comparison
   evals to false *)
-Definition DWPlus_ff {NANS: Nans} : floatfunc 
+Definition DWPlusFP_ff {NANS: Nans} : floatfunc 
                   [double_double;Tdouble] double_double
     DWplusFP_bnds (fun xhl y => xhl + y)%R.
 apply (Build_floatfunc [double_double;Tdouble] 
                 double_double _ _ 
           (DWPlusFP')
-           1%N 0%N).
+           1%N 1%N).
 intros x ? y ?.
-simpl in H0. 
-move : H.
-rewrite/interp_bounds/finite_bnds2.
-move => H.
+simpl. repeat split; auto. admit. 
+
 set v:= @compare double_double Lt true dd_lb x.
+unfold dd_lb in v.
+simpl ftype_of_float in v.
+unfold compare, compare', double_double in v.
+simpl fprecp in v. simpl femax in v.
+simpl fprec_lt_femax_bool in v;
+simpl fprecp_not_one_bool in v.
+unfold nonstd_compare in v.
+unfold DD_compare in v.
 cbv [compare extend_comp compare'] in v.
 cbv beta zeta iota delta in v.
 Admitted.
