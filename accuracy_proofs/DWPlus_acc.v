@@ -1605,7 +1605,10 @@ inversion Heqbo. clear Heqbo. rewrite /DD2F.
 match goal with |- context [Rlt_bool ?a ?b ] => 
 remember (Rlt_bool a b)
 end.
-destruct b => //.
+destruct b => //. 
+
+
+admit. } 
 
  
 rewrite Rlt_bool_true. Req_bool_false.
