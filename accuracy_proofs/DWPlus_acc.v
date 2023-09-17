@@ -1523,7 +1523,9 @@ destruct H as [HA HB].
 destruct H0 as [HC HD].
 rewrite/DWPlusFP'.
 repeat split; intros; try discriminate.
-{ destruct x, x. rewrite /proj1_sig.
+hnf in H.
+{ destruct x, x. 
+rewrite /proj1_sig. 
 rewrite /rounded_finite/FT2R/nonstd_to_R in H. simpl in H.
 remember (DD2F' (exist (fun a : dd_rep => dd_pred a) (f, f0) d)).
 destruct o.
