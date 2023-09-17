@@ -976,11 +976,14 @@ Fact fprec_le_femax_DD : FPCore.ZLT fprecDD (femax Tdouble).
 Fact nstd_prf2 : Is_true (negb (106 =? 1)%positive). 
   Proof. by simpl. Qed.
 
+Definition dd_ov :=
+(bpow radix2 (femax Tdouble) - 
+      bpow radix2 ((femax Tdouble) - Z.pos 106%positive)).
 
 Definition DD2F (x : ftype Tdouble * ftype Tdouble ) 
   : option (float radix2):= 
 let xhi := fst x in let xlo := snd x in
-if is_finite xhi && is_finite xlo then
+if Rlt_bool (Rabs (F2R (Operations.Fplus (FT2F xhi) (FT2F xlo)))) dd_ov then
  Some (Operations.Fplus (FT2F xhi) (FT2F xlo)) else None.
 
 
@@ -1007,8 +1010,9 @@ Definition DD_is_finite_compare x :
   | Some xh => DD_compare x x = Some Eq 
   | _ => True 
   end.
-destruct x, f, f0; 
-  rewrite /DD_compare/DD2R/FT2R => //=; f_equal.
+destruct x. rewrite /DD2F/DD_compare.
+remember (Rlt_bool _ dd_ov) as b.
+destruct b => //=; f_equal.
 all: by apply Rcompare_Eq. 
 Defined.
 
@@ -1016,28 +1020,35 @@ Definition DD_compare_correct x y a b :
       DD2F x = Some a ->
       DD2F y = Some b ->
       DD_compare x y = Some (Rcompare (F2R a) (F2R b)).
-rewrite /DD2F/DD_compare. destruct x, y => //=.
-move => H1 H2. 
-destruct f, f0, f1, f2 => //=;
+rewrite /DD2F/DD_compare. 
+remember (Rlt_bool _ dd_ov) as fb.
+destruct fb => //=. 
+move => H1.
+match goal with |-context[Rlt_bool ?a ?b] => 
+  remember (Rlt_bool a b) as fb0  end.
+destruct fb0 => //=.
+move => H2.
 simpl in H1, H2;
-inversion H1; inversion H2 => //=;
-try rewrite Rmult_0_l;
-try rewrite !FPCore.F2R_eq=> //=; 
-f_equal => //=;
-rewrite !Operations.F2R_plus F2R_0 => //=;
-try rewrite !Rplus_0_l => //=.
+inversion H1; inversion H2 => //=. f_equal.
+rewrite !FPCore.F2R_eq=> //=.
 Defined.
 
 Definition DD_zero := 
   (Binary.B754_zero (fprec Tdouble) 1024 true, 
 Binary.B754_zero (fprec Tdouble) 1024 true).
 
+Fact F2R0 :
+@F2R Zaux.radix2 {| Fnum := 0; Fexp := 0 |} = 0.
+Proof. rewrite /F2R //=; nra. Qed.
+
 Definition DD_nonstd_nonempty_finite :
 match DD2F DD_zero with
 | Some xh => True 
 | _ => False
 end.
-by rewrite /DD2F/DD_zero.
+rewrite /DD2F/DD_zero F2R0 => //=.
+rewrite Rlt_bool_true => //=.
+rewrite Rabs_R0 /dd_ov. simpl; nra.
 Defined.
 
 (** TODO *)
@@ -1349,9 +1360,7 @@ try rewrite !Rplus_0_l => //=;
 try rewrite !Rplus_0_r => //=.
 Defined.
 
-Fact F2R0 :
-@F2R Zaux.radix2 {| Fnum := 0; Fexp := 0 |} = 0.
-Proof. rewrite /F2R //=; nra. Qed.
+
 
 Definition DD_nonstd_nonempty_finite' :
 match DD2F' DD_zero' with
@@ -1593,6 +1602,10 @@ remember (a && b)
 end.
 move => Heqbo. destruct b => //=.
 inversion Heqbo. clear Heqbo. rewrite /DD2F.
+match goal with |- context [Rlt_bool ?a ?b ] => 
+remember (Rlt_bool a b)
+end.
+destruct b => //.
 
  
 rewrite Rlt_bool_true. Req_bool_false.
