@@ -930,44 +930,9 @@ Qed.
 
 End AccuracyDWPlusFP.
 
-Section FiniteDWPlusFP.
-
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-Variables (xh xl y : ftype Tdouble).
-
-(* start section hyps *)
-Hypothesis  xE : double_word xh xl.
-
-Definition ov := Raux.bpow Zaux.radix2 (femax Tdouble).
-
-Theorem is_finite_DWPlusFP_ex  
-  (Hxy : is_finite (xh + xl + y)%F64 = true) 
-  (Hxh : is_finite (xh)%F64 = true)
-  (Hxl : is_finite (xl)%F64 = true)
-  (Hy  : is_finite (y)%F64 = true):
-  is_finite_p (DWPlusFP xh xl y).
-Proof.
-rewrite /DWPlusFP/is_finite_p. 
-replace (TwoSumF xh y) with
-  (TwoSumF_sum xh y, TwoSumF_err xh y) => //.
-remember (xl + TwoSumF_err xh y)%F64 as f1.
-replace (Fast2Sum (TwoSumF_sum xh y) f1) with
-  (Fast2Sum_sum (TwoSumF_sum xh y) f1, 
-      Fast2Sum_err (TwoSumF_sum xh y) f1) => //;
-rewrite /fst/snd.
-rewrite /Fast2Sum_sum/fst/Fast2Sum.
-rewrite /TwoSumF_sum/fst/TwoSumF.
-unfold double_word in xE.
-have FIN1: (is_finite (xh + y)%F64 = true).
-{  destruct xh, y, xl, s, s0, s1; simpl; auto; 
-  try discriminate. 
-Admitted. 
-
-End FiniteDWPlusFP.
 
 Require Import List.
 Import ListNotations.
-
 Section VCFloat.
 
 Definition fprecDD := 106%Z.
@@ -1477,38 +1442,7 @@ rewrite Hy Hy1. interval.
 rewrite Hy1 Hy. rewrite Rabs_R0. apply Rmult_le_pos ; [nra|].
 apply Ulp.ulp_ge_0.
  apply (exist _ _ H). 
-
-(* set P := (fun (a: dd_rep) => Rabs (FT2R (snd a)) <= / 2 * ulp (FT2R (fst a))).
-set y := (Zconst Tdouble (-Z.pow 2 (femax Tdouble -1))).
-pose y' := (/ 2 * ulp (FT2R y)).
-unfold ulp in y'. 
-remember (Req_bool (FT2R y) 0) as y0.
-destruct y0. *)
-(* { subst y. 
-rewrite -B2R_float_of_ftype in Heqy0.
-rewrite Req_bool_false in Heqy0 => //=.
-apply F2R_neq_0 => //=. } 
-set y1 := Zconst Tdouble (Z.pow 2 (-971)). 
-set Y:= (y,y1); assert (P Y); rewrite /Y/P/FT2R/Ulp.ulp => //=.
-rewrite Req_bool_false; [|apply F2R_neq_0 => //=  ].
-clear y'.
-set y':= FT2R y. unfold FT2R in y'. simpl in y'.
-fold y'. rewrite (cexp_fexp radix2
-  (SpecFloat.fexp (fprec Tdouble) (femax Tdouble)) y' 1024) => //=;
-try interval.
-subst y'; rewrite /F2R => //=; split; try interval.
-rewrite Rabs_mult.
-try interval with (i_prec 128). 
- apply (exist _ _ H).  *)
-(* Defined. *) 
 Defined.
-
-
-(* simpl in y'.
-rewrite -B2R_float_of_ftype in y'.
-rewrite (cexp_fexp radix2
-  (SpecFloat.fexp (fprec Tdouble) (femax Tdouble)) (FT2R y) 11)  in y'.
-simpl in y'. *)
 
 Definition dd_ub : ftype double_double'.
 rewrite /ftype/double_double' => //=.
@@ -1581,7 +1515,7 @@ Definition DWPlusFP_ff {NANS: Nans} : floatfunc
 apply (Build_floatfunc [double_double';Tdouble] 
                 double_double _ _ 
           (DWPlusFP')
-           1%N 1%N).
+          2%N 1%N).
 intros x ? y ?.
 { simpl in H, H0.
 rewrite !andb_true_iff in H H0.
@@ -1598,13 +1532,27 @@ match goal with |- context [if ?a && ?b then _ else _] =>
 remember (a && b)
 end.
 move => Heqbo. destruct b => //=.
-inversion Heqbo. clear Heqbo. rewrite /DD2F.
+inversion Heqbo. clear Heqbo. 
+move : Heqb.
 match goal with |- context [Rlt_bool ?a ?b ] => 
 remember (Rlt_bool a b)
 end.
 destruct b => //.
-move: Heqb0. 
-rewrite /DWPlusFP.
+match goal with |- context [true && ?a] => 
+remember a
+end.
+destruct b => //. move => _.
+move : Heqb0.
+remember (Req_bool _ _). 
+destruct b => //=.
+{ move => _. admit. (* provable *) } 
+move => H2. admit. (*not provable*) } 
+{ move : Heqo. rewrite /DD2F' => /=.
+match goal with |- context [if ?a && ?b then _ else _] => 
+remember (a && b)
+end. destruct b => //. (* case false *) admit.
+
+(* rewrite /DWPlusFP.
 replace (TwoSumF f y) with
 (TwoSumF_sum f y,TwoSumF_err f y) => //.
 replace (Fast2Sum (TwoSumF_sum f y) (f0 + TwoSumF_err f y)%F64)
@@ -1613,44 +1561,15 @@ with
 Fast2Sum_err (TwoSumF_sum f y) (f0 + TwoSumF_err f y)%F64) => //.
 rewrite /fst/snd.
 rewrite /TwoSumF_sum/fst/TwoSumF.
-rewrite Operations.F2R_plus -!FPCore.F2R_eq !F2R_FT2F.
-unfold dd_lb in HA.
-
-
-admit. } 
-
- 
-rewrite Rlt_bool_true. Req_bool_false.
-remember (  (if negb (Req_bool (FT2R f + FT2R f0) 0)
-   then Rle_bool (/ IZR (Z.pow_pos 2 1022)) (Rabs (FT2R f + FT2R f0))
-   else true)).
-destruct b => //=.
-remember (Rlt_bool (Rabs (F2R (Operations.Fplus (B2F f) (B2F f0)))) dd_ov).
-destruct b => //=.
-
-
-in Heqo.
-
-
-admit.
-destruct d. simpl in H.
-move: H. rewrite /rounded_finite/FT2R/nonstd_to_R => //=.
-rewrite /DD2F' => //=.
-move : HA.
-rewrite /compare/extend_comp/compare' => //=.
-rewrite /proj1_sig/fst/snd => //=.
-
-apply finite_bnds_e in HB, HC, HD.
-
-remember (Req_bool (FT2R f + FT2R f0) 0).
-destruct b => //=.
-move => H.
-
-
+rewrite Operations.F2R_plus -!FPCore.F2R_eq !F2R_FT2F. *)
+} }  
+destruct x,x => //=.
 destruct (
   relative_errorDWPlusFP_correct' f f0 y) 
-as (del & A & B)=> //. admit. 
-admit. admit. }
+as (del & A & B)=> //. 
+apply (dd_pred_double_word (f, f0)) => //.
+(* supposedly we've proved this by now *)
+admit.
 exists del, 0.
   repeat split; try nra.
 simpl. rewrite /FPCore.default_rel.
@@ -1659,13 +1578,11 @@ simpl;
 cbv [fprec double_double] => //=.
 move => B. 
 refine (Rle_trans _ _ _ B _).
-field_simplify; try lra. admit. admit.
-
-simpl. rewrite /FT2R/nonstd_to_R => //=.
-
-admit.
+interval with (i_prec 128).
+interval with (i_prec 128).
+simpl.
+(* using hyp A *)
 Admitted.
-
 
 End VCFloat.
 
