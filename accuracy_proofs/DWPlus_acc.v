@@ -1292,9 +1292,6 @@ Definition DD_zero' : dd_rep1.
  apply (exist _ _ H). 
 Defined.
 
-Definition dd_ov :=
-(bpow radix2 (femax Tdouble) - 
-      bpow radix2 ((femax Tdouble) - Z.pos 106%positive)).
 
 Definition DD2F' (x : dd_rep1) 
   : option (float radix2):= let s:= (proj1_sig x) in
@@ -1412,7 +1409,7 @@ move: Heqc. rewrite /FT2R => //=; move => Heqc.
 refine (Rle_trans _ _ _ _ _).
 apply Rlt_le in Heqc.
 apply Heqc. unfold dd_ov. simpl; nra.
-Qed.
+Defined.
 
 
 Definition double_double' : type. 
@@ -1504,7 +1501,7 @@ rewrite Rabs_mult.
 try interval with (i_prec 128). 
  apply (exist _ _ H).  *)
 (* Defined. *) 
-Qed.
+Defined.
 
 
 (* simpl in y'.
@@ -1564,7 +1561,7 @@ try interval with (i_prec 128).
 rewrite Hy Rabs_pos_eq; [split; simpl | nra];
 try interval with (i_prec 128). nra. 
  apply (exist _ _ H). 
-Qed.
+Defined.
 
 Definition finite_bnds2 := 
     ((dd_lb, true), (dd_ub, true)).
@@ -1605,7 +1602,19 @@ inversion Heqbo. clear Heqbo. rewrite /DD2F.
 match goal with |- context [Rlt_bool ?a ?b ] => 
 remember (Rlt_bool a b)
 end.
-destruct b => //. 
+destruct b => //.
+move: Heqb0. 
+rewrite /DWPlusFP.
+replace (TwoSumF f y) with
+(TwoSumF_sum f y,TwoSumF_err f y) => //.
+replace (Fast2Sum (TwoSumF_sum f y) (f0 + TwoSumF_err f y)%F64)
+with
+(Fast2Sum_sum (TwoSumF_sum f y) (f0 + TwoSumF_err f y)%F64,
+Fast2Sum_err (TwoSumF_sum f y) (f0 + TwoSumF_err f y)%F64) => //.
+rewrite /fst/snd.
+rewrite /TwoSumF_sum/fst/TwoSumF.
+rewrite Operations.F2R_plus -!FPCore.F2R_eq !F2R_FT2F.
+unfold dd_lb in HA.
 
 
 admit. } 
