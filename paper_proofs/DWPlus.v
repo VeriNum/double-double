@@ -68,7 +68,7 @@ case:(Req_dec e 0)=>e0.
   by rewrite e0 Rplus_0_r round_generic.
 have dE: round two fexp Zfloor (x + e) = x.
   by apply: round_DN_plus_eps_pos =>//;  lra.
-rewrite -{2}dE; apply:round_N_eq_DN; rewrite round_UP_DN_ulp.
+rewrite -{2}dE. apply:round_N_eq_DN. rewrite round_UP_DN_ulp.
   rewrite dE. 
   suff: e <  (ulp radix2 fexp (x + e)) / 2 by lra.
   apply: (Rlt_le_trans _ (/ 2 * ulp radix2 fexp x)); try lra.
@@ -146,7 +146,7 @@ apply:Rle_antisym.
   apply: round_N_le_midp =>//.
   rewrite succ_eq_pos; lra.
 apply:round_N_ge_midp=>//.
-by rewrite notpow_pred=>//; lra.
+rewrite notpow_pred =>//; lra.
 Qed.
 
 Fact generic_is_pow x: is_pow two  x -> format x.
@@ -203,7 +203,7 @@ apply: Rle_antisym=>//.
 rewrite [X in _ <= X ] xer; apply: round_le ; lra.
 Qed.
 
-Section TwoF2Sum.
+Section TwoF2Sum. 
 
 Fact choiceP: (forall x : Z, choice x = negb (choice (- (x + 1))%Z)).
 Proof.
