@@ -2506,31 +2506,16 @@ subst b; simpl.
 rewrite Operations.F2R_plus.
 by rewrite -!F2R_FT2F !FPCore.F2R_eq.
 
-(* 
+ 
 rewrite Operations.F2R_plus.
-rewrite -!FPCore.F2R_eq !F2R_FT2F in Hov.
-rewrite -!B2F_F2R_B2R  !B2R_float_of_ftype.
-simpl in Hb. rewrite /FT2R in Hb. simpl in Hb.
-rewrite /nonstd_to_R/nonstd_to_F in Hb.
-
-remember (DD2F (f, f0)).
-destruct o. rewrite /DD2F in Heqo.
-
-rewrite Rlt_bool_true in Heqo.
-
-pose proof xl_bnd f f0 X C.
-clear HA HB H H0.
-
-move : C.
-rewrite /dd_ov. simpl. intros.
-
-pose proof dd_ub_implies. 
- admit.
+simpl in C. clear HA HB Hb H.
+move: C.  
+by rewrite -!B2F_F2R_B2R  !B2R_float_of_ftype.
 
 by rewrite H2 Rplus_0_r. } 
 
-rewrite /floatfunc_congr /DWPlusFP' => //=.
-Admitted. *)
+Search floatfunc_congr.
+Admitted.
 
 End VCFloat.
 
