@@ -1357,15 +1357,20 @@ rewrite B. clear B.
 
 move: Hd5 Hd4 Hd2 Hd3 Hd1. unfold t, default_rel, Relative.u_ro. simpl.
 intros. simpl in Hxh, Hy.
-match goal with |- Rabs ?a < _ =>
-field_simplify a
-end.
 
-(* TODO: lookup Coq manual print def and 
-  change this so that the body of Rabs isn't 
-  elided *)
+interval_intro (
+Rabs
+  (((FT2R xl + (FT2R xh + FT2R y) * d2s) * (1 + d2) +
+    -
+    ((((FT2R xh + FT2R y) * (1 + d5) + (FT2R xl + (FT2R xh + FT2R y) * d2s) * (1 + d2)) * (1 + d4) -
+      (FT2R xh + FT2R y) * (1 + d5)) * (1 + d3))) * (1 + d1))) with 
+(i_prec 128, i_bisect (FT2R xh), i_depth 10).
 
-Admitted.
+destruct H.
+refine (Rle_lt_trans _ _ _ H0 _).
+
+interval with (i_prec 256).
+Qed.
 
 Let zh := Fast2Sum_sum sh (BPLUS xl sl) .
 Let zl := Fast2Sum_err sh (BPLUS xl sl) .
@@ -2264,13 +2269,10 @@ match goal with |- context [ (Rcompare ?a ?b  )] =>
   remember (Rcompare a ubnd)
 end. 
 match goal with |- context [ (Rcompare ?a ?b )] =>
-  set lbnd:= b;
-  remember (Rcompare a lbnd)
+  set lbnd:= a;
+  remember (Rcompare lbnd b)
 end. 
-destruct c, c0 => //=. move => _  _.
-pose proof dd_pred_double_word (f,f0) d as Hdd.
-repeat split.
-destruct d as ( A & B & C & D) => //.
+destruct d as ( A & B & C & D & E) => //.
 Qed.
 
  Lemma dd_ub_implies' x :
@@ -2332,6 +2334,15 @@ Definition DWPlusFP' {NANS: Nans}
   let xs := proj1_sig x in 
   DWPlusFP (fst xs) (snd xs) y.
 
+Theorem ff_congr {NANS: Nans} : 
+@floatfunc_congr [double_double'; Tdouble] double_double (@DWPlusFP' NANS).
+Proof.
+rewrite /floatfunc_congr/DWPlusFP' => //=.
+rewrite /nonstd_is_nan/nonstd_compare/DD_compare/applyk_aux.
+simpl. intros.
+remember (Rcompare _ _ ). destruct c.
+symmetry in Heqc.
+Admitted.
 
 Definition DWPlusFP_ff {NANS: Nans} : floatfunc 
                   [double_double' ;Tdouble] double_double
@@ -2341,6 +2352,7 @@ apply (Build_floatfunc [double_double';Tdouble]
           (DWPlusFP')
           2%N 1%N).
 intros x ? y ?.
+
 { simpl in H, H0.
 rewrite !andb_true_iff in H H0.
 destruct H as [HA HB].
@@ -2514,8 +2526,8 @@ by rewrite -!B2F_F2R_B2R  !B2R_float_of_ftype.
 
 by rewrite H2 Rplus_0_r. } 
 
-Search floatfunc_congr.
-Admitted.
+apply ff_congr.
+Qed.
 
 End VCFloat.
 
