@@ -1361,6 +1361,10 @@ match goal with |- Rabs ?a < _ =>
 field_simplify a
 end.
 
+(* TODO: lookup Coq manual print def and 
+  change this so that the body of Rabs isn't 
+  elided *)
+
 Admitted.
 
 Let zh := Fast2Sum_sum sh (BPLUS xl sl) .
@@ -1768,28 +1772,61 @@ assumption.
 Defined.
 
 Definition f_lb : ftype Tdouble :=
-(Zconst Tdouble (-Z.pow 2 (femax Tdouble - 2))).
+(Zconst Tdouble (-Z.pow 2 (femax Tdouble - 3))).
 (*  ftype_of_float (Binary.B754_infinity _ _ true). *)
 
 Definition f_ub : ftype Tdouble :=
-(Zconst Tdouble (Z.pow 2 (femax Tdouble - 2))).
+(Zconst Tdouble (Z.pow 2 (femax Tdouble - 3))).
 (*  ftype_of_float (Binary.B754_infinity _ _ false). *)
 
 Definition finite_bnds := 
     ((f_lb, true), (f_ub, true)).
 
+Require Import Interval.Tactic.
+
 Lemma finite_bnds_y_1 y :
+compare Lt true f_lb y = true  -> 
 compare Lt true y f_ub = true  -> 
 Rabs (FT2R y) < /4 * (bpow radix2 (femax Tdouble)).
 Proof.
 rewrite /compare/compare'/extend_comp. simpl. 
-Admitted.
+intros.
+destruct y.
+1,2,3: rewrite /FT2R; simpl; rewrite Rabs_R0; nra.
+revert H H0.
+destruct (Binary.Bcompare 53 1024 _ f_ub) as
+ [[| |] |] eqn:?H; try discriminate.
+destruct (Binary.Bcompare 53 1024 f_lb _) as
+ [[| |] |] eqn:?H; try discriminate.
+move => _ _.
+rewrite !Binary.Bcompare_correct in H, H0;
+try reflexivity.
+match type of H with Some ?A = Some ?B => 
+  assert (A = B) by congruence end.
+match type of H0 with Some ?A = Some ?B => 
+  assert (A = B) by congruence end.
+symmetry in H, H0.
+apply Rcompare_Lt_inv in H1, H2.
+apply Rabs_lt. split.
+refine (Rlt_trans _ _  _ _ _).
+2: apply H2. simpl; interval.
+refine (Rlt_trans _ _  _ H1 _).
+simpl; interval.
+Qed.
 
 Lemma finite_bnds_y_2 y :
 compare Lt true y f_ub = true  -> 
+compare Lt true f_lb y = true  -> 
 is_finite y = true.
 Proof.
-Admitted.
+rewrite /compare/compare'/extend_comp. simpl. 
+intros.
+destruct y. 
+4 : simpl; auto.
+all: simpl in H.
+all: rewrite /FT2R; simpl; try discriminate; auto.
+simpl in H0. destruct s; auto. 
+Qed.
 
 Notation ulp :=  (Ulp.ulp Zaux.radix2 
   (SpecFloat.fexp (fprec Tdouble) (femax Tdouble))).
@@ -1801,6 +1838,7 @@ Proof.  intros. nra. Qed.
 
 Definition dd_pred (a: dd_rep) : Prop := 
   is_finite (fst a) = true /\ is_finite (snd a) = true
+  /\ Rabs (FT2R (fst a) + FT2R (snd a)) < dd_ov
   /\ Rabs (FT2R (fst a)) < /4 * (bpow radix2 (femax Tdouble))
   /\ (0 <>  (FT2R (fst a)) ->  
   bpow radix2 (@emin Tdouble + fprec Tdouble - 1) <= 
@@ -1973,7 +2011,7 @@ Fact dd_pred_double_word a :
   dd_pred a -> double_word (fst a) (snd a).
 Proof.
 rewrite /dd_pred/double_word; 
- move => [] FIN1 [] FIN2 [] A [] H1 [] H2 H3.
+ move => [] FIN1 [] FIN2 [] Hov [] A [] H1 [] H2 H3.
 destruct (Bayleyaux.is_pow_dec radix2 (FT2R (fst a))).
 { symmetry. rewrite /rounded. 
 destruct (Req_dec (FT2R (fst a)) 0).
@@ -2001,7 +2039,8 @@ Definition dd_rep1 : Type :=
 Definition DD_zero' : dd_rep1.
  set P := dd_pred.
  assert (P DD_zero). rewrite /DD_zero/P/dd_pred/FT2R => //=.
- rewrite Rplus_0_l Rabs_R0; repeat split; try nra. 
+ rewrite Rplus_0_l Rabs_R0; repeat split; try nra.
+ rewrite /dd_ov. simpl; nra.
  apply Rmult_le_pos; try lra.
  apply ulp_ge_0.
  apply (exist _ _ H). 
@@ -2138,9 +2177,6 @@ assumption.
 Defined.
 
 
-
-Require Import Interval.Tactic.
-
 Definition dd_lb : ftype double_double'.
 rewrite /ftype/double_double' => //=.
 rewrite /dd_rep1.
@@ -2162,6 +2198,8 @@ have Hy1 : FT2R (ftype_of_float y1) = 0.
 subst y1.  rewrite /neg_zero/FT2R. simpl. nra.
 set Y:= (y, y1). assert (dd_pred Y).
 rewrite /Y/dd_pred/fst/snd; repeat split; intros.
+rewrite Hy1 /dd_ov Rplus_0_r. simpl. rewrite Hy.
+apply Rabs_lt; split; simpl; nra.
 rewrite Hy ;
 rewrite Ropp_Ropp_IZR Rabs_Ropp Rabs_pos_eq; simpl; nra.
 simpl in Hy1. 
@@ -2174,49 +2212,6 @@ rewrite Hy1 Rabs_R0.
 apply Rmult_le_pos; try nra.
 apply Ulp.ulp_ge_0.
  apply (exist _ _ H). 
-(* rewrite /ftype/double_double' => //=.
-rewrite /dd_rep1.
-set y := (Zconst Tdouble (-Z.pow 2 (femax Tdouble -1))).
-have Hy : FT2R y = IZR (- 2 ^ (femax Tdouble - 1)).
-{ subst y . rewrite /Zconst. 
-destruct (@IEEE754_extra.BofZ_representable
-(fprec Tdouble)
-  (femax Tdouble) (Pos2Z.is_pos (fprecp Tdouble)) (fprec_lt_femax Tdouble)
-(- 2 ^ (femax Tdouble - 1))) as ( A & _).
-apply IEEE754_extra.integer_representable_opp.
-apply (@IEEE754_extra.integer_representable_2p (fprec Tdouble)
-  (femax Tdouble) (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble) 
-( (femax Tdouble - 1))); split; simpl; lia.
-rewrite FT2R_ftype_of_float A Ropp_Ropp_IZR; simpl;
-  nra. } 
-pose y' := (/ 2 * ulp (FT2R y)).
-unfold ulp in y'. 
-remember (Req_bool (FT2R y) 0) as y0.
-destruct y0. 
-{ subst y. 
-rewrite -B2R_float_of_ftype in Heqy0.
-rewrite Req_bool_false in Heqy0 => //=.
-apply F2R_neq_0 => //=. } 
-set y1 := Zconst Tdouble (Z.pow 2 (-971)). 
-have Hy1 : FT2R y1 = IZR (2 ^ (-971)).
-{ subst y1 . rewrite /Zconst. 
-destruct (@IEEE754_extra.BofZ_representable
-(fprec Tdouble)
-  (femax Tdouble) (Pos2Z.is_pos (fprecp Tdouble)) (fprec_lt_femax Tdouble)
-(2 ^ (-971))) as ( A & _).
-apply (@IEEE754_extra.integer_representable_n (fprec Tdouble)
-  (femax Tdouble) (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble) 
-( 2 ^ -971)); split; simpl; try lia.
-rewrite FT2R_ftype_of_float A ; simpl;
-  nra. } 
-set Y:= (y,y1); assert (dd_pred Y).
-rewrite /Y/dd_pred/fst/snd; repeat split; intros.
-rewrite Hy;
-rewrite Ropp_Ropp_IZR Rabs_Ropp Rabs_pos_eq; simpl; nra.
-rewrite Hy Hy1. interval.
-rewrite Hy1 Hy. rewrite Rabs_R0. apply Rmult_le_pos ; [nra|].
-apply Ulp.ulp_ge_0.
- apply (exist _ _ H).  *)
 Defined.
 
 Definition dd_ub : ftype double_double'.
@@ -2239,6 +2234,8 @@ have Hy1 : FT2R (ftype_of_float y1) = 0.
 subst y1.  rewrite /neg_zero/FT2R. simpl. nra.
 set Y:= (y, y1). assert (dd_pred Y).
 rewrite /Y/dd_pred/fst/snd; repeat split; intros.
+rewrite Hy1 /dd_ov Rplus_0_r. simpl. rewrite Hy.
+apply Rabs_lt; split; simpl; nra.
 rewrite Hy ;
 rewrite  Rabs_pos_eq; simpl; nra.
 simpl in Hy1. 
@@ -2251,84 +2248,8 @@ rewrite Hy1 Rabs_R0.
 apply Rmult_le_pos; try nra.
 apply Ulp.ulp_ge_0.
  apply (exist _ _ H). 
-(*  rewrite /neg_zero/FT2R.
-simpl. interval.
-rewrite Hy1 Hy. simpl.
-simpl in y'.
-rewrite /Ulp.ulp Req_bool_false.
-simpl in Hy. rewrite -Hy.
-pose proof (cexp_fexp radix2
-  (SpecFloat.fexp (fprec Tdouble) (femax Tdouble)) (FT2R y) 1022).
-rewrite H. rewrite Rabs_pos_eq. simpl. try interval with (i_prec 128). 
-try interval with (i_prec 128).
-rewrite Hy Rabs_pos_eq; [split; simpl | nra];
-try interval with (i_prec 128). nra. 
- apply (exist _ _ H). 
-
-
-set y := (Zconst Tdouble (Z.pow 2 (femax Tdouble - 3))).
-have Hy : FT2R y = IZR (2 ^ (femax Tdouble - 3)).
-{ subst y . rewrite /Zconst. 
-destruct (@IEEE754_extra.BofZ_representable
-(fprec Tdouble)
-  (femax Tdouble) (Pos2Z.is_pos (fprecp Tdouble)) (fprec_lt_femax Tdouble)
-( 2 ^ (femax Tdouble - 3))) as ( A & _).
-apply (@IEEE754_extra.integer_representable_2p (fprec Tdouble)
-  (femax Tdouble) (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble) 
-( (femax Tdouble - 3))); split; simpl; lia.
-rewrite FT2R_ftype_of_float A; simpl;
-  nra. } 
-pose y' := (/ 4 * ulp (FT2R y)).
-unfold ulp in y'. 
-remember (Req_bool (FT2R y) 0) as y0.
-destruct y0.
-{ subst y. 
-rewrite -B2R_float_of_ftype in Heqy0.
-rewrite Req_bool_false in Heqy0 => //=.
-apply F2R_neq_0 => //=. } 
-set y1 := Zconst Tdouble (Z.pow 2 (967)). 
-have Hy1 : FT2R y1 = IZR (2 ^ (967)).
-{ subst y1 . rewrite /Zconst. 
-destruct (@IEEE754_extra.BofZ_representable
-(fprec Tdouble)
-  (femax Tdouble) (Pos2Z.is_pos (fprecp Tdouble)) (fprec_lt_femax Tdouble)
-(2 ^ (967))) as ( A & _).
-apply (@IEEE754_extra.integer_representable_2p (fprec Tdouble)
-  (femax Tdouble) (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble) 
-( 967)); split; simpl; try lia.
-rewrite FT2R_ftype_of_float A ; simpl;
-  nra. } 
-set Y:= (y,y1); assert (dd_pred Y).
-rewrite /Y/dd_pred/fst/snd; repeat split; intros.
-rewrite Hy;
-rewrite  Rabs_pos_eq; simpl; nra.
-rewrite Hy Hy1. interval.
-rewrite Hy1 Hy. simpl.
-simpl in y'.
-rewrite /Ulp.ulp Req_bool_false.
-simpl in Hy. rewrite -Hy.
-pose proof (cexp_fexp radix2
-  (SpecFloat.fexp (fprec Tdouble) (femax Tdouble)) (FT2R y) 1022).
-rewrite H. rewrite Rabs_pos_eq. simpl. try interval with (i_prec 128). 
-try interval with (i_prec 128).
-rewrite Hy Rabs_pos_eq; [split; simpl | nra];
-try interval with (i_prec 128). nra.   apply (exist _ _ H). *)
 Defined.
 
-
-(* Lemma dd_ub_fst_implies:
-B2F (fst (proj1_sig dd_ub)) = 
-  FT2F (Zconst Tdouble (Z.pow 2 (femax Tdouble - 3))).
-Proof.
-simpl; reflexivity.
-Qed.
-
-Lemma dd_ub_snd_implies:
-B2F (snd (proj1_sig dd_ub)) = 
-  FT2F (ftype_of_float (@neg_zero Tdouble)). 
-Proof.
-simpl; reflexivity.
-Qed. *)
 
  Lemma dd_ub_implies x :
 compare Lt true x dd_ub = true -> 
@@ -2350,6 +2271,54 @@ destruct c, c0 => //=. move => _  _.
 pose proof dd_pred_double_word (f,f0) d as Hdd.
 repeat split.
 destruct d as ( A & B & C & D) => //.
+Qed.
+
+ Lemma dd_ub_implies' x :
+compare Lt true x dd_ub = true -> 
+compare Lt true dd_lb x = true -> 
+Rabs (@FT2R double_double (proj1_sig x)) < /4 * (bpow radix2 (femax Tdouble)).
+Proof.
+destruct x, x.
+rewrite /compare/compare'/extend_comp. simpl. 
+rewrite !Rmult_1_r.
+match goal with |- context [ (Rcompare ?a ?b  )] =>
+  set ubnd:= b;
+  remember (Rcompare a ubnd)
+end. 
+match goal with |- context [ (Rcompare ?a ?b )] =>
+  set lbnd:= a;
+  remember (Rcompare lbnd b)
+end. 
+destruct c, c0 => //=. move => _  _.
+rewrite FPCore.F2R_eq in Heqc, Heqc0.
+rewrite Operations.F2R_plus in Heqc, Heqc0.
+rewrite /FT2R/nonstd_to_R => //=.
+remember (DD2F _ ). destruct o.
+rewrite /DD2F in Heqo.
+rewrite Rlt_bool_true in Heqo.
+destruct d as (A & B & C & D).
+rewrite A B in Heqo. clear A B C D.
+simpl in Heqo.
+inversion Heqo.
+rewrite Operations.F2R_plus.
+symmetry in Heqc, Heqc0. 
+apply Rcompare_Lt_inv in Heqc, Heqc0.
+apply Rabs_lt; split.
+refine (Rlt_trans _ _ _ _ _).
+2: apply  Heqc0. subst lbnd. nra.
+refine (Rlt_trans _ _ _ _ _).
+apply  Heqc. subst ubnd. nra.
+
+rewrite Operations.F2R_plus /dd_ov. simpl.
+symmetry in Heqc, Heqc0. 
+apply Rcompare_Lt_inv in Heqc, Heqc0.
+apply Rabs_lt; split.
+refine (Rlt_trans _ _ _ _ _).
+2: apply  Heqc0. subst lbnd. nra.
+refine (Rlt_trans _ _ _ _ _).
+apply  Heqc. subst ubnd. nra.
+
+rewrite Rabs_R0. nra.
 Qed.
 
 Definition finite_bnds2 := 
@@ -2378,37 +2347,40 @@ destruct H as [HA HB].
 destruct H0 as [HC HD].
 rewrite/DWPlusFP'.
 
+pose proof dd_ub_implies' x HB HA as Hb.
+simpl in Hb. 
+
 destruct x,x => //=.
 
 pose proof (dd_pred_double_word (f, f0) d).
 
-destruct d as (A & B & C & D).
+destruct d as (A & B & C & D & E).
 
 have Hp :
 is_finite (fst (DWPlusFP f f0 y)) = true 
     /\ is_finite (snd (DWPlusFP f f0 y)) = true.
-pose proof DWPlusFP_finite f f0 y X A B 
-  (finite_bnds_y_2 y HD) C 
-  (finite_bnds_y_1 y HD).
+pose proof DWPlusFP_finite f f0 y X A B
+  (finite_bnds_y_2 y HD HC) D
+  (finite_bnds_y_1 y HC HD).
 rewrite /is_finite_p in H => //.
 
 have Hov:
 Rabs (F2R (FT2F (fst (DWPlusFP f f0 y))) + 
   F2R (FT2F (snd (DWPlusFP f f0 y)))) < dd_ov.
 
-have Hb : 
+have Hpr : 
 (3 <= fprec Tdouble)%Z . 
 change (fprec Tdouble) with 53%Z. lia.
 destruct (
 relative_errorDWPlusFP_correct' f f0 y
-  X Hp Hb) as (d & Heq &Hd).
+  X Hp Hpr) as (d & Heq &Hd).
 destruct Hp as (FIN1 & FIN2).
 rewrite -!FPCore.F2R_eq !F2R_FT2F Heq.
-clear HA HB .
-pose proof   (finite_bnds_y_1 y HD) as Hy.
+clear HA HB Hb.
+pose proof   (finite_bnds_y_1 y HC HD) as Hy.
 rewrite /dd_ov.
-move: Hd C Hy. simpl. intros.
-pose proof xl_bnd f f0 X C.
+move: Hd  D Hy. simpl. intros.
+pose proof xl_bnd f f0 X D.
 interval with (i_prec 128).
 
 have HFIN: 
@@ -2465,7 +2437,8 @@ discriminate.
 rewrite H1.
 
 have H2:
-@FT2R double_double' (exist (fun a : dd_rep => dd_pred a) (f, f0) (conj A (conj B (conj C D)))) =
+@FT2R double_double' (exist (fun a : dd_rep => dd_pred a) 
+  (f, f0) (conj A (conj B (conj C (conj D E))))) =
 (FT2R f + FT2R f0).
 
 rewrite /(@FT2R double_double')/nonstd_to_R; simpl.
@@ -2497,7 +2470,7 @@ rewrite Operations.F2R_plus.
 by rewrite -!F2R_FT2F !FPCore.F2R_eq.
 
 subst b. simpl.
-destruct D as (D1 & D2 & D3).
+destruct E as (D1 & D2 & D3).
 rewrite /Rle_bool in Heqb1.
 remember (Rcompare (/ IZR (Z.pow_pos 2 1022)) (Rabs (FT2R f + FT2R f0))).
 destruct c. discriminate. discriminate.
@@ -2505,7 +2478,7 @@ symmetry in Heqc0, Heqc.
 apply Rcompare_Lt_inv in  Heqc.
 apply Rcompare_Gt_inv in  Heqc0.
 apply Rlt_not_eq, not_eq_sym in Heqc.
-clear HA HB H.
+clear HA HB H Hb.
 specialize (D2 Heqc).
 simpl in D2; nra.
 
@@ -2517,7 +2490,7 @@ rewrite Operations.F2R_plus.
 by rewrite -!F2R_FT2F !FPCore.F2R_eq.
 
 subst b. simpl.
-destruct D as (D1 & D2 & D3).
+destruct E as (D1 & D2 & D3).
 rewrite /Rle_bool in Heqb1.
 remember (Rcompare (/ IZR (Z.pow_pos 2 1022)) (Rabs (FT2R f + FT2R f0))).
 destruct c. discriminate. discriminate.
@@ -2525,7 +2498,7 @@ symmetry in Heqc0, Heqc.
 apply Rcompare_Gt_inv in  Heqc.
 apply Rcompare_Gt_inv in  Heqc0.
 apply Rgt_not_eq, not_eq_sym in Heqc.
-clear HA HB H.
+clear HA HB H Hb.
 specialize (D2 Heqc).
 simpl in D2; nra.
 
@@ -2533,18 +2506,31 @@ subst b; simpl.
 rewrite Operations.F2R_plus.
 by rewrite -!F2R_FT2F !FPCore.F2R_eq.
 
+(* 
 rewrite Operations.F2R_plus.
 rewrite -!FPCore.F2R_eq !F2R_FT2F in Hov.
 rewrite -!B2F_F2R_B2R  !B2R_float_of_ftype.
+simpl in Hb. rewrite /FT2R in Hb. simpl in Hb.
+rewrite /nonstd_to_R/nonstd_to_F in Hb.
+
+remember (DD2F (f, f0)).
+destruct o. rewrite /DD2F in Heqo.
+
+rewrite Rlt_bool_true in Heqo.
+
 pose proof xl_bnd f f0 X C.
-clear HA HB H.
-move : C H0.
-rewrite /dd_ov. simpl. intros. admit.
+clear HA HB H H0.
+
+move : C.
+rewrite /dd_ov. simpl. intros.
+
+pose proof dd_ub_implies. 
+ admit.
 
 by rewrite H2 Rplus_0_r. } 
 
 rewrite /floatfunc_congr /DWPlusFP' => //=.
-Admitted.
+Admitted. *)
 
 End VCFloat.
 
