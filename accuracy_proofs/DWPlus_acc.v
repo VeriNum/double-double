@@ -916,8 +916,10 @@ rewrite B. clear B.
 move: Hd  Hd2 Hd3. unfold t, default_rel, Relative.u_ro. simpl.
 intros. simpl in Hxh, Hy.
 match goal with |- Rabs ?a < _ =>
-field_simplify a
+field_simplify a;
+set j:=  a
 end.
+
 interval_intro ( Rabs
 (- FT2R xh * d3 * d2 * d1 - FT2R xh * d3 * d2 - FT2R xh * d2 * d1 - FT2R xh * d2 - FT2R y * d3 * d2 * d1 -
    FT2R y * d3 * d2 + FT2R y * d1 + FT2R y))
@@ -1114,6 +1116,29 @@ Qed.
 Let sh := TwoSumF_sum xh y.
 Let sl := TwoSumF_err xh y.
 
+Lemma xl_bnd 
+(Hxh : Rabs (FT2R xh) < /4 * (bpow radix2 (femax t)))
+(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t))): 
+Rabs (FT2R xl) <= / 2 * IZR (Z.pow_pos 2 970). 
+Proof.
+apply dw_ulp in DWx.
+refine (Rle_trans _ _ _  DWx _).
+set g:=
+/ 2 * ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 
+    ( bpow radix2 (femax t - 2)).
+refine (Rle_trans _ g _  _ _).
+rewrite /g.
+apply Rmult_le_compat_l; try nra.
+apply ulp_le. 
+apply BinarySingleNaN.fexp_correct.
+apply (fprec_gt_0 t).
+apply FLT_exp_monotone.
+refine (Rle_trans _ _  _  _ _).
+apply Rlt_le, Hxh.
+rewrite Rabs_pos_eq; [simpl; nra | apply bpow_ge_0].
+subst g. rewrite ulp_bpow. simpl; nra.
+Qed.
+
 Theorem DWPlusFP_zh_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
 (HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true) 
@@ -1125,7 +1150,76 @@ let zh := Fast2Sum_sum sh (BPLUS xl sl) in
 Proof.
 rewrite /Fast2Sum_err/fst/snd => //.
 rewrite /Fast2Sum_sum/fst/Fast2Sum.
-Admitted.
+have HFIN : Binary.is_finite (fprec t) (femax t) (float_of_ftype (BPLUS xh y)) = true.
+apply TwoSumF_sum_finite => //.
+
+have Hxl :Rabs (FT2R xl) <= / 2 * IZR (Z.pow_pos 2 970)
+ by apply xl_bnd.
+
+have HFINsl :
+Binary.is_finite (fprec t) (femax t) (float_of_ftype sl) = true.
+apply TwoSumF_err_finite => //.
+
+destruct (TwoSumF_error xh y 
+  (is_finite_p_TwoSum HFINxh HFINy Hxh Hy))  as (d1 & B1 & Hd1).
+fold sl in B1. 
+
+have HFINxsl : 
+Binary.is_finite (fprec t) (femax t) (xl + sl)%F64 = true.
+pose proof 
+  (@Binary.Bplus_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+  BinarySingleNaN.mode_NE xl sl HFINxl HFINsl
+   ) as Hp.
+ move: Hp.
+rewrite Rlt_bool_true. move =>  A.
+destruct A, H0 => //.
+
+destruct
+(Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
+ (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R xl)
+  (FT2R sl )) as 
+(d & Hd & B).
+1,2:rewrite -B2R_float_of_ftype; try
+  apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
+rewrite -B2R_float_of_ftype in B. rewrite B. clear B.
+
+rewrite B1 B2R_float_of_ftype .
+
+move: Hd Hd1. rewrite /Relative.u_ro; simpl. move => Hd Hd1.
+interval with (i_prec 128).
+
+pose proof 
+  (@Binary.Bplus_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+  BinarySingleNaN.mode_NE sh (xl + sl)%F64
+   ) as Hp.
+ move: Hp.
+rewrite Rlt_bool_true. move =>  A.
+destruct A => //. destruct H0 => //.
+
+destruct
+(Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
+ (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R sh)
+  (FT2R (xl + sl)%F64 )) as 
+(d & Hd & B).
+1,2:rewrite -B2R_float_of_ftype; try
+  apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
+rewrite -B2R_float_of_ftype in B. rewrite B. clear B.
+
+rewrite -is_finite_Binary in HFINxsl.
+destruct (BPLUS_accurate' _ _ _ HFINxsl) as (d6 & Hd6 & B).
+rewrite B. clear B. 
+
+rewrite B1 B2R_float_of_ftype .
+
+subst sh; rewrite /TwoSumF_sum/fst/TwoSumF.
+rewrite -is_finite_Binary in HFIN.
+destruct (BPLUS_accurate' _ _ _ HFIN) as (d5 & Hd5 & B).
+rewrite B. clear B. 
+
+interval with (i_prec 128). 
+Qed.
 
 Theorem DWPlusFP_zl_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
@@ -1143,6 +1237,8 @@ rewrite /Fast2Sum_err/fst/snd => //.
 rewrite /Fast2Sum_sum/fst/Fast2Sum.
 move => FINzh.
 
+have Hu :Rabs (FT2R xl) <= / 2 * IZR (Z.pow_pos 2 970)
+ by apply xl_bnd.
 
 have HFINxsl :
 is_finite (xl + sl)%F64 = true.
@@ -1194,10 +1290,7 @@ rewrite -is_finite_Binary in HFINsh.
 destruct (BPLUS_accurate' _ _ _ HFINsh) as (d4 & Hd4 & B).
 rewrite B. clear B. 
 
-have Hu : Rabs (FT2R xl) <= / 2 * ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 
-    ( bpow radix2 (femax t - 2)). admit.
-
-rewrite ulp_bpow in Hu. simpl in Hu.
+rewrite Heq.
 
 move: Hd5 Hd6 Hd2 Hd. unfold t, default_rel, Relative.u_ro. simpl.
 intros. simpl in Hxh, Hy.
@@ -1205,15 +1298,16 @@ match goal with |- Rabs ?a < _ =>
 field_simplify a
 end.
 
-rewrite Heq.
 
 interval_intro ( Rabs  
-  (FT2R xh * d4 * d6 * d1 + FT2R xh * d4 * d6 + FT2R xh * d6 * d1 + FT2R xh * d6 + FT2R y * d4 * d6 * d1 +
-   FT2R y * d4 * d6 + FT2R y * d6 * d1 + FT2R y * d6 + FT2R xl * d5 * d6 * d1 + FT2R xl * d5 * d6 +
+ (FT2R xh * d4 * d6 * d1 + FT2R xh * d4 * d6 + FT2R xh * d2s * d5 * d6 * d1 + FT2R xh * d2s * d5 * d6 +
+   FT2R xh * d2s * d5 * d1 + FT2R xh * d2s * d5 + FT2R xh * d2s * d6 * d1 + FT2R xh * d2s * d6 +
+   FT2R xh * d2s * d1 + FT2R xh * d2s + FT2R xh * d6 * d1 + FT2R xh * d6 + FT2R y * d4 * d6 * d1 +
+   FT2R y * d4 * d6 + FT2R y * d2s * d5 * d6 * d1 + FT2R y * d2s * d5 * d6 + FT2R y * d2s * d5 * d1 +
+   FT2R y * d2s * d5 + FT2R y * d2s * d6 * d1 + FT2R y * d2s * d6 + FT2R y * d2s * d1 + 
+   FT2R y * d2s + FT2R y * d6 * d1 + FT2R y * d6 + FT2R xl * d5 * d6 * d1 + FT2R xl * d5 * d6 +
    FT2R xl * d5 * d1 + FT2R xl * d5 + FT2R xl * d6 * d1 + FT2R xl * d6 + FT2R xl * d1 + 
-   FT2R xl + (FT2R xh + FT2R y) * d2s * d5 * d6 * d1 + (FT2R xh + FT2R y) * d2s * d5 * d6 +
-   (FT2R xh + FT2R y) * d2s * d5 * d1 + (FT2R xh + FT2R y) * d2s * d5 + (FT2R xh + FT2R y) * d2s * d6 * d1 +
-   (FT2R xh + FT2R y) * d2s * d6 + (FT2R xh + FT2R y) * d2s * d1 + (FT2R xh + FT2R y) * d2s)
+   FT2R xl)
   ) with (i_prec 128).
 refine (Rle_lt_trans _ _ _ _ _).
 destruct H. apply r0. nra. }  
@@ -1240,7 +1334,6 @@ destruct H as (d1 & Hd1 & B).
 rewrite -!FT2R_ftype_of_float.
 rewrite B. clear B.
 
-
 rewrite -is_finite_Binary in FINR.
 pose proof (@BMINUS_accurate' _ _ _ 
           (sh + (xl + sl))%F64 sh FINR).
@@ -1265,18 +1358,12 @@ rewrite -is_finite_Binary in HFINsh.
 destruct (BPLUS_accurate' _ _ _ HFINsh) as (d5 & Hd5 & B).
 rewrite B. clear B. 
 
-have Hu : Rabs (FT2R xl) <= / 2 * ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 
-    ( bpow radix2 (femax t - 2)). admit.
-
-rewrite ulp_bpow in Hu. simpl in Hu.
-
 move: Hd5 Hd4 Hd2 Hd3 Hd1. unfold t, default_rel, Relative.u_ro. simpl.
 intros. simpl in Hxh, Hy.
 match goal with |- Rabs ?a < _ =>
 field_simplify a
 end.
 
-admit.
 Admitted.
 
 Let zh := Fast2Sum_sum sh (BPLUS xl sl) .
