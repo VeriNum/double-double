@@ -1534,7 +1534,7 @@ Qed.
 
 End AccuracyDWPlusFP.
 
-
+(* 
 Require Import List.
 Import ListNotations.
 Section VCFloat.
@@ -2590,6 +2590,6 @@ by rewrite H2 Rplus_0_r. }
 apply ff_congr.
 Qed.
 
-End VCFloat.
+End VCFloat. *)
 
 

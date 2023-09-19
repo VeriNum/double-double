@@ -1,26 +1,5 @@
 -R . DD
 
-#verif_proofs/verif_objs/two_sum.v
-#verif_proofs/verif_two_sum.v
-
-#verif_proofs/verif_objs/fast_2mult.v
-#verif_proofs/verif_fast_2mult.v
-
-#verif_proofs/verif_objs/fast_2sum.v
-#verif_proofs/verif_fast_2sum.v
-
-#verif_proofs/verif_objs/dw_plus_fp.v
-#verif_proofs/verif_dw_plus_fp.v
-
-#verif_proofs/verif_objs/dw_plus_dw.v
-#verif_proofs/verif_dw_plus_dw.v
-
-#verif_proofs/verif_objs/dw_mult_fp.v
-#verif_proofs/verif_dw_mult_fp.v
-
-#verif_proofs/verif_objs/dw_mult_dw.v
-#verif_proofs/verif_dw_mult_dw.v
-
 paper_proofs/Bayleyaux.v
 paper_proofs/F2SumFLT.v
 paper_proofs/F2SumFLX.v
@@ -36,3 +15,4 @@ DDModels.v
 accuracy_proofs/TwoSum_acc.v
 accuracy_proofs/Fast2Mult_acc.v
 accuracy_proofs/DWPlus_acc.v
+accuracy_proofs/DWPlusFP_vcfloat.v
