@@ -41,15 +41,21 @@ Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
       option comparison := 
   let xhi := fst x in let xlo := snd x in
   let yhi := fst y in let ylo := snd y in
-  let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
-  let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
-  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')).
+  if is_finite xhi && is_finite xlo then 
+   let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
+   let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
+   Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y'))
+  else None.
 
 Lemma DD_compare_refl x :
   let xhi := fst x in let xlo := snd x in
   let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
-DD_compare x x =  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
-Proof. intros. rewrite /DD_compare. f_equal. Qed.
+  is_finite xhi = true -> is_finite xlo = true ->  
+  DD_compare x x =  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
+Proof. 
+intros. rewrite /DD_compare. 
+destruct x, f, f0; simpl in xhi, xlo => //=.
+Qed.
 
 Definition DD_is_finite (x : ftype Tdouble * ftype Tdouble ) := 
   match DD2F x with
@@ -535,8 +541,7 @@ Definition DD2F' (x : dd_rep1)
   : option (float radix2):= let s:= (proj1_sig x) in
 let xhi := fst s in let xlo := snd s in
 if Rlt_bool (Rabs (F2R (Operations.Fplus (FT2F xhi) (FT2F xlo)))) dd_ov
-(*    &&  is_finite xhi && is_finite xlo *) &&
-(if negb (Req_bool (FT2R xhi + FT2R xlo) 0) then
+ && (if negb (Req_bool (FT2R xhi + FT2R xlo) 0) then
      Rle_bool (bpow radix2 (@emin Tdouble + fprec Tdouble - 1)) (Rabs (FT2R xhi + FT2R xlo))
   else true)
 then
@@ -550,15 +555,20 @@ Definition DD_compare' (x y: dd_rep1) :
   let yhi := fst sy in let ylo := snd sy in
   let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
   let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
-  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')).
+  if is_finite xhi && is_finite xlo 
+      && is_finite yhi && is_finite ylo then
+   Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')) 
+  else None.
 
 Lemma DD_compare'_refl (a : dd_rep1) :
   let sx:= (proj1_sig a) in
   let xhi := fst sx in let xlo := snd sx in
   let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
-DD_compare' a a = Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
+  is_finite xhi = true ->  is_finite xlo = true -> 
+   DD_compare' a a = Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
 Proof.
-intros. rewrite /DD_compare'. f_equal.
+intros. rewrite /DD_compare' => //=.
+destruct a, x, f, f0 => //=.
 Qed.
 
 Definition DD_is_finite_compare' x :
@@ -568,13 +578,15 @@ Definition DD_is_finite_compare' x :
   end.
 destruct x. destruct x , f, f0; 
   rewrite /DD_compare'/DD2F'/DD2R/FT2R => //=; f_equal;
+destruct d as (A & B & _); simpl in A, B.
+all: 
 match goal with |-  context[ Rlt_bool ?a ?b] =>
   destruct (Rlt_bool a b) => //= end;
 match goal with |-  context[ Rle_bool ?a ?b] =>
   destruct (Rle_bool a b) => //= end;
 match goal with |-  context[ Req_bool ?a ?b ] =>
   destruct (Req_bool a b) => //= end;
-f_equal; by apply Rcompare_Eq .
+f_equal; try apply Rcompare_Eq; try nra .
 Defined.
 
 Definition DD_compare_correct' x y a b :
@@ -585,7 +597,9 @@ rewrite /DD2F'/DD_compare'. destruct x, y.
 destruct x, x0 => //=.
 move => H1 H2. 
 simpl in H1, H2;
-move : H1 H2.
+move : H1 H2;
+destruct d as (A & B & _); simpl in A, B;
+destruct d0 as (C & D & _); simpl in C, D.
 repeat match goal with |-  context[ Rlt_bool ?a ?b] =>
   destruct (Rlt_bool a b) => //= end;
 repeat match goal with |-  context[ Req_bool ?a ?b ] =>
@@ -744,7 +758,7 @@ apply Ulp.ulp_ge_0.
 Defined.
 
 
- Lemma dd_ub_implies x :
+Lemma dd_ub_implies x :
 compare Lt true x dd_ub = true -> 
 compare Lt true dd_lb x = true -> 
 Rabs (FT2R (fst (proj1_sig x))) < /4 * (bpow radix2 (femax Tdouble)).
@@ -763,7 +777,7 @@ end.
 destruct d as ( A & B & C & D & E) => //.
 Qed.
 
- Lemma dd_ub_implies' x :
+Lemma dd_ub_implies' x :
 compare Lt true x dd_ub = true -> 
 compare Lt true dd_lb x = true -> 
 Rabs (@FT2R double_double (proj1_sig x)) < /4 * (bpow radix2 (femax Tdouble)).
@@ -822,6 +836,18 @@ Definition DWPlusFP' {NANS: Nans}
   let xs := proj1_sig x in 
   DWPlusFP (fst xs) (snd xs) y.
 
+Lemma DWPlusFP_nans {NANS: Nans} 
+  (x : ftype double_double') (y : ftype Tdouble) :
+  let xs := proj1_sig x in 
+  is_nan y = true -> 
+  is_finite (fst (DWPlusFP (fst xs) (snd xs) y)) = false.
+Proof.
+destruct x, x. intros.
+simpl in xs; destruct xs.
+rewrite /DWPlusFP/TwoSumF/Fast2Sum/fst/snd.
+destruct f1, f2, y => //.
+Qed.
+
 Lemma Rcompare_refl x :
 Rcompare x x = Eq.
 Proof. by apply Rcompare_Eq. Qed.
@@ -839,44 +865,68 @@ apply Eqdep.EqdepTheory.inj_pair2 in H1, H6, H3, H2, H, H0;
 hnf in H4, H7. 
 move: H4 H7. 
 rewrite /nonstd_is_nan/nonstd_compare.
-rewrite !DD_compare'_refl !Rcompare_refl.
-move => Heq. 
-subst.
+destruct ah, bh, x, x0.
+repeat match goal with |- context [DD_compare' ?a ?b] =>
+  remember (DD_compare' a b)
+end.
 
-destruct ah0, bh0 => //;
-move => Heq'; subst;
-try apply float_equiv_refl.
+destruct o; 
+move: Heqo.
+{ rewrite /DD_compare'.
+match goal with |-context[if ?a then _ else _] =>
+remember a as b
+end.
+destruct b;
+try solve [ try discriminate; try contradiction].
+rewrite !Rcompare_refl; move => Hc.
+destruct c; 
+ intros; try discriminate; try contradiction.
 
+destruct o0. 
+move: Heqo0.
+rewrite /DD_compare'.
+match goal with |-context[if ?a then _ else _] =>
+remember a as b
+end.
+destruct b; move => Heq0; 
+inversion Heq0; clear Heq0; subst c;
+try discriminate; try contradiction.
+{ move : H4.
+rewrite !Rcompare_refl; move => Hc0.
+inversion Hc0; subst. rewrite Hc0. 
+simpl in Heqb, Heqb0.
+clear Hc0 d.
 
-{  admit.
-(* rewrite /float_equiv/nonstd_is_nan => //=.
-remember (Rcompare _ _ ). destruct c.
-symmetry in Heqc.
-apply Rcompare_Eq_inv in Heqc.
-simpl in Heqc.
-rewrite FPCore.F2R_eq in Heqc.
-rewrite Operations.F2R_plus in Heqc. simpl in Heqc.
+destruct ah0, bh0; subst; try apply float_equiv_refl;
+  try contradiction.
 
-remember (Rcompare _ _ ). destruct c.
-simpl in Heqc. *)
-(* {
-rewrite Heqc.
+rewrite /float_equiv/applyk/double_double
+/double_double/applyk_aux/nonstd_is_nan
+/nonstd_compare/eq_rect_r/eq_rect/DD_compare
+/eq_sym/eq_rect_r/eq_rect/eq_sym.
 
+rewrite /double_double'.
+unfold f_equal.
 
-have Hj:
-(Binary.B754_nan (fprec Tdouble) (femax Tdouble) s pl e) =
-(Binary.B754_nan (fprec Tdouble) (femax Tdouble) s0 pl0 e0).
-Search float_equiv. Search binary_float_equiv. Search Binary.nan_pl.
-} 
- *) }
-destruct Heq', H0; subst.
-have Hj:
-(Binary.B754_finite (fprec Tdouble) (femax Tdouble) s0 m0 e1 e2) =
-(Binary.B754_finite (fprec Tdouble) (femax Tdouble) s0 m0 e1 e0).
-apply binary_float_equiv_eq => //.
-rewrite Hj.
-apply float_equiv_refl.
-Admitted.
+rewrite !DWPlusFP_nans => //. 
+
+destruct H7 as [? [? ?] ]; subst.
+assert (e2 = e0) by (apply Coq.Logic.ProofIrrelevance.proof_irrelevance).
+subst. by apply float_equiv_refl. } 
+
+contradiction. } 
+
+rewrite /DD_compare'. move=> Hd;
+destruct (Rcompare _ _ ); 
+remember (_ && _) as b;
+destruct b;
+simpl in Hd, Heqb;
+try discriminate;
+symmetry in Heqb;
+destruct d as (A & B & C);
+simpl in A, B; rewrite A B in Heqb;
+discriminate.
+Qed.
 
 Definition DWPlusFP_ff {NANS: Nans} : floatfunc 
                   [double_double' ;Tdouble] double_double
