@@ -1570,6 +1570,12 @@ Definition DD_compare (x y: ftype Tdouble * ftype Tdouble) :
   let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
   Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')).
 
+Lemma DD_compare_refl x :
+  let xhi := fst x in let xlo := snd x in
+  let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
+DD_compare x x =  Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
+Proof. intros. rewrite /DD_compare. f_equal. Qed.
+
 Definition DD_is_finite (x : ftype Tdouble * ftype Tdouble ) := 
   match DD2F x with
   | Some xh => if is_finite (fst x) then True else False
@@ -2073,6 +2079,15 @@ Definition DD_compare' (x y: dd_rep1) :
   let y' := (Operations.Fplus (FT2F yhi) (FT2F ylo)) in
   Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 y')).
 
+Lemma DD_compare'_refl (a : dd_rep1) :
+  let sx:= (proj1_sig a) in
+  let xhi := fst sx in let xlo := snd sx in
+  let x' := (Operations.Fplus (FT2F xhi) (FT2F xlo)) in
+DD_compare' a a = Some (Rcompare (FPCore.F2R radix2 x') (FPCore.F2R radix2 x')).
+Proof.
+intros. rewrite /DD_compare'. f_equal.
+Qed.
+
 Definition DD_is_finite_compare' x :
   match DD2F' x with 
   | Some xh => DD_compare' x x = Some Eq 
@@ -2334,14 +2349,60 @@ Definition DWPlusFP' {NANS: Nans}
   let xs := proj1_sig x in 
   DWPlusFP (fst xs) (snd xs) y.
 
+Lemma Rcompare_refl x :
+Rcompare x x = Eq.
+Proof. by apply Rcompare_Eq. Qed.
+
 Theorem ff_congr {NANS: Nans} : 
 @floatfunc_congr [double_double'; Tdouble] double_double (@DWPlusFP' NANS).
 Proof.
-rewrite /floatfunc_congr/DWPlusFP' => //=.
-rewrite /nonstd_is_nan/nonstd_compare/DD_compare/applyk_aux.
-simpl. intros.
+rewrite /floatfunc_congr.
+intros.
+inversion H. clear H; subst.
+inversion H5. clear H5; subst.
+inversion H8. clear H8; subst.
+apply Eqdep.EqdepTheory.inj_pair2 in H1, H6, H3, H2, H, H0;  
+ subst.
+hnf in H4, H7. 
+move: H4 H7. 
+rewrite /nonstd_is_nan/nonstd_compare.
+rewrite !DD_compare'_refl !Rcompare_refl.
+move => Heq. 
+subst.
+
+destruct ah0, bh0 => //;
+move => Heq'; subst;
+try apply float_equiv_refl.
+
+
+{  admit.
+(* rewrite /float_equiv/nonstd_is_nan => //=.
 remember (Rcompare _ _ ). destruct c.
 symmetry in Heqc.
+apply Rcompare_Eq_inv in Heqc.
+simpl in Heqc.
+rewrite FPCore.F2R_eq in Heqc.
+rewrite Operations.F2R_plus in Heqc. simpl in Heqc.
+
+remember (Rcompare _ _ ). destruct c.
+simpl in Heqc. *)
+(* {
+rewrite Heqc.
+
+
+have Hj:
+(Binary.B754_nan (fprec Tdouble) (femax Tdouble) s pl e) =
+(Binary.B754_nan (fprec Tdouble) (femax Tdouble) s0 pl0 e0).
+Search float_equiv. Search binary_float_equiv. Search Binary.nan_pl.
+} 
+ *) }
+destruct Heq', H0; subst.
+have Hj:
+(Binary.B754_finite (fprec Tdouble) (femax Tdouble) s0 m0 e1 e2) =
+(Binary.B754_finite (fprec Tdouble) (femax Tdouble) s0 m0 e1 e0).
+apply binary_float_equiv_eq => //.
+rewrite Hj.
+apply float_equiv_refl.
 Admitted.
 
 Definition DWPlusFP_ff {NANS: Nans} : floatfunc 
