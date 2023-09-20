@@ -832,6 +832,7 @@ end.
 interval_intro ( Rabs
 (FT2R xh * d1 + FT2R xh + FT2R y * d1 + FT2R y))
  with (i_prec 128).
+Locate " / _ ".
 refine (Rle_lt_trans _ _ _ _ _).
 destruct H. apply r0. nra.
 
