@@ -1,3 +1,6 @@
+(** This file contains accuracy proofs for double-word 
+plus a (double-word, floating-point number *)
+
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import DWPlus DDModels Fast2Mult_acc TwoSum_acc.
