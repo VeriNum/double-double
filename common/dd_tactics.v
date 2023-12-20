@@ -112,3 +112,24 @@ Ltac rewrite_format :=
     (Generic_fmt.Znearest choice) A) with
   (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
   (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) A) end.
+
+Ltac subexpr_finite_H0 fexpr:=
+    match fexpr with
+      | BPLUS ?b ?c =>       
+          let H1 := fresh in pose proof (BPLUS_finite_e _ _ b c) as H1;
+          subexpr_finite_H0 b;
+          subexpr_finite_H0 c
+      | BMINUS ?b ?c => 
+          let H1 := fresh in pose proof (BMINUS_finite_sub _ _ b c) as H1;
+          subexpr_finite_H0 b;
+          subexpr_finite_H0 c
+      | BMULT  ?b ?c => 
+          let H1 := fresh in pose proof (BMULT_finite_e _ _ b c) as H1;
+          subexpr_finite_H0 b;
+          subexpr_finite_H0 c
+    end. 
+  
+
+Ltac subexpr_finite :=
+    match goal with |- context [is_finite ?a = true] => subexpr_finite_H0 a end. 
+

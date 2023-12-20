@@ -3,7 +3,7 @@ plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import DWPlus DDModels Fast2Mult_acc TwoSum_acc.
+Require Import DWPlus DDModels DWord_defs Fast2Mult_acc TwoSum_acc.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -103,6 +103,18 @@ destruct (float_of_ftype f1), (float_of_ftype f2),
  auto; try contradiction. 
 Qed.
 
+Fact FINxh : is_finite xh = true.
+Proof.
+pose proof FIN1 as HF; move: HF.
+rewrite /is_finite_p/TwoSumF => //=.
+rewrite !is_finite_Binary.
+rewrite /BPLUS/BINOP !float_of_ftype_of_float.
+move => [] H1 H2.
+destruct (float_of_ftype xh), (float_of_ftype y); 
+simpl in H1; try discriminate; auto.
+destruct s, s0; simpl in H1; try discriminate.
+Qed.
+
 Let sh := fst (TwoSumF xh y).
 Let sl := snd (TwoSumF xh y).
 Let v  := BPLUS xl sl.
@@ -121,6 +133,19 @@ destruct (float_of_ftype f1), (float_of_ftype f2), s, s0; simpl; auto;
  try contradiction; auto. 
 Qed.
 
+Fact FINxl : is_finite xl = true.
+Proof.
+pose proof FIN2 as HF; move: HF.
+rewrite /is_finite_p/TwoSumF => //=.
+rewrite !is_finite_Binary.
+destruct (TwoSumF xh y).
+rewrite !float_of_ftype_of_float.
+move => H1.
+destruct (float_of_ftype xl), (float_of_ftype sl); 
+simpl in H1; try discriminate; auto.
+destruct s, s0; simpl in H1; try discriminate.
+Qed.
+
 Fact FIN3 : is_finite (BPLUS xh y) = true.
 Proof.
 move: FIN. rewrite /DWPlusFP.
@@ -135,6 +160,7 @@ rewrite is_finite_Binary.
 destruct (float_of_ftype f1), (float_of_ftype f2), s, s0; simpl; auto;
  try contradiction; auto. 
 Qed.
+
 
 End CorrectDWPlusFP.
 
@@ -355,7 +381,7 @@ fold (TwoSumF_err xh y) (TwoSumF_sum xh y) (@FT2R t).
 rewrite TwoSumF_correct /TwoSumF_sum/fst/TwoSumF.
 rewrite BPLUS_UF_exact => //=.
 
-have xle:= (dw_ulp xh xl DWx).
+have xle:= (dw_ulp  xh xl DWx).
 rewrite !B2R_float_of_ftype.
 rewrite round_generic. field_simplify_Rabs.
 unfold Rmax.
@@ -788,6 +814,34 @@ refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
 apply bpow_le; lia.
 
 apply Fast2Sum_CorrectDWPlusFP => //.
+Qed.
+
+Lemma DWPlusFP_double_word : 
+double_word (fst (DWPlusFP xh xl y)) (snd (DWPlusFP xh xl y)).
+Proof.
+apply DWdouble_word_dw.
+have Hp : (1 < fprec t)%Z by lia.
+have Hch: choice = (fun n : Z => negb (Z.even n)) by
+apply functional_extensionality; rewrite /choice //=.
+pose proof (DWPlusFP_correct Hp Hch Hp3).
+specialize (H (FT2R xh) (FT2R xl) (FT2R y)).
+pose proof DWPlusFP_eq.
+move: H0.
+destruct (DWPlus.DWPlusFP _ _ (FT2R xh) (FT2R xl) (FT2R y)).
+destruct (DWPlusFP xh xl y).
+simpl in *. rewrite /F2Rp. move => H1. inversion H1; subst.
+apply H.
+rewrite -B2R_float_of_ftype.
+apply (@generic_format_FLX_FLT radix2 emin),
+   Binary.generic_format_B2R.
+apply dw_word_DWdouble => //.
+Qed.
+
+Lemma DWPlusFP_double_word' : 
+rounded t (FT2R (fst (DWPlusFP xh xl y)) + FT2R (snd (DWPlusFP xh xl y)) ) = 
+  FT2R (fst (DWPlusFP xh xl y)).
+Proof.
+symmetry. apply DWPlusFP_double_word.
 Qed.
 
 End CorrectDWPlusFP'.

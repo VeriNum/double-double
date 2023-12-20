@@ -282,6 +282,21 @@ destruct (float_of_ftype a), (float_of_ftype b);
 destruct s,s0; discriminate; auto.
 Qed.
 
+Lemma BMINUS_finite_sub {NAN: Nans} {STD: is_standard t} :
+ forall (a b : ftype t)
+ (Hfin : is_finite (BMINUS a b) = true),
+ is_finite a = true  /\ 
+ is_finite b = true.
+Proof.
+unfold BMINUS, BINOP; intros.
+rewrite is_finite_Binary, float_of_ftype_of_float in Hfin.
+rewrite !is_finite_Binary.
+destruct (float_of_ftype a), (float_of_ftype b); 
+  inversion Hfin; clear Hfin; subst; simpl; auto.
+destruct s,s0; discriminate; auto.
+Qed.
+
+
 Definition Bplus_no_overflow (x y: R) : Prop :=
   (Rabs ( Generic_fmt.round Zaux.radix2
               (SpecFloat.fexp (fprec t) (femax t))
@@ -402,6 +417,34 @@ destruct ((Binary.Bplus (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax t)
 simpl; try discriminate.
 Qed.
 
+Lemma no_overflow_sum_is_finite {NAN: Nans} {STD: is_standard t} :
+  forall x y
+  (H1  : is_finite x = true)
+  (H2  : is_finite y = true) 
+  (Hov : Bplus_no_overflow (FT2R x) (FT2R y)),
+  is_finite (BPLUS x y) = true.
+Proof.
+intros x y.
+rewrite !is_finite_Binary; 
+  unfold Bplus_no_overflow, BPLUS, BINOP; intros.
+rewrite float_of_ftype_of_float.
+pose proof (Binary.Bplus_correct  (fprec t) (femax t)  
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE 
+  (float_of_ftype x) (float_of_ftype y) H1 H2) as
+  H0.
+remember (Rlt_bool _ _ ) as HB; destruct HB.  
+destruct H0 as (_ & HP  &_); auto.
+exfalso.
+unfold Rlt_bool in HeqHB.
+remember (Rcompare _ _) as HR; destruct HR; try discriminate.
+symmetry in HeqHR. 
+apply Rcompare_Eq_inv in HeqHR.
+rewrite !B2R_float_of_ftype in HeqHR; nra.
+symmetry in HeqHR. 
+apply Rcompare_Gt_inv in HeqHR.
+rewrite !B2R_float_of_ftype in HeqHR; nra.
+Qed.
+
 Lemma BPLUS_accurate' {NAN: Nans} {STD: is_standard t} :
   forall (x y : ftype t) 
   (FIN: is_finite (BPLUS  x y) = true), 
@@ -462,6 +505,34 @@ destruct ((Binary.Bminus (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax t)
              (plus_nan t) BinarySingleNaN.mode_NE 
               (float_of_ftype x) (float_of_ftype y)));
 simpl; try discriminate.
+Qed.
+
+Lemma no_overflow_minus_is_finite {NAN: Nans} {STD: is_standard t} :
+  forall x y
+  (H1  : is_finite x = true)
+  (H2  : is_finite y = true) 
+  (Hov : Bminus_no_overflow (FT2R x) (FT2R y)),
+  is_finite (BMINUS x y) = true.
+Proof.
+intros x y.
+rewrite !is_finite_Binary; 
+  unfold Bminus_no_overflow, BMINUS, BINOP; intros.
+rewrite float_of_ftype_of_float.
+pose proof (Binary.Bminus_correct  (fprec t) (femax t)  
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) BinarySingleNaN.mode_NE 
+  (float_of_ftype x) (float_of_ftype y) H1 H2) as
+  H0.
+remember (Rlt_bool _ _ ) as HB; destruct HB.  
+destruct H0 as (_ & HP  &_); auto.
+exfalso.
+unfold Rlt_bool in HeqHB.
+remember (Rcompare _ _) as HR; destruct HR; try discriminate.
+symmetry in HeqHR. 
+apply Rcompare_Eq_inv in HeqHR.
+rewrite !B2R_float_of_ftype in HeqHR; nra.
+symmetry in HeqHR. 
+apply Rcompare_Gt_inv in HeqHR.
+rewrite !B2R_float_of_ftype in HeqHR; nra.
 Qed.
 
 Lemma BMINUS_accurate {NAN: Nans} {STD: is_standard t} :

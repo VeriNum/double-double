@@ -41,9 +41,11 @@ Definition rnd :=
   (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
 
 (* connect paper proofs to local defs *)
-Fact rel_errorE: relative_error_DWPlusDW = Rabs errorDWDW * (Rabs (/( xhr + xlr + yhr + ylr))).
+Fact rel_errorE: relative_error_DWPlusDW = 
+    Rabs errorDWDW * (Rabs (/( xhr + xlr + yhr + ylr))).
 Proof.
-rewrite /relative_error_DWPlusDW  /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
+rewrite /relative_error_DWPlusDW  
+  /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
 Qed.
 
 Fact FIN1 : 
@@ -69,7 +71,7 @@ BPLUS_correct t f2 f1. clear H4.
 rewrite Heqf2 Heqf1.
 rewrite TwoSumF_correct.
 rewrite /TwoSumF_sum/TwoSumF/fst.
- Admitted.
+Admitted.
 
 
 Lemma relative_errorDWDW_eq :

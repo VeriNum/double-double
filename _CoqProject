@@ -12,7 +12,7 @@ common/float_acc_lems.v
 common/dd_tactics.v
 
 DDModels.v
+DWord_defs.v
 accuracy_proofs/TwoSum_acc.v
 accuracy_proofs/Fast2Mult_acc.v
 accuracy_proofs/DWPlus_acc.v
-accuracy_proofs/DWPlusFP_vcfloat.v

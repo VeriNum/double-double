@@ -72,97 +72,6 @@ Definition double_word : ftype t -> ftype t -> Type :=
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 
-Fact dw_ulp xh xl: 
-  double_word xh xl -> Rabs (FT2R xl) <= /2 * ulp (FT2R xh).
-Proof.
-unfold double_word; intros.
-assert (FT2R xl = - (rounded t (FT2R xh + FT2R xl) 
-  - (FT2R xh + FT2R xl))).
-{ rewrite <-H; nra. } 
-rewrite H0, Rabs_Ropp.
-eapply Rle_trans.
-apply Ulp.error_le_half_ulp_round.
-apply FLT.FLT_exp_valid.
-apply (fprec_gt_0 t).
-apply FLT.FLT_exp_monotone.
-fold choice.
-rewrite H at 2; unfold rounded.
-now apply Req_le.
-Qed.
-
-
-
-Notation fexp :=
-(SpecFloat.fexp (fprec t) (femax t)).
-Notation format :=
-(Generic_fmt.generic_format Zaux.radix2 fexp).
-
-Lemma rbpowpuW':
-   forall (x e : ftype t),
-   0 < FT2R x -> 
-   0 <= FT2R e < / 2 * ulp (FT2R x) ->
-   rounded t (FT2R x + FT2R e) = FT2R x.
-Proof.
-intros x e Hx He.
-assert (Hfx: format (FT2R x)) by 
-  (rewrite <- B2R_float_of_ftype;
-apply Binary.generic_format_B2R).
-assert 
-  (Generic_fmt.Valid_exp (SpecFloat.fexp (fprec t) (femax t))).
-{ apply BinarySingleNaN.fexp_correct. unfold FLX.Prec_gt_0.
-pose proof fprec_gt_one t; lia. } 
-destruct (Req_dec (FT2R e) 0) as [e0 | e0].
-{ rewrite e0, Rplus_0_r. unfold rounded.
-apply Generic_fmt.round_generic. 
-apply BinarySingleNaN.valid_rnd_round_mode.
-rewrite <- B2R_float_of_ftype.
-apply Binary.generic_format_B2R. } 
-assert (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) 
-              Zfloor (FT2R x + FT2R e) = FT2R x) as dE.
-apply Ulp.round_DN_plus_eps_pos ; auto;  try lra. 
-rewrite <- dE at 2. 
-eapply Ulp.round_N_eq_DN; auto. 
- rewrite Ulp.round_UP_DN_ulp. rewrite dE.
-  assert (FT2R e <  (ulp (FT2R x + FT2R e)) / 2); try lra.
-  refine (Rlt_le_trans _  (/ 2 * ulp (FT2R x)) _ _ _); try lra.
-  assert (ulp ( FT2R x) <= ulp  (FT2R x + FT2R e)); try lra. 
-  apply Ulp.ulp_le; try rewrite !Rabs_pos_eq; try lra; auto. 
-apply Binary.fexp_monotone.
-destruct (Generic_fmt.generic_format_EM 
-  Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R x + FT2R e)); auto.
-revert dE. rewrite Generic_fmt.round_generic; simpl; auto. try lra. 
-apply Generic_fmt.valid_rnd_DN.
-Qed.
-
-
-Definition is_pow  x :=  exists e : Z, Rabs x = bpow Zaux.radix2 e.
-
-Theorem POSpow_ln_beta :
-  forall x : R, is_pow  x -> (0 < x)%R ->
-    x = (bpow Zaux.radix2 (mag Zaux.radix2 x - 1)).
-Proof.
-intros x [e Bx] H1.
-rewrite Rabs_pos_eq in Bx; last lra.
-rewrite Bx, mag_bpow; ring_simplify (e + 1 - 1)%Z. auto.
-Qed.
-
-
-Fact dw_le xh xl: FT2R xh <> 0 -> 
-  double_word xh xl -> Rabs (FT2R xl) <= Rabs (FT2R xh).
-Proof.
-intros. 
-apply dw_ulp in X.
-refine (Rle_trans _ _ _ X _).
-refine (Rle_trans _ _ _ _ 
-  (Ulp.ulp_le_abs Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
-         _ H _)).
-refine (Rle_trans _ _ _ (Rmult_le_compat _ 1 _ _ _ _ _ _) _); try nra.
-apply Ulp.ulp_ge_0.
-apply Rle_refl. nra.
-rewrite <- B2R_float_of_ftype.
-apply Binary.generic_format_B2R.
-Qed.
-
 End DWord.
 
 Section DWops.
@@ -171,6 +80,13 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 (** Algorithm 4 : Addition of DW number and FP number *)
 Definition DWPlusFP (xh xl y : ftype t) := 
 let (sh, sl) := TwoSumF xh y in
+let v:= BPLUS xl sl in
+let (zh, zl) := Fast2Sum sh v in (zh, zl).
+
+(** Algorithm 4p : Addition of DW number and FP number *)
+Definition DWPlusFP' (xh xl y : ftype t) := 
+let xhp := BPLUS xh xl in
+let (sh, sl) := TwoSumF xhp y in
 let v:= BPLUS xl sl in
 let (zh, zl) := Fast2Sum sh v in (zh, zl).
 
