@@ -302,12 +302,13 @@ simpl; rewrite Rabs_right; try nra.
 apply not_0_IZR => //.
 Qed.
 
+
 Let rnd_p {t} := 
 round radix2 (FLX_exp (fprec t)) (Znearest choice).
 
 
 (* the necessary ordering for Fast2Sum holds *)
-Lemma Fast2Sum_CorrectDWPlusFP (xh y xl: ftype t)   (Hbn :  (3 <= fprec t)%Z): 
+Lemma Fast2Sum_CorrectDWPlusFP (xh y xl: ftype t) (Hbn :  (3 <= fprec t)%Z): 
   is_finite (BPLUS xl (snd (TwoSumF xh y))) = true -> 
   is_finite_p (TwoSumF xh y) -> 
   FT2R xh + FT2R y <> 0 -> 
@@ -330,7 +331,7 @@ have Hc: generic_format radix2 fexp (FT2R xl) by
 have Hrnd: rounded t (FT2R xh + FT2R y) <> 0.
 rewrite /rounded; apply Plus_error.round_plus_neq_0 => //.
 
-
+(* cases on the higher order term*)
 case:(Req_dec (FT2R xh) 0)=> hxh0.
 { pose proof TwoSum0 xh y FIN2 hxh0 as H.
   BPLUS_correct t xl (snd (TwoSumF xh y)); clear H5.
@@ -885,7 +886,7 @@ field_simplify a; interval with (i_prec 128)
 end. 
 
  pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  (@Binary.Bplus_ (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
   BinarySingleNaN.mode_NE xh y
   HFINxh HFINy) as Hp.

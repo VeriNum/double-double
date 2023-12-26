@@ -106,6 +106,25 @@ let (vh, vl) := Fast2Sum sh c in
 let w:= BPLUS tl vl in
 let (zh, zl) := Fast2Sum vh w in (zh, zl).
 
+(* Fact AccurateDWPlusDW_DWPlusFP (xh xl yh yl : ftype t) :
+  let (th, tl) := TwoSumF xl yl in
+  let (vh, vl) := DWPlusFP xh th yh in
+  let w:= BPLUS tl vl in
+  let (zh, zl) := Fast2Sum vh w in (zh, zl) = 
+  AccurateDWPlusDW xh xl yh yl.
+Proof.
+unfold AccurateDWPlusDW, DWPlusFP.
+set (s1:= TwoSumF xl yl). destruct s1.
+set (s2:= TwoSumF xh yh). destruct s2.
+replace (BPLUS f f2) with (BPLUS f2 f).
+set (s3:= Fast2Sum f1 (BPLUS f2 f)). destruct s3.
+simpl; auto.
+apply BPLUS_commut. 
+destruct (float_of_ftype f2), (float_of_ftype f).
+destruct s, s0. f_equal.
+cbv [plus_nan]. simpl.  *)
+
+
 (** Algorithm 7 : Multiplication of a DW number by a FP number *)
 Definition DWTimesFP1 (xh xl y : ftype t) := 
 let (ch, cl1) := Fast2Mult xh y in
