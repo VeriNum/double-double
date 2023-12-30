@@ -308,6 +308,7 @@ round radix2 (FLX_exp (fprec t)) (Znearest choice).
 
 
 (* the necessary ordering for Fast2Sum holds *)
+(* TODO This lemma is no longer needed ! *)
 Lemma Fast2Sum_CorrectDWPlusFP (xh y xl: ftype t) (Hbn :  (3 <= fprec t)%Z): 
   is_finite (BPLUS xl (snd (TwoSumF xh y))) = true -> 
   is_finite_p (TwoSumF xh y) -> 
@@ -798,12 +799,11 @@ destruct (Rle_or_lt
    FT2R (snd (TwoSumF xh y))))) as [HUF|HUF].
 
 { rewrite -FastTwoSumEq_FLT => //; f_equal.
-{ BPLUS_correct t xl (snd (TwoSumF xh y)).
+BPLUS_correct t xl (snd (TwoSumF xh y)).
 rewrite (round_FLT_FLX radix2 (@DDModels.emin t)) => //.
-by rewrite !B2R_float_of_ftype. } 
-apply Fast2Sum_CorrectDWPlusFP => //. }
+by rewrite !B2R_float_of_ftype. }
 
-rewrite -FastTwoSumEq_FLT => //. f_equal.
+rewrite -FastTwoSumEq_FLT => //; f_equal.
 rewrite BPLUS_UF_exact => //.
 rewrite round_generic => //; f_equal.
 apply: (generic_format_FLX_FLT _ emin).
@@ -813,8 +813,6 @@ apply: Plus_error.FLT_format_plus_small.
  
 refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
 apply bpow_le; lia.
-
-apply Fast2Sum_CorrectDWPlusFP => //.
 Qed.
 
 Lemma DWPlusFP_double_word : 
@@ -886,7 +884,7 @@ field_simplify a; interval with (i_prec 128)
 end. 
 
  pose proof 
-  (@Binary.Bplus_ (fprec t) (femax t)
+  (@Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
   BinarySingleNaN.mode_NE xh y
   HFINxh HFINy) as Hp.
@@ -1803,7 +1801,7 @@ Qed.
 Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0.
 Proof.
 move => H0. 
-pose proof DWPlusFP_eq xh xl y xE FIN Hp3.
+pose proof DWPlusFP_eq xh xl y FIN.
 rewrite /F2Rp in H. 
 destruct (Req_dec xr 0).
 { have xh0: FT2R xh = 0.
@@ -1883,7 +1881,7 @@ apply dw_word_DWdouble => //.
 apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
 apply Req_le.
 rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-pose proof DWPlusFP_eq xh  xl y xE FIN.
+pose proof DWPlusFP_eq xh  xl y FIN.
  rewrite /F2Rp/DWPlus.DWPlusFP in H1.
 repeat f_equal.
 all: by rewrite H1.
