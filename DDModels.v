@@ -4,21 +4,6 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common.
 
-Section Format.
-Context {t : type}.
-
-Definition emin := SpecFloat.emin (fprec t) (femax t).
-Fact emin_le_0 : (emin <= 0)%Z. 
-Proof. pose proof @fprec_lb t; pose proof @femax_lb t; 
-unfold emin, SpecFloat.emin; lia. Qed.
-
-Definition choice:= fun x0 : Z => negb (Z.even x0).
-Fact choiceP (x : Z) : choice x = negb (choice (- (x + 1))%Z).
-Proof. unfold choice; rewrite Z.even_opp, Z.even_add; 
-destruct (Z.even x); auto. Qed.
-
-End Format.
-
 
 Section TwoSumModel.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.

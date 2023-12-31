@@ -1,6 +1,6 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs.
-Require Import DDModels.
+Require Import DDModels common.
 
 Ltac field_simplify_round :=
   match goal with |- context[Generic_fmt.round _ _ _ ?a] =>
@@ -113,23 +113,73 @@ Ltac rewrite_format :=
   (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
   (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) A) end.
 
-Ltac subexpr_finite_H0 fexpr:=
+Ltac subexpr_finite_H0 fexpr HFIN :=
     match fexpr with
       | BPLUS ?b ?c =>       
-          let H1 := fresh in pose proof (BPLUS_finite_e _ _ b c) as H1;
-          subexpr_finite_H0 b;
-          subexpr_finite_H0 c
-      | BMINUS ?b ?c => 
-          let H1 := fresh in pose proof (BMINUS_finite_sub _ _ b c) as H1;
-          subexpr_finite_H0 b;
-          subexpr_finite_H0 c
-      | BMULT  ?b ?c => 
-          let H1 := fresh in pose proof (BMULT_finite_e _ _ b c) as H1;
-          subexpr_finite_H0 b;
-          subexpr_finite_H0 c
-    end. 
+          try match goal with 
+            | H1: is_finite b = true |- _ =>
+              try subexpr_finite_H0 b H1;
+              try match goal with 
+                | H2: is_finite c = true |- _ =>
+                  try subexpr_finite_H0 c H2
+                | _ => let H0 := fresh in pose proof (BPLUS_finite_e _ b c HFIN) as H0;
+                       let H2 := fresh in destruct H0 as (_ & H2);
+                       try subexpr_finite_H0 c H2
+              end
+            | _ =>  let H0 := fresh in pose proof (BPLUS_finite_e _ b c HFIN) as H0;
+                    let H1 := fresh in let H2 := fresh in 
+                    destruct H0 as (H1 & H2);
+                    try subexpr_finite_H0 b H1;
+                    try subexpr_finite_H0 c H2
+          end
+      | BMINUS ?b ?c =>       
+          try match goal with 
+            | H1: is_finite b = true |- _ =>
+              try subexpr_finite_H0 b H1;
+              try match goal with 
+                | H2: is_finite c = true |- _ =>
+                  try subexpr_finite_H0 c H2
+                | _ => let H0 := fresh in pose proof (BMINUS_finite_sub _ b c HFIN) as H0;
+                       let H2 := fresh in destruct H0 as (_ & H2);
+                       try subexpr_finite_H0 c H2
+              end
+            | _ =>  let H0 := fresh in pose proof (BMINUS_finite_sub _ b c HFIN) as H0;
+                    let H1 := fresh in let H2 := fresh in 
+                    destruct H0 as (H1 & H2);
+                    try subexpr_finite_H0 b H1;
+                    try subexpr_finite_H0 c H2
+          end
+      | BMULT ?b ?c =>       
+          try match goal with 
+            | H1: is_finite b = true |- _ =>
+              try subexpr_finite_H0 b H1;
+              try match goal with 
+                | H2: is_finite c = true |- _ =>
+                  try subexpr_finite_H0 c H2
+                | _ => let H0 := fresh in pose proof (BMULT_finite_e _ b c HFIN) as H0;
+                       let H2 := fresh in destruct H0 as (_ & H2);
+                       try subexpr_finite_H0 c H2
+              end
+            | _ =>  let H0 := fresh in pose proof (BMULT_finite_e _ b c HFIN) as H0;
+                    let H1 := fresh in let H2 := fresh in 
+                    destruct H0 as (H1 & H2);
+                    try subexpr_finite_H0 b H1;
+                    try subexpr_finite_H0 c H2
+          end
+  end
+.
   
-
 Ltac subexpr_finite :=
-    match goal with |- context [is_finite ?a = true] => subexpr_finite_H0 a end. 
+    match goal with |- context [is_finite ?a = true -> _ ] => 
+      let H:= fresh in intros H; subexpr_finite_H0 a H 
+    end. 
+
+
+Ltac  field_simplify_format :=
+  match goal with |- context [Generic_fmt.generic_format _ _ ?a ] => 
+    field_simplify a
+  end;  
+  try apply Generic_fmt.generic_format_0;
+  auto with dd_base.
+
 

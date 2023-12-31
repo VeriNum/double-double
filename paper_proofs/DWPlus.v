@@ -1854,7 +1854,9 @@ Qed.
 
 Notation relative_error_DWFP :=   (relative_errorDWFP  xh yh yl).
 
-Hypothesis  xyn0 : xh + xl + (yh + yl) <> 0.
+
+(* Hypothesis  xyn0 : xh + xl + (yh + yl) <> 0. 
+removed by AEK Dec 20, 2023 *)
 Hypothesis   xhy : Rabs yh <= Rabs xh.
 Hypothesis   s0 : xh + yh <> 0.
 Hypothesis  x0 : xh <> 0.
@@ -2503,8 +2505,9 @@ lra.
       rewrite !ulp_neq_0 //; last by  lra.
       rewrite Rmult_comm.
       have->: 2 = pow 1 by [].
-      rewrite cexp_bpow  // bpow_plus /=; lra.
-    move=> h3.
+      rewrite cexp_bpow. rewrite bpow_plus. lra.   
+      1,2: apply Rgt_not_eq; nra.
+    move=> h3. 
     rewrite Rmult_1_r; apply/(Rmult_le_reg_l 2); lra.
   move=> h4.
   apply:(Rle_trans _ (/2* ulp (3/2*ulp(x+y)))).
@@ -3160,7 +3163,21 @@ have xyd': 2 - 6 *u < x + y.
   apply:(Rlt_le_trans _ (xh - u + (yh - u)))=>//.
   lra.
 move=>*; apply: Rmult_le_compat =>//=; try apply:Rabs_pos; try lra.
-  by apply/Rlt_le/Rinv_0_lt_compat/Rabs_pos_lt.
+  apply/Rlt_le/Rinv_0_lt_compat/Rabs_pos_lt.
+have xypos: 0 < x + y.
+  apply:(Rlt_trans _ (2 - 6  * u)) =>//.
+  suff: 6 * u < 2 by lra.
+  apply:(Rlt_trans _ ((pow 3) * (pow (-p)))) ; first by rewrite -/u /= IZR_Zpower_pos /= ;lra.
+  rewrite -bpow_plus.
+  have ->: 2 = pow 1 by [].
+  apply:bpow_lt; move: Hp3; lia.  
+by apply Rgt_not_eq.
+rewrite Rabs_pos_eq; try lra.
+apply: Rinv_le.
+  suff : (pow 2 ) * pow (-p) < 1 by rewrite /= -/u IZR_Zpower_pos /=; lra.
+  have ->: 1 = pow 0 by [].
+  rewrite -bpow_plus; apply: bpow_lt; move: Hp3; lia.
+apply:(Rle_trans _ (2 - 6 * u)); try lra.
 have xypos: 0 < x + y.
   apply:(Rlt_trans _ (2 - 6  * u)) =>//.
   suff: 6 * u < 2 by lra.
@@ -3168,12 +3185,12 @@ have xypos: 0 < x + y.
   rewrite -bpow_plus.
   have ->: 2 = pow 1 by [].
   apply:bpow_lt; move: Hp3; lia.
-rewrite Rabs_pos_eq; try lra.
-apply: Rinv_le.
-  suff : (pow 2 ) * pow (-p) < 1 by rewrite /= -/u IZR_Zpower_pos /=; lra.
-  have ->: 1 = pow 0 by [].
-  rewrite -bpow_plus; apply: bpow_lt; move: Hp3; lia.
-apply:(Rle_trans _ (2 - 6 * u)); try lra.
+nra.
+destruct (Req_dec (x + y) 0); [exfalso|nra].
+apply Rplus_opp_r_uniq in H.
+have Hr: (rnd_p y = rnd_p (-x)) by f_equal.
+apply s0. rewrite hx hy. rewrite Hr.
+rewrite (rnd_p_sym _ _ choiceP). nra.
 Qed.
 
 End  DWPlusDW_Pre.
@@ -3197,6 +3214,45 @@ apply:(Rle_trans _ (ulp (rnd_p x))).
 apply:ulp_le_abs =>//; apply:generic_format_round.
 Qed.
 
+Lemma TwoSum_sum_asym (a b : R) : 
+TwoSum_sum (-a) (-b) = - TwoSum_sum a b.
+Proof.
+pose proof (TwoSum_asym a b).
+rewrite /pair_opp in H.
+replace (TwoSum (-a) (-b)) with 
+  (TwoSum_sum (-a) (-b), TwoSum_err (-a) (-b)) in H by auto.
+inversion H. rewrite H1/TwoSum => //.
+Qed.
+
+Lemma TwoSum_err_asym (a b : R) : 
+TwoSum_err (-a) (-b) = - TwoSum_err a b.
+Proof.
+pose proof (TwoSum_asym a b).
+rewrite /pair_opp in H.
+replace (TwoSum (-a) (-b)) with 
+  (TwoSum_sum (-a) (-b), TwoSum_err (-a) (-b)) in H by auto.
+inversion H. rewrite H2/TwoSum => //.
+Qed.
+
+Lemma Fast2Sum_sum_asym (a b : R) : 
+F2Sum_sum (-a) (-b) = - F2Sum_sum a b.
+Proof.
+pose proof (Fast2Sum_asym (rnd_p_sym p _ choiceP) a b).
+rewrite /pair_opp in H.
+replace (F2Sum (-a) (-b)) with 
+  (F2Sum_sum (-a) (-b), F2Sum_err (-a) (-b)) in H by auto.
+inversion H. unfold F2Sum_sum => //.
+Qed. 
+
+Lemma Fast2Sum_err_asym (a b : R) : 
+F2Sum_err (-a) (-b) = - F2Sum_err a b.
+Proof.
+pose proof (Fast2Sum_asym (rnd_p_sym p _ choiceP) a b).
+rewrite /pair_opp in H.
+replace (F2Sum (-a) (-b)) with 
+  (F2Sum_sum (-a) (-b), F2Sum_err (-a) (-b)) in H by auto.
+inversion H. unfold TwoSum => //.
+Qed.
 
 Fact rel_errorDWDW_Sym (xh xl yh yl: R) 
               (Fxh: format xh) (Fyh: format yh) (Fxl: format xl)(Fyl: format yl)
@@ -3206,13 +3262,24 @@ Fact rel_errorDWDW_Sym (xh xl yh yl: R)
 Proof.
 have rn_sym:= (rnd_p_sym p _ choiceP).
 congr Rabs.
-rewrite   /TwoSum_sum /TwoSum_err !TwoSum_asym //.
-have rnd_opp a b: rnd_p (-a + -b) = - (rnd_p (a + b)).
-  have ->: (-a + -b )= -(a + b) by ring.
-  by rewrite ZNE round_NE_opp .
-  rewrite !(rnd_opp, Fast2Sum_asym) -?ZNE //=.
-  field.
-by split; lra.
+rewrite !TwoSum_sum_asym !TwoSum_err_asym.
+match goal with |-context[-?a + - ?b] =>
+  replace (-a+-b) with (-(a+b)) by nra
+end.
+replace (- xh + - xl + (- yh + - yl)) with
+  (-( xh +  xl + ( yh +  yl))) by nra.
+rewrite rn_sym Fast2Sum_err_asym Fast2Sum_sum_asym.
+match goal with |-context[-?a + - ?b] =>
+  replace (-a+-b) with (-(a+b)) by nra
+end.
+rewrite rn_sym Fast2Sum_err_asym Fast2Sum_sum_asym.
+match goal with |-context[-?a + - ?b] =>
+  replace (-a+-b) with (-(a+b)) by nra
+end. 
+match goal with |-context[-?a - - ?b] =>
+  replace (-a--b) with (-(a-b)) by nra
+end.
+field. nra.
 Qed.
 
 Fact DW_asym xh xl: double_word xh xl -> double_word (-xh ) (-xl).
@@ -3221,8 +3288,6 @@ case=>[[Fxh Fxl] xe]; split;[split; try apply:generic_format_opp|]=>//.
 have -> : (- xh + - xl) = -(xh + xl) by ring.
 by rewrite {1} xe ZNE round_NE_opp.
 Qed.
-
-
 
 Fact relative_errorDWDWC  xh xl yh yl (Fxh: format xh) (Fyh: format yh)
             (Fxl: format xl) (Fyl: format yl):
@@ -3236,14 +3301,16 @@ rewrite /relative_errorDWDW /TwoSum_sum /TwoSum_err TwoSumCh TwoSumCl.
 by have ->: (yh  + yl + ( xh + xl)) = (xh + xl + (yh + yl)) by ring.
 Qed.
 
-Fact relative_errorDWDWS  xh xl yh yl  exp (Fyh : format yh) (Fxh : format xh) (Fxl: format xl) (Fyl: format yl): 
+Fact relative_errorDWDWS  xh xl yh yl  exp (Fyh : format yh) 
+  (Fxh : format xh) (Fxl: format xl) (Fyl: format yl): 
   xh + xl + yh + yl  <> 0 -> let e := pow exp in 
   (relative_errorDWDW   (xh*e)  (xl* e) (yh * e) (yl *e)  ) =  (relative_errorDWDW  xh  xl yh yl).
 Proof.
   move=> xyn0 /=.
-  
-rewrite /relative_errorDWDW.  congr Rabs. rewrite /TwoSum_sum /TwoSum_err !TwoSumS //= !(=^~ Rmult_plus_distr_r, round_bpow, =^~ Rmult_minus_distr_r).
-
+rewrite /relative_errorDWDW.  
+congr Rabs. 
+rewrite /TwoSum_sum /TwoSum_err !TwoSumS 
+  //= !(=^~ Rmult_plus_distr_r, round_bpow, =^~ Rmult_minus_distr_r).
 field.
  split =>//; move:(bpow_gt_0 two exp); lra.
 Qed.
@@ -3252,11 +3319,11 @@ Qed.
 
 
 Theorem  DWPlusDW_relerr_bound (xh xl yh yl: R) 
-         (DWx: double_word xh xl)(DWy: double_word yh yl)  (xyn0: (xh+xl + (yh + yl) <> 0)): 
+         (DWx: double_word xh xl)(DWy: double_word yh yl)  (* (xyn0: (xh+xl + (yh + yl) <> 0)) *): 
          (relative_errorDWDW xh xl yh yl )<=  (3 * u^2) / (1 - 4 * u).
 Proof.
 (* pose ulp:= (ulp two fexp). *)
-wlog xhy : xh xl yh yl  DWx DWy xyn0 /  Rabs yh <= Rabs xh.
+wlog xhy : xh xl yh yl  DWx DWy (* xyn0 *) /  Rabs yh <= Rabs xh.
   move=> Hwlog.
   case:(Rle_lt_dec (Rabs yh) (Rabs xh) )=> absyxh.
     by apply: Hwlog =>//.
@@ -3298,7 +3365,7 @@ case:(Req_dec (xh + yh) 0)=> s0.
    lra.
   by rewrite /TwoSum_err ; apply:generic_format_round.
 clear Fxh Fxl hx x Fyh Fyl hy y.
-wlog xhpos:  xh xl DWx yh yl DWy xyn0 xhy x0 s0 / 0 <  xh.
+wlog xhpos:  xh xl DWx yh yl DWy (* xyn0 *) xhy x0 s0 / 0 <  xh.
   move=> Hwlog.
   case: (Rle_lt_dec 0 xh)=> xh0.
     apply:Hwlog => //; lra.
@@ -3307,7 +3374,14 @@ wlog xhpos:  xh xl DWx yh yl DWy xyn0 xhy x0 s0 / 0 <  xh.
   rewrite -rel_errorDWDW_Sym =>//.
   apply: Hwlog; try lra; try apply: DW_asym => //.
   by rewrite !Rabs_Ropp.
-wlog [xh1 xh2]:  xh xl yh yl DWx DWy xyn0 xhy s0 x0 xhpos
+(*AEK pos hyp sat*)
+destruct (Req_dec (xh + xl + (yh + yl)) 0); [exfalso|nra].
+apply Rplus_opp_r_uniq in H.
+have Hr: (rnd_p (yh + yl) = rnd_p (-(xh + xl))) by f_equal.
+apply s0. rewrite hx hy. rewrite Hr.
+rewrite (rnd_p_sym _ _ choiceP). nra.
+(* end AEK *)
+wlog [xh1 xh2]:  xh xl yh yl DWx DWy (* xyn0 *) xhy s0 x0 xhpos
              / 1 <= xh  <= 2-2*u.
   move=> Hwlog.
   case:(DWx)=>[[Fxh Fxl] hx].  
@@ -3322,17 +3396,21 @@ wlog [xh1 xh2]:  xh xl yh yl DWx DWy xyn0 xhy s0 x0 xhpos
     + split ; first by split;apply:formatS.
       rewrite -Rmult_plus_distr_r round_bpow.
       by case:DWy=> _ {1}->.
-    + rewrite -!Rmult_plus_distr_r.
-      by apply: Rmult_integral_contrapositive_currified; lra.
     + rewrite !Rabs_mult  (Rabs_pos_eq (pow _)); try lra.
       by apply: Rmult_le_compat_r ; lra.
   rewrite -!Rmult_plus_distr_r.
   by apply: Rmult_integral_contrapositive_currified; lra.
+(*AEK pos hyp sat*)
+destruct (Req_dec (xh + xl + (yh + yl)) 0); [exfalso|nra].
+apply Rplus_opp_r_uniq in H.
+have Hr: (rnd_p (yh + yl) = rnd_p (-(xh + xl))) by f_equal.
+apply s0. rewrite hx hy. rewrite Hr.
+rewrite (rnd_p_sym _ _ choiceP). nra.
+(* *)
 by  case:( DWPlusDW_relerr_bound_pre Hp3 DWx DWy).
 Qed.
 
 End  DWPlusDW.
-
 
 End DWPlus.
 
