@@ -73,94 +73,30 @@ Qed.
 
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 
-Fact FIN1 : is_finite_p (TwoSumF xh y).
-Proof.
-move : FIN.
-rewrite /DWPlusFP.
-replace ( TwoSumF xh y) with ( TwoSumF_sum xh y,  TwoSumF_err xh y) => //.
-replace (Fast2Sum (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y))) with
-  (Fast2Sum_sum (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y)), 
-  Fast2Sum_err (TwoSumF_sum xh y) (BPLUS xl (TwoSumF_err xh y))) => //.
-intros.
-destruct FIN0 as (FINm & _); clear FIN. 
-unfold Fast2Mult_mul, Fast2Mult_err, fst, snd in *; simpl in *.
-unfold Fast2Sum_sum, fst, Fast2Sum in FINm.
-remember (TwoSumF_err xh y) as f1.
-remember (TwoSumF_sum xh y) as f2;
-split; simpl;  
-rewrite is_finite_Binary;
-remember (BPLUS xl f1) as f3;
-rewrite !is_finite_Binary /BPLUS/BINOP !float_of_ftype_of_float
-  in FINm.
-destruct (float_of_ftype f2), (float_of_ftype f3), s, s0;
- auto; try contradiction. 
-rewrite Heqf3 in FINm.
-rewrite /BPLUS/BINOP !float_of_ftype_of_float
-  in FINm.
-destruct (float_of_ftype f1), (float_of_ftype f2),
-   (float_of_ftype xl);
-  destruct s, s0, s1; 
- auto; try contradiction. 
-Qed.
-
-Fact FINxh : is_finite xh = true.
-Proof.
-pose proof FIN1 as HF; move: HF.
-rewrite /is_finite_p/TwoSumF => //=.
-rewrite !is_finite_Binary.
-rewrite /BPLUS/BINOP !float_of_ftype_of_float.
-move => [] H1 H2.
-destruct (float_of_ftype xh), (float_of_ftype y); 
-simpl in H1; try discriminate; auto.
-destruct s, s0; simpl in H1; try discriminate.
-Qed.
-
-Let sh := fst (TwoSumF xh y).
-Let sl := snd (TwoSumF xh y).
-Let v  := BPLUS xl sl.
-
-Fact FIN2 : is_finite (BPLUS xl sl) = true.
-Proof.
-move: FIN. rewrite /DWPlusFP.
-replace (TwoSumF xh y) with ( sh,sl) => //= H.
-destruct H as (FINm & _). rewrite /fst in FINm.
-remember (BPLUS xl sl) as f1.
-remember sh as f2.
-rewrite !is_finite_Binary /BPLUS/BINOP !float_of_ftype_of_float
-  in FINm.
-rewrite is_finite_Binary.
-destruct (float_of_ftype f1), (float_of_ftype f2), s, s0; simpl; auto;
- try contradiction; auto. 
-Qed.
-
-Fact FINxl : is_finite xl = true.
-Proof.
-pose proof FIN2 as HF; move: HF.
-rewrite /is_finite_p/TwoSumF => //=.
-rewrite !is_finite_Binary.
-destruct (TwoSumF xh y).
-rewrite !float_of_ftype_of_float.
-move => H1.
-destruct (float_of_ftype xl), (float_of_ftype sl); 
-simpl in H1; try discriminate; auto.
-destruct s, s0; simpl in H1; try discriminate.
-Qed.
+Ltac prove_finite := 
+  move: FIN;
+  rewrite /DWPlusFP/is_finite_p //=;
+  move => [];
+  subexpr_finite => //
+  .
 
 Fact FIN3 : is_finite (BPLUS xh y) = true.
-Proof.
-move: FIN. rewrite /DWPlusFP.
-replace (TwoSumF xh y) with ( sh,sl) => //=.
-subst sh. rewrite /TwoSumF/fst/snd => H.
-destruct H as (FINa & _). unfold fst in FINa. 
-remember (BPLUS xh y) as f1.
-remember (BPLUS xl sl) as f2.
-rewrite !is_finite_Binary /BPLUS/BINOP !float_of_ftype_of_float
-  in FINa.
-rewrite is_finite_Binary.
-destruct (float_of_ftype f1), (float_of_ftype f2), s, s0; simpl; auto;
- try contradiction; auto. 
-Qed.
+Proof. prove_finite. Qed.
 
+Fact FINxh : is_finite xh = true.
+Proof. prove_finite. Qed.
+
+Fact FIN1 : is_finite_p (TwoSumF xh y).
+Proof.
+Proof. prove_finite. Qed.
+
+Let sl := snd (TwoSumF xh y).
+
+Fact FIN2 : is_finite (BPLUS xl sl) = true.
+Proof. prove_finite. Qed.
+
+Fact FINxl : is_finite xl = true.
+Proof. prove_finite. Qed.
 
 End CorrectDWPlusFP.
 
