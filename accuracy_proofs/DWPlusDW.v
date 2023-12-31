@@ -323,6 +323,88 @@ pose proof @DWPlusDW_relerr_bound (fprec t)
 move: H. by rewrite relative_errorDWDW_eq.
 Qed.
 
+Lemma DWPlusDW_0 : (xhr + xlr + yhr + ylr) = 0 -> zh + zl = 0.
+Proof.
+unfold zh, zl.
+have: DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl) by 
+  apply  DWPlusDWEq_FLT =>//. 
+rewrite /F2Rp.
+replace DWPlusDW with
+  (fst DWPlusDW, snd DWPlusDW) => //.
+move => H1.
+inversion H1. rewrite -H0 -H2 ; clear H1 H0 H2.
+
+destruct (Req_dec (xhr + xlr) 0).
+{ have xh0: xhr = 0.
+move: xE; rewrite /double_word. 
+by rewrite H /rounded round_0.
+rewrite H Rplus_0_l.
+move =>  Hy.
+have yh0: yhr = 0.
+move: yE; rewrite /double_word. 
+by rewrite Hy /rounded round_0.
+have xl0 : xlr = 0 by apply (@double_word_0 xh).
+have yl0 : ylr = 0 by apply (@double_word_0 yh).
+rewrite xh0 yh0  xl0 yl0. 
+rewrite /TwoSum_err/TwoSum_sum //=.
+repeat (try rewrite !Rplus_0_l;
+        try rewrite !Rminus_0_r;
+        try rewrite !round_0; 
+        try nra). }
+ 
+move => H1.
+have : yhr + ylr = - (xhr + xlr) by nra.
+move => H3.
+have Hxy : (yhr = -xhr).
+move: xE yE; rewrite /double_word. 
+rewrite H3 /rounded round_NE_opp. 
+move => HxE HyE. 
+move: xE yE; rewrite /double_word. 
+rewrite H3 /rounded round_NE_opp. 
+rewrite /yhr/xhr HxE HyE //=.
+have Hxyl : (ylr = -xlr) by nra.
+have : TwoSum_sum p choice xhr yhr = 0 /\ 
+        TwoSum_err p choice xhr yhr = 0.
+apply null_case_pre => //; try nra.
+apply generic_format_FLX_FT2R.
+have : TwoSum_sum p choice xlr ylr = 0 /\ 
+        TwoSum_err p choice xlr ylr = 0.
+apply null_case_pre => //; try nra.
+apply generic_format_FLX_FT2R.
+move => [] HA HB [] HC HD. rewrite HA HB HC HD.
+repeat (try rewrite !Rplus_0_l;
+        try rewrite !Rminus_0_r;
+        try rewrite !round_0; 
+        try nra). 
+Qed.
+
+Theorem relative_errorDWPlusFP_correct' : 
+  exists del, (zh + zl) = (xhr + xlr + yhr + ylr) * (1 + del) /\
+    Rabs del <= (3 * u^2) / (1 - 4 * u).
+Proof.
+destruct (Req_dec (xhr + xlr + yhr + ylr) 0) as [Hx0|Hx0].
+{ exists 0; rewrite Hx0; split; [field_simplify ; by apply DWPlusDW_0
+  | rewrite Rabs_R0 /u //=].
+apply Rdiv_le_0_compat_Raux; try nra.
+move : Hp3.
+rewrite fprec_eq.
+move => Hp3'.
+apply Rlt_Rminus.
+refine (Rle_lt_trans _ 
+  (4 * / IZR (Z.pow_pos 2 3)) _ _ _); try nra.
+apply Generic_proof.Rdiv_le_mult_pos; try nra.
+rewrite !Zpower_pos_powerRZ power_RZ_inv; try nra.
+rewrite Rmult_assoc.
+rewrite -powerRZ_add; try nra.
+suff : powerRZ 2 (- Z.pos (fprecp t) + 3) <= 1; 
+  try nra. rewrite -(@powerRZ_O 2).
+apply Pff.Rle_powerRZ; try nra; lia. } 
+exists (((zh + zl) - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)); split. 
+{ now field_simplify. } 
+apply relative_errorDWPlusDW_correct.
+Qed.
+
+
 End AccuracyDWPlusDW.
 
 
