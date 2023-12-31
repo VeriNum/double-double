@@ -1,6 +1,6 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs.
-Require Import DDModels.
+Require Import DDModels common.
 
 Ltac field_simplify_round :=
   match goal with |- context[Generic_fmt.round _ _ _ ?a] =>
@@ -173,4 +173,13 @@ Ltac subexpr_finite :=
     match goal with |- context [is_finite ?a = true -> _ ] => 
       let H:= fresh in intros H; subexpr_finite_H0 a H 
     end. 
+
+
+Ltac  field_simplify_format :=
+  match goal with |- context [Generic_fmt.generic_format _ _ ?a ] => 
+    field_simplify a
+  end;  
+  try apply Generic_fmt.generic_format_0;
+  auto with dd_base.
+
 

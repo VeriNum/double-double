@@ -4,21 +4,6 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common.
 
-Section Format.
-Context {t : type}.
-
-Definition emin := SpecFloat.emin (fprec t) (femax t).
-Fact emin_le_0 : (emin <= 0)%Z. 
-Proof. pose proof @fprec_lb t; pose proof @femax_lb t; 
-unfold emin, SpecFloat.emin; lia. Qed.
-
-Definition choice:= fun x0 : Z => negb (Z.even x0).
-Fact choiceP (x : Z) : choice x = negb (choice (- (x + 1))%Z).
-Proof. unfold choice; rewrite Z.even_opp, Z.even_add; 
-destruct (Z.even x); auto. Qed.
-
-End Format.
-
 
 Section TwoSumModel.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -105,25 +90,6 @@ let c:= BPLUS sl th in
 let (vh, vl) := Fast2Sum sh c in 
 let w:= BPLUS tl vl in
 let (zh, zl) := Fast2Sum vh w in (zh, zl).
-
-(* Fact AccurateDWPlusDW_DWPlusFP (xh xl yh yl : ftype t) :
-  let (th, tl) := TwoSumF xl yl in
-  let (vh, vl) := DWPlusFP xh th yh in
-  let w:= BPLUS tl vl in
-  let (zh, zl) := Fast2Sum vh w in (zh, zl) = 
-  AccurateDWPlusDW xh xl yh yl.
-Proof.
-unfold AccurateDWPlusDW, DWPlusFP.
-set (s1:= TwoSumF xl yl). destruct s1.
-set (s2:= TwoSumF xh yh). destruct s2.
-replace (BPLUS f f2) with (BPLUS f2 f).
-set (s3:= Fast2Sum f1 (BPLUS f2 f)). destruct s3.
-simpl; auto.
-apply BPLUS_commut. 
-destruct (float_of_ftype f2), (float_of_ftype f).
-destruct s, s0. f_equal.
-cbv [plus_nan]. simpl.  *)
-
 
 (** Algorithm 7 : Multiplication of a DW number by a FP number *)
 Definition DWTimesFP1 (xh xl y : ftype t) := 

@@ -12,7 +12,7 @@ Section TwoSumCorrect.
 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Notation emin := (@DD.DDModels.emin t).
+Notation emin := (@common.emin t).
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Let rnd_mode:= (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
@@ -348,7 +348,6 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (a b : ftype t).
 
-Notation emin := (@DD.DDModels.emin t).
 
 Hypothesis (FIN : is_finite_p (TwoSumF a b)).
 
@@ -374,7 +373,7 @@ Section FastTwoSumCorrect.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation FE := (FLT_exp (@emin t) (fprec t)).
-Notation emin := (@DD.DDModels.emin t).
+Notation emin := (@common.emin t).
 
 Lemma Fast2Sum_2sum0 (xl: ftype t): 
 F2Sum.Fast2Sum (fprec t) choice 0
@@ -484,37 +483,6 @@ by rewrite -!B2R_float_of_ftype.
 Qed.
 
 
-(* TODO: add to general file *)
-Fact generic_format_FLT_FT2R (x : ftype t) : 
-generic_format radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R x).
-Proof.
-rewrite -B2R_float_of_ftype. 
-apply Binary.generic_format_B2R.
-Qed.
-
-Fact generic_format_FLX_FT2R (x : ftype t) : 
-generic_format radix2 (FLX_exp (fprec t)) (FT2R x).
-Proof.
-rewrite -B2R_float_of_ftype. 
-eapply (@generic_format_FLX_FLT radix2 emin).
-apply Binary.generic_format_B2R.
-Qed.
-
-Fact valid_exp_fexp : 
-  Valid_exp (SpecFloat.fexp (fprec t) (femax t)). 
-Proof. by apply FLT.FLT_exp_valid. Qed.
-
-Ltac  field_simplify_format :=
-  match goal with |- context [generic_format _ _ ?a ] => 
-    field_simplify a
-  end;  
-  try apply generic_format_0;
-  try apply generic_format_FLX_FT2R;
-  try apply generic_format_FLT_FT2R
-.
-
-(* end TODO *)
-
 Lemma FastTwoSumEq_FLT_uf1 
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
 Rabs (FT2R a + FT2R b) < bpow radix2 (emin + fprec t - 1) -> 
@@ -598,9 +566,7 @@ have Hg1: generic_format radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (f
 BPLUS_correct t a b; rewrite !B2R_float_of_ftype //=.
 move => Huf.
 apply Plus_error.FLT_format_plus_small => //.
-apply generic_format_round.
-apply valid_exp_fexp.
-apply valid_rnd_N.
+apply generic_format_round; auto with dd_base.
 apply generic_format_opp;
 apply generic_format_FLT_FT2R.
 eapply Rle_trans. apply Rlt_le.
@@ -737,26 +703,6 @@ rewrite round_generic .
 symmetry; rewrite round_generic => //.
 apply (@generic_format_FLX_FLT radix2 emin) => //.
 Qed.
-
-(* TODO add this fact to general and use in previous proofs *)
-Fact rnd_plus_FLT_FLX_eq  :
-round radix2 (FLX_exp (fprec t)) (Znearest choice) (FT2R a + FT2R b) = 
-round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b).
-Proof.
-case : (Rlt_dec (Rabs (FT2R a  + FT2R b))
-  (bpow radix2 (emin + fprec t - 1))) => Huf1.
-{ have Hg : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a + FT2R b).
- apply Plus_error.FLT_format_plus_small => //;
-try apply generic_format_FLT_FT2R.
-  eapply Rle_trans. apply Rlt_le.
-  apply Huf1. rewrite /emin/DDModels.emin.
-  apply bpow_le; lia.
- rewrite !round_generic => //; try nra.
-by eapply (@generic_format_FLX_FLT radix2 emin). } 
-apply Rnot_lt_le in Huf1.
-by rewrite round_FLT_FLX.
-Qed.
-(* END TODO *)
 
 
 (* the result of the FLT format algorithm and the FLX format algorithm are 

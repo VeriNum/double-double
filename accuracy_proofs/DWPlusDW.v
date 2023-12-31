@@ -1,7 +1,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import Fast2Mult_acc TwoSum_acc DWPlus_acc.
-Require Import DWPlus DDModels.
+Require Import DWPlus DDModels DWord_defs.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -13,83 +13,19 @@ Section AccuracyDWPlusDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
-Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
-Notation u   := (bpow Zaux.radix2 (- fprec t)).
-
-(* TODO put in general file *)
-Lemma double_word_underflow (xh xl: ftype t) : 
-  double_word xh xl -> 
-  Rabs (FT2R xh + FT2R xl) < 
-      bpow radix2 (@emin t + fprec t - 1) -> 
-  FT2R xl = 0.
-Proof.
-rewrite /double_word. intros DWx Hr. move: DWx. 
-rewrite /rounded round_generic; [ nra|
-  apply Plus_error.FLT_format_plus_small => //].
-1,2: rewrite -B2R_float_of_ftype; 
-  apply Binary.generic_format_B2R.
-eapply Rle_trans.
-apply Rlt_le, Hr.
-apply bpow_le; rewrite /emin; lia.
-Qed.
-
-Lemma generic_format_FLT_FT2R (x : ftype t) : 
-generic_format radix2 fexp (FT2R x).
-Proof.
-rewrite -B2R_float_of_ftype. 
-apply Binary.generic_format_B2R.
-Qed.
-
-Lemma generic_format_FLX_FT2R (x : ftype t) : 
-generic_format radix2 (FLX_exp (fprec t)) (FT2R x).
-Proof.
-rewrite -B2R_float_of_ftype. 
-eapply (@generic_format_FLX_FLT radix2 emin).
-apply Binary.generic_format_B2R.
-Qed.
-
-Fact fprec_gt_1 : (1 < fprec t)%Z.
-Proof. pose proof (@fprec_lb t). lia. Qed.
-
-Fact fexp_valid : Valid_exp fexp. 
-Proof. apply FLT.FLT_exp_valid. apply fprec_gt_0. Qed.
-
-
-Local Hint Resolve generic_format_FLT_FT2R 
-                   generic_format_FLX_FT2R 
-                   fprec_gt_1
-                   fexp_valid : base.
-
-Lemma double_word_0 (xh xl : ftype t) : 
-  double_word xh xl -> 
-  FT2R xh = 0 ->  
-  FT2R xl = 0.
-Proof.
-rewrite /double_word.
-intros DWx H0. rewrite H0 in DWx.
-rewrite DWx Rplus_0_l /rounded 
-  round_generic => //; auto with base.
-Qed.
-
-
-Ltac  field_simplify_format :=
-  match goal with |- context [generic_format _ _ ?a ] => 
-    field_simplify a
-  end;  
-  try apply generic_format_0;
-  auto with base.
-
-(* END TODO but check local hints *)
-
+Notation u := (bpow Zaux.radix2 (- fprec t)).
+Notation p := (fprec t).
 
 Variables (xh xl yh yl : ftype t).
+
+Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Let emin :=  (@DDModels.emin t).
 
 Let xhr := (FT2R xh).
 Let xlr := (FT2R xl).
 Let yhr := (FT2R yh).
 Let ylr := (FT2R yl).
 
-Local Notation p := (fprec t).
 (* connect paper proofs to local defs *)
 Definition DWPlusDW :=
   F2Sum.Fast2Sum p choice
@@ -105,15 +41,13 @@ Definition DWPlusDW :=
                        (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr)))))
 .
 
-Let emin :=  (@DDModels.emin t).
 
+(* start section hypotheses *)
 Hypothesis  xE : double_word xh xl.
 Hypothesis  yE : double_word yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
-
-Definition rnd_FLT := 
-  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
-
+Hypothesis FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl). 
+(* end section hypotheses *)
 
 Let f0 := BPLUS xh yh.
 Let x  := TwoSumF_err xl yl.
@@ -122,69 +56,39 @@ Let y1 := BPLUS xl yl.
 Let f1 := BPLUS x1 y1.
 Let y  := snd (Fast2Sum f0 f1).
 
-Fact FIN1
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
-  is_finite_p (Fast2Sum f0 f1).
-Proof. 
-move : FIN. 
-rewrite /is_finite_p/AccurateDWPlusDW.
-rewrite /Fast2Sum/TwoSumF/snd/fst.
-move => [] . repeat subexpr_finite => //.
-Qed.
+Ltac prove_finite := 
+move : FIN;
+rewrite /is_finite_p/AccurateDWPlusDW;
+rewrite /Fast2Sum/TwoSumF/snd/fst;
+move => [] ; repeat subexpr_finite => //
+.
 
+Fact FIN1 : is_finite_p (Fast2Sum f0 f1).
+Proof. prove_finite. Qed.
 
-Fact FIN2
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
-is_finite_p (TwoSumF xh yh).
-Proof.
-move : FIN. 
-rewrite /is_finite_p/AccurateDWPlusDW.
-rewrite /Fast2Sum/TwoSumF/snd/fst.
-move => [] . repeat subexpr_finite; split => //.
-Qed.
+Fact FIN2 : is_finite_p (TwoSumF xh yh).
+Proof. prove_finite. Qed.
 
-Fact FIN3
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
-is_finite (BPLUS x1 y1) = true.
-Proof. 
-move : FIN. 
-rewrite /is_finite_p/AccurateDWPlusDW.
-rewrite /Fast2Sum/TwoSumF/snd/fst.
-move => []. repeat subexpr_finite => //.
-Qed.
+Fact FIN3 : is_finite (BPLUS x1 y1) = true.
+Proof. prove_finite. Qed.
 
-Fact FIN4
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
-is_finite_p (TwoSumF xl yl).
-Proof. 
-move : FIN. 
-rewrite /is_finite_p/AccurateDWPlusDW.
-rewrite /Fast2Sum/TwoSumF/snd/fst.
-move => [] . repeat subexpr_finite; split => //.
-Qed.
+Fact FIN4 : is_finite_p (TwoSumF xl yl).
+Proof. prove_finite. Qed.
 
-Fact FIN5
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
-is_finite (BPLUS x y) = true.
-Proof. 
-move : FIN. 
-rewrite /is_finite_p/AccurateDWPlusDW.
-rewrite /Fast2Sum/TwoSumF/snd/fst.
-move => []. repeat subexpr_finite => //.
-Qed.
+Fact FIN5 : is_finite (BPLUS x y) = true.
+Proof. prove_finite. Qed.
 
 (* the result of the FLT format algorithm and the FLX format algorithm are 
   equal, regardless of underflow. *)
-Lemma DWPlusDWEq_FLT 
-  (FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl)): 
+Lemma DWPlusDWEq_FLT : 
   DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl).
 Proof.
 
-pose proof (FIN1 FIN) as fin1.
-pose proof (FIN2 FIN) as fin2.
-pose proof (FIN3 FIN) as fin3.
-pose proof (FIN4 FIN) as fin4.
-pose proof (FIN5 FIN) as fin5.
+pose proof FIN1 as fin1.
+pose proof FIN2 as fin2.
+pose proof FIN3 as fin3.
+pose proof FIN4 as fin4.
+pose proof FIN5 as fin5.
 
 move: FIN.
 rewrite /AccurateDWPlusDW/is_finite_p/DWPlusDW.
@@ -298,7 +202,6 @@ rewrite /relative_error_DWPlusDW
   /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
 Qed.
 
-Hypothesis FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl). 
 
 Lemma relative_errorDWDW_eq :
 relative_errorDWDW p choice xhr xlr yhr ylr = relative_error_DWPlusDW.
@@ -343,8 +246,8 @@ move =>  Hy.
 have yh0: yhr = 0.
 move: yE; rewrite /double_word. 
 by rewrite Hy /rounded round_0.
-have xl0 : xlr = 0 by apply (@double_word_0 xh).
-have yl0 : ylr = 0 by apply (@double_word_0 yh).
+have xl0 : xlr = 0 by apply (double_word_0 xh).
+have yl0 : ylr = 0 by apply (double_word_0 yh).
 rewrite xh0 yh0  xl0 yl0. 
 rewrite /TwoSum_err/TwoSum_sum //=.
 repeat (try rewrite !Rplus_0_l;

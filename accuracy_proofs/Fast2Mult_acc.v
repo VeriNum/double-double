@@ -5,10 +5,14 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
+
 Section TwoMultCorrect.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
-Notation emin := (@DD.DDModels.emin t).
+
+Notation emin := (@common.emin t).
+
 Variables (a b : ftype t).
+
 Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
 Hypothesis (UF  :  (FT2R a * FT2R b) <> 0 -> 
   bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R a * FT2R b)). 
@@ -69,12 +73,14 @@ End TwoMultCorrect.
 
 Section TwoMultAcc. 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
-Notation emin := (@DD.DDModels.emin t).
-Variables (a b : ftype t).
-Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
 
+Notation emin := (@common.emin t).
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 Notation u   := (bpow Zaux.radix2 (- fprec t)).
+
+Variables (a b : ftype t).
+
+Hypothesis (FIN : is_finite_p (Fast2Mult a b)).
 
 Theorem Fast2Mult_accuracy_norm: 
 forall UF  :  (FT2R a * FT2R b) <> 0 -> 
