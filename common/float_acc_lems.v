@@ -4,6 +4,7 @@
 Require Import vcfloat.VCFloat.
 Require Import common op_defs.
 Require Import mathcomp.ssreflect.ssreflect.
+Require Import Flocq.Core.Generic_fmt Flocq.Core.FLX.
 
 Notation is_finite := vcfloat.FPCore.is_finite.
 
@@ -75,7 +76,7 @@ destruct H0.
 destruct H as [? _].
 rewrite <- B2R_float_of_ftype; unfold BFMA; 
   fold xb yb zb.
-rewrite float_of_ftype_of_float H.
+rewrite !float_of_ftype_of_float H.
 unfold xb, yb, zb.
 rewrite !B2R_float_of_ftype.
 apply generic_round_property.
@@ -625,8 +626,9 @@ apply is_finite_minus_no_overflow; auto.
 Qed.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
+Notation radix2 := Zaux.radix2.
 
-Fact rnd_plus_FLT_FLX_eq {STD: is_standard t}  (a b : ftype t) :
+Fact rnd_plus_FLT_FLX_eq {STD: is_standard t} (a b : ftype t) :
 round radix2 (FLX_exp (fprec t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b) = 
 round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b).
 Proof.
@@ -639,9 +641,10 @@ case : (Rlt_dec (Rabs (FT2R a  + FT2R b))
   apply Huf1. rewrite /emin.
   apply bpow_le; lia.
  rewrite !Generic_fmt.round_generic => //; try nra.
-by apply (FLT.generic_format_FLX_FLT radix2 (@emin t)). } 
+by apply (@FLT.generic_format_FLX_FLT radix2 (@emin t)). } 
 apply Rnot_lt_le in Huf1.
 by rewrite FLT.round_FLT_FLX.
 Qed.
+
 
 End TVar.
