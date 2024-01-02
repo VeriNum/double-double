@@ -4,10 +4,6 @@
 Require Import vcfloat.VCFloat.
 Require Import mathcomp.ssreflect.ssreflect.
 
-Notation radix2 := Zaux.radix2.
-Notation FLX_exp := FLX.FLX_exp.
-Notation round := Generic_fmt.round.
-
 Definition rounded (t: type) (r : R) :=
 (Generic_fmt.round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
      (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) r).
@@ -137,6 +133,10 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Notation emin := (SpecFloat.emin (fprec t) (femax t)).
+Notation radix2 := Zaux.radix2.
+Notation FLX_exp := FLX.FLX_exp.
+Notation round := Generic_fmt.round.
+
 
 Lemma generic_format_FLT_FT2R (x : ftype t) : 
 Generic_fmt.generic_format radix2 fexp (FT2R x).
@@ -169,5 +169,6 @@ Global Hint Resolve generic_format_FLT_FT2R
                     generic_format_FLX_FT2R 
                     fexp_valid 
                     valid_rnd_NE
+                    FPCore.fprec_gt_0
                     fprec_gt_1: dd_base.
 
