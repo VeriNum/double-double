@@ -381,7 +381,7 @@ end.
 
  pose proof 
   (@Binary.Bplus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh y
   HFINxh HFINy) as Hp.
 move: Hp.
@@ -570,7 +570,7 @@ end. }
 have FIN1 : is_finite (xh + y - y)%F64 = true.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( xh + y)%F64 y
   HFIN HFINy) as Hp.
 move: Hp.
@@ -609,7 +609,7 @@ have FIN2 : is_finite (xh + y - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( xh + y)%F64 (xh + y - y)%F64
   HFIN FIN1 ) as Hp.
 move: Hp.
@@ -651,7 +651,7 @@ have FINR : is_finite (y - (xh + y - (xh + y - y)))%F64 = true.
 rewrite is_finite_Binary in FIN2.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE y (xh + y - (xh + y - y))%F64
   HFINy FIN2 ) as Hp.
 move: Hp.
@@ -691,7 +691,7 @@ have FINL : is_finite (xh - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh (xh + y - y)%F64
   HFINxh FIN1 ) as Hp.
 move: Hp.
@@ -743,7 +743,7 @@ end.
 
 pose proof 
   (@Binary.Bplus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( (xh - (xh + y - y))%F64) 
   (y - (xh + y - (xh + y - y)))%F64
   FINL FINR) as Hp.
@@ -795,7 +795,7 @@ end. }
 have FIN1 : is_finite (xh + y - y)%F64 = true.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE ( xh + y)%F64 y
   HFIN HFINy) as Hp.
 move: Hp.
@@ -834,7 +834,7 @@ have FIN2 : is_finite (xh + y - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE ( xh + y)%F64 (xh + y - y)%F64
   HFIN FIN1 ) as Hp.
 move: Hp.
@@ -876,7 +876,7 @@ have FINR : is_finite (y - (xh + y - (xh + y - y)))%F64 = true.
 rewrite is_finite_Binary in FIN2.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE y (xh + y - (xh + y - y))%F64
   HFINy FIN2 ) as Hp.
 move: Hp.
@@ -916,7 +916,7 @@ have FINL : is_finite (xh - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh (xh + y - y)%F64
   HFINxh FIN1 ) as Hp.
 move: Hp.
@@ -970,7 +970,7 @@ end.
 
 pose proof 
   (@Binary.Bplus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( (xh - (xh + y - y))%F64) 
   (y - (xh + y - (xh + y - y)))%F64
   FINL FINR) as Hp.
@@ -1050,7 +1050,7 @@ have HFINxsl :
 Binary.is_finite (fprec t) (femax t) (xl + sl)%F64 = true.
 pose proof 
   (@Binary.Bplus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xl sl HFINxl HFINsl
    ) as Hp.
  move: Hp.
@@ -1076,7 +1076,7 @@ end.
 
 pose proof 
   (@Binary.Bplus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE sh (xl + sl)%F64
    ) as Hp.
  move: Hp.
@@ -1148,7 +1148,7 @@ Binary.is_finite (fprec t) (femax t) (sh + (xl + sl) - sh)%F64 = true.
 { 
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE (sh + (xl + sl))%F64 
   sh) as Hp.
 move: Hp.
@@ -1190,7 +1190,7 @@ end. }
 
 pose proof 
   (@Binary.Bminus_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan t) 
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE (xl + sl)%F64) 
   (sh + (xl + sl) - sh)%F64 as Hp.
 move: Hp.
