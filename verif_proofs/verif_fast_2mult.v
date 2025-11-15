@@ -4,7 +4,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels.
-Require Import fast_2mult.
+Require Import fast_2mult fp_utils.
 
 #[export] Instance CompSpecs : 
   compspecs. make_compspecs prog. Defined.
@@ -32,7 +32,7 @@ Definition fast_2mult_spec :=
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) s).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := MathASI ++ [fast_2mult_spec].
+Definition Gprog : funspecs := MathASI ++ isfinite_double ++ [fast_2mult_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
 Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.

@@ -166,6 +166,24 @@ Ltac subexpr_finite_H0 fexpr HFIN :=
                     try subexpr_finite_H0 b H1;
                     try subexpr_finite_H0 c H2
           end
+      | BFMA ?b ?c ?d => 
+          try match goal with 
+            | H1: is_finite b = true |- _ =>
+              try subexpr_finite_H0 b H1;
+              try match goal with 
+                | H2: is_finite c = true |- _ =>
+                  try subexpr_finite_H0 c H2
+                | _ => let H0 := fresh in pose proof (BFMA_finite_e _ b c d HFIN) as H0;
+                       let H2 := fresh in destruct H0 as (_ & H2);
+                       try subexpr_finite_H0 c H2
+              end
+            | _ =>  let H0 := fresh in pose proof (BFMA_finite_e _ b c d HFIN) as H0;
+                    let H1 := fresh in let H2 := fresh in let H3 := fresh in 
+                    destruct H0 as (H1 & H2 & H3);
+                    try subexpr_finite_H0 b H1;
+                    try subexpr_finite_H0 c H2;
+                    try subexpr_finite_H0 d H3
+          end
   end
 .
   

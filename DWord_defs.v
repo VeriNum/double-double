@@ -19,8 +19,10 @@ Notation fexp :=
 Notation format :=
   (Generic_fmt.generic_format Zaux.radix2 fexp).
 Notation emin := (SpecFloat.emin (fprec t) (femax t)).
-Notation double_word := (DD.DDModels.double_word).
 Notation radix2 := Zaux.radix2.
+
+Notation DW_paper_proofs := (DWPlus.double_word (fprec t) choice).
+Notation double_word := (DD.DDModels.double_word).
 
 Lemma double_word_0 (xh xl : ftype t) : 
   double_word xh xl -> 
@@ -31,6 +33,64 @@ rewrite /double_word.
 intros DWx H0. rewrite H0 in DWx.
 rewrite DWx Rplus_0_l /rounded 
   Generic_fmt.round_generic => //; auto with dd_base.
+Qed.
+
+Theorem DWdouble_word_dw:
+forall (xh xl y : ftype t),
+DW_paper_proofs (FT2R xh) (FT2R xl) -> 
+double_word xh xl.
+Proof.
+intros xh xl y.
+rewrite /DWPlus.double_word/double_word => [] [] [].
+move => Fxh Fxl .
+destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
+                (bpow radix2 (emin + fprec t -1))).
+{ have Hg: 
+  format (FT2R xh + FT2R xl).
+  { apply Plus_error.FLT_format_plus_small.
+  apply fprec_gt_0. 
+  1,2 : rewrite -B2R_float_of_ftype;
+    apply Binary.generic_format_B2R.
+  eapply Rle_trans. apply Rlt_le. apply H.
+  apply bpow_le; fold emin; lia. }
+rewrite /rounded !Generic_fmt.round_generic => //. 
+apply: FLT.generic_format_FLX_FLT. apply Hg. } 
+rewrite /rounded FLT.round_FLT_FLX => //.
+Qed.
+
+Theorem dw_word_DWdouble:
+forall (xh xl y : ftype t),
+double_word xh xl -> 
+DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl).
+Proof.
+intros xh xl y.
+rewrite /DWPlus.double_word/double_word.
+destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
+                (bpow radix2 (emin + fprec t -1))).
+{ have Hg: 
+  format (FT2R xh + FT2R xl).
+  { apply Plus_error.FLT_format_plus_small.
+  apply fprec_gt_0.
+  1,2 : rewrite -B2R_float_of_ftype;
+    apply: Binary.generic_format_B2R.
+  eapply Rle_trans. apply Rlt_le. apply H.
+  apply bpow_le; fold emin; lia. }
+rewrite /rounded Generic_fmt.round_generic => //.
+move=> H1. have Hx0 : FT2R xl = 0.
+assert (FT2R xh + 0 = FT2R xh + FT2R xl) by nra.
+apply Rplus_eq_reg_l in H0 => //.
+rewrite Hx0 ; repeat split => //. Search (Generic_fmt.round _ _ _ (_ + _) = _).
+rewrite Hx0 Rplus_0_r in Hg.
+apply: FLT.generic_format_FLX_FLT. apply Hg. 
+apply Generic_fmt.generic_format_0.
+rewrite Generic_fmt.round_generic; try lra.
+rewrite Hx0 Rplus_0_r in Hg.
+rewrite Rplus_0_r.
+apply: FLT.generic_format_FLX_FLT. apply Hg. } 
+rewrite /rounded FLT.round_FLT_FLX => //.
+move => H1; repeat split => //.
+all:  rewrite -B2R_float_of_ftype; apply (FLT.generic_format_FLX_FLT radix2 emin);
+ apply Binary.generic_format_B2R.
 Qed.
 
 Fact dw_ulp xh xl: 

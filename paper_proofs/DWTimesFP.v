@@ -219,7 +219,6 @@ have u3pos: 0 < u ^3.
 rewrite /=; lra.
 Qed.
 
-
 Section Algo7_pre.
 Variables xh xl y:R.
 Notation ch := (fst (TwoProd xh y)).
@@ -232,13 +231,10 @@ Notation zh := (F2Sum_sum   th tl2 ).
 Notation zl := (F2Sum_err  th tl2 ).
 Notation  xy := ((xh + xl) * y).
 
-
 Definition  DWTimesFP := (zh, zl).
 Notation double_word  := (double_word  p choice).
 Hypothesis Fy: format y.
 Hypothesis DWx: double_word xh xl.
-
-
 
 Lemma DWTimesFP_correct_ypow (ypow: is_pow two y)  (xh0 : xh <> 0):
   ((Rabs ((zh + zl - xy) / xy) <= 3/2 * u ^ 2 + 4 * u ^ 3) /\ (double_word zh zl)).

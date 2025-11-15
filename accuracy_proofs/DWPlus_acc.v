@@ -16,61 +16,6 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl y : ftype t).
 
-Theorem DWdouble_word_dw:
-DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl) -> 
-double_word xh xl.
-Proof.
-rewrite /DWPlus.double_word/double_word => [] [] [].
-move => Fxh Fxl .
-destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
-                (bpow radix2 ((@emin t) + fprec t -1))).
-{ have Hg: 
-  generic_format radix2 (FLT_exp (@emin t) (fprec t)) (FT2R xh + FT2R xl).
-  { apply Plus_error.FLT_format_plus_small.
-  apply fprec_gt_0. 
-  1,2 : rewrite -B2R_float_of_ftype;
-    apply Binary.generic_format_B2R.
-  eapply Rle_trans. apply Rlt_le. apply H.
-  apply bpow_le; fold (@emin t); lia. }
-rewrite /rounded !round_generic => //. 
-apply: generic_format_FLX_FLT. apply Hg. } 
-rewrite /rounded round_FLT_FLX => //.
-Qed.
-
-
-Theorem dw_word_DWdouble:
-double_word xh xl -> 
-DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl).
-Proof.
-rewrite /DWPlus.double_word/double_word.
-destruct (Rlt_or_le (Rabs (FT2R xh + FT2R xl)) 
-                (bpow radix2 (@emin t + fprec t -1))).
-{ have Hg: 
-  generic_format radix2 (FLT_exp (@emin t) (fprec t)) (FT2R xh + FT2R xl).
-  { apply Plus_error.FLT_format_plus_small.
-  apply fprec_gt_0.
-  1,2 : rewrite -B2R_float_of_ftype;
-    apply: Binary.generic_format_B2R.
-  eapply Rle_trans. apply Rlt_le. apply H.
-  apply bpow_le; fold (@emin t); lia. }
-rewrite /rounded round_generic => //.
-move=> H1. have Hx0 : FT2R xl = 0.
-assert (FT2R xh + 0 = FT2R xh + FT2R xl) by nra.
-apply Rplus_eq_reg_l in H0 => //.
-rewrite Hx0 ; repeat split => //. Search (Generic_fmt.round _ _ _ (_ + _) = _).
-rewrite Hx0 Rplus_0_r in Hg.
-apply: generic_format_FLX_FLT. apply Hg. 
-apply generic_format_0.
-rewrite round_generic; try lra.
-rewrite Hx0 Rplus_0_r in Hg.
-rewrite Rplus_0_r.
-apply: generic_format_FLX_FLT. apply Hg. } 
-rewrite /rounded round_FLT_FLX => //.
-move => H1; repeat split => //.
-all:  rewrite -B2R_float_of_ftype; apply (generic_format_FLX_FLT radix2 (@emin t));
- apply Binary.generic_format_B2R.
-Qed.
-
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 
 Ltac prove_finite := 
@@ -314,7 +259,7 @@ Qed.
 Lemma DWPlusFP_double_word : 
 double_word (fst (DWPlusFP xh xl y)) (snd (DWPlusFP xh xl y)).
 Proof.
-apply DWdouble_word_dw.
+apply DWdouble_word_dw => [//=|].
 have Hp : (1 < fprec t)%Z by lia.
 have Hch: choice = (fun n : Z => negb (Z.even n)) by
 apply functional_extensionality; rewrite /choice //=.

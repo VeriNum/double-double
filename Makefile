@@ -27,6 +27,7 @@ OBJDIR = verif_proofs/verif_objs
 OBJ = two_sum.v fast_2mult.v fast_2sum.v
 OBJ += dw_plus_fp.v dw_plus_dw.v
 OBJ += dw_mult_fp.v dw_mult_dw.v
+OBJ += fp_utils.v
 OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include

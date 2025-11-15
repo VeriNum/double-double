@@ -5,6 +5,8 @@ paper_proofs/F2SumFLT.v
 paper_proofs/F2SumFLX.v
 paper_proofs/F2Sum.v
 paper_proofs/DWPlus.v
+paper_proofs/DWTimesFP.v
+paper_proofs/DWTimesDW.v
 
 common/common.v
 common/op_defs.v
@@ -16,3 +18,9 @@ DWord_defs.v
 accuracy_proofs/TwoSum_acc.v
 accuracy_proofs/Fast2Mult_acc.v
 accuracy_proofs/DWPlus_acc.v
+# accuracy_proofs/DWMul_acc.v
+
+verif_proofs/verif_objs/fp_utils.v
+verif_proofs/verif_objs/fast_2mult.v
+verif_proofs/verif_fp_utils.v
+verif_proofs/verif_fast_2mult.v
