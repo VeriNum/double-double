@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
@@ -144,7 +147,6 @@ forward_call (a,b, (BOPP (BMULT a b))).
 forward. 
 entailer!.
 Qed.
-
 
 
 

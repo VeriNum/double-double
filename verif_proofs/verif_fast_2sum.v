@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
@@ -45,7 +48,6 @@ autorewrite with float_elim in *. (* for view only *)
 unfold f2val, Fast2Sum, fst, snd.
 entailer!.
 Qed.
-
 
 
 
