@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 (* This file contains basic definitions and lemmas common to all other files in 
   the repository. *)
 
@@ -171,4 +174,3 @@ Global Hint Resolve generic_format_FLT_FT2R
                     valid_rnd_NE
                     FPCore.fprec_gt_0
                     fprec_gt_1: dd_base.
-

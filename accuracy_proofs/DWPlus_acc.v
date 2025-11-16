@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 (** This file contains accuracy proofs for double-word 
 plus a (double-word, floating-point number *)
 
@@ -1348,6 +1351,5 @@ apply relative_errorDWPlusFP_correct.
 Qed.
 
 End AccuracyDWPlusFP.
-
 
 

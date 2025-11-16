@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs.
 Require Import DDModels common.
@@ -199,5 +202,4 @@ Ltac  field_simplify_format :=
   end;  
   try apply Generic_fmt.generic_format_0;
   auto with dd_base.
-
 

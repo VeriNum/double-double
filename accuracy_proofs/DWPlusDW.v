@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import Fast2Mult_acc TwoSum_acc DWPlus_acc.
@@ -309,5 +312,4 @@ Qed.
 
 
 End AccuracyDWPlusDW.
-
 

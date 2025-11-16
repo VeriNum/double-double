@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
@@ -67,4 +70,3 @@ forward_call.
 unfold f2val, SloppyDWPlusDW, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
-

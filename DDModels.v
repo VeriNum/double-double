@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 (* This file contains the floating-point functional models in IEEE-754
   format for the 2Sum and Fast2Mult implementations.*)
 
@@ -157,4 +160,3 @@ Definition DWDivDW2 := True.
 Definition DWDivDW3 := True.
 
 End DWops.
-

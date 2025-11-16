@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import vcfloat.VCFloat.
 
 Definition BFMA {NAN: FPCore.Nans} {t: type} {STD: is_standard t} (x y z: ftype t) : ftype t :=

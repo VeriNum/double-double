@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 (* This file contains lemmas regarding the accuracy of floating point 
   operations such as BPLUS, BFMA, and BMULT. *)
 

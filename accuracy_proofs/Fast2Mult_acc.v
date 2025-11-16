@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common dd_tactics.
 Require Import DDModels.
@@ -83,4 +86,3 @@ Qed.
 
 
 End TwoMultAcc.
-

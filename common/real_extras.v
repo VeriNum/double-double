@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 Require Import Coq.Reals.Reals.
 Require Import Flocq.Core.Raux.
 

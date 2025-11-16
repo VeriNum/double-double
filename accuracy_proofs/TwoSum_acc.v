@@ -1,3 +1,6 @@
+(* Copyright 2025 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
 (* This file contains accuracy and correctness proofs for the
   TwoSum and Fast2Sum algorithms in the FLT format *)
 
@@ -774,5 +777,4 @@ by rewrite !B2R_float_of_ftype.
 Qed.
 
 End FastTwoSumAcc.
-
 
