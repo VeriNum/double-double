@@ -74,9 +74,9 @@ Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _a : ident := $"a".
-Definition _abort : ident := $"abort".
 Definition _b : ident := $"b".
 Definition _dword : ident := $"dword".
+Definition _exit : ident := $"exit".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fma : ident := $"fma".
 Definition _isfinite_double : ident := $"isfinite_double".
@@ -136,7 +136,8 @@ Definition f_fast_2mult := {|
             (Sset _t'2
               (Ecast (Eunop Onotbool (Etempvar _t'3 tint) tint) tbool)))))
       (Sifthenelse (Etempvar _t'2 tint)
-        (Scall None (Evar _abort (Tfunction nil tvoid cc_default)) nil)
+        (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+          ((Econst_int (Int.repr 1) tint) :: nil))
         Sskip))
     (Ssequence
       (Ssequence
@@ -410,9 +411,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      (AST.Xfloat :: AST.Xfloat :: AST.Xfloat :: nil)
                      AST.Xfloat cc_default))
      (tdouble :: tdouble :: tdouble :: nil) tdouble cc_default)) ::
- (_abort,
-   Gfun(External (EF_external "abort" (mksignature nil AST.Xvoid cc_default))
-     nil tvoid cc_default)) ::
+ (_exit,
+   Gfun(External (EF_external "exit"
+                   (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
+     (tint :: nil) tvoid cc_default)) ::
  (_isfinite_double,
    Gfun(External (EF_external "isfinite_double"
                    (mksignature (AST.Xfloat :: nil) AST.Xint cc_default))
@@ -424,7 +426,7 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult :: _isnormal_double :: _isfinite_double :: _abort :: _fma ::
+(_fast_2mult :: _isnormal_double :: _isfinite_double :: _exit :: _fma ::
  ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
  ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::

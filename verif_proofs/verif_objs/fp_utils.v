@@ -19,7 +19,7 @@ Module Info.
   Definition normalized := true.
 End Info.
 
-Definition __194 : ident := $"_194".
+Definition __192 : ident := $"_192".
 Definition ___builtin_annot : ident := $"__builtin_annot".
 Definition ___builtin_annot_intval : ident := $"__builtin_annot_intval".
 Definition ___builtin_bswap : ident := $"__builtin_bswap".
@@ -77,9 +77,8 @@ Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _ax : ident := $"ax".
 Definition _d : ident := $"d".
 Definition _exponent : ident := $"exponent".
-Definition _fraction : ident := $"fraction".
 Definition _isfinite_double : ident := $"isfinite_double".
-Definition _issubnormal_double : ident := $"issubnormal_double".
+Definition _isnormal_double : ident := $"isnormal_double".
 Definition _main : ident := $"main".
 Definition _u : ident := $"u".
 Definition _v : ident := $"v".
@@ -100,44 +99,41 @@ Definition f_isfinite_double := {|
                  (Econst_float (Float.of_bits (Int64.repr 0)) tdouble) tint)))
 |}.
 
-Definition f_issubnormal_double := {|
+Definition f_isnormal_double := {|
   fn_return := tint;
   fn_callconv := cc_default;
   fn_params := ((_x, tdouble) :: nil);
-  fn_vars := ((_v, (Tunion __194 noattr)) :: nil);
-  fn_temps := ((_ax, tulong) :: (_exponent, tulong) :: (_fraction, tulong) ::
-               (_t'1, tint) :: (_t'2, tulong) :: nil);
+  fn_vars := ((_v, (Tunion __192 noattr)) :: nil);
+  fn_temps := ((_ax, tulong) :: (_exponent, tulong) :: (_t'1, tint) ::
+               (_t'2, tulong) :: nil);
   fn_body :=
 (Ssequence
-  (Sassign (Efield (Evar _v (Tunion __194 noattr)) _d tdouble)
+  (Sassign (Efield (Evar _v (Tunion __192 noattr)) _d tdouble)
     (Etempvar _x tdouble))
   (Ssequence
     (Ssequence
-      (Sset _t'2 (Efield (Evar _v (Tunion __194 noattr)) _u tulong))
+      (Sset _t'2 (Efield (Evar _v (Tunion __192 noattr)) _u tulong))
       (Sset _ax
         (Ebinop Oand (Etempvar _t'2 tulong)
           (Econst_long (Int64.repr 9223372036854775807) tulong) tulong)))
     (Ssequence
       (Sset _exponent
-        (Ebinop Oshr (Etempvar _ax tulong) (Econst_int (Int.repr 52) tint)
-          tulong))
+        (Ebinop Oand
+          (Ebinop Oshr (Etempvar _ax tulong) (Econst_int (Int.repr 52) tint)
+            tulong) (Econst_long (Int64.repr 2047) tulong) tulong))
       (Ssequence
-        (Sset _fraction
-          (Ebinop Oand (Etempvar _ax tulong)
-            (Econst_long (Int64.repr 4503599627370495) tulong) tulong))
-        (Ssequence
-          (Sifthenelse (Ebinop Oeq (Etempvar _exponent tulong)
-                         (Econst_int (Int.repr 0) tint) tint)
-            (Sset _t'1
-              (Ecast
-                (Ebinop One (Etempvar _fraction tulong)
-                  (Econst_int (Int.repr 0) tint) tint) tbool))
-            (Sset _t'1 (Econst_int (Int.repr 0) tint)))
-          (Sreturn (Some (Etempvar _t'1 tint))))))))
+        (Sifthenelse (Ebinop One (Etempvar _exponent tulong)
+                       (Econst_int (Int.repr 0) tint) tint)
+          (Sset _t'1
+            (Ecast
+              (Ebinop One (Etempvar _exponent tulong)
+                (Econst_long (Int64.repr 2047) tulong) tint) tbool))
+          (Sset _t'1 (Econst_int (Int.repr 0) tint)))
+        (Sreturn (Some (Etempvar _t'1 tint)))))))
 |}.
 
 Definition composites : list composite_definition :=
-(Composite __194 Union
+(Composite __192 Union
    (Member_plain _d tdouble :: Member_plain _u tulong :: nil)
    noattr :: nil).
 
@@ -386,10 +382,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
- (_issubnormal_double, Gfun(Internal f_issubnormal_double)) :: nil).
+ (_isnormal_double, Gfun(Internal f_isnormal_double)) :: nil).
 
 Definition public_idents : list ident :=
-(_issubnormal_double :: _isfinite_double :: ___builtin_debug ::
+(_isnormal_double :: _isfinite_double :: ___builtin_debug ::
  ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
  ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
  ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::

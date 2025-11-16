@@ -10,13 +10,16 @@ int isfinite_double(double x) {
     return (x - x) == 0.0;
 }
 
-int issubnormal_double(double x) {
+int isnormal_double(double x) {
     union { double d; uint64_t u; } v;
     v.d = x;
 
+    // Clear the sign bit.
     uint64_t ax = v.u & 0x7fffffffffffffffULL;
-    uint64_t exponent = ax >> 52;
-    uint64_t fraction = ax & 0x000fffffffffffffULL;
 
-    return (exponent == 0 && fraction != 0);
+    // Extract the 11-bit exponent.
+    uint64_t exponent = (ax >> 52) & 0x7ffULL;
+
+    // Normal iff 0 < exponent < 0x7ff.
+    return (exponent != 0 && exponent != 0x7ffULL);
 }

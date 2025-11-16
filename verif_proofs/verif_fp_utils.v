@@ -5,7 +5,7 @@ Require Import VSTlib.spec_math.
 Require Import float_acc_lems.
 From Flocq Require Import Pff2Flocq Core.
 
-Require Import fp_utils.
+Require Import fp_utils fp_utils_specs.
 
 #[export] Instance CompSpecs : 
   compspecs. make_compspecs prog. Defined.
@@ -14,19 +14,6 @@ Definition Vprog : varspecs. mk_varspecs prog. Defined.
 Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
-
-Definition isfinite_double_spec := 
-  DECLARE _isfinite_double
-  WITH x : ftype Tdouble 
-  PRE [ tdouble ] (* c lang types *)
-    PROP()
-    PARAMS ( Vfloat x ) (* functions params *)
-    SEP() (* preds on mem *)
-  POST [ tint ]
-    EX b : bool,
-    PROP(b = true <-> is_finite x = true)
-    RETURN (Vint (if b then Int.one else Int.zero))
-    SEP().
 
 (* Collect the function-API specs together into Gprog: list funspec *)
 Definition Gprog : funspecs := MathASI ++ [isfinite_double_spec].
