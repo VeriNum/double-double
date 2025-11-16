@@ -5,7 +5,7 @@
 
 void fast_2mult(struct dword *st, double a, double b) {
    st->s  = a * b;
-   if (!isfinite_double(st->s) || !isnormal_double(st->s)) {
+   if (!isfinite_double(st->s) || !isnormal_mul_double(a,b)) {
       exit(EXIT_FAILURE);
    }
    st->t  = fma(a,b,-st->s);

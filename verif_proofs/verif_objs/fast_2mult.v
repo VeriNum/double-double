@@ -80,7 +80,7 @@ Definition _exit : ident := $"exit".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fma : ident := $"fma".
 Definition _isfinite_double : ident := $"isfinite_double".
-Definition _isnormal_double : ident := $"isnormal_double".
+Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
 Definition _main : ident := $"main".
 Definition _s : ident := $"s".
 Definition _st : ident := $"st".
@@ -91,7 +91,6 @@ Definition _t'3 : ident := 130%positive.
 Definition _t'4 : ident := 131%positive.
 Definition _t'5 : ident := 132%positive.
 Definition _t'6 : ident := 133%positive.
-Definition _t'7 : ident := 134%positive.
 
 Definition f_fast_2mult := {|
   fn_return := tvoid;
@@ -100,8 +99,7 @@ Definition f_fast_2mult := {|
                 (_b, tdouble) :: nil);
   fn_vars := nil;
   fn_temps := ((_t'4, tdouble) :: (_t'3, tint) :: (_t'2, tint) ::
-               (_t'1, tint) :: (_t'7, tdouble) :: (_t'6, tdouble) ::
-               (_t'5, tdouble) :: nil);
+               (_t'1, tint) :: (_t'6, tdouble) :: (_t'5, tdouble) :: nil);
   fn_body :=
 (Ssequence
   (Sassign
@@ -113,26 +111,22 @@ Definition f_fast_2mult := {|
     (Ssequence
       (Ssequence
         (Ssequence
-          (Sset _t'7
+          (Sset _t'6
             (Efield
               (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
                 (Tstruct _dword noattr)) _s tdouble))
           (Scall (Some _t'1)
             (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
                                      cc_default))
-            ((Etempvar _t'7 tdouble) :: nil)))
+            ((Etempvar _t'6 tdouble) :: nil)))
         (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
           (Sset _t'2 (Econst_int (Int.repr 1) tint))
           (Ssequence
-            (Ssequence
-              (Sset _t'6
-                (Efield
-                  (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-                    (Tstruct _dword noattr)) _s tdouble))
-              (Scall (Some _t'3)
-                (Evar _isnormal_double (Tfunction (tdouble :: nil) tint
-                                         cc_default))
-                ((Etempvar _t'6 tdouble) :: nil)))
+            (Scall (Some _t'3)
+              (Evar _isnormal_mul_double (Tfunction
+                                           (tdouble :: tdouble :: nil) tint
+                                           cc_default))
+              ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
             (Sset _t'2
               (Ecast (Eunop Onotbool (Etempvar _t'3 tint) tint) tbool)))))
       (Sifthenelse (Etempvar _t'2 tint)
@@ -419,14 +413,14 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "isfinite_double"
                    (mksignature (AST.Xfloat :: nil) AST.Xint cc_default))
      (tdouble :: nil) tint cc_default)) ::
- (_isnormal_double,
-   Gfun(External (EF_external "isnormal_double"
-                   (mksignature (AST.Xfloat :: nil) AST.Xint cc_default))
-     (tdouble :: nil) tint cc_default)) ::
- (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
+ (_isnormal_mul_double,
+   Gfun(External (EF_external "isnormal_mul_double"
+                   (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
+                     cc_default)) (tdouble :: tdouble :: nil) tint
+     cc_default)) :: (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult :: _isnormal_double :: _isfinite_double :: _exit :: _fma ::
+(_fast_2mult :: _isnormal_mul_double :: _isfinite_double :: _exit :: _fma ::
  ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
  ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::

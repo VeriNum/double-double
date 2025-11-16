@@ -5,7 +5,6 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-
 Section TwoMultCorrect.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

@@ -3,10 +3,8 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
-Require Import DDModels common.
+Require Import DDModels common real_extras.
 Require Import fast_2mult fp_utils_specs.
-Require Import Coq.Bool.Bool.
-
 
 #[export] Instance CompSpecs : 
   compspecs. make_compspecs prog. Defined.
@@ -52,7 +50,7 @@ Definition exit_spec :=
     SEP(data_at Tsh dword dw st).
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := MathASI ++ [exit_spec; isnormal_double_spec; isfinite_double_spec; fast_2mult_spec].
+Definition Gprog : funspecs := MathASI ++ [exit_spec; isnormal_mul_double_spec; isfinite_double_spec; fast_2mult_spec].
 
 Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.
@@ -71,14 +69,14 @@ set (Post1 :=
            b_fin = true <-> is_finite (BMULT a b) = true;
            b_nrm = true <->
              (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1)
-               <= Rabs (FT2R (BMULT a b)))%R;
+               <= Rabs (FT2R a * FT2R b))%R;
            (* how t2 encodes the guard:
               t2 ≠ 0  <->  (¬ b_fin ∨ ¬ b_nrm)  *)
            (Int.eq t2 Int.zero = true <-> (b_fin = true /\ b_nrm = true))
          )
     LOCAL ( temp _t'1 (Vint (tbool b_fin));           (* result of isfinite_double *)
             temp _t'2 (Vint t2);                      (* guard flag *)
-            temp _t'7 (Vfloat (BMULT a b));       (* st->s *)
+            temp _t'6 (Vfloat (BMULT a b));       (* st->s *)
             temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
 SEP (@data_at CompSpecs Tsh dword (Vfloat (Float.mul a b), @snd val val (@default_val CompSpecs dword)) st)).
 forward_if Post1.
@@ -87,20 +85,27 @@ forward_if Post1.
 forward; unfold Post1.
 entailer!.
 Exists vret_fin 
-  (Rle_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1)) (Rabs (FT2R (BMULT a b)))) Int.one.
-entailer!. repeat split; try apply Rle_bool_true. admit. admit. admit. admit.
+  (Rle_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1)) (Rabs (FT2R a * FT2R b))) Int.one.
+entailer!.
+destruct vret_fin; try discriminate.
+repeat split; try apply Rle_bool_true; 
+try apply Rle_bool_to_Rle; try discriminate. 
+intros [A B]; discriminate.
 
--  (*  isfinite(st->s), now check isnormal_double *)
-forward.  (* _t'6 = _st->_s; *) 
+-  (*  isfinite(st->s), now check isnormal_double *)  (* _t'6 = _st->_s; *) 
 forward_call. (* _t'3 = _isnormal_double (_t'6); *)
 Intros vret_nrm.
 forward. (* _t'2 = (tbool) (!_t'3); *)
 
 unfold Post1.
 entailer!.
-Exists vret_fin vret_nrm Int.zero.
+Exists vret_fin vret_nrm (tbool (negb (vret_fin && vret_nrm))).
 entailer!.
-cbv [bool2val]; destruct vret_nrm; auto. admit. admit.
+cbv [bool2val].
+destruct vret_fin; simpl in H0; 
+destruct vret_nrm; simpl; 
+repeat split; try intros [A B]; auto.
+exfalso. apply H0; auto.
 
 - (* if (_t'2) exit(EXIT_FAILURE); *)
 unfold Post1.
@@ -110,7 +115,7 @@ set (Post2 :=
   EX vret0 : bool,
     PROP (NoOverflowUnderflow_fast_2mult a b)
     LOCAL ( temp _t'1 (Vint (if vret0 then Int.one else Int.zero));
-            temp _t'7 (Vfloat (Float.mul a b));
+            temp _t'6 (Vfloat (Float.mul a b));
             temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
 SEP (@data_at CompSpecs Tsh dword (Vfloat (Float.mul a b), @snd val val (@default_val CompSpecs dword)) st)).
 forward_if Post2.
@@ -127,7 +132,9 @@ entailer!.
 Exists vret.
 entailer!.
 destruct H2.
-admit.
+unfold NoOverflowUnderflow_fast_2mult; split.
+apply H0; destruct vret; auto. apply H2; auto.
+apply H1. apply H2; auto.
 
 + 
 unfold Post2.
@@ -136,8 +143,6 @@ forward.
 forward_call (a,b, (BOPP (BMULT a b))).
 forward. 
 entailer!.
-unfold NoOverflowUnderflow_fast_2mult; split.
-
 Qed.
 
 

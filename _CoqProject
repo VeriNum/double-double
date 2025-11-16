@@ -12,6 +12,7 @@ common/common.v
 common/op_defs.v
 common/float_acc_lems.v
 common/dd_tactics.v
+common/real_extras.v
 
 DDModels.v
 DWord_defs.v

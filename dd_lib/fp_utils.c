@@ -10,9 +10,9 @@ int isfinite_double(double x) {
     return (x - x) == 0.0;
 }
 
-int isnormal_double(double x) {
+int isnormal_mul_double(double x, double y) {
     union { double d; uint64_t u; } v;
-    v.d = x;
+    v.d = x * y;
 
     // Clear the sign bit.
     uint64_t ax = v.u & 0x7fffffffffffffffULL;
