@@ -1,6 +1,3 @@
-(* Copyright 2025 Ariel Kellison *)
-(* Licensed under the MIT License. See LICENSE. *)
-
 From Coq Require Import String List ZArith.
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.
 Import Clightdefs.ClightNotations.
@@ -82,7 +79,6 @@ Definition _dword : ident := $"dword".
 Definition _exit : ident := $"exit".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fma : ident := $"fma".
-Definition _isfinite_double : ident := $"isfinite_double".
 Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
 Definition _main : ident := $"main".
 Definition _s : ident := $"s".
@@ -91,9 +87,6 @@ Definition _t : ident := $"t".
 Definition _t'1 : ident := 128%positive.
 Definition _t'2 : ident := 129%positive.
 Definition _t'3 : ident := 130%positive.
-Definition _t'4 : ident := 131%positive.
-Definition _t'5 : ident := 132%positive.
-Definition _t'6 : ident := 133%positive.
 
 Definition f_fast_2mult := {|
   fn_return := tvoid;
@@ -101,56 +94,39 @@ Definition f_fast_2mult := {|
   fn_params := ((_st, (tptr (Tstruct _dword noattr))) :: (_a, tdouble) ::
                 (_b, tdouble) :: nil);
   fn_vars := nil;
-  fn_temps := ((_t'4, tdouble) :: (_t'3, tint) :: (_t'2, tint) ::
-               (_t'1, tint) :: (_t'6, tdouble) :: (_t'5, tdouble) :: nil);
+  fn_temps := ((_t'2, tdouble) :: (_t'1, tint) :: (_t'3, tdouble) :: nil);
   fn_body :=
 (Ssequence
-  (Sassign
-    (Efield
-      (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-        (Tstruct _dword noattr)) _s tdouble)
-    (Ebinop Omul (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
   (Ssequence
+    (Scall (Some _t'1)
+      (Evar _isnormal_mul_double (Tfunction (tdouble :: tdouble :: nil) tint
+                                   cc_default))
+      ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Ssequence
+    (Sassign
+      (Efield
+        (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
+          (Tstruct _dword noattr)) _s tdouble)
+      (Ebinop Omul (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
     (Ssequence
       (Ssequence
-        (Ssequence
-          (Sset _t'6
-            (Efield
-              (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-                (Tstruct _dword noattr)) _s tdouble))
-          (Scall (Some _t'1)
-            (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
-                                     cc_default))
-            ((Etempvar _t'6 tdouble) :: nil)))
-        (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
-          (Sset _t'2 (Econst_int (Int.repr 1) tint))
-          (Ssequence
-            (Scall (Some _t'3)
-              (Evar _isnormal_mul_double (Tfunction
-                                           (tdouble :: tdouble :: nil) tint
-                                           cc_default))
-              ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
-            (Sset _t'2
-              (Ecast (Eunop Onotbool (Etempvar _t'3 tint) tint) tbool)))))
-      (Sifthenelse (Etempvar _t'2 tint)
-        (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
-          ((Econst_int (Int.repr 1) tint) :: nil))
-        Sskip))
-    (Ssequence
-      (Ssequence
-        (Sset _t'5
+        (Sset _t'3
           (Efield
             (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
               (Tstruct _dword noattr)) _s tdouble))
-        (Scall (Some _t'4)
+        (Scall (Some _t'2)
           (Evar _fma (Tfunction (tdouble :: tdouble :: tdouble :: nil)
                        tdouble cc_default))
           ((Etempvar _a tdouble) :: (Etempvar _b tdouble) ::
-           (Eunop Oneg (Etempvar _t'5 tdouble) tdouble) :: nil)))
+           (Eunop Oneg (Etempvar _t'3 tdouble) tdouble) :: nil)))
       (Sassign
         (Efield
           (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-            (Tstruct _dword noattr)) _t tdouble) (Etempvar _t'4 tdouble)))))
+            (Tstruct _dword noattr)) _t tdouble) (Etempvar _t'2 tdouble)))))
 |}.
 
 Definition composites : list composite_definition :=
@@ -412,10 +388,6 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "exit"
                    (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
      (tint :: nil) tvoid cc_default)) ::
- (_isfinite_double,
-   Gfun(External (EF_external "isfinite_double"
-                   (mksignature (AST.Xfloat :: nil) AST.Xint cc_default))
-     (tdouble :: nil) tint cc_default)) ::
  (_isnormal_mul_double,
    Gfun(External (EF_external "isnormal_mul_double"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
@@ -423,10 +395,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
      cc_default)) :: (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult :: _isnormal_mul_double :: _isfinite_double :: _exit :: _fma ::
- ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+(_fast_2mult :: _isnormal_mul_double :: _exit :: _fma :: ___builtin_debug ::
+ ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
+ ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
+ ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
@@ -445,4 +417,5 @@ Definition public_idents : list ident :=
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.
+
 

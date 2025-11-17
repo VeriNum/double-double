@@ -1,6 +1,3 @@
-(* Copyright 2025 Ariel Kellison *)
-(* Licensed under the MIT License. See LICENSE. *)
-
 From Coq Require Import String List ZArith.
 From compcert Require Import Coqlib Integers Floats AST Ctypes Cop Clight Clightdefs.
 Import Clightdefs.ClightNotations.
@@ -22,7 +19,6 @@ Module Info.
   Definition normalized := true.
 End Info.
 
-Definition __194 : ident := $"_194".
 Definition ___builtin_annot : ident := $"__builtin_annot".
 Definition ___builtin_annot_intval : ident := $"__builtin_annot_intval".
 Definition ___builtin_bswap : ident := $"__builtin_bswap".
@@ -77,18 +73,22 @@ Definition ___compcert_va_composite : ident := $"__compcert_va_composite".
 Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
-Definition _ax : ident := $"ax".
-Definition _d : ident := $"d".
-Definition _exponent : ident := $"exponent".
+Definition _fabs : ident := $"fabs".
+Definition _fin : ident := $"fin".
 Definition _isfinite_double : ident := $"isfinite_double".
 Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
+Definition _lb : ident := $"lb".
+Definition _ldexp : ident := $"ldexp".
 Definition _main : ident := $"main".
-Definition _u : ident := $"u".
-Definition _v : ident := $"v".
+Definition _thresh : ident := $"thresh".
 Definition _x : ident := $"x".
 Definition _y : ident := $"y".
+Definition _z : ident := $"z".
 Definition _t'1 : ident := 128%positive.
 Definition _t'2 : ident := 129%positive.
+Definition _t'3 : ident := 130%positive.
+Definition _t'4 : ident := 131%positive.
+Definition _t'5 : ident := 132%positive.
 
 Definition f_isfinite_double := {|
   fn_return := tint;
@@ -107,39 +107,53 @@ Definition f_isnormal_mul_double := {|
   fn_return := tint;
   fn_callconv := cc_default;
   fn_params := ((_x, tdouble) :: (_y, tdouble) :: nil);
-  fn_vars := ((_v, (Tunion __194 noattr)) :: nil);
-  fn_temps := ((_ax, tulong) :: (_exponent, tulong) :: (_t'1, tint) ::
-               (_t'2, tulong) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_z, tdouble) :: (_thresh, tdouble) :: (_fin, tint) ::
+               (_lb, tint) :: (_t'5, tint) :: (_t'4, tdouble) ::
+               (_t'3, tint) :: (_t'2, tint) :: (_t'1, tdouble) :: nil);
   fn_body :=
 (Ssequence
-  (Sassign (Efield (Evar _v (Tunion __194 noattr)) _d tdouble)
-    (Ebinop Omul (Etempvar _x tdouble) (Etempvar _y tdouble) tdouble))
+  (Sset _z (Ebinop Omul (Etempvar _x tdouble) (Etempvar _y tdouble) tdouble))
   (Ssequence
     (Ssequence
-      (Sset _t'2 (Efield (Evar _v (Tunion __194 noattr)) _u tulong))
-      (Sset _ax
-        (Ebinop Oand (Etempvar _t'2 tulong)
-          (Econst_long (Int64.repr 9223372036854775807) tulong) tulong)))
+      (Scall (Some _t'1)
+        (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble cc_default))
+        ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+         (Econst_int (Int.repr 53) tint) :: nil))
+      (Sset _thresh (Etempvar _t'1 tdouble)))
     (Ssequence
-      (Sset _exponent
-        (Ebinop Oand
-          (Ebinop Oshr (Etempvar _ax tulong) (Econst_int (Int.repr 52) tint)
-            tulong) (Econst_long (Int64.repr 2047) tulong) tulong))
       (Ssequence
-        (Sifthenelse (Ebinop One (Etempvar _exponent tulong)
-                       (Econst_int (Int.repr 0) tint) tint)
-          (Sset _t'1
-            (Ecast
-              (Ebinop One (Etempvar _exponent tulong)
-                (Econst_long (Int64.repr 2047) tulong) tint) tbool))
-          (Sset _t'1 (Econst_int (Int.repr 0) tint)))
-        (Sreturn (Some (Etempvar _t'1 tint)))))))
+        (Scall (Some _t'2)
+          (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+          ((Etempvar _z tdouble) :: nil))
+        (Sset _fin (Etempvar _t'2 tint)))
+      (Ssequence
+        (Ssequence
+          (Sifthenelse (Ebinop Oeq (Etempvar _z tdouble)
+                         (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
+                         tint)
+            (Sset _t'3 (Econst_int (Int.repr 1) tint))
+            (Ssequence
+              (Scall (Some _t'4)
+                (Evar _fabs (Tfunction (tdouble :: nil) tdouble cc_default))
+                ((Etempvar _z tdouble) :: nil))
+              (Sset _t'3
+                (Ecast
+                  (Ebinop Ole
+                    (Ebinop Omul
+                      (Econst_float (Float.of_bits (Int64.repr 4503599627370496)) tdouble)
+                      (Etempvar _thresh tdouble) tdouble)
+                    (Etempvar _t'4 tdouble) tint) tbool))))
+          (Sset _lb (Etempvar _t'3 tint)))
+        (Ssequence
+          (Sifthenelse (Etempvar _fin tint)
+            (Sset _t'5 (Ecast (Etempvar _lb tint) tbool))
+            (Sset _t'5 (Econst_int (Int.repr 0) tint)))
+          (Sreturn (Some (Etempvar _t'5 tint))))))))
 |}.
 
 Definition composites : list composite_definition :=
-(Composite __194 Union
-   (Member_plain _d tdouble :: Member_plain _u tulong :: nil)
-   noattr :: nil).
+nil.
 
 Definition global_definitions : list (ident * globdef fundef type) :=
 ((___compcert_va_int32,
@@ -385,14 +399,23 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|}))
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
+ (_ldexp,
+   Gfun(External (EF_external "ldexp"
+                   (mksignature (AST.Xfloat :: AST.Xint :: nil) AST.Xfloat
+                     cc_default)) (tdouble :: tint :: nil) tdouble
+     cc_default)) ::
+ (_fabs,
+   Gfun(External (EF_external "fabs"
+                   (mksignature (AST.Xfloat :: nil) AST.Xfloat cc_default))
+     (tdouble :: nil) tdouble cc_default)) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
  (_isnormal_mul_double, Gfun(Internal f_isnormal_mul_double)) :: nil).
 
 Definition public_idents : list ident :=
-(_isnormal_mul_double :: _isfinite_double :: ___builtin_debug ::
- ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
- ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
- ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+(_isnormal_mul_double :: _isfinite_double :: _fabs :: _ldexp ::
+ ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
@@ -411,4 +434,5 @@ Definition public_idents : list ident :=
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.
+
 
