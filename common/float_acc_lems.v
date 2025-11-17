@@ -234,7 +234,7 @@ Qed.
 
 End FMA. 
 
-Section Mult. 
+Section Mult.
 
 Definition Bmult_no_overflow  (x y: R) : Prop :=
   (Rabs (rounded t (x * y)) < Raux.bpow Zaux.radix2 (femax t))%R.
@@ -350,6 +350,32 @@ destruct Hbmult as (Hbmult & _).
 rewrite -Hbmult -!B2R_float_of_ftype !float_of_ftype_of_float; 
 f_equal.
 Qed. 
+
+Lemma BMULT_not_zero  {NAN: Nans} {STD: is_standard t} :
+  forall (x y : ftype t)
+  (Hfin : Binary.is_finite_strict _ _ (float_of_ftype (BMULT x y)) = true),
+  (FT2R x * FT2R y)%R = 0 -> False.
+Proof.
+  unfold BMULT, BINOP; simpl.
+  intros x y H H1.
+  rewrite <- !B2R_float_of_ftype in H1.
+  rewrite float_of_ftype_of_float in H.
+  assert (Hx : Binary.is_finite_strict _ _  (float_of_ftype x) = true). 
+  {destruct (float_of_ftype x), (float_of_ftype y); try discriminate; auto. } 
+  assert (Hy : Binary.is_finite_strict _ _  (float_of_ftype y) = true). 
+  {destruct (float_of_ftype x), (float_of_ftype y); try discriminate; auto. } 
+  destruct (float_of_ftype x), (float_of_ftype y); 
+  cbv [Binary.Bmult]; try discriminate.
+  apply Rmult_integral in H1; destruct H1.
+  { pose proof (Binary.B2R_Bsign_inj _ _ 
+    (Binary.B754_finite (fprec t) (femax t) s m e e0)) 
+    (Binary.B754_zero (fprec t) (femax t) s) as Hp;  
+  rewrite Hp in H; clear Hp; auto. }
+  pose proof (Binary.B2R_Bsign_inj _ _ 
+    (Binary.B754_finite (fprec t) (femax t) s0 m0 e1 e2)) 
+    (Binary.B754_zero (fprec t) (femax t) s0) as Hp;  
+  rewrite Hp in H; clear Hp; auto.
+Qed.
 
 End Mult.
 

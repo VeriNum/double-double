@@ -1,6 +1,10 @@
 // dd_lib/fp_utils.c
 #include <stdint.h>
 #include "include/fp_utils.h"
+#include <math.h> // for fabs  
+#include <float.h>  // for DBL_MIN
+
+
 
 int isfinite_double(double x) {
     /* For finite x, x - x == 0
@@ -11,15 +15,10 @@ int isfinite_double(double x) {
 }
 
 int isnormal_mul_double(double x, double y) {
-    union { double d; uint64_t u; } v;
-    v.d = x * y;
-
-    // Clear the sign bit.
-    uint64_t ax = v.u & 0x7fffffffffffffffULL;
-
-    // Extract the 11-bit exponent.
-    uint64_t exponent = (ax >> 52) & 0x7ffULL;
-
-    // Normal iff 0 < exponent < 0x7ff.
-    return (exponent != 0 && exponent != 0x7ffULL);
+    double z = x * y;
+    double thresh = ldexp(1.0, 53);
+    int fin = isfinite_double(z);
+    // 2 ^ (emin + 2 * p - 1)
+    int lb = z == 0.0 || DBL_MIN * thresh <= fabs(z); 
+    return fin && lb;  
 }

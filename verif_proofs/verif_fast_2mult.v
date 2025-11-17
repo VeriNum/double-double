@@ -20,8 +20,8 @@ Open Scope logic.
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
 Definition NoOverflowUnderflow_fast_2mult (a b : ftype Tdouble) : Prop :=
-  is_finite (BMULT a b) = true /\ 
-  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R. 
+  is_finite (BMULT a b) = true /\ ((FT2R a * FT2R b)%R = 0%R \/
+  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
 
 Definition dword := Tstruct _dword noattr.
 
@@ -42,15 +42,15 @@ Definition fast_2mult_spec :=
 
 Definition exit_spec :=
   DECLARE _exit
-  WITH st : val, dw : reptype dword (* frame *)
+  WITH code : int
   PRE [ tint ]
     PROP()
     PARAMS (Vint (Int.repr 1))   (* matches exit(EXIT_FAILURE) *)
-    SEP(data_at Tsh dword dw st)
+    SEP( )
   POST [ tvoid ]
     PROP(False)    (* exit never returns *)
     LOCAL()
-    SEP(data_at Tsh dword dw st).
+    SEP().
 
 (* Collect the function-API specs together into Gprog: list funspec *)
 Definition Gprog : funspecs := MathASI ++ [exit_spec; isnormal_mul_double_spec; isfinite_double_spec; fast_2mult_spec].
@@ -62,89 +62,32 @@ Definition tbool (b : bool) : int :=
 Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
 Proof.
 start_function.
-forward.
-forward.  (* _t'7 = _st->_s; *) 
-forward_call. (* _t'1 = _isfinite_double (_t'7); *)
+forward_call (a,b).
 Intros vret_fin.
-set (Post1 :=
-  EX b_fin b_nrm : bool, EX t2 : int,
-    PROP ( (* meaning of the booleans *)
-           b_fin = true <-> is_finite (BMULT a b) = true;
-           b_nrm = true <->
-             (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1)
-               <= Rabs (FT2R a * FT2R b))%R;
-           (* how t2 encodes the guard:
-              t2 ≠ 0  <->  (¬ b_fin ∨ ¬ b_nrm)  *)
-           (Int.eq t2 Int.zero = true <-> (b_fin = true /\ b_nrm = true))
-         )
-    LOCAL ( temp _t'1 (Vint (tbool b_fin));           (* result of isfinite_double *)
-            temp _t'2 (Vint t2);                      (* guard flag *)
-            temp _t'6 (Vfloat (BMULT a b));       (* st->s *)
-            temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
-SEP (@data_at CompSpecs Tsh dword (Vfloat (Float.mul a b), @snd val val (@default_val CompSpecs dword)) st)).
-forward_if Post1.
+set (Post_if :=
+  PROP (MulResultIsNormal a b)
+  LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
+  SEP (data_at Tsh dword (default_val dword) st)).
+forward_if Post_if.
 
-- (* !isfinite(st->s), so t'2 = 1; *)
-forward; unfold Post1.
-entailer!.
-Exists vret_fin 
-  (Rle_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1)) (Rabs (FT2R a * FT2R b))) Int.one.
-entailer!.
-destruct vret_fin; try discriminate.
-repeat split; try apply Rle_bool_true; 
-try apply Rle_bool_to_Rle; try discriminate. 
-intros [A B]; discriminate.
-
--  (*  isfinite(st->s), now check isnormal_double *)  (* _t'6 = _st->_s; *) 
-forward_call. (* _t'3 = _isnormal_double (_t'6); *)
-Intros vret_nrm.
-forward. (* _t'2 = (tbool) (!_t'3); *)
-
-unfold Post1.
-entailer!.
-Exists vret_fin vret_nrm (tbool (negb (vret_fin && vret_nrm))).
-entailer!.
-cbv [bool2val].
-destruct vret_fin; simpl in H0; 
-destruct vret_nrm; simpl; 
-repeat split; try intros [A B]; auto.
-exfalso. apply H0; auto.
-
-- (* if (_t'2) exit(EXIT_FAILURE); *)
-unfold Post1.
-Intros vret t2 t0.
-(* Postcondition for the outer if: drop _t'2 from the state *)
-set (Post2 :=
-  EX vret0 : bool,
-    PROP (NoOverflowUnderflow_fast_2mult a b)
-    LOCAL ( temp _t'1 (Vint (if vret0 then Int.one else Int.zero));
-            temp _t'6 (Vfloat (Float.mul a b));
-            temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
-SEP (@data_at CompSpecs Tsh dword (Vfloat (Float.mul a b), @snd val val (@default_val CompSpecs dword)) st)).
-forward_if Post2.
-
-+ 
-forward_call (st,(Vfloat (Float.mul a b), snd (default_val dword))).
-unfold Post2.
+-
+forward_call (Int.repr 1).
+unfold Post_if.
 entailer!.
 
-+
+-
 forward.
-unfold Post2.
+unfold Post_if.
 entailer!.
-Exists vret.
-entailer!.
-destruct H2.
-unfold NoOverflowUnderflow_fast_2mult; split.
-apply H0; destruct vret; auto. apply H2; auto.
-apply H1. apply H2; auto.
+apply H.
+destruct vret_fin; auto.
 
-+ 
-unfold Post2.
-Intros vret2. 
+-
+unfold Post_if.
 forward.
-forward_call (a,b, (BOPP (BMULT a b))).
-forward. 
+forward.
+forward_call.
+forward.
 entailer!.
 Qed.
 
