@@ -6,13 +6,12 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
-Require Import VST.floyd.library.
 
-Require Import Interval.Tactic.
 Require Import float_acc_lems common real_extras.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import fp_utils fp_utils_specs.
+Require Import float_verif_lemmas.
 
 #[export] Instance CompSpecs : 
   compspecs. make_compspecs prog. Defined.
@@ -77,84 +76,180 @@ Proof.
 start_function.
 forward.
 forward_call.
+forward.
 forward_call.
 Intros vret_fin.
-set (Post1 := 
-EX b_fin b_nrm : bool, EX t3 : int,
-    PROP  ( (b_fin = true <-> is_finite (BMULT x y) = true);
-            b_nrm = true <-> 
-              (((FT2R x * FT2R y) = 0)%R \/
-              (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) 
-              <= Rabs (FT2R x * FT2R y))%R);
-            t3 = (if b_nrm then Int.one else Int.zero))
-    LOCAL ( temp _fin   (Vint (if b_fin then Int.one else Int.zero)); 
-            temp _thresh (Vfloat (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
-                  (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
-                  (Float.of_bits (Int64.repr 4607182418800017408)) 53)); 
-            temp _t'3 (Vint t3);            (* guard flag *)
-            temp _z (Vfloat (Float.mul x y)); temp _x (Vfloat x); temp _y (Vfloat y)) 
-    SEP ()).
-forward_if Post1.
 
--
-forward.
-unfold Post1; entailer!.
-set (b_nrm := true).
-set (t3 := tbool b_nrm).
-(* because (FT2R x * FT2R y) = 0 in this branch *)
-Exists vret_fin b_nrm t3.
-assert (Hfin: vret_fin = true).
-{ apply H. admit. }
-entailer!; repeat split; intros; auto.
-left. admit.
+set (px := is_finite y = true /\
+Float.cmp Ceq x (Float.of_bits (Int64.repr 0)) = true).
+set (py := is_finite x = true /\
+Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true).
 
--
-forward_call.  (* fabs *)
-forward.
-unfold Post1; entailer!.
-set (b_nrm :=
-  Rle_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))
-           (Rabs (FT2R x * FT2R y))).
-set (t3 := tbool b_nrm).
-Exists vret_fin b_nrm t3. 
-entailer!; repeat split; intros; auto.
-
-+ 
-right.
-apply Rle_bool_to_Rle; auto.
-+
-destruct H1.
-exfalso. admit.
-apply Rle_bool_true; auto.
-+
-subst t3 b_nrm.
-admit.
-
--
-unfold Post1; clear Post1.
-Intros b_fin b_nrm t3.
-forward.
-set (Post2 := 
-EX vret : bool,
-    PROP  (vret = andb b_fin b_nrm)
-    LOCAL ( temp _fin   (Vint (if b_fin then Int.one else Int.zero));
-            temp _lb    (Vint t3);  (* unchanged lb *)
+set (Post_if := 
+EX b_fin b_zx: bool,  
+    PROP ( b_fin = true <-> is_finite (BMULT x y) = true;
+           b_zx = true <-> px)
+    LOCAL ( temp _fin (Vint (if b_fin then Int.one else Int.zero)); 
             temp _thresh (Vfloat
+              (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
               (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
-                            (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
-                            (Float.of_bits (Int64.repr 4607182418800017408)) 53));
-            temp _t'3   (Vint t3); 
-            temp _t'5   (Vint (if vret then Int.one else Int.zero));
-            temp _z     (Vfloat (Float.mul x y));
-            temp _x     (Vfloat x);
-            temp _y     (Vfloat y))
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53))); 
+            temp _t'1 (Vfloat 
+              (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53));
+            temp _t'3 (Vint (if b_zx then Int.one else Int.zero));
+            temp _z (Vfloat (Float.mul x y)); 
+            temp _x (Vfloat x); 
+            temp _y (Vfloat y)) 
     SEP ()).
-forward_if Post2.
+forward_if Post_if.
+
+-
+forward_call.
+Intros vret.
+forward.
+unfold Post_if; entailer!.
+set (b_zx:= eqb (is_finite y) true).
+Exists vret_fin b_zx.
+entailer!; repeat split; intros; auto.
+subst b_zx.
+destruct H1, vret. 
+specialize (H1 eq_refl). 
+rewrite H1; simpl; auto.
+destruct (is_finite y); simpl; auto.
+subst b_zx.
+destruct H2 as [H2 _]; rewrite H2. 
+simpl; auto.
+subst b_zx. 
+destruct vret, H1.
+specialize (H1 eq_refl); rewrite H1. simpl; auto. 
+destruct (is_finite y).
+specialize (H2 eq_refl); discriminate.
+simpl; auto. 
+
+-
+forward.
+unfold Post_if; entailer!.
+set (b_zx:= eqb (Float.cmp Ceq x (Float.of_bits (Int64.repr 0))) true).
+Exists vret_fin b_zx.
+entailer!; repeat split; intros; auto.
+subst b_zx.
+exfalso.
+apply eqb_prop in H1; 
+rewrite H1 in H0; discriminate.
+subst b_zx.
+apply eqb_prop in H1; auto.
+subst b_zx. 
+exfalso.
+destruct H1 as [_ H1].
+rewrite H1 in H0; discriminate.
+subst b_zx. 
+destruct (Float.cmp Ceq x (Float.of_bits (Int64.repr 0))).
+discriminate.
+simpl; auto.
+
+-
+unfold Post_if; clear Post_if.
+Intros b_fin b_zx.
+forward.
+set (Post_if := 
+EX b_zy: bool,
+    PROP (  b_zy = true <-> py)
+    LOCAL ( temp _zx (Vint (if b_zx then Int.one else Int.zero));
+            temp _fin  (Vint (if b_fin then Int.one else Int.zero));
+            temp _thresh (Vfloat
+              (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
+              (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53))); 
+            temp _t'1 (Vfloat 
+              (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53));
+            temp _t'3 (Vint (if b_zx then Int.one else Int.zero));
+            temp _t'5 (Vint (if b_zy then Int.one else Int.zero));
+            temp _z (Vfloat (Float.mul x y)); 
+            temp _x (Vfloat x); 
+            temp _y (Vfloat y)) 
+    SEP ()).
+forward_if Post_if.
+
++
+forward_call.
+Intros vret_xfin.
+forward.
+unfold Post_if; clear Post_if; entailer!.
+set (b_zy := (eqb (is_finite x) true)).
+Exists b_zy. 
+entailer!.
+subst b_zy.
+repeat split; auto.
+apply eqb_prop; auto.
+intros [ A _].
+rewrite A; simpl; auto.
+destruct vret_xfin; auto.
+destruct (is_finite x); simpl; auto;
+exfalso; destruct H3 as [H3 _].
+specialize (H3 eq_refl); auto.
+destruct (is_finite x); simpl; auto;
+exfalso; destruct H3 as [_ H3].
+specialize (H3 eq_refl); auto.
 
 +
 forward.
-unfold Post2; entailer!.
-Exists (b_fin && b_nrm)%bool.
+unfold Post_if; clear Post_if; entailer!.
+set (b_zy := 
+  (eqb (Float.cmp Ceq y (Float.of_bits (Int64.repr 0))) true)).
+Exists b_zy. 
+entailer!.
+subst b_zy py.
+repeat split; auto.
+apply eqb_prop; auto.
+exfalso.
+apply eqb_prop in H3; 
+rewrite H3 in H2; discriminate.
+apply eqb_prop in H3; 
+rewrite H3 in H2; discriminate.
+intros [ _ A ].
+rewrite A; simpl; auto.
+destruct 
+(Float.cmp Ceq y (Float.of_bits (Int64.repr 0)));
+simpl; auto; discriminate.
+
++
+unfold Post_if; clear Post_if.
+Intros b_zy.
+forward.
+set (puf := ((FT2R x * FT2R y)%R = 0%R \/
+    (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= 
+    Rabs (FT2R x * FT2R y))%R)).
+set (Post_if := 
+EX b_lb: bool,
+    PROP (  b_lb = true <-> py /\ px /\ puf)
+    LOCAL ( temp _zx (Vint (if b_zx then Int.one else Int.zero));
+            temp _fin  (Vint (if b_fin then Int.one else Int.zero));
+            temp _thresh (Vfloat
+              (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
+              (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53))); 
+            temp _t'1 (Vfloat 
+              (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+              (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+              (Float.of_bits (Int64.repr 4607182418800017408)) 53));
+            temp _t'3 (Vint (if b_zx then Int.one else Int.zero));
+            temp _t'5 (Vint (if b_zy then Int.one else Int.zero));            temp _z (Vfloat (Float.mul x y)); 
+            temp _x (Vfloat x); 
+            temp _y (Vfloat y))
+    SEP ()).
+forward_if Post_if.
+
+*
+forward.
+unfold Post_if; entailer!; clear Post_if.
+Exists (b_zx && b_zy)%bool.
 entailer!.
 destruct b_fin, b_nrm; simpl; auto.
 exfalso. admit.
