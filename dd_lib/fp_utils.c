@@ -20,8 +20,12 @@ int isnormal_mul_double(double x, double y) {
     double thresh = DBL_MIN * ldexp(1.0, 53); 
     int fin = isfinite_double(z);
     // checking if result z is zero is not sufficient
+    // if z is zero we can't prove the 
+    // real product is zero
     int zx = x == 0.0 && isfinite_double(y);
     int zy = y == 0.0 && isfinite_double(x);
-    int lb = (zx || zy) || thresh <= fabs(z); 
-    return fin && lb;  
+    // checking if result z ge thresh is not sufficient
+    // if z is ge thresh we can't to prove the 
+    // real product is ge thresh; also requires finite
+    return fin && ((zx || zy) || thresh < fabs(z)); 
 }

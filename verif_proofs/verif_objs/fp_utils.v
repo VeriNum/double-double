@@ -77,7 +77,6 @@ Definition _fabs : ident := $"fabs".
 Definition _fin : ident := $"fin".
 Definition _isfinite_double : ident := $"isfinite_double".
 Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
-Definition _lb : ident := $"lb".
 Definition _ldexp : ident := $"ldexp".
 Definition _main : ident := $"main".
 Definition _thresh : ident := $"thresh".
@@ -87,7 +86,6 @@ Definition _z : ident := $"z".
 Definition _zx : ident := $"zx".
 Definition _zy : ident := $"zy".
 Definition _t'1 : ident := 128%positive.
-Definition _t'10 : ident := 137%positive.
 Definition _t'2 : ident := 129%positive.
 Definition _t'3 : ident := 130%positive.
 Definition _t'4 : ident := 131%positive.
@@ -116,10 +114,10 @@ Definition f_isnormal_mul_double := {|
   fn_params := ((_x, tdouble) :: (_y, tdouble) :: nil);
   fn_vars := nil;
   fn_temps := ((_z, tdouble) :: (_thresh, tdouble) :: (_fin, tint) ::
-               (_zx, tint) :: (_zy, tint) :: (_lb, tint) :: (_t'10, tint) ::
-               (_t'9, tdouble) :: (_t'8, tint) :: (_t'7, tint) ::
-               (_t'6, tint) :: (_t'5, tint) :: (_t'4, tint) ::
-               (_t'3, tint) :: (_t'2, tint) :: (_t'1, tdouble) :: nil);
+               (_zx, tint) :: (_zy, tint) :: (_t'9, tdouble) ::
+               (_t'8, tint) :: (_t'7, tint) :: (_t'6, tint) ::
+               (_t'5, tint) :: (_t'4, tint) :: (_t'3, tint) ::
+               (_t'2, tint) :: (_t'1, tdouble) :: nil);
   fn_body :=
 (Ssequence
   (Sset _z (Ebinop Omul (Etempvar _x tdouble) (Etempvar _y tdouble) tdouble))
@@ -166,28 +164,26 @@ Definition f_isnormal_mul_double := {|
               (Sset _t'5 (Econst_int (Int.repr 0) tint)))
             (Sset _zy (Etempvar _t'5 tint)))
           (Ssequence
-            (Ssequence
+            (Sifthenelse (Etempvar _fin tint)
               (Ssequence
                 (Sifthenelse (Etempvar _zx tint)
-                  (Sset _t'7 (Econst_int (Int.repr 1) tint))
-                  (Sset _t'7 (Ecast (Etempvar _zy tint) tbool)))
-                (Sifthenelse (Etempvar _t'7 tint)
                   (Sset _t'8 (Econst_int (Int.repr 1) tint))
+                  (Sset _t'8 (Ecast (Etempvar _zy tint) tbool)))
+                (Sifthenelse (Etempvar _t'8 tint)
+                  (Sset _t'7 (Ecast (Econst_int (Int.repr 1) tint) tbool))
                   (Ssequence
-                    (Scall (Some _t'9)
-                      (Evar _fabs (Tfunction (tdouble :: nil) tdouble
-                                    cc_default))
-                      ((Etempvar _z tdouble) :: nil))
-                    (Sset _t'8
-                      (Ecast
-                        (Ebinop Ole (Etempvar _thresh tdouble)
-                          (Etempvar _t'9 tdouble) tint) tbool)))))
-              (Sset _lb (Etempvar _t'8 tint)))
-            (Ssequence
-              (Sifthenelse (Etempvar _fin tint)
-                (Sset _t'10 (Ecast (Etempvar _lb tint) tbool))
-                (Sset _t'10 (Econst_int (Int.repr 0) tint)))
-              (Sreturn (Some (Etempvar _t'10 tint))))))))))
+                    (Ssequence
+                      (Scall (Some _t'9)
+                        (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                      cc_default))
+                        ((Etempvar _z tdouble) :: nil))
+                      (Sset _t'7
+                        (Ecast
+                          (Ebinop Olt (Etempvar _thresh tdouble)
+                            (Etempvar _t'9 tdouble) tint) tbool)))
+                    (Sset _t'7 (Ecast (Etempvar _t'7 tint) tbool)))))
+              (Sset _t'7 (Econst_int (Int.repr 0) tint)))
+            (Sreturn (Some (Etempvar _t'7 tint)))))))))
 |}.
 
 Definition composites : list composite_definition :=

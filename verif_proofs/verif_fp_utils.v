@@ -86,10 +86,9 @@ set (py := is_finite x = true /\
 Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true).
 
 set (Post_if := 
-EX b_fin b_zx: bool,  
-    PROP ( b_fin = true <-> is_finite (BMULT x y) = true;
-           b_zx = true <-> px)
-    LOCAL ( temp _fin (Vint (if b_fin then Int.one else Int.zero)); 
+EX  b_zx: bool,  
+    PROP ( b_zx = true <-> px)
+    LOCAL ( temp _fin (Vint (if vret_fin then Int.one else Int.zero)); 
             temp _thresh (Vfloat
               (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
               (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
@@ -112,7 +111,7 @@ Intros vret.
 forward.
 unfold Post_if; entailer!.
 set (b_zx:= eqb (is_finite y) true).
-Exists vret_fin b_zx.
+Exists b_zx.
 entailer!; repeat split; intros; auto.
 subst b_zx.
 destruct H1, vret. 
@@ -133,7 +132,7 @@ simpl; auto.
 forward.
 unfold Post_if; entailer!.
 set (b_zx:= eqb (Float.cmp Ceq x (Float.of_bits (Int64.repr 0))) true).
-Exists vret_fin b_zx.
+Exists b_zx.
 entailer!; repeat split; intros; auto.
 subst b_zx.
 exfalso.
@@ -152,13 +151,13 @@ simpl; auto.
 
 -
 unfold Post_if; clear Post_if.
-Intros b_fin b_zx.
+Intros b_zx.
 forward.
 set (Post_if := 
 EX b_zy: bool,
     PROP (  b_zy = true <-> py)
     LOCAL ( temp _zx (Vint (if b_zx then Int.one else Int.zero));
-            temp _fin  (Vint (if b_fin then Int.one else Int.zero));
+            temp _fin  (Vint (if vret_fin then Int.one else Int.zero));
             temp _thresh (Vfloat
               (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
               (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
@@ -191,11 +190,11 @@ intros [ A _].
 rewrite A; simpl; auto.
 destruct vret_xfin; auto.
 destruct (is_finite x); simpl; auto;
-exfalso; destruct H3 as [H3 _].
-specialize (H3 eq_refl); auto.
+exfalso; destruct H2 as [H2 _].
+specialize (H2 eq_refl); auto.
 destruct (is_finite x); simpl; auto;
-exfalso; destruct H3 as [_ H3].
-specialize (H3 eq_refl); auto.
+exfalso; destruct H2 as [_ H2].
+specialize (H2 eq_refl); auto.
 
 +
 forward.
@@ -208,10 +207,10 @@ subst b_zy py.
 repeat split; auto.
 apply eqb_prop; auto.
 exfalso.
-apply eqb_prop in H3; 
-rewrite H3 in H2; discriminate.
-apply eqb_prop in H3; 
-rewrite H3 in H2; discriminate.
+apply eqb_prop in H2; 
+rewrite H2 in H1; discriminate.
+apply eqb_prop in H2; 
+rewrite H2 in H1; discriminate.
 intros [ _ A ].
 rewrite A; simpl; auto.
 destruct 
@@ -222,14 +221,16 @@ simpl; auto; discriminate.
 unfold Post_if; clear Post_if.
 Intros b_zy.
 forward.
-set (puf := ((FT2R x * FT2R y)%R = 0%R \/
-    (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= 
-    Rabs (FT2R x * FT2R y))%R)).
-set (Post_if := 
+set (puf := 
+  (bpow radix2 (emin + 2 * fprec Tdouble - 1)) <
+    (Rabs (round radix2 (FLT_exp emin (fprec Tdouble))
+                  ZnearestE (FT2R x * FT2R y))%R)).
+set (Post_t7 := 
 EX b_lb: bool,
-    PROP (  b_lb = true <-> py /\ px /\ puf)
+    PROP (b_lb = true <-> vret_fin = true /\ (px \/ py \/ puf))
     LOCAL ( temp _zx (Vint (if b_zx then Int.one else Int.zero));
-            temp _fin  (Vint (if b_fin then Int.one else Int.zero));
+            temp _zy (Vint (if b_zy then Int.one else Int.zero));
+            temp _fin  (Vint (if vret_fin then Int.one else Int.zero));
             temp _thresh (Vfloat
               (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
               (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
@@ -239,47 +240,131 @@ EX b_lb: bool,
               (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
               (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
               (Float.of_bits (Int64.repr 4607182418800017408)) 53));
-            temp _t'3 (Vint (if b_zx then Int.one else Int.zero));
-            temp _t'5 (Vint (if b_zy then Int.one else Int.zero));            temp _z (Vfloat (Float.mul x y)); 
+            temp _t'7 (Vint (if b_lb then Int.one else Int.zero));
+            temp _z (Vfloat (Float.mul x y)); 
             temp _x (Vfloat x); 
             temp _y (Vfloat y))
     SEP ()).
-forward_if Post_if.
+forward_if Post_t7.
 
-*
+* 
+set (Post_xy :=
+  EX b_xy : bool,
+  PROP ( b_xy = true <->  px \/ py)
+  LOCAL ( temp _zx (Vint (if b_zx then Int.one else Int.zero));
+          temp _zy (Vint (if b_zy then Int.one else Int.zero));
+          temp _fin (Vint (if vret_fin then Int.one else Int.zero));
+          temp _thresh (Vfloat
+             (Float.mul (Float.of_bits (Int64.repr 4503599627370496))
+             (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+             (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+             (Float.of_bits (Int64.repr 4607182418800017408)) 53)));
+          temp _t'1 (Vfloat
+             (Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+             (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+             (Float.of_bits (Int64.repr 4607182418800017408)) 53));
+          temp _t'8 (Vint (if b_xy then Int.one else Int.zero));
+          temp _z (Vfloat (Float.mul x y));
+          temp _x (Vfloat x);
+          temp _y (Vfloat y))
+  SEP ()).
+forward_if Post_xy.
+
+**
 forward.
-unfold Post_if; entailer!; clear Post_if.
-Exists (b_zx && b_zy)%bool.
+unfold Post_xy; clear Post_xy.
 entailer!.
-destruct b_fin, b_nrm; simpl; auto.
-exfalso. admit.
-
-+
-forward.
-unfold Post2.
-Exists (b_fin && b_nrm)%bool. 
+Exists true.
 entailer!.
-destruct b_fin; try discriminate.
-rewrite andb_false_l; auto.
+destruct b_zx, b_zy, vret_fin; 
+simpl; repeat split; intros; auto;
+try left; try apply H1; try apply H0; auto;
+try right; try apply H1; try apply H0; auto.
 
-+ 
-unfold Post2.
-Intros vret.
-forward.
-Exists (b_fin && b_nrm)%bool.
+**
+clear Post_t7.
+forward.   
+unfold Post_xy; clear Post_xy.
 entailer!.
-split; intros; destruct b_fin;
-destruct b_nrm; simpl in *; try discriminate; auto.
-
-*
+Exists (orb b_zx b_zy).
+entailer!.
+destruct b_zx, b_zy, vret_fin; 
+simpl; repeat split; intros; auto; try discriminate.
+right; apply H1; auto.
+right; apply H1; auto.
 admit.
+
+** 
+unfold Post_xy; clear Post_xy.   
+Intros b_xy.
+forward_if.
+forward.
+unfold Post_t7; clear Post_t7.
+entailer!.
+set (uf:= Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1)) 
+(Rabs (round radix2 (FLT_exp emin (fprec Tdouble)) ZnearestE (FT2R x * FT2R y)))).
+Exists (andb vret_fin (orb b_xy uf)).
+entailer!.
+
+***
+
+destruct b_xy, vret_fin, uf;
+simpl; repeat split; intros; auto; try discriminate.
+destruct H3 as [H3 _].
+destruct H3; auto.
+destruct H3 as [H3 _].
+destruct H3; auto.
+admit. admit. admit. admit. admit. admit.
+
+***
+
+forward_call.
+forward.
+forward.
+unfold Post_t7; clear Post_t7.
+entailer!.
+set (uf:= Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1)) 
+(Rabs (round radix2 (FLT_exp emin (fprec Tdouble)) ZnearestE (FT2R x * FT2R y)))).
+Exists uf.
+entailer!.
+simpl; repeat split; intros; auto; try discriminate.
+destruct vret_fin; auto.
+destruct vret_fin; auto.
+destruct b_xy; auto. admit.
+admit. admit.
+destruct vret_fin; auto.
+destruct b_xy; auto.
+admit.
+pose proof Float_cmp_Cle_mul x y (bpow radix2 (emin + 2 * fprec Tdouble - 1))
+as Huf.
+simpl in Huf; rewrite <- Huf; clear Huf.
+destruct Rlt_bool; subst; simpl; auto.
+destruct vret_fin; auto.
+apply H; auto. admit.
+cbv [Float.of_bits fprec fprec_gt_0 fprec_lt_femax Bits.b64_of_bits Float.mul Binary.Bldexp]. simpl.
+cbv [Binary.lift Binary.Bmult]. simpl.
+ cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux].
+ cbv [FT2R]; simpl.  cbv [ F2R]; simpl.
+ nra.
+
+ *
+ forward.
+ unfold Post_t7; clear Post_t7.
+ entailer!.
+set (uf:= Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1)) 
+(Rabs (round radix2 (FLT_exp emin (fprec Tdouble)) ZnearestE (FT2R x * FT2R y)))).
+Exists false.
+entailer!.
+repeat split; try discriminate.
+destruct vret_fin; auto. admit.
+intros [A B]; auto.
+
 *
-apply H1.
-destruct H2 as [ _ H2 ]; apply H2.
-*
-apply H0.
-destruct H2 as [ H2 _ ]; apply H2.
-*
-apply H0. 
-destruct H2 as [ H2 _ ]; apply H2.
+  unfold Post_t7; clear Post_t7.
+ Intros b_lb.
+ forward.
+Exists b_lb.
+entailer!.
+split; intros; auto.
+admit. admit.
 Admitted.
