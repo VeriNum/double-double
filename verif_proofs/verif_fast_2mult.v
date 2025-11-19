@@ -53,7 +53,7 @@ Definition exit_spec :=
     SEP().
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := MathASI ++ [exit_spec; isnormal_mul_double_spec; isfinite_double_spec; fast_2mult_spec].
+Definition Gprog : funspecs := MathASI ++ [exit_spec; fast2_mult_check_spec; isfinite_double_spec; fast_2mult_spec].
 
 Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.

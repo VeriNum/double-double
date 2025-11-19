@@ -4,7 +4,7 @@
 #include "fp_utils.h"
 
 void fast_2mult(struct dword *st, double a, double b) {
-   if (!isnormal_mul_double(a,b)) {
+   if (!fast2_mult_check(a,b)) {
       exit(EXIT_FAILURE);
    }
    st->s  = a * b;

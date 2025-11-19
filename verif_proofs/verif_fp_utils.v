@@ -25,7 +25,7 @@ Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := MathASI ++ [ isfinite_double_spec; isnormal_mul_double_spec].
+Definition Gprog : funspecs := MathASI ++ [ isfinite_double_spec; fast2_mult_check_spec].
 
 (* The function satisfies its API spec (with a semax-body proof) *)
 Lemma body_isfinite_double: semax_body Vprog Gprog f_isfinite_double isfinite_double_spec.
@@ -71,7 +71,7 @@ apply valid_rnd_N.
 Qed.
 
 (* The function satisfies its API spec (with a semax-body proof) *)
-Lemma body_isnormal_mul_double: semax_body Vprog Gprog f_isnormal_mul_double isnormal_mul_double_spec.
+Lemma body_fast2_mult_check: semax_body Vprog Gprog f_fast2_mult_check fast2_mult_check_spec.
 Proof.
 start_function.
 forward.
@@ -292,7 +292,7 @@ destruct b_zx, b_zy, vret_fin;
 simpl; repeat split; intros; auto; try discriminate.
 right; apply H1; auto.
 right; apply H1; auto.
-admit.
+destruct H4; [apply H0 | apply H1 ]; auto.
 
 ** 
 unfold Post_xy; clear Post_xy.   
@@ -307,17 +307,16 @@ Exists (andb vret_fin (orb b_xy uf)).
 entailer!.
 
 ***
-
 destruct b_xy, vret_fin, uf;
 simpl; repeat split; intros; auto; try discriminate.
 destruct H3 as [H3 _].
 destruct H3; auto.
 destruct H3 as [H3 _].
 destruct H3; auto.
-admit. admit. admit. admit. admit. admit.
+all: exfalso; cbv in H2; apply H2; auto.
+all: exfalso; cbv in H4; apply H4; auto.
 
 ***
-
 forward_call.
 forward.
 forward.
@@ -330,41 +329,65 @@ entailer!.
 simpl; repeat split; intros; auto; try discriminate.
 destruct vret_fin; auto.
 destruct vret_fin; auto.
-destruct b_xy; auto. admit.
-admit. admit.
-destruct vret_fin; auto.
-destruct b_xy; auto.
-admit.
+destruct b_xy; auto. 
+destruct H3; destruct H3; auto.
+right; right;
+apply Rlt_bool_to_Rlt; auto.
+right; right;
+apply Rlt_bool_to_Rlt; auto.
+destruct b_xy; try discriminate.
+destruct H5 as [_ H5]; destruct H5.
+assert (false = true); [ apply H3 | auto]; left; auto.
+destruct H5.
+assert (false = true); [ apply H3 | auto]; right; auto. 
+apply Rlt_bool_true; auto.
 pose proof Float_cmp_Cle_mul x y (bpow radix2 (emin + 2 * fprec Tdouble - 1))
 as Huf.
 simpl in Huf; rewrite <- Huf; clear Huf.
 destruct Rlt_bool; subst; simpl; auto.
 destruct vret_fin; auto.
-apply H; auto. admit.
+apply H; auto. 
+cbv [Binary.is_finite Float.mul Float.of_bits]. simpl; auto.
 cbv [Float.of_bits fprec fprec_gt_0 fprec_lt_femax Bits.b64_of_bits Float.mul Binary.Bldexp]. simpl.
 cbv [Binary.lift Binary.Bmult]. simpl.
- cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux].
- cbv [FT2R]; simpl.  cbv [ F2R]; simpl.
- nra.
+cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux].
+cbv [FT2R]; simpl.  cbv [ F2R]; simpl.
+nra.
 
- *
- forward.
- unfold Post_t7; clear Post_t7.
- entailer!.
+*
+forward.
+unfold Post_t7; clear Post_t7.
+entailer!.
 set (uf:= Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1)) 
 (Rabs (round radix2 (FLT_exp emin (fprec Tdouble)) ZnearestE (FT2R x * FT2R y)))).
 Exists false.
 entailer!.
 repeat split; try discriminate.
-destruct vret_fin; auto. admit.
+destruct vret_fin; auto; try discriminate. 
 intros [A B]; auto.
 
 *
-  unfold Post_t7; clear Post_t7.
- Intros b_lb.
- forward.
+unfold Post_t7; clear Post_t7.
+Intros b_lb.
+forward.
 Exists b_lb.
 entailer!.
-split; intros; auto.
-admit. admit.
-Admitted.
+destruct H2 as [H2 _];  
+destruct H2 as [H2 H3]; auto.
+split. 
+apply H; auto.
+destruct H3.
+left. 
+pose proof Float_cmp_Ceq_zero_mul_FT2R_l as Hr;
+simpl in Hr; apply Hr.
+destruct H3; auto.
+destruct H3.
+left. 
+pose proof Float_cmp_Ceq_zero_mul_FT2R_r as Hr;
+simpl in Hr; apply Hr.
+destruct H3; auto.
+right.
+apply Rlt_le.
+pose proof no_underflow_real_from_round_mul.
+apply Rlt_bool_to_Rlt; auto.
+Qed.

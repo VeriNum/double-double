@@ -77,9 +77,9 @@ Definition _a : ident := $"a".
 Definition _b : ident := $"b".
 Definition _dword : ident := $"dword".
 Definition _exit : ident := $"exit".
+Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fma : ident := $"fma".
-Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
 Definition _main : ident := $"main".
 Definition _s : ident := $"s".
 Definition _st : ident := $"st".
@@ -99,8 +99,8 @@ Definition f_fast_2mult := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _isnormal_mul_double (Tfunction (tdouble :: tdouble :: nil) tint
-                                   cc_default))
+      (Evar _fast2_mult_check (Tfunction (tdouble :: tdouble :: nil) tint
+                                cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -388,14 +388,14 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "exit"
                    (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
      (tint :: nil) tvoid cc_default)) ::
- (_isnormal_mul_double,
-   Gfun(External (EF_external "isnormal_mul_double"
+ (_fast2_mult_check,
+   Gfun(External (EF_external "fast2_mult_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) :: (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult :: _isnormal_mul_double :: _exit :: _fma :: ___builtin_debug ::
+(_fast_2mult :: _fast2_mult_check :: _exit :: _fma :: ___builtin_debug ::
  ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
  ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
  ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::

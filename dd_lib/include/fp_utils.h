@@ -4,6 +4,6 @@
 
 int isfinite_double(double x);
 
-int isnormal_mul_double(double x, double y);
+int fast2_mult_check(double x, double y);
 
 #endif

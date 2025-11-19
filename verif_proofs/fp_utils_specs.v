@@ -25,14 +25,14 @@ Definition isfinite_double_spec :=
 
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
-Definition MulResultIsNormal (a b : ftype Tdouble) : Prop :=
+Definition MulResultIsSafeForFast2Mult (a b : ftype Tdouble) : Prop :=
   is_finite (BMULT a b) = true /\ (((FT2R a * FT2R b) = 0)%R \/
   (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
 
 (* The function returns an int, and that int is `1` iff `is_finite x` 
 is true; otherwise it's `0`. And it doesn't touch memory.*)
-Definition isnormal_mul_double_spec := 
-  DECLARE _isnormal_mul_double
+Definition fast2_mult_check_spec := 
+  DECLARE _fast2_mult_check
   WITH x : ftype Tdouble, y : ftype Tdouble 
   PRE [ tdouble, tdouble ] (* c lang types *)
     PROP()
@@ -40,6 +40,6 @@ Definition isnormal_mul_double_spec :=
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true <-> MulResultIsNormal x y)
+    PROP(b = true -> MulResultIsSafeForFast2Mult x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().

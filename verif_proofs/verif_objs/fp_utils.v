@@ -74,9 +74,9 @@ Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _fabs : ident := $"fabs".
+Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fin : ident := $"fin".
 Definition _isfinite_double : ident := $"isfinite_double".
-Definition _isnormal_mul_double : ident := $"isnormal_mul_double".
 Definition _ldexp : ident := $"ldexp".
 Definition _main : ident := $"main".
 Definition _thresh : ident := $"thresh".
@@ -108,7 +108,7 @@ Definition f_isfinite_double := {|
                  (Econst_float (Float.of_bits (Int64.repr 0)) tdouble) tint)))
 |}.
 
-Definition f_isnormal_mul_double := {|
+Definition f_fast2_mult_check := {|
   fn_return := tint;
   fn_callconv := cc_default;
   fn_params := ((_x, tdouble) :: (_y, tdouble) :: nil);
@@ -443,10 +443,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xfloat :: nil) AST.Xfloat cc_default))
      (tdouble :: nil) tdouble cc_default)) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
- (_isnormal_mul_double, Gfun(Internal f_isnormal_mul_double)) :: nil).
+ (_fast2_mult_check, Gfun(Internal f_fast2_mult_check)) :: nil).
 
 Definition public_idents : list ident :=
-(_isnormal_mul_double :: _isfinite_double :: _fabs :: _ldexp ::
+(_fast2_mult_check :: _isfinite_double :: _fabs :: _ldexp ::
  ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
  ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::

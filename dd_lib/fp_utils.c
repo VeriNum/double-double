@@ -14,7 +14,7 @@ int isfinite_double(double x) {
     return (x - x) == 0.0;
 }
 
-int isnormal_mul_double(double x, double y) {
+int fast2_mult_check(double x, double y) {
     double z = x * y;
     // 2 ^ (emin + 2 * p - 1)
     double thresh = DBL_MIN * ldexp(1.0, 53); 
