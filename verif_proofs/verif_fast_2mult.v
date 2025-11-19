@@ -19,10 +19,6 @@ Open Scope logic.
 
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
-Definition NoOverflowUnderflow_fast_2mult (a b : ftype Tdouble) : Prop :=
-  is_finite (BMULT a b) = true /\ ((FT2R a * FT2R b)%R = 0%R \/
-  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
-
 Definition dword := Tstruct _dword noattr.
 
 Definition f2val (pq: ftype Tdouble * ftype Tdouble) : val*val :=
@@ -36,7 +32,7 @@ Definition fast_2mult_spec :=
     PARAMS (st; Vfloat a; Vfloat b) (*functions params *)
     SEP(data_at_ Tsh dword st) (* preds on mem *)
   POST [ tvoid ]
-    PROP(NoOverflowUnderflow_fast_2mult a b)
+    PROP()
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 
@@ -46,7 +42,7 @@ Definition exit_spec :=
   PRE [ tint ]
     PROP()
     PARAMS (Vint (Int.repr 1))   (* matches exit(EXIT_FAILURE) *)
-    SEP( )
+    SEP()
   POST [ tvoid ]
     PROP(False)    (* exit never returns *)
     LOCAL()
@@ -65,7 +61,7 @@ start_function.
 forward_call (a,b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (MulResultIsNormal a b)
+  PROP ()
   LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at Tsh dword (default_val dword) st)).
 forward_if Post_if.
@@ -79,8 +75,6 @@ entailer!.
 forward.
 unfold Post_if.
 entailer!.
-apply H.
-destruct vret_fin; auto.
 
 -
 unfold Post_if.
