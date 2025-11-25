@@ -75,6 +75,7 @@ Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _fabs : ident := $"fabs".
 Definition _fast2_mult_check : ident := $"fast2_mult_check".
+Definition _fast2_mult_check2 : ident := $"fast2_mult_check2".
 Definition _fin : ident := $"fin".
 Definition _isfinite_double : ident := $"isfinite_double".
 Definition _ldexp : ident := $"ldexp".
@@ -184,6 +185,86 @@ Definition f_fast2_mult_check := {|
                     (Sset _t'7 (Ecast (Etempvar _t'7 tint) tbool)))))
               (Sset _t'7 (Econst_int (Int.repr 0) tint)))
             (Sreturn (Some (Etempvar _t'7 tint)))))))))
+|}.
+
+Definition f_fast2_mult_check2 := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, tdouble) :: (_y, tdouble) :: (_z, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_thresh, tdouble) :: (_zx, tint) :: (_zy, tint) ::
+               (_fin, tint) :: (_t'9, tdouble) :: (_t'8, tint) ::
+               (_t'7, tint) :: (_t'6, tint) :: (_t'5, tint) ::
+               (_t'4, tint) :: (_t'3, tint) :: (_t'2, tint) ::
+               (_t'1, tdouble) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble cc_default))
+      ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+       (Econst_int (Int.repr 53) tint) :: nil))
+    (Sset _thresh
+      (Ebinop Omul
+        (Econst_float (Float.of_bits (Int64.repr 4503599627370496)) tdouble)
+        (Etempvar _t'1 tdouble) tdouble)))
+  (Ssequence
+    (Ssequence
+      (Sifthenelse (Ebinop Oeq (Etempvar _x tdouble)
+                     (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
+                     tint)
+        (Ssequence
+          (Scall (Some _t'3)
+            (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
+                                     cc_default))
+            ((Etempvar _y tdouble) :: nil))
+          (Sset _t'2 (Ecast (Etempvar _t'3 tint) tbool)))
+        (Sset _t'2 (Econst_int (Int.repr 0) tint)))
+      (Sset _zx (Etempvar _t'2 tint)))
+    (Ssequence
+      (Ssequence
+        (Sifthenelse (Ebinop Oeq (Etempvar _y tdouble)
+                       (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
+                       tint)
+          (Ssequence
+            (Scall (Some _t'5)
+              (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
+                                       cc_default))
+              ((Etempvar _x tdouble) :: nil))
+            (Sset _t'4 (Ecast (Etempvar _t'5 tint) tbool)))
+          (Sset _t'4 (Econst_int (Int.repr 0) tint)))
+        (Sset _zy (Etempvar _t'4 tint)))
+      (Ssequence
+        (Ssequence
+          (Scall (Some _t'6)
+            (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
+                                     cc_default))
+            ((Ebinop Oadd
+               (Ebinop Omul (Etempvar _x tdouble) (Etempvar _y tdouble)
+                 tdouble) (Etempvar _z tdouble) tdouble) :: nil))
+          (Sset _fin (Etempvar _t'6 tint)))
+        (Ssequence
+          (Sifthenelse (Etempvar _fin tint)
+            (Ssequence
+              (Sifthenelse (Etempvar _zx tint)
+                (Sset _t'8 (Econst_int (Int.repr 1) tint))
+                (Sset _t'8 (Ecast (Etempvar _zy tint) tbool)))
+              (Sifthenelse (Etempvar _t'8 tint)
+                (Sset _t'7 (Ecast (Econst_int (Int.repr 1) tint) tbool))
+                (Ssequence
+                  (Ssequence
+                    (Scall (Some _t'9)
+                      (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                    cc_default))
+                      ((Ebinop Omul (Etempvar _x tdouble)
+                         (Etempvar _y tdouble) tdouble) :: nil))
+                    (Sset _t'7
+                      (Ecast
+                        (Ebinop Olt (Etempvar _thresh tdouble)
+                          (Etempvar _t'9 tdouble) tint) tbool)))
+                  (Sset _t'7 (Ecast (Etempvar _t'7 tint) tbool)))))
+            (Sset _t'7 (Econst_int (Int.repr 0) tint)))
+          (Sreturn (Some (Etempvar _t'7 tint))))))))
 |}.
 
 Definition composites : list composite_definition :=
@@ -443,11 +524,12 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xfloat :: nil) AST.Xfloat cc_default))
      (tdouble :: nil) tdouble cc_default)) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
- (_fast2_mult_check, Gfun(Internal f_fast2_mult_check)) :: nil).
+ (_fast2_mult_check, Gfun(Internal f_fast2_mult_check)) ::
+ (_fast2_mult_check2, Gfun(Internal f_fast2_mult_check2)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast2_mult_check :: _isfinite_double :: _fabs :: _ldexp ::
- ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+(_fast2_mult_check2 :: _fast2_mult_check :: _isfinite_double :: _fabs ::
+ _ldexp :: ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
  ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::

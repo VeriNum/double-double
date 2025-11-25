@@ -19,7 +19,7 @@ DWord_defs.v
 accuracy_proofs/TwoSum_acc.v
 accuracy_proofs/Fast2Mult_acc.v
 accuracy_proofs/DWPlus_acc.v
-# accuracy_proofs/DWMul_acc.v
+accuracy_proofs/DWMul_acc.v
 
 verif_proofs/verif_objs/fp_utils.v
 verif_proofs/verif_objs/fast_2mult.v

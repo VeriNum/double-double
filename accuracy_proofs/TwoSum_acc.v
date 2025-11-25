@@ -15,9 +15,50 @@ Section TwoSumCorrect.
 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Notation emin := (@common.emin t).
-Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
+Let rnd_mode:= (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
+Notation emin := (@common.emin t).
+
+
+Lemma is_finite_FastSum (a b : ftype t):
+  is_finite (fst (DDModels.Fast2Sum a b)) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
+Proof.
+  rewrite /DDModels.Fast2Sum/fst/snd.
+  move => Hfin.
+  have H: Rabs (round radix2 fexp (Znearest choice) (FT2R b -
+   round radix2 fexp (Znearest choice)
+     (round radix2 fexp (Znearest choice) (FT2R a + FT2R b) - FT2R a)))
+  <= bpow radix2 (femax t).  
+  rewrite (@Fast2Sum_correct_proof_flt _ _ _ _ _ _ _ _ (B2F (float_of_ftype a))); FLT_basics.
+  rewrite -Ropp_minus_distr Rabs_Ropp.
+  eapply Rle_trans.
+  apply  Plus_error.plus_error_le_l; FLT_basics. admit. admit. admit.
+Admitted.
+
+Lemma is_finite_TwoSum (a b : ftype t):
+  is_finite (fst (DDModels.TwoSumF a b)) = true -> is_finite (snd (DDModels.TwoSumF a b)) = true .
+Proof.
+  rewrite /DDModels.TwoSumF/fst/snd.
+  set (x := FT2R a).
+  set (y := FT2R b).
+  have Heq: (round radix2 fexp (Znearest choice)
+(round radix2 fexp (Znearest choice)
+    (x -
+    round radix2 fexp (Znearest choice)
+      (round radix2 fexp (Znearest choice) (x + y) -
+        round radix2 fexp (Znearest choice)
+          (round radix2 fexp (Znearest choice) (x + y) - x))) +
+  round radix2 fexp (Znearest choice)
+    (y -
+    round radix2 fexp (Znearest choice)
+      (round radix2 fexp (Znearest choice) (x + y) - x)))) = x + y - round radix2 fexp (Znearest choice) (x + y).
+  set (z1:= round _ _ _ _ ).
+  set (z2:= round _ _ _ (x + y)).
+  rewrite -(@TwoSum_correct emin (fprec t) choice); FLT_basics. 
+  rewrite Rplus_minus_l; subst z1; f_equal. admit. admit. 
+Admitted.
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 Let rnd_mode:= (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
 
 Theorem round_plus_ge_ulp :

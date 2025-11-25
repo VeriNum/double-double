@@ -5,7 +5,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import fp_utils.
+Require Import fp_utils op_defs.
 
 (* The function returns an int, and that int is `1` iff `is_finite x` 
 is true; otherwise it's `0`. And it doesn't touch memory.*)
@@ -41,5 +41,23 @@ Definition fast2_mult_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true -> MulResultIsSafeForFast2Mult x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+
+Definition MulResultIsSafeForFast2Mult2 (a b c: ftype Tdouble) : Prop :=
+  is_finite (BFMA a b c) = true /\ (((FT2R a * FT2R b) = 0)%R \/
+  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
+
+Definition fast2_mult_check2_spec := 
+  DECLARE _fast2_mult_check2
+  WITH x : ftype Tdouble, y : ftype Tdouble, z : ftype Tdouble  
+  PRE [ tdouble, tdouble, tdouble ] (* c lang types *)
+    PROP()
+    PARAMS ( Vfloat x; Vfloat y; Vfloat z ) (* functions params *)
+    SEP() (* preds on mem *)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> MulResultIsSafeForFast2Mult2 x y z)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().

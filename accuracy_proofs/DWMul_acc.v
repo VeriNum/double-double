@@ -9,106 +9,160 @@ Require Import float_acc_lems op_defs dd_tactics common.
 Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc.
 From Flocq Require Import Pff2Flocq Core.
 
+From Coq Require Import Reals.Reals.
+
 Require Import mathcomp.ssreflect.ssreflect.
 
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 Require Import Logic.FunctionalExtensionality.
 
+Set Bullet Behavior "Strict Subproofs".
+
 Lemma let_pair_eta {A B C} (p : A*B) (k : A -> B -> C) :
   (let '(a,b) := p in k a b) = k (fst p) (snd p).
 Proof. destruct p; reflexivity. Qed.
 
-
 Section CorrectDWMulFP.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
+  Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Variables (xh xl y : ftype t).
+  Variables (xh xl y : ftype t).
 
-Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y). 
+  Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y). 
 
-Ltac prove_finite := 
-  move: FIN;
-  rewrite /DWTimesFP3/is_finite_p //=;
-  move => [] //=;
-  subexpr_finite => //
-.
+  Ltac prove_finite := 
+    move: FIN;
+    rewrite /DWTimesFP3/is_finite_p //=;
+    move => [] //=;
+    subexpr_finite => //
+  .
 
-Fact FIN3 : is_finite (BMULT xh y) = true.
-Proof. prove_finite. Qed.
+  Fact FIN3 : is_finite (BMULT xh y) = true.
+  Proof. prove_finite. Qed.
 
-Fact FINxh : is_finite xh = true.
-Proof. prove_finite. Qed.
+  Fact FINxh : is_finite xh = true.
+  Proof. prove_finite. Qed.
 
-Fact FIN1 : is_finite_p (Fast2Mult xh y).
-Proof. prove_finite. Qed.
+  Fact FIN1 : is_finite_p (Fast2Mult xh y).
+  Proof. prove_finite. Qed.
 
-Let sl := snd (TwoSumF xh y).
+  Let sl := snd (TwoSumF xh y).
 
-Let cl1 := snd (Fast2Mult xh y).
+  Let cl1 := snd (Fast2Mult xh y).
 
-Fact FIN2 : is_finite (BFMA xl y cl1) = true.
-Proof. prove_finite. Qed.
+  Fact FIN2 : is_finite (BFMA xl y cl1) = true.
+  Proof. prove_finite. Qed.
 
-Let ch := fst(Fast2Mult xh y).
+  Let ch := fst(Fast2Mult xh y).
 
-Fact FINxl : is_finite xl = true.
-Proof. prove_finite. Qed.
+  Fact FINxl : is_finite xl = true.
+  Proof. prove_finite. Qed.
 
 End CorrectDWMulFP.
 
 Section  CorrectDWMulFP'.
+  Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+  Notation emin := (@common.emin t).
+
+  Variables (a b : ftype t).
+
+  Hypothesis (Fast2Mult_overflow_condition : is_finite (BMULT a b) = true).
+  Hypothesis (Fast2Mult_underflow_condition_strict : (FT2R a * FT2R b) <> 0 -> 
+    bpow Zaux.radix2 (emin + 3 * fprec t) <= Rabs (FT2R a * FT2R b)).
+
+  Lemma Fast2Mult_correct : DWTimesFP.Fast2Mult (fprec t) choice (FT2R a) (FT2R b) = F2Rp (Fast2Mult a b).
+  Proof.
+    have UF : (FT2R a * FT2R b) <> 0 -> 
+      bpow Zaux.radix2 (emin + 2 * fprec t -1) <= Rabs (FT2R a * FT2R b).
+    -
+    move => H0.
+    eapply Rle_trans; [ | apply Fast2Mult_underflow_condition_strict] => //.
+    apply bpow_le. cbv [emin SpecFloat.emin].  
+    pose proof femax_lb t; pose proof fprec_gt_1 t; lia.
+    -
+    have FIN: (is_finite_p (Fast2Mult a b)) by apply Fast2Mult_finite_if_BMULT_finite.
+    destruct (Req_dec (FT2R a * FT2R b) 0).
+    + 
+    rewrite /DWTimesFP.Fast2Mult/Fast2Mult.
+    rewrite /F2Rp/fst/snd.
+    rewrite -BMULT_round_correct => //.
+    destruct FIN as [_ FIN]; rewrite /Fast2Mult/snd in FIN. 
+    rewrite -BFMA_round_correct /FMA => //=.
+    rewrite -BOPP_binary; try left; try apply BOPP_is_finite => //=.
+    rewrite Rplus_opp -BMULT_round_correct => //.
+    rewrite !H !round_0 Rminus_diag !round_0; auto.
+    +
+    have Hgen: 
+    generic_format radix2 (FLX_exp (fprec t)) 
+    (FT2R a * FT2R b - round radix2 (FLX_exp (fprec t)) ZnearestE (FT2R a * FT2R b)).
+    *
+    rewrite -Ropp_minus_distr; apply generic_format_opp.
+    apply Mult_error.mult_error_FLX; FLT_basics.
+    *
+    rewrite /DWTimesFP.Fast2Mult/Fast2Mult/F2Rp/fst/snd; f_equal.
+    BMULT_correct t a b => //=.
+    rewrite -!B2R_float_of_ftype => //=.
+    rewrite (round_FLT_FLX radix2 _) !B2R_float_of_ftype => //.
+    apply Fast2Mult_underflow_condition_imples => //.
+    rewrite -BFMA_round_correct /FMA => //=.
+    rewrite -BOPP_binary; try left; try apply BOPP_is_finite => //=.
+    rewrite Rplus_opp -BMULT_round_correct => //. 
+    symmetry; rewrite round_generic => //.
+    symmetry; rewrite round_generic => //.
+    rewrite (round_FLT_FLX radix2 emin)  => //=.
+    apply Fast2Mult_underflow_condition_imples => //.
+    apply format_dq; FLT_basics => //.
+    apply Fast2Mult_finite_if_BMULT_finite => //.
+  Qed.
+
+End CorrectDWMulFP'.
+
+Section CorrectDWMulFP.
+
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin := (@common.emin t).
-
-Lemma Fast2Mult_FLT_no_UF : 
-  forall a b
-  (Hfin: is_finite (BMULT a b) = true)
-  (Huf: FT2R a * FT2R b <> 0 -> 
-  bpow radix2 (SpecFloat.emin (fprec t) (femax t) + 3 * fprec t) <= Rabs (FT2R a * FT2R b)),
-  DWTimesFP.Fast2Mult (fprec t) choice (FT2R a) (FT2R b) = F2Rp (Fast2Mult a b).
-Proof.
-move => a b Hfin Huf.
-have Huf1: bpow radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1) <= Rabs (FT2R a * FT2R b).
-admit.
-rewrite /DWTimesFP.Fast2Mult/Fast2Mult/F2Rp/fst/snd; f_equal.
-BMULT_correct t a b => //=.
-rewrite -!B2R_float_of_ftype => //=.
-rewrite (round_FLT_FLX radix2 _) !B2R_float_of_ftype => //.
-have Hgen: generic_format radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
-(FT2R a * FT2R b -
-round radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) (Znearest choice)
-(FT2R a * FT2R b)).
-{ apply format_dq => //. admit. admit. admit. }
-rewrite -BFMA_round_correct /FMA => //=.
-rewrite -BOPP_binary; try left; try apply BOPP_is_finite => //=.
-rewrite Rplus_opp -BMULT_round_correct => //. 
-symmetry; rewrite round_generic => //.
-symmetry; rewrite round_generic.
-rewrite (round_FLT_FLX radix2 emin)  => //=.
-apply (generic_format_FLX_FLT _ (SpecFloat.emin (fprec t) (femax t))).
-rewrite -(round_FLT_FLX radix2 (SpecFloat.emin (fprec t) (femax t)))=> //.
-admit.
-Admitted.
-
-Lemma Fast2Mult_correct
-
-Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
-Let ulp := (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 Notation u   := (bpow radix2 (- fprec t)).
+Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 
-Let rnd_p {t} := round radix2 (FLX_exp (fprec t)) (Znearest choice).
+Let ulp := (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 
 Variables (xh xl y : ftype t).
+
 Hypothesis  xE : double_word xh xl.
+
+Lemma is_finite_DWTimesFP3 : 
+  is_finite (fst (DWTimesFP3 xh xl y)) = true -> 
+  is_finite (snd (DWTimesFP3 xh xl y)) = true.
+Proof.
+  rewrite /fst/snd/DWTimesFP3.
+  pose proof TwoMult_is_DW xh y as H2m.
+  pose proof Fast2Sum_is_DW (fst (Fast2Mult xh y)) (BFMA xl y (snd (Fast2Mult xh y))) as H2s.
+  move : H2m H2s.
+  rewrite /Fast2Mult_mul/Fast2Mult_err/Fast2Mult/fst/snd/Fast2Sum/double_word
+    /Fast2Sum_sum/Fast2Sum_err/fst/snd/Fast2Sum.
+  intros.
+  set (a := (BFMA _ _ _)) in *.
+  set (b := BMINUS (BPLUS _ _) _) in *.
+  pose proof Binary.Bminus_correct
+    (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
+  BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b).
+  Search is_finite BMINUS.
+  Search Binary.is_finite Rlt.
+
 Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y). 
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 Hypothesis TwoProdE : TwoProd = DWTimesFP.Fast2Mult (fprec t) choice.
+Hypothesis DWTimesFPUnderflowHyp1: 
+  bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh * FT2R y).
+Hypothesis DWTimesFPUnderflowHyp2: 
+  bpow radix2 (emin + fprec t - 1) + 
+  / 2 * Ulp.ulp radix2 fexp (FT2R xh * FT2R y) <= Rabs (FT2R xl * FT2R y).
 
-Theorem DWTimesFP_eq_no_UF :
+Theorem DWTimesFP3_FLX_FLT  :
   DWTimesFP9 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y) = F2Rp (DWTimesFP3 xh xl y).
 Proof.
-have Hp : (1 < fprec t)%Z by lia.
 have FIN1: (is_finite_p (Fast2Mult xh y)) by
 apply: (FIN1 _ xl _) => //.
 have FIN2 : is_finite (BFMA xl y (snd (Fast2Mult xh y))) = true by
@@ -118,240 +172,39 @@ rewrite /Fast2Mult/fst/snd. move => FIN2.
 have FIN3 : is_finite (BMULT xh y) = true by 
 apply: (FIN3 _ _ _ FIN) => //.
 rewrite /DWTimesFP9/DWTimesFP3.
-rewrite TwoProdE Fast2Mult_FLT_no_UF. 
-rewrite -FastTwoSumEq_FLT.
-  Search F2Sum.Fast2Sum.
-  assert (H4: (4 <= fprec t)%Z) by admit.
-
-rewrite /F2Rp/Fast2Mult/fst/snd.
-
-set ch := (FT2R (BMULT xh y)).
-set cl1 := (FMA (fprec t) choice (FT2R (BFMA xh y (BOPP (BMULT xh y)))) (FT2R xl) (FT2R y)).
-set cl2 := (FT2R (BFMA xl y (BFMA xh y (BOPP (BMULT xh y))))).  
-pose proof (@F_F2Sum_err (fprec t) choice H4 ch cl1).
-  pose proof (@F_F2Sum_err (fprec t) choice H4 ch cl2).
-
-simpl in H0.
-f_equal. subst cl1 cl2.
-    move: H.  
-    rewrite /FMA.
-
-subst ch cl1. simpl.
-
-rewrite /F2Rp/Fast2Mult/fst/snd.
-intros. f_equal. simpl in H.
-rewrite -!BFMA_round_correct /FMA => //=.
+rewrite TwoProdE Fast2Mult_correct => //.
+rewrite -FastTwoSumEq_FLT /Fast2Mult/F2Rp/fst/snd.
+f_equal.
+rewrite -!BFMA_round_correct /FMA=> //.
 rewrite Rplus_comm.
-Search (round _ _ _  _ = round _ _ _ _).
-Print format_dq.
-Print Plus_error.FLT_format_plus_small.
-Search generic_format (_ + _).
-
-DWPlus.Fv:
-forall [p : Z],
-(1 < p)%Z ->
-forall (choice : Z -> bool) (xh xl y : R),
-generic_format radix2 (FLX_exp p)
-(round radix2 (FLX_exp p) (Znearest choice) (xl + DWPlus.TwoSum_err p choice xh y))
-DWPlus.rbpowpuW':
-
-Search (round _ _ _  (?a + _) = ?a).
-
-
-set y0:= round radix2 (FLT_exp emin (fprec t)) (Znearest choice)
-(FT2R xh * FT2R y + FT2R (BOPP (BMULT xh y))).
-rewrite !round_generic => //=.
-apply generic_format_FLT_FLX.
-
-About ErrFmaAppr_correct.
-pose proof ErrFmaAppr_correct radix2 emin (fprec t) .
-pose proof ErrFMA_bounded radix2 emin (fprec t) choice
-  (FT2R xl) (FT2R y) y0.
-  apply H.
-
-apply (proj1(ErrFMA_bounded radix2 emin (fprec t) choice _ _ _
-_ _ _ _)).
-eapply ErrFMA_bounded.
-pose proof ErrFMA_bounded radix2 emin (fprec t) choice
-  (FT2R xl) (FT2R y) y0.
-Search generic_format FLT_exp FLX_exp.
-generic_format_FLX_FLT
-Search (round _ _ _ (_ + round _ _ _ _ )).
-
-rewrite -BOPP_binary; try left; try apply BOPP_is_finite => //=.
-rewrite Rplus_opp -BMULT_round_correct. 
-rewrite Rplus_comm.
-rewrite !(Generic_fmt.round_generic _ _ _
- (FT2R xh * FT2R y - round radix2 _ _ (FT2R xh * FT2R y))).
-2: apply format_dq; [ | | | | ].
-Search (round _ _ _ (_ + _)). 
-
-{
-rewrite TwoProdE /DWTimesFP.Fast2Mult => //=; f_equal.
-{
-BMULT_correct t xh y => //=.
-rewrite -!B2R_float_of_ftype.
-rewrite (round_FLT_FLX radix2 (common.emin)) !B2R_float_of_ftype => //.
-} 
-rewrite -BFMA_round_correct /FMA => //=.
-rewrite -BFMA_round_correct /FMA => //=;
-  [| apply (proj2(@BFMA_finite_e _ _ _ xl y _ FIN2)) => //=].
-rewrite -BOPP_binary; try left; try apply BOPP_is_finite => //=.
-rewrite Rplus_opp -BMULT_round_correct. 
-rewrite Rplus_comm.
-rewrite !(Generic_fmt.round_generic _ _ _
- (FT2R xh * FT2R y - round radix2 _ _ (FT2R xh * FT2R y))).
- Search (round _ _ _ (_ + _)).
-Print format_dq.
-
-rewrite (round_FLT_FLX radix2 (common.emin)) => //; f_equal.
-
-rewrite Generic_fmt.round_generic.
-
-format_dq
-Search (_ - round _ _ _ _ ).
-
-rewrite !(round_FLT_FLX radix2 (common.emin)) => //; f_equal.
-Search (_ - round _ _ _ _ ).
-rewrite /FLT_exp. simpl.
-Search generic_format (_ * _).
-Plus_error.FLT_format_plus_small
-Search  Binary.B2R ftype_of_float.
-
-
-match goal with | FINX : is_finite (BFMA ?a ?b ?s) = true |- context [FT2R (BFMA ?a ?b ?s)] =>
-  let X:= fresh in set (X:= FT2R (BFMA a b s)); unfold BFMA in X ;
-  let H4 := fresh in pose proof (is_finite_fma_no_overflow t a b s FINX) as H4; apply Rlt_bool_true in H4;
-  unfold common.rounded in H4;
-  let H := fresh in 
-  assert (H : is_finite a = true /\ is_finite b = true /\ is_finite s = true); try auto end.
- [rewrite !is_finite_Binary; rewrite !is_finite_Binary in FINX ;
-    unfold BFMA, BINOP in FINX; rewrite float_of_ftype_of_float in FINX;
-    destruct (float_of_ftype a); destruct (float_of_ftype b); destruct (float_of_ftype s); 
-      simpl in FINX; repeat split; try discriminate; auto | ] end.
-          match goal with | H: Binary.is_finite _ _
-                   (Binary.Bfma _ _ _ _ _ _ ?A ?B ?C) = _ |- Binary.is_finite _ _ _ = _ =>
-            match A with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
-                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
-            match B with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
-                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
-            match C with | (Binary.B754_infinity _ _ ?s4)  => destruct s4
-                         | (Binary.B754_finite _ _ ?s4 _ _ _) => destruct s4 | _ => idtac end;
-          try discriminate; auto end
-  | ] end. Print is_finite_Binary.
-  rewrite -!is_finite_Binary in FIN2.
-    let H1 := fresh in let H2 := fresh in  destruct H as (H1 & H2 & HS);
-    let H3 := fresh in pose proof (Binary.Bfma_correct  (fprec t) (femax t) 
-        (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE 
-        (float_of_ftype a) (float_of_ftype b) (float_of_ftype s) H1 H2 HS) as H3; cbv zeta in H3;
-    rewrite !B2R_float_of_ftype in H3
-  end.
-BFMA_correct t xl y (BFMA xh y (BOPP (BMULT xh y))) => //=.
-} 
-}
-
-try apply (generic_format_FLX_FLT radix2 emin).
-
-Search round (_ * _).
-
-
-
-case: (Fast2Mult xh y) => ch cl1 Hmul.
-
-
-destruct (Fast2Sum ch (BFMA xl y cl1)) as [zh zl] eqn:Hsum.
-simpl in *.
-
-
-
-replace  (Fast2Mult xh y ) with
-  (fst (Fast2Mult xh y), snd (Fast2Mult xh y )) => //.
-replace
-(Fast2Sum (fst (Fast2Mult xh y)) (BFMA xl y (snd (Fast2Mult xh y))))
-with 
-(fst (Fast2Sum (fst (Fast2Mult xh y)) (BFMA xl y (snd (Fast2Mult xh y)))),
-snd (Fast2Sum (fst (Fast2Mult xh y)) (BFMA xl y (snd (Fast2Mult xh y))))) => //.
-move => FIN1 FIN2. 
-
-rewrite -FastTwoSumEq_FLT.
-destruct DWTimesFP.Fast2Mult.
-rewrite -let_pair_eta.
-
-have Heq: (F2Sum.Fast2Sum (fprec t) choice (FT2R xh) (FT2R y)) =
-  (TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) ,
-    TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) ) => //.
-have Herr : TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) = FT2R (snd (TwoSumF xh y)).
-{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
-inversion H. rewrite H2 /TwoSumF => //. } 
-have Hsum : TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) = FT2R (fst (TwoSumF xh y)).
-{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
-inversion H. rewrite H1 /TwoSumF => //. } 
-
-rewrite Herr Hsum.
-destruct (Req_dec (FT2R xh + FT2R y) 0).
-{ apply TwoSumF_eq in H => //.
-inversion H.
-rewrite Fast2Sum_2sum0' => //; 
-rewrite /TwoSumF/fst/snd.
-rewrite H2 H1 Rplus_0_r.
-rewrite F2Sum.Fast2Sum0f round_generic => //. 
-1,2,3: rewrite -!B2R_float_of_ftype.
-all: try apply (generic_format_FLX_FLT radix2 emin);
-try apply Binary.generic_format_B2R.
-now rewrite H2 H1. } 
-
-destruct (Rle_or_lt 
-(bpow radix2 (emin + fprec t - 1))  
-(Rabs
-  (FT2R xl +
-   FT2R (snd (TwoSumF xh y))))) as [HUF|HUF].
-
-{ rewrite -FastTwoSumEq_FLT => //; f_equal.
-BPLUS_correct t xl (snd (TwoSumF xh y)).
-rewrite (round_FLT_FLX radix2 (@common.emin t)) => //.
-by rewrite !B2R_float_of_ftype. }
-
-rewrite -FastTwoSumEq_FLT => //; f_equal.
-rewrite BPLUS_UF_exact => //.
-rewrite round_generic => //; f_equal.
-apply: (generic_format_FLX_FLT _ emin).
-apply: Plus_error.FLT_format_plus_small.
-1,2 : rewrite -!B2R_float_of_ftype;
-  apply: Binary.generic_format_B2R.
- 
-refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
-apply bpow_le; lia.
-Qed.
-
-Lemma DWPlusFP_double_word : 
-double_word (fst (DWPlusFP xh xl y)) (snd (DWPlusFP xh xl y)).
-Proof.
-apply DWdouble_word_dw.
-have Hp : (1 < fprec t)%Z by lia.
-have Hch: choice = (fun n : Z => negb (Z.even n)) by
-apply functional_extensionality; rewrite /choice //=.
-pose proof (DWPlusFP_correct Hp Hch Hp3).
-specialize (H (FT2R xh) (FT2R xl) (FT2R y)).
-pose proof DWPlusFP_eq.
-move: H0.
-destruct (DWPlus.DWPlusFP _ _ (FT2R xh) (FT2R xl) (FT2R y)).
-destruct (DWPlusFP xh xl y).
-simpl in *. rewrite /F2Rp. move => H1. inversion H1; subst.
+rewrite -(round_FLT_FLX radix2 emin); auto.
+set u := round radix2 (FLT_exp emin (fprec t)) (Znearest choice)
+           (FT2R xh * FT2R y + FT2R (BOPP (BMULT xh y))).
+set v := FT2R xl * FT2R y.
+apply (Rle_trans _ (Rabs v - Rabs u)).
+apply Rminus_plus_le_minus.
+eapply Rle_trans.
+pose proof error_le_half_ulp radix2 (FLT_exp emin (fprec t))
+  choice (FT2R xh * FT2R y).
+subst u. rewrite round_generic. 
+rewrite -BOPP_binary.
+rewrite Rplus_opp -BMULT_round_correct => //.
+apply Rplus_le_compat_l.
+rewrite -Ropp_minus_distr Rabs_Ropp in H. 
 apply H.
-rewrite -B2R_float_of_ftype.
-apply (@generic_format_FLX_FLT radix2 emin),
-   Binary.generic_format_B2R.
-apply dw_word_DWdouble => //.
-Qed.
+right; auto.
+admit.
+apply DWTimesFPUnderflowHyp2.
+admit.
+admit.
+admit.
 
-Lemma DWPlusFP_double_word' : 
-rounded t (FT2R (fst (DWPlusFP xh xl y)) + FT2R (snd (DWPlusFP xh xl y)) ) = 
-  FT2R (fst (DWPlusFP xh xl y)).
-Proof.
-symmetry. apply DWPlusFP_double_word.
-Qed.
+rewrite /is_finite_p/fst/snd/Fast2Sum.
 
-End CorrectDWPlusFP'.
+admit.
+Admitted. 
+
+End CorrectDWMulFP.
 
 Section DWPlusFPFinite.
 Context {NANS: Nans} .

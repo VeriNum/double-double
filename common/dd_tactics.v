@@ -4,6 +4,15 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs.
 Require Import DDModels common.
+From Flocq Require Import Core.
+
+Ltac FLT_basics := 
+  try apply FLT_exp_valid; try apply fprec_gt_0;
+  try apply valid_rnd_N; try apply generic_format_FLT_FT2R;
+  try apply FLT_exp_monotone; try apply fprec_gt_one;
+  try apply generic_format_FLX_FT2R
+.
+
 
 Ltac field_simplify_round :=
   match goal with |- context[Generic_fmt.round _ _ _ ?a] =>
