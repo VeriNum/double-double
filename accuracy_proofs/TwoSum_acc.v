@@ -11,29 +11,135 @@ Require Import F2SumFLT F2SumFLX.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
 
+Set Bullet Behavior "Strict Subproofs".
+
 Section TwoSumCorrect.
 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
-Let rnd_mode:= (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
 Notation emin := (@common.emin t).
+Notation rnd  := (round radix2 fexp (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)).
+Notation Omega  := (bpow radix2 (femax t)). 
+Notation BMINUS := (@FPCore.BMINUS NANS t STD).
+Notation BPLUS  := (@FPCore.BPLUS  NANS t STD).
 
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 
 Lemma is_finite_FastSum (a b : ftype t):
-  is_finite (fst (DDModels.Fast2Sum a b)) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
+  Rabs (FT2R b) <= Rabs (FT2R a) -> 
+  is_finite (BPLUS a b) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
 Proof.
+  move => Hab.
   rewrite /DDModels.Fast2Sum/fst/snd.
   move => Hfin.
-  have H: Rabs (round radix2 fexp (Znearest choice) (FT2R b -
-   round radix2 fexp (Znearest choice)
-     (round radix2 fexp (Znearest choice) (FT2R a + FT2R b) - FT2R a)))
-  <= bpow radix2 (femax t).  
-  rewrite (@Fast2Sum_correct_proof_flt _ _ _ _ _ _ _ _ (B2F (float_of_ftype a))); FLT_basics.
+  destruct (BPLUS_finite_e t a b Hfin) as [Hfina  Hfinb].
+  have Hfinlt : Rabs (FT2R a) < Omega by (apply is_finite_no_overflow).
+  suff: is_finite (BMINUS (BPLUS a b) a) = true. 
+  -
+  move => Hfin1.
+  suff: Rabs (rnd (FT2R b - FT2R (BMINUS (BPLUS a b) a))) < Omega. 
+  + 
+  move => Hbnd. 
+  rewrite !is_finite_Binary in Hfin1, Hfinb.
+  rewrite -!B2R_float_of_ftype in Hbnd.
+  pose proof Binary.Bminus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax t) 
+  (plus_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE 
+  (float_of_ftype b) (float_of_ftype (BMINUS (BPLUS a b) a)) Hfinb Hfin1 as Hc.
+  apply Rlt_bool_true in Hbnd; rewrite Hbnd in Hc; clear Hbnd.
+  destruct Hc as [_ [HB _]].
+  move: HB; rewrite /BMINUS/BINOP !is_finite_Binary !float_of_ftype_of_float => //.
+  +
+  suff: Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) < Omega; [|apply (is_finite_minus_no_overflow t) => //].
+  move => Hbnd.
+  rewrite -BMINUS_round_correct; [|apply no_overflow_minus_is_finite => //].
+  suff: (Fast2Sum_correct_flt radix2 emin (fprec t) choice (FT2R a) (FT2R b));
+  [|apply F2Sum_correct_abs_flt; FLT_basics => //=].
+  rewrite /Fast2Sum_correct_flt/fst/snd/Fast2Sum_flt; move => H2sflt.
+  rewrite -BPLUS_round_correct => //.
+  rewrite H2sflt; clear H2sflt.
   rewrite -Ropp_minus_distr Rabs_Ropp.
-  eapply Rle_trans.
-  apply  Plus_error.plus_error_le_l; FLT_basics. admit. admit. admit.
-Admitted.
+  eapply Rle_lt_trans.
+  apply Plus_error.plus_error_le_l; FLT_basics. 
+  exact Hfinlt.
+  -
+  suff: Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) < Omega.
+  --
+  move => Hbnd. 
+  rewrite !is_finite_Binary in Hfin, Hfina.
+  rewrite -!B2R_float_of_ftype in Hbnd.
+  pose proof Binary.Bminus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax t) 
+  (plus_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE 
+  (float_of_ftype (BPLUS a b)) (float_of_ftype a) Hfin Hfina as Hc.
+  apply Rlt_bool_true in Hbnd; rewrite Hbnd in Hc; clear Hbnd.
+  destruct Hc as [_ [HB _]].
+  move: HB; rewrite /BMINUS/BINOP !is_finite_Binary !float_of_ftype_of_float => //.  
+  -- 
+  suff: Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) <= Rabs (FT2R a).
+  move => Ha.
+  eapply Rle_lt_trans; [apply Ha |] => //.
+  ++
+  destruct (Rlt_dec 0 (FT2R a)) as [Hgt | Hle].
+  **
+  apply Rlt_le in Hgt. 
+  move : Hab.
+  rewrite (Rabs_pos_eq (FT2R a)) => //.
+  move => Hab.
+  rewrite -round_NE_abs.
+  eapply Rle_trans with (round radix2 fexp ZnearestE (FT2R a)).
+  ---
+  apply round_le; FLT_basics. 
+  apply Rabs_le.
+  apply Rabs_le_inv in Hab.
+  rewrite -BPLUS_round_correct => //.
+  suff: 0 <= FT2R a + FT2R b <= 2 * FT2R a; [| destruct Hab; split; nra].
+  +++
+  move => H1.
+  destruct H1 as [H1 H2].
+  fold emin.
+  eapply (round_le radix2 fexp (Znearest choice)) in H1, H2.
+  rewrite round_0 in H1.
+  split; apply Rcomplements.Rle_minus_l; [field_simplify|] => //.
+  eapply Rle_trans; [apply H2|]. 
+  rewrite round_generic; [ nra |replace 2 with (bpow radix2 1)] => //.
+  rewrite Rmult_comm. 
+  apply Mult_error.mult_bpow_pos_exact_FLT => //.
+  rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
+  ---
+  rewrite round_generic;  
+  rewrite -B2R_float_of_ftype; [nra| apply Binary.generic_format_B2R].
+  **
+  apply Rnot_lt_le in Hle.
+  move : Hab.
+  rewrite (Rabs_left1 (FT2R a)) => //.
+  move => Hab.
+  rewrite -round_NE_abs.
+  eapply Rle_trans with (round radix2 fexp ZnearestE (- FT2R a)).
+  ---
+  apply round_le; FLT_basics. 
+  apply Rabs_le.
+  apply Rabs_le_inv in Hab.
+  rewrite -BPLUS_round_correct => //.
+  suff: 2 * FT2R a <= FT2R a + FT2R b <= 0; [| destruct Hab; split; nra].
+  +++
+  move => H1.
+  destruct H1 as [H1 H2].
+  fold emin.
+  eapply (round_le radix2 fexp (Znearest choice)) in H1, H2.
+  rewrite round_0 in H2.
+  split; apply Rcomplements.Rle_minus_l; [|field_simplify] => //.
+  ***
+  eapply Rle_trans; [| apply H1]. 
+  rewrite round_generic; [ nra |replace 2 with (bpow radix2 1)] => //.
+  rewrite Rmult_comm. 
+  apply Mult_error.mult_bpow_pos_exact_FLT => //.
+  rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
+  ---
+  rewrite round_generic; [ nra |replace 2 with (bpow radix2 1)] => //.
+  apply generic_format_opp.
+  rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
+Qed.
+
 
 Lemma is_finite_TwoSum (a b : ftype t):
   is_finite (fst (DDModels.TwoSumF a b)) = true -> is_finite (snd (DDModels.TwoSumF a b)) = true .
@@ -58,8 +164,8 @@ Proof.
   rewrite Rplus_minus_l; subst z1; f_equal. admit. admit. 
 Admitted.
 
+
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
-Let rnd_mode:= (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE).
 
 Theorem round_plus_ge_ulp :
   forall (x y : ftype t),
