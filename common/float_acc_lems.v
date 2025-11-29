@@ -10,6 +10,8 @@ Require Import mathcomp.ssreflect.ssreflect.
 Require Import Flocq.Core.Generic_fmt Flocq.Core.FLX.
 From Flocq Require Import Pff2Flocq Core.
 
+Set Bullet Behavior "Strict Subproofs".
+
 Section TVar. 
 
 Notation is_finite := vcfloat.FPCore.is_finite.
@@ -45,22 +47,39 @@ Qed.
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Notation radix2 := Zaux.radix2.
 
-Fact rnd_plus_FLT_FLX_eq {STD: is_standard t} (a b : ftype t) :
-round radix2 (FLX_exp (fprec t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b) = 
-round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b).
+Fact rnd_plus_FLT_FLX_eq {STD: is_standard t} (a b : R) :
+  generic_format radix2 fexp a -> generic_format radix2 fexp b ->
+  round radix2 (FLX_exp (fprec t)) (Generic_fmt.Znearest choice) (a + b) = 
+  round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice) (a +  b).
 Proof.
-case : (Rlt_dec (Rabs (FT2R a  + FT2R b))
-  (bpow radix2 (@emin t + fprec t - 1))) => Huf1.
-{ have Hg : Generic_fmt.generic_format radix2 fexp (FT2R a + FT2R b).
- apply Plus_error.FLT_format_plus_small => //;
-  try apply generic_format_FLT_FT2R.
+  move => Hga Hgb.
+  case : (Rlt_dec (Rabs (a  +  b)) (bpow radix2 (@emin t + fprec t - 1))) => Huf1.
+  - 
+  have Hg : Generic_fmt.generic_format radix2 fexp (a + b).
+  apply Plus_error.FLT_format_plus_small => //; try apply generic_format_FLT_FT2R.
   eapply Rle_trans. apply Rlt_le.
   apply Huf1. rewrite /emin.
   apply bpow_le; lia.
- rewrite !Generic_fmt.round_generic => //; try nra.
-by apply (@FLT.generic_format_FLX_FLT radix2 (@emin t)). } 
-apply Rnot_lt_le in Huf1.
-by rewrite FLT.round_FLT_FLX.
+  rewrite !Generic_fmt.round_generic => //; try nra.
+  by apply (@FLT.generic_format_FLX_FLT radix2 (@emin t)).
+  - 
+  apply Rnot_lt_le in Huf1.
+  by rewrite FLT.round_FLT_FLX.
+Qed.
+
+Fact rnd_plus_FLT_FLX_eq' {STD: is_standard t} (a b : ftype t) :
+  round radix2 (FLX_exp (fprec t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b) = 
+  round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice) (FT2R a + FT2R b).
+Proof.
+  apply rnd_plus_FLT_FLX_eq; apply generic_format_FLT_FT2R.
+Qed.
+
+Notation Omega  := (bpow radix2 (femax t)). 
+
+Lemma is_finite_no_overflow {STD: is_standard t} (a : ftype t) :
+  is_finite a = true -> Rabs (FT2R a) < Omega.
+Proof.
+  rewrite -!B2R_float_of_ftype; intros; apply Binary.abs_B2R_lt_emax.
 Qed.
 
 End General. 
@@ -476,6 +495,7 @@ apply Fourier_util.Rlt_zero_pos_plus1.
 apply default_rel_gt_0.
 eapply Rle_trans with (default_rel t * 1); try nra.
 f_equal. unfold xb, yb; rewrite !B2R_float_of_ftype; auto.
+-
 red in FIN.
 rewrite <-!B2R_float_of_ftype in FIN; auto.
 fold xb yb in FIN; lra.
@@ -561,6 +581,27 @@ destruct (float_of_ftype x); destruct (float_of_ftype y);
   destruct s; destruct s0; simpl; try discriminate; auto.
 apply is_finite_sum_no_overflow; auto.
 Qed.
+
+(** Relate BPLUS to round NE in FLT format *)
+Lemma BPLUS_round_correct {NAN: Nans} {STD: is_standard t} :  
+  forall a b (Hfin : is_finite (BPLUS a b) = true),
+  let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
+  round Zaux.radix2 fexp (Znearest choice) (FT2R a + FT2R b ) = FT2R (BPLUS a b).
+Proof.
+intros.
+pose proof (is_finite_sum_no_overflow a b Hfin) as Hfin1.
+destruct (BPLUS_finite_e a b Hfin) as (HA & HB).
+rewrite !is_finite_Binary in HA, HB.
+pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) 
+        (fprec_gt_one t)) BinarySingleNaN.mode_NE (float_of_ftype a) 
+        (float_of_ftype b)) as Hbplus.
+simpl in Hbplus; rewrite !B2R_float_of_ftype in Hbplus.
+apply Rlt_bool_true in Hfin1; rewrite Hfin1 in Hbplus; clear Hfin1;
+destruct Hbplus as (Hbplus & _) => //.
+rewrite -Hbplus -!B2R_float_of_ftype !float_of_ftype_of_float; 
+f_equal. 
+Qed. 
 
 End Plus. 
 
@@ -737,6 +778,7 @@ apply Fourier_util.Rlt_zero_pos_plus1.
 apply default_rel_gt_0.
 eapply Rle_trans with (default_rel t * 1); try nra.
 f_equal. unfold xb, yb; rewrite !B2R_float_of_ftype; auto.
+-
 red in FIN.
 rewrite <-!B2R_float_of_ftype in FIN; auto.
 fold xb yb in FIN; lra.
@@ -760,6 +802,27 @@ destruct (float_of_ftype x); destruct (float_of_ftype y);
   destruct s; destruct s0; simpl; try discriminate; auto.
 apply is_finite_minus_no_overflow; auto.
 Qed.
+
+(** Relate BMINUS to round NE in FLT format *)
+Lemma BMINUS_round_correct {NAN: Nans} {STD: is_standard t} :  
+  forall a b (Hfin : is_finite (BMINUS a b) = true),
+  let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
+  round Zaux.radix2 fexp (Znearest choice) (FT2R a - FT2R b ) = FT2R (BMINUS a b).
+Proof.
+intros.
+pose proof (is_finite_minus_no_overflow a b Hfin) as Hfin1.
+destruct (BMINUS_finite_sub a b Hfin) as (HA & HB).
+rewrite !is_finite_Binary in HA, HB.
+pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) 
+        (fprec_gt_one t)) BinarySingleNaN.mode_NE (float_of_ftype a) 
+        (float_of_ftype b)) as Hbminus.
+simpl in Hbminus; rewrite !B2R_float_of_ftype in Hbminus.
+apply Rlt_bool_true in Hfin1; rewrite Hfin1 in Hbminus; clear Hfin1;
+destruct Hbminus as (Hbminus & _) => //.
+rewrite -Hbminus -!B2R_float_of_ftype !float_of_ftype_of_float; 
+f_equal. 
+Qed. 
 
 End Minus.
 

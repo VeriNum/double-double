@@ -13,6 +13,11 @@ Ltac FLT_basics :=
   try apply generic_format_FLX_FT2R
 .
 
+Ltac FLX_basics := 
+  try apply FLX_exp_valid; try apply fprec_gt_0;
+  try apply valid_rnd_N; try apply generic_format_FLX_FT2R;
+  try apply FLX_exp_monotone; try apply fprec_gt_one
+.
 
 Ltac field_simplify_round :=
   match goal with |- context[Generic_fmt.round _ _ _ ?a] =>

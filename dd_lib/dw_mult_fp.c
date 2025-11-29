@@ -7,4 +7,3 @@ void dw_mult_fp9(struct dword *zh, struct dword *x, double y) {
    c3     = fma(x->t,y,ch.t); 
    fast_2sum(zh,ch.s,c3);
 }
-
