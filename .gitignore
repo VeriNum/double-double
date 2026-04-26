@@ -1,3 +1,4 @@
+.history/
 .*.aux
 .*.d
 *.a
@@ -31,3 +32,5 @@ lia.cache
 nia.cache
 nlia.cache
 nra.cache
+CoqMakefile
+CoqMakefile.conf
