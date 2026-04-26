@@ -4,8 +4,6 @@
 #include <math.h> // for fabs  
 #include <float.h>  // for DBL_MIN
 
-
-
 int isfinite_double(double x) {
     /* For finite x, x - x == 0
        For +inf/-inf, x - x is NaN
