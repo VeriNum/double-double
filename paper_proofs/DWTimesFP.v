@@ -1,6 +1,6 @@
 (* Copyright (c)  Inria. All rights reserved. *)
 
-Require Import Psatz ZArith Reals.
+From Stdlib Require Import Psatz ZArith Reals.
 
 From Flocq Require Import Core Relative Sterbenz Operations Plus_error Mult_error.
 
@@ -583,7 +583,7 @@ case:(Rle_lt_dec 2 (xh * y))=> xhy2.
   move=> h0.
   have h1: 0 < (xh + xl) * y  by lra.
   move/(Rinv_le_contravar _ _ h):h0.
-  rewrite Rabs_Rinv; try lra.
+  rewrite Rabs_inv; try lra.
   move=> h0.
   apply: (Rle_trans _ ( 3 * u * u /  (2 - 2 * u))).
     rewrite /Rdiv; apply:Rmult_le_compat ; try lra; try apply: Rabs_pos.

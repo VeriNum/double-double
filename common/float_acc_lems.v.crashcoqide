@@ -142,7 +142,7 @@ destruct
  try discriminate.
 Qed.
 
-Lemma BMFA_finite_e {NAN: Nans} {STD: is_standard t} :
+Lemma BFMA_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a u f : ftype t)
  (Hfin : is_finite (BFMA a f u) = true),
  is_finite a = true  /\ 
@@ -171,7 +171,7 @@ Proof.
 intros.
 apply fma_accurate; auto;
 pose proof is_finite_fma_no_overflow_aux x y z FIN;
-  try eapply (BMFA_finite_e _ _ _ FIN).
+  try eapply (BFMA_finite_e _ _ _ FIN).
 apply is_finite_fma_no_overflow; auto.
 Qed.
 
@@ -282,7 +282,7 @@ destruct (float_of_ftype a), (float_of_ftype b);
 destruct s,s0; discriminate; auto.
 Qed.
 
-Lemma BMINUS_finite_sub {NAN: Nans} {STD: is_standard t} :
+Lemma BMINUS_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a b : ftype t)
  (Hfin : is_finite (BMINUS a b) = true),
  is_finite a = true  /\ 

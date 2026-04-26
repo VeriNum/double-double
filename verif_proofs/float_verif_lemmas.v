@@ -7,11 +7,11 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.FPCompCert.
 
 From Flocq Require Import Pff2Flocq Core.
-Require Import Coq.Reals.Reals.
-Require Import Coq.micromega.Lra.
+From Stdlib Require Import Reals.Reals.
+From Stdlib Require Import micromega.Lra.
 
 Require Import float_acc_lems real_extras.
-Require Import Coq.Logic.Decidable.
+From Stdlib Require Import Logic.Decidable.
 
 Lemma Float_cmp_Ceq_zero_finite:
   forall a,

@@ -43,7 +43,6 @@ exists delta, epsilon.
 split; [ | split]; auto.
 Qed.
 
-
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Notation radix2 := Zaux.radix2.
 
@@ -603,6 +602,36 @@ rewrite -Hbplus -!B2R_float_of_ftype !float_of_ftype_of_float;
 f_equal. 
 Qed. 
 
+Lemma BPLUS_fin_symm {NAN: Nans} {STD: is_standard t} :
+  forall (x y : ftype t),
+  is_finite (BPLUS  x y) = true -> is_finite (BPLUS y x) = true.
+Proof.
+  move => x y Hfin.
+  destruct (BPLUS_finite_e _ _ Hfin) as [Hx Hy].
+  pose proof (is_finite_sum_no_overflow x y Hfin) as Hbnd.
+  pose proof (Binary.Bplus_correct  (fprec t) (femax t) 
+        (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) 
+        (fprec_gt_one t)) BinarySingleNaN.mode_NE (float_of_ftype y) 
+        (float_of_ftype x)) as Hbplus.
+simpl in Hbplus; rewrite !B2R_float_of_ftype in Hbplus.
+apply Rlt_bool_true in Hbnd. 
+rewrite Rplus_comm in Hbnd. 
+rewrite Hbnd in Hbplus; clear Hbnd.
+destruct Hbplus as (_ & Hbplus & _) => //; 
+[rewrite -is_finite_Binary => // | rewrite -is_finite_Binary => //| ].
+rewrite is_finite_Binary /BPLUS/BINOP !float_of_ftype_of_float => //. 
+Qed.
+
+Lemma BPLUS_comm {NAN: Nans} {STD: is_standard t} :
+  forall (x y : ftype t) 
+  (FIN: is_finite (BPLUS  x y) = true), 
+  FT2R (BPLUS x y) = FT2R (BPLUS y x).
+Proof.
+  move => x y Hfin.
+  rewrite -!BPLUS_round_correct; [ | apply BPLUS_fin_symm | exact Hfin] => //.
+  rewrite Rplus_comm => //. 
+Qed.
+
 End Plus. 
 
 Section Minus.
@@ -636,7 +665,7 @@ Definition Bminus_no_overflow (x y: R) : Prop :=
                  BinarySingleNaN.mode_NE)  (x - y )) < Raux.bpow Zaux.radix2 (femax t))%R.
 
 
-Lemma BMINUS_finite_sub {NAN: Nans} {STD: is_standard t} :
+Lemma BMINUS_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a b : ftype t)
  (Hfin : is_finite (BMINUS a b) = true),
  is_finite a = true  /\ 
@@ -811,7 +840,7 @@ Lemma BMINUS_round_correct {NAN: Nans} {STD: is_standard t} :
 Proof.
 intros.
 pose proof (is_finite_minus_no_overflow a b Hfin) as Hfin1.
-destruct (BMINUS_finite_sub a b Hfin) as (HA & HB).
+destruct (BMINUS_finite_e a b Hfin) as (HA & HB).
 rewrite !is_finite_Binary in HA, HB.
 pose proof (Binary.Bminus_correct  (fprec t) (femax t) 
         (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) 
@@ -823,6 +852,7 @@ destruct Hbminus as (Hbminus & _) => //.
 rewrite -Hbminus -!B2R_float_of_ftype !float_of_ftype_of_float; 
 f_equal. 
 Qed. 
+
 
 End Minus.
 

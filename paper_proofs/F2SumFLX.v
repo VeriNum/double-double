@@ -1,5 +1,5 @@
 (* Copyright (c)  Inria. All rights reserved. *)
-Require Import Reals  Psatz.
+From Stdlib Require Import Reals Psatz ZArith.
 From Flocq Require Import Core Plus_error Relative Sterbenz Operations.
 Require Import F2SumFLT.
 

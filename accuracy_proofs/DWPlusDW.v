@@ -29,6 +29,7 @@ Let xlr := (FT2R xl).
 Let yhr := (FT2R yh).
 Let ylr := (FT2R yl).
 
+
 (* connect paper proofs to local defs *)
 Definition DWPlusDW :=
   F2Sum.Fast2Sum p choice

@@ -1,5 +1,5 @@
 (* Copyright (c)  Inria. All rights reserved. *)
-Require Import Reals  Psatz.
+From Stdlib Require Import Reals Psatz.
 From Flocq Require Import Core Plus_error Relative Sterbenz Operations.
 From Flocq Require Import  Round.
 Require Import mathcomp.ssreflect.ssreflect.

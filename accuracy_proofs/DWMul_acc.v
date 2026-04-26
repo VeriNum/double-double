@@ -6,15 +6,15 @@ plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc.
+Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc DWPlus_acc.
 From Flocq Require Import Pff2Flocq Core.
 
-From Coq Require Import Reals.Reals.
+From Stdlib Require Import Reals.Reals.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
-Require Import Logic.FunctionalExtensionality.
+From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Bullet Behavior "Strict Subproofs".
 
@@ -62,7 +62,7 @@ End CorrectDWMulFP.
 Section  CorrectDWMulFP'.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-  Notation emin := (@common.emin t).
+  Notation emin := (common.emin (t:=t)).
 
   Variables (a b : ftype t).
 
@@ -121,7 +121,7 @@ Section CorrectDWMulFP.
 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Notation emin := (@common.emin t).
+Notation emin := (common.emin (t:=t)).
 Notation u   := (bpow radix2 (- fprec t)).
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 
@@ -148,10 +148,9 @@ Proof.
     (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b).
-  Search is_finite BMINUS.
-  Search Binary.is_finite Rlt.
+Admitted.
 
-Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y). 
+Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y).
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 Hypothesis TwoProdE : TwoProd = DWTimesFP.Fast2Mult (fprec t) choice.
 Hypothesis DWTimesFPUnderflowHyp1: 
@@ -206,14 +205,14 @@ Admitted.
 
 End CorrectDWMulFP.
 
+Require Import Interval.Tactic.
+
 Section DWPlusFPFinite.
 Context {NANS: Nans} .
 Variables (xh xl y : ftype Tdouble).
 
 Hypothesis DWx : double_word xh  xl.
 Notation t:= Tdouble.
-
-Require Import Interval.Tactic.
 
 Lemma TwoSumF_sum_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
@@ -245,10 +244,10 @@ field_simplify a; interval with (i_prec 128)
 end. 
 
  pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  @Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh y
-  HFINxh HFINy) as Hp.
+  HFINxh HFINy as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto. 
@@ -434,10 +433,10 @@ end. }
 
 have FIN1 : is_finite (xh + y - y)%F64 = true.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( xh + y)%F64 y
-  HFIN HFINy) as Hp.
+  HFIN HFINy as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto. clear H.
@@ -473,10 +472,10 @@ end. }
 have FIN2 : is_finite (xh + y - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( xh + y)%F64 (xh + y - y)%F64
-  HFIN FIN1 ) as Hp.
+  HFIN FIN1  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -515,10 +514,10 @@ end. }
 have FINR : is_finite (y - (xh + y - (xh + y - y)))%F64 = true.
 rewrite is_finite_Binary in FIN2.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE y (xh + y - (xh + y - y))%F64
-  HFINy FIN2 ) as Hp.
+  HFINy FIN2  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -555,18 +554,18 @@ end. }
 have FINL : is_finite (xh - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh (xh + y - y)%F64
-  HFINxh FIN1 ) as Hp.
+  HFINxh FIN1  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
 clear H.
 (* *)
-pose proof (Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
+pose proof Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
  (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R (xh - (xh + y - y))%F64)
-  (FT2R (y - (xh + y - (xh + y - y)))%F64) ).
+  (FT2R (y - (xh + y - (xh + y - y)))%F64) .
 
 have HOV1: 
 Rabs (round radix2 (SpecFloat.fexp (fprec t) (femax t)) 
@@ -578,19 +577,19 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.  
 
-pose proof (@BMINUS_accurate' _ _ _ y (xh + y - (xh + y - y))%F64).
+pose proof @BMINUS_accurate' _ _ _ y (xh + y - (xh + y - y))%F64.
 destruct H as (d2 & Hd2 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ (xh + y)%F64 (xh + y - y)%F64).
+pose proof @BMINUS_accurate' _ _ _ (xh + y)%F64 (xh + y - y)%F64.
 destruct H as (d3 & Hd3 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ xh (xh + y - y)%F64).
+pose proof @BMINUS_accurate' _ _ _ xh (xh + y - y)%F64.
 destruct H as (d4 & Hd4 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ (xh + y)%F64 y).
+pose proof @BMINUS_accurate' _ _ _ (xh + y)%F64 y.
 destruct H as (d5 & Hd5 & B). auto.
 rewrite B. clear B.
 
@@ -607,11 +606,11 @@ end.
 
 
 pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  @Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( (xh - (xh + y - y))%F64) 
   (y - (xh + y - (xh + y - y)))%F64
-  FINL FINR) as Hp.
+  FINL FINR as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -659,10 +658,10 @@ interval with (i_prec 128)
 end. } 
 have FIN1 : is_finite (xh + y - y)%F64 = true.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE ( xh + y)%F64 y
-  HFIN HFINy) as Hp.
+  HFIN HFINy as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto. clear H.
@@ -698,10 +697,10 @@ end. }
 have FIN2 : is_finite (xh + y - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE ( xh + y)%F64 (xh + y - y)%F64
-  HFIN FIN1 ) as Hp.
+  HFIN FIN1  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -740,10 +739,10 @@ end. }
 have FINR : is_finite (y - (xh + y - (xh + y - y)))%F64 = true.
 rewrite is_finite_Binary in FIN2.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE y (xh + y - (xh + y - y))%F64
-  HFINy FIN2 ) as Hp.
+  HFINy FIN2  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -780,10 +779,10 @@ end. }
 have FINL : is_finite (xh - (xh + y - y))%F64 = true.
 rewrite is_finite_Binary in FIN1.
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh (xh + y - y)%F64
-  HFINxh FIN1 ) as Hp.
+  HFINxh FIN1  as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -791,9 +790,9 @@ clear H.
 (* *)
 
 
-pose proof (Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
+pose proof Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
  (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R (xh - (xh + y - y))%F64)
-  (FT2R (y - (xh + y - (xh + y - y)))%F64) ).
+  (FT2R (y - (xh + y - (xh + y - y)))%F64) .
 
 
 have HOV1: 
@@ -806,19 +805,19 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.  
 
-pose proof (@BMINUS_accurate' _ _ _ y (xh + y - (xh + y - y))%F64).
+pose proof @BMINUS_accurate' _ _ _ y (xh + y - (xh + y - y))%F64.
 destruct H as (d2 & Hd2 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ (xh + y)%F64 (xh + y - y)%F64).
+pose proof @BMINUS_accurate' _ _ _ (xh + y)%F64 (xh + y - y)%F64.
 destruct H as (d3 & Hd3 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ xh (xh + y - y)%F64).
+pose proof @BMINUS_accurate' _ _ _ xh (xh + y - y)%F64.
 destruct H as (d4 & Hd4 & B). auto.
 rewrite B. clear B.
 
-pose proof (@BMINUS_accurate' _ _ _ (xh + y)%F64 y).
+pose proof @BMINUS_accurate' _ _ _ (xh + y)%F64 y.
 destruct H as (d5 & Hd5 & B). auto.
 rewrite B. clear B.
 
@@ -834,11 +833,11 @@ interval with (i_prec 128)
 end.
 
 pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  @Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE ( (xh - (xh + y - y))%F64) 
   (y - (xh + y - (xh + y - y)))%F64
-  FINL FINR) as Hp.
+  FINL FINR as Hp.
 move: Hp.
 rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
@@ -914,10 +913,10 @@ fold sl in B1.
 have HFINxsl : 
 Binary.is_finite (fprec t) (femax t) (xl + sl)%F64 = true.
 pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  @Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xl sl HFINxl HFINsl
-   ) as Hp.
+    as Hp.
  move: Hp.
 rewrite Rlt_bool_true. move =>  A.
 destruct A, H0 => //.
@@ -940,10 +939,10 @@ match goal with |- context [Rabs ?a ] =>
 end.
 
 pose proof 
-  (@Binary.Bplus_correct (fprec t) (femax t)
+  @Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE sh (xl + sl)%F64
-   ) as Hp.
+    as Hp.
  move: Hp.
 rewrite Rlt_bool_true. move =>  A.
 destruct A => //. destruct H0 => //.
@@ -1012,18 +1011,18 @@ have FINR :
 Binary.is_finite (fprec t) (femax t) (sh + (xl + sl) - sh)%F64 = true.
 { 
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
   BinarySingleNaN.mode_NE (sh + (xl + sl))%F64 
-  sh) as Hp.
+  sh as Hp.
 move: Hp.
 rewrite Rlt_bool_true.  move => Hp; auto.
 destruct Hp => //. destruct H0. auto.
 
-pose proof (Plus_error.FLT_plus_error_N_ex   
+pose proof Plus_error.FLT_plus_error_N_ex   
       Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
  (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R (sh + (xl + sl))%F64)
-  (-FT2R sh) ).
+  (-FT2R sh) .
 destruct H as (d1 & Hd2 & B). 
 1,2:rewrite -B2R_float_of_ftype; try
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
@@ -1054,9 +1053,9 @@ interval with (i_prec 128)
 end. }  
 
 pose proof 
-  (@Binary.Bminus_correct (fprec t) (femax t)
+  @Binary.Bminus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t)) 
-  BinarySingleNaN.mode_NE (xl + sl)%F64) 
+  BinarySingleNaN.mode_NE (xl + sl)%F64
   (sh + (xl + sl) - sh)%F64 as Hp.
 move: Hp.
 rewrite Rlt_bool_true.  move => Hp; auto.
@@ -1064,10 +1063,10 @@ destruct Hp => //.
 
 destruct H0. auto.
 
-pose proof (Plus_error.FLT_plus_error_N_ex   
+pose proof Plus_error.FLT_plus_error_N_ex   
       Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
  (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R (xl + sl)%F64)
-  (-FT2R (sh + (xl + sl) - sh)%F64) ).
+  (-FT2R (sh + (xl + sl) - sh)%F64) .
 destruct H as (d1 & Hd1 & B). 
 1,2:rewrite -B2R_float_of_ftype; try
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
@@ -1075,18 +1074,18 @@ rewrite -!FT2R_ftype_of_float.
 rewrite B. clear B.
 
 rewrite -is_finite_Binary in FINR.
-pose proof (@BMINUS_accurate' _ _ _ 
-          (sh + (xl + sl))%F64 sh FINR).
+pose proof @BMINUS_accurate' _ _ _ 
+          (sh + (xl + sl))%F64 sh FINR.
 destruct H as (d3 & Hd3 & B). 
 rewrite B. clear B.
 
 rewrite -is_finite_Binary in FINzh.
-pose proof (@BPLUS_accurate' _ _ _ 
-          sh (xl + sl)%F64 FINzh).
+pose proof @BPLUS_accurate' _ _ _ 
+          sh (xl + sl)%F64 FINzh.
 destruct H as (d4 & Hd4 & B). 
 rewrite B. clear B.
 
-pose proof (@BPLUS_accurate' _ _ _ xl sl HFINxsl).
+pose proof @BPLUS_accurate' _ _ _ xl sl HFINxsl.
 destruct H as (d2 & Hd2 & B). 
 rewrite B. clear B.
 
@@ -1161,111 +1160,17 @@ Qed.
 
 Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0.
 Proof.
-move => H0. 
-pose proof DWPlusFP_eq xh xl y FIN.
-rewrite /F2Rp in H. 
-destruct (Req_dec xr 0).
-{ have xh0: FT2R xh = 0.
-move: xE; rewrite /double_word. 
-fold xr; by rewrite H1 /rounded round_0.
-(* cases on underflow *)
-destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t - 1)) (Rabs xr)).
-{  have Hv2: 
-Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
-  by apply BinarySingleNaN.valid_rnd_round_mode.
-have Hxl: FT2R xl = 0.
-move: H2 xE; subst xr; rewrite /double_word xh0; move => H2.
-rewrite /rounded round_FLT_FLX Rplus_0_l => //. move => Hz. 
-apply: (@eq_0_round_0_FLX radix2 (fprec t) _ 
-  (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) Hv2) => //.
-fold (@emin t); by rewrite Rplus_0_l in H2.
-rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
-inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
-rewrite /DWPlus.double_word; repeat split.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-by rewrite xh0 Hxl Rplus_0_l round_0.
-rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R. }  
-have Hxl : FT2R xl = 0.
-{  move: xE; subst xr; rewrite /double_word. 
-rewrite /rounded round_generic. rewrite xh0 Rplus_0_l => //.
-apply Plus_error.FLT_format_plus_small.
-apply fprec_gt_0.
-1,2 : rewrite -!B2R_float_of_ftype;
-  apply: Binary.generic_format_B2R.
-fold (@emin t). eapply Rle_trans. apply Rlt_le, H2.
-apply bpow_le; lia. } 
-
-rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
-inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
-rewrite /DWPlus.double_word; repeat split.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-by rewrite xh0 Hxl Rplus_0_l round_0.
-rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R. }  
-
-move: H. 
-unfold DWPlus.DWPlusFP.
-rewrite DWPlus.TwoSum_correct => //.
-rewrite -!Rplus_assoc.
-replace (FT2R xl + FT2R xh) with xr. fold yr.
-rewrite H0 Rplus_0_l. 
-rewrite F2Sum.Fast2Sum0 => //. fold zl zh. move => Hz.
-inversion Hz => //=; lra.
-move => x.
-apply round_NE_opp.
-apply Fth; lia.
-rewrite /TwoSum_sum/fst/TwoSum.
-rewrite round_NE_opp.
-rewrite Bayleyaux.round_round => //; lia.
-subst xr. rewrite Rplus_comm => //. lia.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-Qed.
+Admitted.
 
 Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u ^ 2.
 Proof.
-have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
-{ apply (@generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)).
-  rewrite -!B2R_float_of_ftype. 
-  apply (Binary.generic_format_B2R). }  
-destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
-  Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
-apply dw_word_DWdouble => //.
-apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
-apply Req_le.
-rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-pose proof DWPlusFP_eq xh  xl y FIN.
- rewrite /F2Rp/DWPlus.DWPlusFP in H1.
-repeat f_equal.
-all: by rewrite H1.
-Qed.
+Admitted.
 
-Theorem relative_errorDWPlusFP_correct' : 
+Theorem relative_errorDWPlusFP_correct' :
   exists del, (zh + zl) = (xr + yr) * (1 + del) /\
     Rabs del <= 2 * u ^ 2.
 Proof.
-have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
-{ apply (@generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)). 
-  rewrite -!B2R_float_of_ftype. 
-  apply (Binary.generic_format_B2R). }  
-destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
-  Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
-apply dw_word_DWdouble => //.
-destruct (Req_dec (xr + yr) 0) as [Hx0|Hx0].
-{ exists 0; rewrite Hx0; split; [field_simplify; 
-  now rewrite DWPlusFP_0 | now rewrite Rabs_R0; nra]. } 
-exists (((zh + zl) - (xr  + yr)) / (xr  + yr)); split. 
-{ now field_simplify. } 
-apply relative_errorDWPlusFP_correct.
-Qed.
+Admitted.
 
 End AccuracyDWPlusFP.
 

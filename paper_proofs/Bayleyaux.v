@@ -1,7 +1,7 @@
 (* Copyright (c) ENS de Lyon and Inria. All rights reserved. *)
 
 (* Require Import ROmega.*)
-Require Import Reals Psatz ZArith.
+From Stdlib Require Import Reals Psatz ZArith.
 From Flocq Require Import Core Relative Sterbenz Operations.
 Require Import mathcomp.ssreflect.ssreflect.
 
@@ -258,7 +258,7 @@ case (Req_dec (rnd_p t) 0%R)=> rt0.
   rewrite rt0; suff-> : t = 0 by lra.
   move:rt0; apply/eq_0_round_0_FLX.
 exists ((t - (rnd_p t))%R / (rnd_p t))%R; split; try lra.
-  rewrite /Rdiv Rabs_mult Rabs_Rinv // Rabs_minus_sym.
+  rewrite /Rdiv Rabs_mult Rabs_inv // Rabs_minus_sym.
   have hh := (Rabs_pos_lt (rnd_p t) rt0).
   apply:(Rmult_le_reg_r (Rabs (rnd_p t)))=>//.
  have h := (relative_error_N_FLX_round two p p_gt_0  choice t).

@@ -1,6 +1,6 @@
 (* Copyright (c)  Inria. All rights reserved. *)
 
-Require Import Psatz ZArith Reals.
+From Stdlib Require Import Psatz ZArith Reals.
 
 From Flocq Require Import Core Relative Sterbenz Operations Plus_error Mult_error.
 
@@ -1817,7 +1817,7 @@ have xyn0: x*y <> 0 by lra.
 suff etaubxy: Rabs eta < 5 * (u * u) * (x * y).
   apply/(Rmult_lt_reg_r (x*y)) =>//.
   rewrite Rmult_assoc -{2}(Rabs_pos_eq (x*y));  last lra.
-  rewrite Rabs_Rinv // Rinv_l // ?Rmult_1_r //.
+  rewrite Rabs_inv // Rinv_l // ?Rmult_1_r //.
  by apply/Rabs_no_R0.
 
 (* xh =1 or yh = 1 *)
@@ -2599,7 +2599,7 @@ have xyn0: x*y <> 0 by lra.
 suff etaubxy: Rabs eta < 55/10 * (u * u) * (x * y).
   apply/(Rmult_lt_reg_r (x*y)) =>//.
   rewrite Rmult_assoc -{2}(Rabs_pos_eq (x*y));  last lra.
-  rewrite Rabs_Rinv // Rinv_l // ?Rmult_1_r //.
+  rewrite Rabs_inv // Rinv_l // ?Rmult_1_r //.
  by apply/Rabs_no_R0.
 
 (* xh =1 or yh = 1 *)
@@ -3384,7 +3384,7 @@ have xyn0: x*y <> 0 by lra.
 suff etaubxy: Rabs eta < 55/10 * (u * u) * (x * y).
 apply/(Rmult_lt_reg_r (x*y)) =>//.
 rewrite Rmult_assoc -{2}(Rabs_pos_eq (x*y));  last lra.
-rewrite Rabs_Rinv // Rinv_l // ?Rmult_1_r //.
+rewrite Rabs_inv // Rinv_l // ?Rmult_1_r //.
 
  by apply/Rabs_no_R0.
 
@@ -4432,7 +4432,7 @@ case: xh1 => xh1; last first.
   have xpos: 0 < xh + xl by  move/Rabs_le_inv: xlu; lra.
   have ypos: 0 < yh + yl by move/Rabs_le_inv: ylu; lra.
   have xyous: 0 < (xh + xl) * (yh + yl) by apply/Rmult_lt_0_compat; lra .
-  rewrite Rabs_mult Rabs_Rinv; try lra.
+  rewrite Rabs_mult Rabs_inv; try lra.
   apply:(Rmult_lt_reg_r (Rabs ((xh + xl) * (yh + yl)))).
     rewrite Rabs_pos_eq; lra.
   rewrite Rmult_assoc Rinv_l ?Rmult_1_r; last by  rewrite Rabs_pos_eq; lra.
@@ -4468,7 +4468,7 @@ case: y1 => yh1; last first.
   have xpos: 0 < xh + xl by  move/Rabs_le_inv: xlu; lra.
   have ypos: 0 < yh + yl by move/Rabs_le_inv: ylu; lra.
   have xyous: 0 < (xh + xl) * (yh + yl) by apply/Rmult_lt_0_compat; lra .
-  rewrite Rabs_mult Rabs_Rinv; try lra.
+  rewrite Rabs_mult Rabs_inv; try lra.
   apply:(Rmult_lt_reg_r (Rabs ((xh + xl) * (yh + yl)))).
     rewrite Rabs_pos_eq; lra.
   rewrite Rmult_assoc Rinv_l ?Rmult_1_r; last by  rewrite Rabs_pos_eq; lra.
@@ -4494,7 +4494,7 @@ case: y1 => yh1; last first.
 have xpos: 0 < xh + xl by  move/Rabs_le_inv: xlu; lra.
 have ypos: 0 < yh + yl by move/Rabs_le_inv: ylu; lra.
 have xypos: 0 < (xh + xl) * (yh + yl) by apply/Rmult_lt_0_compat; lra.
-rewrite Rabs_mult Rabs_Rinv; try lra.
+rewrite Rabs_mult Rabs_inv; try lra.
 rewrite [X in _ * / X  ] Rabs_pos_eq; try lra.
 apply:(Rmult_lt_reg_r ((xh + xl) * (yh + yl))) =>//.
 rewrite Rmult_assoc Rinv_l ?Rmult_1_r; try lra.

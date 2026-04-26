@@ -6,7 +6,7 @@ Require Import float_acc_lems op_defs common DDModels.
 Require Import Bayleyaux DWPlus.
 
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
-Require Import Logic.FunctionalExtensionality.
+From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Require Import mathcomp.ssreflect.ssreflect.
 

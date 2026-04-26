@@ -10,7 +10,8 @@ Ltac FLT_basics :=
   try apply FLT_exp_valid; try apply fprec_gt_0;
   try apply valid_rnd_N; try apply generic_format_FLT_FT2R;
   try apply FLT_exp_monotone; try apply fprec_gt_one;
-  try apply generic_format_FLX_FT2R
+  try apply generic_format_FLX_FT2R;
+  try apply generic_format_0
 .
 
 Ltac FLX_basics := 
@@ -156,11 +157,11 @@ Ltac subexpr_finite_H0 fexpr HFIN :=
               try match goal with 
                 | H2: is_finite c = true |- _ =>
                   try subexpr_finite_H0 c H2
-                | _ => let H0 := fresh in pose proof (BMINUS_finite_sub _ b c HFIN) as H0;
+                | _ => let H0 := fresh in pose proof (BMINUS_finite_e _ b c HFIN) as H0;
                        let H2 := fresh in destruct H0 as (_ & H2);
                        try subexpr_finite_H0 c H2
               end
-            | _ =>  let H0 := fresh in pose proof (BMINUS_finite_sub _ b c HFIN) as H0;
+            | _ =>  let H0 := fresh in pose proof (BMINUS_finite_e _ b c HFIN) as H0;
                     let H1 := fresh in let H2 := fresh in 
                     destruct H0 as (H1 & H2);
                     try subexpr_finite_H0 b H1;

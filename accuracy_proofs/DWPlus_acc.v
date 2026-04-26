@@ -12,7 +12,7 @@ From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
 
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
-Require Import Logic.FunctionalExtensionality.
+From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Section CorrectDWPlusFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -289,14 +289,14 @@ Qed.
 
 End CorrectDWPlusFP'.
 
+Require Import Interval.Tactic.
+
 Section DWPlusFPFinite.
 Context {NANS: Nans} .
 Variables (xh xl y : ftype Tdouble).
 
 Hypothesis DWx : double_word xh  xl.
 Notation t:= Tdouble.
-
-Require Import Interval.Tactic.
 
 Lemma TwoSumF_sum_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
