@@ -118,22 +118,42 @@ Proof.
   apply valid_rnd_N.
 Qed.
 
-(* The function satisfies its API spec (with a semax-body proof) *)
+(* fast2_mult_check(x, y) returns 1 only if Fast2Mult_cond x y holds, i.e.,
+   x*y is finite and either the real product is zero or it is at least
+   bpow 2 (emin + 2*p - 1) (the Fast2Mult underflow safety threshold).
+
+   Proof structure: three intermediate PROP invariants, each carrying only
+   the forward direction (b = true -> P) since the spec postcondition needs
+   only that implication.
+     Post_if  : captures C variable `zx = (x == 0.0) && isfinite(y)`.
+     Post_if2 : captures C variable `zy = (y == 0.0) && isfinite(x)`.
+     Post_t7  : captures the final return value after the threshold check.
+   At the join point Post_t7 discharges MulResultIsSafeForFast2Mult using
+   Hfin_spec (finiteness of x*y), Float_cmp_Ceq_zero_mul_FT2R_{l,r} (zero
+   product from the C zero-checks), and no_underflow_real_from_round_mul
+   (above-threshold product from the fabs comparison). *)
 Lemma body_fast2_mult_check: semax_body Vprog Gprog f_fast2_mult_check fast2_mult_check_spec.
 Proof.
   start_function.
+  (* z = x * y;  thresh = DBL_MIN * ldexp(1.0,53);  fin = isfinite_double(z) *)
   forward.
   forward_call.
   forward.
   forward_call.
   Intros vret_fin.
+  (* Hfin_spec : vret_fin = true <-> is_finite (BMULT x y) = true *)
   rename H into Hfin_spec.
 
+  (* px / py: the zero-product witnesses carried through the boolean short-circuits.
+     px asserts x == 0.0 (and y is finite); py asserts y == 0.0 (and x is finite).
+     Either witness allows us to conclude FT2R x * FT2R y = 0 at the join point. *)
   set (px := is_finite y = true /\
     Float.cmp Ceq x (Float.of_bits (Int64.repr 0)) = true).
   set (py := is_finite x = true /\
     Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true).
 
+  (* Post_if: join point after `zx = (x == 0.0) && isfinite(y)`.
+     b_zx = true implies the real product is zero because x is zero. *)
   set (Post_if :=
     EX b_zx: bool,
     PROP (b_zx = true -> px)
@@ -147,25 +167,28 @@ Proof.
     SEP ()).
   forward_if Post_if.
 
-  - (* x == 0.0 = true: call isfinite(y), Exists (is_finite y) *)
+  - (* x == 0.0 = true: call isfinite(y) and witness b_zx with its return value. *)
     forward_call.
     Intros vret.
     forward.
     unfold Post_if; Exists vret; entailer!.
     split.
-    + intro Hvret; unfold px; split; [apply (proj1 H0); exact Hvret | assumption].
+    + (* PROP forward direction: H0 is the isfinite spec iff; assumption is the branch cond. *)
+      intro Hvret; unfold px; split; [apply (proj1 H0); exact Hvret | assumption].
     + destruct vret; simpl; auto.
 
-  - (* x == 0.0 = false: return false, vacuously true *)
+  - (* x == 0.0 = false: short-circuit gives 0; PROP is vacuously satisfied. *)
     forward.
     unfold Post_if; entailer!.
     Exists false.
     entailer!.
 
-  - unfold Post_if; clear Post_if.
+  - (* After the zx branch: collect b_zx and move to the zy check. *)
+    unfold Post_if; clear Post_if.
     Intros b_zx.
     rename H into H_b_zx.
     forward.
+    (* Post_if2: join point after `zy = (y == 0.0) && isfinite(x)`. *)
     set (Post_if2 :=
       EX b_zy: bool,
       PROP (b_zy = true -> py)
@@ -180,7 +203,7 @@ Proof.
       SEP ()).
     forward_if Post_if2.
 
-    + (* y == 0.0 = true *)
+    + (* y == 0.0 = true: call isfinite(x) and witness b_zy with its return value. *)
       forward_call.
       Intros vret_xfin.
       forward.
@@ -189,16 +212,20 @@ Proof.
       * intro Hvret_xfin; unfold py; split; [apply (proj1 H0); exact Hvret_xfin | assumption].
       * destruct vret_xfin; simpl; auto.
 
-    + (* y == 0.0 = false *)
+    + (* y == 0.0 = false: short-circuit gives 0. *)
       forward.
       unfold Post_if2; clear Post_if2; entailer!.
       Exists false.
       entailer!.
 
-    + unfold Post_if2; clear Post_if2.
+    + (* After the zy branch: proceed to the threshold comparison. *)
+      unfold Post_if2; clear Post_if2.
       Intros b_zy.
       rename H into H_b_zy.
       forward.
+      (* Post_t7: join point after `return fin && ((zx || zy) || thresh < fabs(z))`.
+         b_lb = true implies (1) x*y is finite and (2) the real product is either
+         zero (via px or py) or above the underflow threshold (via uf). *)
       set (Post_t7 :=
         EX b_lb: bool,
         PROP (b_lb = true -> vret_fin = true /\ (px \/ py \/
@@ -217,7 +244,8 @@ Proof.
         SEP ()).
       forward_if Post_t7.
 
-      * (* fin = true *)
+      * (* fin = true: evaluate the zx || zy short-circuit. *)
+        (* Post_xy: join point for `zx || zy`. *)
         set (Post_xy :=
           EX b_xy: bool,
           PROP (b_xy = true -> px \/ py)
@@ -233,13 +261,13 @@ Proof.
           SEP ()).
         forward_if Post_xy.
 
-        ** (* b_zx = true *)
+        ** (* b_zx = true: zx || zy is true; witness Post_xy with true. *)
            forward.
            unfold Post_xy; clear Post_xy; Exists true; entailer!.
            left; apply H_b_zx.
            destruct b_zx; [reflexivity | simpl in H0; contradiction].
 
-        ** (* b_zx = false *)
+        ** (* b_zx = false: evaluate zy; witness with b_zx || b_zy. *)
            forward.
            unfold Post_xy; clear Post_xy; Exists (orb b_zx b_zy); entailer!.
            match goal with |- ?A /\ ?B => refine (conj _ _) end.
@@ -251,12 +279,13 @@ Proof.
              { destruct b_zx; [exfalso; discriminate H0 | reflexivity]. }
              subst b_zx; simpl; destruct b_zy; reflexivity. }
 
-        ** unfold Post_xy; clear Post_xy.
+        ** (* After zx || zy: check thresh < fabs(z). *)
+           unfold Post_xy; clear Post_xy.
            Intros b_xy.
            rename H into H_b_xy.
            forward_if.
 
-           (* b_xy = true: short-circuit, return fin = true *)
+           (* b_xy = true: zero product confirmed; no threshold check needed. *)
            forward.
            unfold Post_t7; clear Post_t7; entailer!.
            set (uf := Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1))
@@ -280,7 +309,9 @@ Proof.
              { right; right; exact Huf. } }
            { simpl; reflexivity. }
 
-           (* b_xy = false: check threshold *)
+           (* b_xy = false: call fabs, compare against thresh.
+              Float_cmp_Cle_mul connects the C float comparison thresh < fabs(z)
+              to Rlt_bool on the rounded real product. *)
            forward_call.
            forward.
            forward.
@@ -290,6 +321,7 @@ Proof.
                ZnearestE (FT2R x * FT2R y)))).
            Exists uf.
            entailer!.
+           (* Derive is_finite (x*y) from fin = true (vret_fin = true) via Hfin_spec. *)
            assert (vret_fin = true) as Hvf_eq by
              (destruct vret_fin; auto; simpl in H_b_xy; contradiction).
            assert (is_finite (ftype_of_float (Float.mul x y)) = true) as Hfin_mul by
@@ -299,21 +331,24 @@ Proof.
              (ftype_of_float thresh_val) Hfin_mul thresh_val_finite (eq_sym thresh_val_FT2R) as Hcmp.
            simpl in Hcmp; rewrite <- Hcmp; clear Hcmp.
            match goal with |- ?A /\ ?B => refine (conj _ _) end.
-           { (* PROP: uf = true -> vret_fin = true /\ ... *)
-             intro Htrue.
+           { intro Htrue.
              destruct uf eqn:Huf_eq.
              - split; [exact Hvf_eq | right; right; reflexivity].
              - discriminate Htrue. }
-           { (* Vint equality *)
-             unfold uf; reflexivity. }
+           { unfold uf; reflexivity. }
 
-      * (* fin = false *)
+      * (* fin = false: return value is 0; PROP is vacuously satisfied. *)
         forward.
         unfold Post_t7; clear Post_t7; entailer!.
         Exists false.
         entailer!.
 
-      * unfold Post_t7; clear Post_t7.
+      * (* Join: discharge MulResultIsSafeForFast2Mult from Post_t7.
+           b_lb = true gives finiteness and the disjunction of safety witnesses.
+           - px: Float_cmp_Ceq_zero_mul_FT2R_l gives FT2R x * FT2R y = 0.
+           - py: Float_cmp_Ceq_zero_mul_FT2R_r gives FT2R x * FT2R y = 0.
+           - uf: no_underflow_real_from_round_mul gives the Rabs lower bound. *)
+        unfold Post_t7; clear Post_t7.
         Intros b_lb.
         rename H into H_lb.
         forward.
