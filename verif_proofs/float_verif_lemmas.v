@@ -109,7 +109,19 @@ Proof.
   cbv; auto.
 Qed.
 
-Lemma Float_cmp_Cle_mul : 
+Lemma is_finite_Float_add_l : forall (a b : Floats.float),
+  Binary.is_finite (fprec Tdouble) (femax Tdouble) (Float.add a b) = true ->
+  Binary.is_finite (fprec Tdouble) (femax Tdouble) a = true.
+Proof.
+  intros a b H.
+  destruct a; simpl in *; auto;
+  ( cbv [Float.add Floats.Float.add Binary.Bplus Binary.B2BSN
+           BinarySingleNaN.Bplus Binary.BSN2B] in H;
+    destruct b; simpl in H; try discriminate;
+    destruct s, s0; simpl in H; try discriminate).
+Qed.
+
+Lemma Float_cmp_Cle_mul :
 forall x y A B (Hfin1: is_finite (ftype_of_float (Float.mul x y)) = true)
   (Hfin2: is_finite B = true) (Heq: A = FT2R B),
   Vint (if Rlt_bool A (Rabs ((round radix2 fexp ZnearestE) 
