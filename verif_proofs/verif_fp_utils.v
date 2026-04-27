@@ -369,10 +369,24 @@ Proof.
             apply Rlt_bool_to_Rlt; exact Hpuf. }
 Qed.
 
-(* The function satisfies its API spec (with a semax-body proof) *)
+(* fast2_mult_check2(x, y, z) returns 1 only if Fast2Mult_cond2 x y z holds,
+   i.e., x*y + z (as compiled by CompCert) is finite and either the real
+   product x*y is zero or it is at least bpow 2 (emin + 2*p - 1).
+
+   Key difference from fast2_mult_check: the finiteness check calls
+   isfinite_double(fma(x,y,z)).  CompCert lowers fma(x,y,z) to two sequential
+   IEEE operations (Float.mul followed by Float.add), not a fused FMA.
+   Fast2Mult_cond2 therefore uses BPLUS (BMULT x y) z, not BFMA x y z.
+   To derive is_finite (x*y) from is_finite (x*y + z), the proof uses
+   is_finite_Float_add_l (finiteness of a sum implies finiteness of the left
+   addend).
+
+   The invariant structure mirrors fast2_mult_check; see that proof for the
+   detailed explanation of Post_if, Post_if2, Post_xy, and Post_t7. *)
 Lemma body_fast2_mult_check2: semax_body Vprog Gprog f_fast2_mult_check2 fast2_mult_check2_spec.
 Proof.
   start_function.
+  (* thresh = DBL_MIN * ldexp(1.0,53) *)
   forward_call.
   forward.
 
@@ -381,6 +395,7 @@ Proof.
   set (py := is_finite x = true /\
     Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true).
 
+  (* Post_if: join point after `zx = (x == 0.0) && isfinite(y)`. *)
   set (Post_if :=
     EX b_zx: bool,
     PROP (b_zx = true -> px)
@@ -393,7 +408,7 @@ Proof.
     SEP ()).
   forward_if Post_if.
 
-  - (* x == 0.0 = true *)
+  - (* x == 0.0 = true: call isfinite(y); witness b_zx with its return value. *)
     forward_call.
     Intros vret.
     rename H into H_cmp_x.
@@ -404,16 +419,18 @@ Proof.
     + intro Hvret; unfold px; split; [apply (proj1 Hisfinite_y); exact Hvret | assumption].
     + destruct vret; simpl; auto.
 
-  - (* x == 0.0 = false *)
+  - (* x == 0.0 = false: short-circuit gives 0. *)
     forward.
     unfold Post_if; entailer!.
     Exists false.
     entailer!.
 
-  - unfold Post_if; clear Post_if.
+  - (* After zx branch: collect b_zx and proceed to the zy check. *)
+    unfold Post_if; clear Post_if.
     Intros b_zx.
     rename H into H_b_zx.
     forward.
+    (* Post_if2: join point after `zy = (y == 0.0) && isfinite(x)`. *)
     set (Post_if2 :=
       EX b_zy: bool,
       PROP (b_zy = true -> py)
@@ -427,7 +444,7 @@ Proof.
       SEP ()).
     forward_if Post_if2.
 
-    + (* y == 0.0 = true *)
+    + (* y == 0.0 = true: call isfinite(x); witness b_zy with its return value. *)
       forward_call.
       Intros vret_xfin.
       rename H into H_cmp_y.
@@ -438,20 +455,23 @@ Proof.
       * intro Hvret_xfin; unfold py; split; [apply (proj1 Hisfinite_x); exact Hvret_xfin | assumption].
       * destruct vret_xfin; simpl; auto.
 
-    + (* y == 0.0 = false *)
+    + (* y == 0.0 = false: short-circuit gives 0. *)
       forward.
       unfold Post_if2; clear Post_if2; entailer!.
       Exists false.
       entailer!.
 
-    + unfold Post_if2; clear Post_if2.
+    + (* After zy branch: call isfinite(fma(x,y,z)), then check threshold. *)
+      unfold Post_if2; clear Post_if2.
       Intros b_zy.
       rename H into H_b_zy.
       forward.
       forward_call.
       Intros vret.
+      (* Hfin_spec : vret = true <-> is_finite (BPLUS (BMULT x y) z) = true
+         (fma compiled by CompCert as two sequential IEEE ops: mul then add). *)
       rename H into Hfin_spec.
-      (* Hfin_spec : vret = true <-> is_finite (BFMA x y z) = true *)
+      (* Post_t7: captures the return value of the entire boolean expression. *)
       set (Post_t7 :=
         EX b_lb: bool,
         PROP (b_lb = true -> vret = true /\ (px \/ py \/
@@ -470,7 +490,8 @@ Proof.
         SEP ()).
       forward_if Post_t7.
 
-      * (* fin = true *)
+      * (* fin = true: evaluate zx || zy. *)
+        (* Post_xy: join point for `zx || zy`. *)
         set (Post_xy :=
           EX b_xy: bool,
           PROP (b_xy = true -> px \/ py)
@@ -486,13 +507,13 @@ Proof.
           SEP ()).
         forward_if Post_xy.
 
-        ** (* b_zx = true *)
+        ** (* b_zx = true: witness Post_xy with true. *)
            forward.
            unfold Post_xy; clear Post_xy; Exists true; entailer!.
            left; apply H_b_zx.
            destruct b_zx; [reflexivity | simpl in H0; contradiction].
 
-        ** (* b_zx = false *)
+        ** (* b_zx = false: witness with b_zx || b_zy. *)
            forward.
            unfold Post_xy; clear Post_xy; Exists (orb b_zx b_zy); entailer!.
            match goal with |- ?A /\ ?B => refine (conj _ _) end.
@@ -504,12 +525,13 @@ Proof.
              { destruct b_zx; [exfalso; discriminate H0 | reflexivity]. }
              subst b_zx; simpl; destruct b_zy; reflexivity. }
 
-        ** unfold Post_xy; clear Post_xy.
+        ** (* After zx || zy: check thresh < fabs(x*y). *)
+           unfold Post_xy; clear Post_xy.
            Intros b_xy.
            rename H into H_b_xy.
            forward_if.
 
-           (* b_xy = true *)
+           (* b_xy = true: zero product confirmed; no threshold check needed. *)
            forward.
            unfold Post_t7; clear Post_t7; entailer!.
            set (uf := Rlt_bool (bpow radix2 (emin + 2 * fprec Tdouble - 1))
@@ -530,7 +552,9 @@ Proof.
              { right; left; exact Hpy. } }
            { right; right; exact Huf. }
 
-           (* b_xy = false: check threshold *)
+           (* b_xy = false: call fabs, compare against thresh.
+              is_finite_Float_add_l extracts is_finite (x*y) from
+              is_finite (x*y + z), needed by Float_cmp_Cle_mul. *)
            forward_call.
            forward.
            forward.
@@ -542,6 +566,7 @@ Proof.
            entailer!.
            assert (vret = true) as Hvf_eq by
              (destruct vret; auto; simpl in H_b_xy; contradiction).
+           (* Extract is_finite (x*y) from is_finite (x*y + z) via Hfin_spec. *)
            assert (is_finite (ftype_of_float (Float.mul x y)) = true) as Hfin_mul.
            { rewrite is_finite_Binary, float_of_ftype_of_float.
              apply (is_finite_Float_add_l (Float.mul x y) z).
@@ -558,13 +583,15 @@ Proof.
              - discriminate Htrue. }
            { unfold uf; reflexivity. }
 
-      * (* fin = false *)
+      * (* fin = false: return value is 0. *)
         forward.
         unfold Post_t7; clear Post_t7; entailer!.
         Exists false.
         entailer!.
 
-      * unfold Post_t7; clear Post_t7.
+      * (* Join: discharge MulResultIsSafeForFast2Mult2 from Post_t7.
+           proj1 Hfin_spec converts vret = true to is_finite (BPLUS (BMULT x y) z) = true. *)
+        unfold Post_t7; clear Post_t7.
         Intros b_lb.
         rename H into H_lb.
         forward.
