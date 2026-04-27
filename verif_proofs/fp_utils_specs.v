@@ -5,7 +5,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import fp_utils op_defs.
+Require Import fp_utils op_defs DDModels.
 
 (* The function returns an int, and that int is `1` iff `is_finite x` 
 is true; otherwise it's `0`. And it doesn't touch memory.*)
@@ -26,8 +26,7 @@ Definition isfinite_double_spec :=
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
 Definition MulResultIsSafeForFast2Mult (a b : ftype Tdouble) : Prop :=
-  is_finite (BMULT a b) = true /\ (((FT2R a * FT2R b) = 0)%R \/
-  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
+  Fast2Mult_cond a b.
 
 (* The function returns an int, and that int is `1` iff `is_finite x` 
 is true; otherwise it's `0`. And it doesn't touch memory.*)
@@ -45,9 +44,8 @@ Definition fast2_mult_check_spec :=
     SEP().
 
 
-Definition MulResultIsSafeForFast2Mult2 (a b c: ftype Tdouble) : Prop :=
-  is_finite (BFMA a b c) = true /\ (((FT2R a * FT2R b) = 0)%R \/
-  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <= Rabs (FT2R a * FT2R b))%R). 
+Definition MulResultIsSafeForFast2Mult2 (a b c : ftype Tdouble) : Prop :=
+  Fast2Mult_cond2 a b c.
 
 Definition fast2_mult_check2_spec := 
   DECLARE _fast2_mult_check2

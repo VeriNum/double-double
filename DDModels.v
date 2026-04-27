@@ -51,6 +51,24 @@ Definition Fast2Mult_mul (a b : ftype t) := fst (Fast2Mult a b).
 End Fast2MultModel.
 
 
+Section Fast2MultCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Definition Fast2Mult_cond (a b : ftype t) : Prop :=
+  is_finite (BMULT a b) = true /\
+  (FT2R a * FT2R b = 0 \/
+   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+   <= Rabs (FT2R a * FT2R b)).
+
+Definition Fast2Mult_cond2 (a b c : ftype t) : Prop :=
+  is_finite (BFMA a b c) = true /\
+  (FT2R a * FT2R b = 0 \/
+   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+   <= Rabs (FT2R a * FT2R b)).
+
+End Fast2MultCond.
+
+
 Section DWord.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

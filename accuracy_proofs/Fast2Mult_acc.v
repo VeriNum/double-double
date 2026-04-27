@@ -166,3 +166,26 @@ Proof.
 Qed.
 
 End TwoMultAcc.
+
+Section TwoMultCheckImplies.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
+
+Variables (a b : ftype t).
+
+(* Fast2Mult_cond is the single pre-condition shared with the verif spec
+   (MulResultIsSafeForFast2Mult is definitionally Fast2Mult_cond at Tdouble). *)
+Corollary Fast2Mult_accuracy_from_safety :
+  Fast2Mult_cond a b ->
+  Rabs (FT2R (Fast2Mult_err a b)) <= /2 * ulp (FT2R a * FT2R b).
+Proof.
+  intros [Hfin Huf].
+  apply Fast2Mult_accuracy_norm; auto.
+  intros Hne.
+  destruct Huf as [H | H].
+  - exfalso; apply Hne; exact H.
+  - exact H.
+Qed.
+
+End TwoMultCheckImplies.
