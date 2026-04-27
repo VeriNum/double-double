@@ -61,7 +61,7 @@ Definition Fast2Mult_cond (a b : ftype t) : Prop :=
    <= Rabs (FT2R a * FT2R b)).
 
 Definition Fast2Mult_cond2 (a b c : ftype t) : Prop :=
-  is_finite (BFMA a b c) = true /\
+  is_finite (BPLUS (BMULT a b) c) = true /\
   (FT2R a * FT2R b = 0 \/
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).

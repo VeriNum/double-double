@@ -40,6 +40,6 @@ int fast2_mult_check2(double x, double y, double z) {
     // if z is ge thresh we can't to prove the 
     // real product is ge thresh
     // accuracy bound also requires finite
-    int fin = isfinite_double(x * y + z);    
+    int fin = isfinite_double(fma(x, y, z));
     return fin && ((zx || zy) || thresh < fabs(x * y)); 
 }
