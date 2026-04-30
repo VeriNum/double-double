@@ -3,7 +3,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import Fast2Mult_acc TwoSum_acc DWPlus_acc.
+Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc DWPlus_acc.
 Require Import DWPlus DDModels DWord_defs.
 From Flocq Require Import Pff2Flocq Core.
 

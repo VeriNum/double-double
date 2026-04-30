@@ -6,7 +6,7 @@ Local Open Scope string_scope.
 Local Open Scope clight_scope.
 
 Module Info.
-  Definition version := "3.15".
+  Definition version := "3.17".
   Definition build_number := "".
   Definition build_tag := "".
   Definition build_branch := "".
@@ -76,8 +76,6 @@ Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _a : ident := $"a".
 Definition _b : ident := $"b".
 Definition _dword : ident := $"dword".
-Definition _exit : ident := $"exit".
-Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fma : ident := $"fma".
 Definition _main : ident := $"main".
@@ -86,7 +84,6 @@ Definition _st : ident := $"st".
 Definition _t : ident := $"t".
 Definition _t'1 : ident := 128%positive.
 Definition _t'2 : ident := 129%positive.
-Definition _t'3 : ident := 130%positive.
 
 Definition f_fast_2mult := {|
   fn_return := tvoid;
@@ -94,39 +91,29 @@ Definition f_fast_2mult := {|
   fn_params := ((_st, (tptr (Tstruct _dword noattr))) :: (_a, tdouble) ::
                 (_b, tdouble) :: nil);
   fn_vars := nil;
-  fn_temps := ((_t'2, tdouble) :: (_t'1, tint) :: (_t'3, tdouble) :: nil);
+  fn_temps := ((_t'1, tdouble) :: (_t'2, tdouble) :: nil);
   fn_body :=
 (Ssequence
+  (Sassign
+    (Efield
+      (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
+        (Tstruct _dword noattr)) _s tdouble)
+    (Ebinop Omul (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
   (Ssequence
-    (Scall (Some _t'1)
-      (Evar _fast2_mult_check (Tfunction (tdouble :: tdouble :: nil) tint
-                                cc_default))
-      ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
-    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
-      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
-        ((Econst_int (Int.repr 1) tint) :: nil))
-      Sskip))
-  (Ssequence
+    (Ssequence
+      (Sset _t'2
+        (Efield
+          (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
+            (Tstruct _dword noattr)) _s tdouble))
+      (Scall (Some _t'1)
+        (Evar _fma (Tfunction (tdouble :: tdouble :: tdouble :: nil) tdouble
+                     cc_default))
+        ((Etempvar _a tdouble) :: (Etempvar _b tdouble) ::
+         (Eunop Oneg (Etempvar _t'2 tdouble) tdouble) :: nil)))
     (Sassign
       (Efield
         (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-          (Tstruct _dword noattr)) _s tdouble)
-      (Ebinop Omul (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
-    (Ssequence
-      (Ssequence
-        (Sset _t'3
-          (Efield
-            (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-              (Tstruct _dword noattr)) _s tdouble))
-        (Scall (Some _t'2)
-          (Evar _fma (Tfunction (tdouble :: tdouble :: tdouble :: nil)
-                       tdouble cc_default))
-          ((Etempvar _a tdouble) :: (Etempvar _b tdouble) ::
-           (Eunop Oneg (Etempvar _t'3 tdouble) tdouble) :: nil)))
-      (Sassign
-        (Efield
-          (Ederef (Etempvar _st (tptr (Tstruct _dword noattr)))
-            (Tstruct _dword noattr)) _t tdouble) (Etempvar _t'2 tdouble)))))
+          (Tstruct _dword noattr)) _t tdouble) (Etempvar _t'1 tdouble))))
 |}.
 
 Definition composites : list composite_definition :=
@@ -384,36 +371,28 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      (AST.Xfloat :: AST.Xfloat :: AST.Xfloat :: nil)
                      AST.Xfloat cc_default))
      (tdouble :: tdouble :: tdouble :: nil) tdouble cc_default)) ::
- (_exit,
-   Gfun(External (EF_external "exit"
-                   (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
-     (tint :: nil) tvoid cc_default)) ::
- (_fast2_mult_check,
-   Gfun(External (EF_external "fast2_mult_check"
-                   (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
-                     cc_default)) (tdouble :: tdouble :: nil) tint
-     cc_default)) :: (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
+ (_fast_2mult, Gfun(Internal f_fast_2mult)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult :: _fast2_mult_check :: _exit :: _fma :: ___builtin_debug ::
- ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
- ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
- ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
- ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
- ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
- ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
- ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
- ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
- ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
- ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
- ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
- ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
- ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
- ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
- ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
- ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
- ___compcert_va_composite :: ___compcert_va_float64 ::
- ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
+(_fast_2mult :: _fma :: ___builtin_debug :: ___builtin_fmin ::
+ ___builtin_fmax :: ___builtin_fnmsub :: ___builtin_fnmadd ::
+ ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_clsll ::
+ ___builtin_clsl :: ___builtin_cls :: ___builtin_expect ::
+ ___builtin_unreachable :: ___builtin_va_end :: ___builtin_va_copy ::
+ ___builtin_va_arg :: ___builtin_va_start :: ___builtin_membar ::
+ ___builtin_annot_intval :: ___builtin_annot :: ___builtin_sel ::
+ ___builtin_memcpy_aligned :: ___builtin_sqrt :: ___builtin_fsqrt ::
+ ___builtin_fabsf :: ___builtin_fabs :: ___builtin_ctzll ::
+ ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll :: ___builtin_clzl ::
+ ___builtin_clz :: ___builtin_bswap16 :: ___builtin_bswap32 ::
+ ___builtin_bswap :: ___builtin_bswap64 :: ___compcert_i64_umulh ::
+ ___compcert_i64_smulh :: ___compcert_i64_sar :: ___compcert_i64_shr ::
+ ___compcert_i64_shl :: ___compcert_i64_umod :: ___compcert_i64_smod ::
+ ___compcert_i64_udiv :: ___compcert_i64_sdiv :: ___compcert_i64_utof ::
+ ___compcert_i64_stof :: ___compcert_i64_utod :: ___compcert_i64_stod ::
+ ___compcert_i64_dtou :: ___compcert_i64_dtos :: ___compcert_va_composite ::
+ ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
+ nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.

@@ -51,6 +51,30 @@ Definition Fast2Mult_mul (a b : ftype t) := fst (Fast2Mult a b).
 End Fast2MultModel.
 
 
+Section TwoSumCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation fexp  := (SpecFloat.fexp (fprec t) (femax t)).
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+Definition TwoSum_cond (a b : ftype t) : Prop :=
+  is_finite (BPLUS a b) = true /\
+  is_finite (BMINUS a b) = true /\
+  Rabs (FT2R b) < Ulp.pred Zaux.radix2 fexp Omega.
+
+End TwoSumCond.
+
+
+Section Fast2SumCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Definition Fast2Sum_cond (a b : ftype t) : Prop :=
+  is_finite (BPLUS a b) = true /\
+  Rabs (FT2R b) <= Rabs (FT2R a).
+
+End Fast2SumCond.
+
+
 Section Fast2MultCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
