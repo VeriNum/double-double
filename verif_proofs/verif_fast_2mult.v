@@ -33,7 +33,7 @@ Definition fast_2mult_spec :=
     PARAMS (st; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword st)
   POST [ tvoid ]
-    PROP(Rabs (FT2R (Fast2Mult_err a b)) <= /2 * ulp (FT2R a * FT2R b))
+    PROP()
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 
@@ -44,5 +44,9 @@ Proof.
 start_function.
 forward. forward. forward_call. forward.
 entailer!.
-apply Fast2Mult_accuracy_from_safety; auto.
 Qed.
+
+Corollary Fast2Mult_acc (a b : ftype Tdouble) :
+  Fast2Mult_cond a b ->
+  (Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R.
+Proof. apply Fast2Mult_accuracy_from_safety. Qed.

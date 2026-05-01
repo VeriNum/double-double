@@ -69,7 +69,9 @@ Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.
 
 (* Collect the function-API specs together into Gprog: list funspec *)
-Definition Gprog : funspecs := MathASI ++ [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_check2_spec].
+Definition Gprog : funspecs := MathASI ++
+  [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_check2_spec;
+    two_sum_check_spec; fast2_sum_check_spec ].
 
 (* isfinite_double(x) returns 1 iff x is finite.
    The C implementation uses the trick (x - x) == 0.0: finite values give 0,
@@ -610,5 +612,163 @@ Proof.
             apply Hr; exact (proj2 Hpy).
           + right; apply Rlt_le, Rlt_bool_to_Rlt, no_underflow_real_from_round_mul.
             apply Rlt_bool_to_Rlt; exact Hpuf. }
+Qed.
+
+(* fast2_sum_check(x,y) returns 1 only if Fast2Sum_cond x y holds:
+   (a+b) is finite (derived by isfinite_double(s)), and |b| ≤ |a| (by fabs comparison).
+   Because the C uses short-circuit &&, fabs is called only when fin=true,
+   so is_finite x and is_finite y can be derived from is_finite (BPLUS x y)
+   via is_finite_Float_add_l / is_finite_Float_add_r. *)
+Lemma body_fast2_sum_check: semax_body Vprog Gprog f_fast2_sum_check fast2_sum_check_spec.
+Proof.
+  start_function.
+  forward. (* s = x + y *)
+  forward_call. (* fin = isfinite_double(s): Scall + Sset _fin handled together *)
+  Intros vret_fin.
+  rename H into Hfin_spec.
+  set (Post_ret :=
+    EX b_r : bool,
+    PROP(b_r = true -> SumResultIsSafeForFast2Sum x y)
+    LOCAL(temp _t'2 (Vint (if b_r then Int.one else Int.zero));
+          temp _a (Vfloat (float_of_ftype x));
+          temp _b (Vfloat (float_of_ftype y)))
+    SEP()).
+  forward_if Post_ret.
+  - (* fin ≠ 0: vret_fin = true, so BPLUS x y is finite *)
+    assert (vret_fin = true) as Hvf.
+    { destruct vret_fin; auto; simpl in H; rep_lia. }
+    assert (is_finite (BPLUS x y) = true) as Hfin_sum.
+    { apply (proj1 Hfin_spec); exact Hvf. }
+    rewrite is_finite_Binary in Hfin_sum.
+    assert (is_finite x = true) as Hx_fin.
+    { rewrite is_finite_Binary.
+      apply is_finite_Float_add_l with (b := float_of_ftype y).
+      exact Hfin_sum. }
+    assert (is_finite y = true) as Hy_fin.
+    { rewrite is_finite_Binary.
+      apply is_finite_Float_add_r with (a := float_of_ftype x).
+      exact Hfin_sum. }
+    forward_call (y). (* t'3 = fabs(b) *)
+    forward_call (x). (* t'4 = fabs(a) *)
+    forward. (* t'2 = (bool)(t'3 <= t'4) *)
+    unfold Post_ret; clear Post_ret.
+    Exists (Float.cmp Cle
+      (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype y))
+      (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype x))).
+    entailer!.
+    split.
+    + intro Hcmp_true.
+      unfold SumResultIsSafeForFast2Sum, DDModels.Fast2Sum_cond.
+      split.
+      { rewrite is_finite_Binary; exact Hfin_sum. }
+      { apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }
+    + change (femax Tdouble) with 1024%Z;
+      change (float_of_ftype y) with y;
+      change (float_of_ftype x) with x;
+      generalize (Float.cmp Cle
+        (Binary.Babs (fprec Tdouble) 1024
+          (abs_nan (fprec Tdouble) 1024 (fprec_gt_one Tdouble)) y)
+        (Binary.Babs (fprec Tdouble) 1024
+          (abs_nan (fprec Tdouble) 1024 (fprec_gt_one Tdouble)) x)).
+      intro b_cmp; destruct b_cmp; reflexivity.
+  - (* fin = 0: t'2 = 0 *)
+    forward. (* t'2 = 0 *)
+    unfold Post_ret; clear Post_ret; Exists false; entailer!.
+  - (* join: return t'2 *)
+    unfold Post_ret; clear Post_ret.
+    Intros b_r.
+    rename H into H_r.
+    forward. (* return t'2 *)
+    Exists b_r; entailer!.
+Qed.
+
+(* two_sum_check(x,y) returns 1 only if TwoSum_cond x y holds:
+   (x+y) finite, (x-y) finite, and |y| < pred(2^1024) = DBL_MAX.
+   Short-circuit && ensures fabs(b) is called only after both fin checks pass,
+   at which point is_finite y follows from is_finite (BPLUS x y). *)
+Lemma body_two_sum_check: semax_body Vprog Gprog f_two_sum_check two_sum_check_spec.
+Proof.
+  start_function.
+  forward_call. (* fin_sum = isfinite_double(x+y) *)
+  Intros vret_sum.
+  rename H into Hfin_sum_spec.
+  forward_call. (* fin_diff = isfinite_double(x-y) *)
+  Intros vret_diff.
+  rename H into Hfin_diff_spec.
+  (* first short-circuit: if fin_sum then t'3 = (bool)fin_diff else t'3 = 0 *)
+  set (Post_if :=
+    EX b_fd : bool,
+    PROP(b_fd = true -> is_finite (BPLUS x y) = true /\
+                        is_finite (BMINUS x y) = true)
+    LOCAL(temp _fin_sum (Vint (if vret_sum then Int.one else Int.zero));
+          temp _fin_diff (Vint (if vret_diff then Int.one else Int.zero));
+          temp _t'3 (Vint (if b_fd then Int.one else Int.zero));
+          temp _a (Vfloat (float_of_ftype x));
+          temp _b (Vfloat (float_of_ftype y)))
+    SEP()).
+  forward_if Post_if.
+  - (* fin_sum ≠ 0: vret_sum = true *)
+    assert (vret_sum = true) as Hvs.
+    { destruct vret_sum; auto; simpl in H; rep_lia. }
+    forward.
+    unfold Post_if; Exists vret_diff; entailer!.
+    split.
+    + intro Hvd.
+      split.
+      { apply (proj1 Hfin_sum_spec); auto. }
+      { apply (proj1 Hfin_diff_spec); auto. }
+    + destruct vret_diff; simpl; auto.
+  - (* fin_sum = 0: t'3 = 0 *)
+    forward.
+    unfold Post_if; Exists false; entailer!.
+  - (* after first short-circuit: check |b| < DBL_MAX *)
+    unfold Post_if; clear Post_if.
+    Intros b_fd.
+    rename H into H_b_fd.
+    set (Post_final :=
+      EX b_fin : bool,
+      PROP(b_fin = true -> SumResultIsSafeForTwoSum x y)
+      LOCAL(temp _t'4 (Vint (if b_fin then Int.one else Int.zero));
+            temp _a (Vfloat (float_of_ftype x));
+            temp _b (Vfloat (float_of_ftype y)))
+      SEP()).
+    forward_if Post_final.
+    + (* t'3 ≠ 0: b_fd = true, so both fin checks pass *)
+      assert (b_fd = true) as Hbfd_eq.
+      { destruct b_fd; auto; simpl in H; rep_lia. }
+      destruct (H_b_fd Hbfd_eq) as [Hfin_plus Hfin_minus].
+      assert (is_finite y = true) as Hy_fin.
+      { rewrite is_finite_Binary.
+        apply is_finite_Float_add_r with (a := float_of_ftype x).
+        rewrite is_finite_Binary in Hfin_plus; exact Hfin_plus. }
+      forward_call (y). (* t'5 = fabs(b) *)
+      forward. (* t'4 = (bool)(t'5 < DBL_MAX) *)
+      unfold Post_final; clear Post_final.
+      Exists (Float.cmp Clt
+        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype y))
+        dbl_max_val).
+      entailer!.
+      split.
+      { intro Hcmp_true.
+        unfold SumResultIsSafeForTwoSum, DDModels.TwoSum_cond.
+        split; [exact Hfin_plus | split; [exact Hfin_minus |]].
+        apply Float_cmp_Clt_dbl_max; [exact Hy_fin | exact Hcmp_true]. }
+      { change (femax Tdouble) with 1024%Z;
+        change (float_of_ftype y) with y;
+        unfold dbl_max_val;
+        generalize (Float.cmp Clt
+          (Binary.Babs (fprec Tdouble) 1024
+            (abs_nan (fprec Tdouble) 1024 (fprec_gt_one Tdouble)) y)
+          (Float.of_bits (Int64.repr 9218868437227405311))).
+        intro b_cmp; destruct b_cmp; reflexivity. }
+    + (* t'3 = 0: t'4 = 0 *)
+      forward. (* t'4 = 0 *)
+      unfold Post_final; clear Post_final; Exists false; entailer!.
+    + (* join: return t'4 *)
+      unfold Post_final; clear Post_final.
+      Intros b_fin.
+      rename H into H_fin.
+      forward. (* return t'4 *)
+      Exists b_fin; entailer!.
 Qed.
 

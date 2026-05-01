@@ -20,7 +20,11 @@ void fast_2mult_guarded(struct dword *st, double a, double b);
 
 void two_sum(struct dword *st, double a, double b);
 
+void two_sum_guarded(struct dword *st, double a, double b);
+
 void fast_2sum(struct dword *st, double a, double b);
+
+void fast_2sum_guarded(struct dword *st, double a, double b);
 
 void dw_plus_fp(struct dword *st, struct dword *x, double a);
 

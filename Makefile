@@ -24,7 +24,7 @@ endif
 ####################################################################
 
 OBJDIR = verif_proofs/verif_objs
-OBJ = two_sum.v fast_2mult.v fast_2mult_guarded.v fast_2sum.v
+OBJ = two_sum.v two_sum_guarded.v fast_2mult.v fast_2mult_guarded.v fast_2sum.v fast_2sum_guarded.v
 OBJ += dw_plus_fp.v dw_plus_dw.v
 OBJ += dw_mult_fp.v dw_mult_dw.v
 OBJ += fp_utils.v

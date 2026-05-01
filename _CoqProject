@@ -23,10 +23,18 @@ accuracy_proofs/DWPlus_acc.v
 accuracy_proofs/DWMul_acc.v
 
 verif_proofs/verif_objs/fp_utils.v
+verif_proofs/verif_objs/two_sum.v
+verif_proofs/verif_objs/two_sum_guarded.v
+verif_proofs/verif_objs/fast_2sum.v
+verif_proofs/verif_objs/fast_2sum_guarded.v
 verif_proofs/verif_objs/fast_2mult.v
 verif_proofs/verif_objs/fast_2mult_guarded.v
 verif_proofs/float_verif_lemmas.v
 verif_proofs/fp_utils_specs.v
 verif_proofs/verif_fp_utils.v
+verif_proofs/verif_two_sum.v
+verif_proofs/verif_fast_2sum.v
 verif_proofs/verif_fast_2mult.v
 verif_proofs/verif_fast_2mult_guarded.v
+verif_proofs/verif_two_sum_guarded.v
+verif_proofs/verif_fast_2sum_guarded.v

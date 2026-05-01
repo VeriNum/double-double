@@ -4,6 +4,10 @@
 
 int isfinite_double(double x);
 
+int fast2_sum_check(double a, double b);
+
+int two_sum_check(double a, double b);
+
 int fast2_mult_check(double x, double y);
 
 int fast2_mult_check2(double x, double y, double z);

@@ -55,7 +55,6 @@ Proof.
 start_function.
 forward_call (a,b).
 Intros vret_fin.
-(* H : vret_fin = true -> MulResultIsSafeForFast2Mult a b *)
 set (Post_if :=
   PROP (Fast2Mult_cond a b)
   LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
@@ -71,14 +70,11 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   unfold MulResultIsSafeForFast2Mult.
   apply H.
-  (* vret_fin = true follows from the else-branch condition:
-     !_t'1 = 0 with _t'1 = Vint (if vret_fin then Int.one else Int.zero)
-     means vret_fin = true *)
   destruct vret_fin; auto.
-  exfalso; simpl in *; rep_lia.
 
 - (* continuation: call fast_2mult with Fast2Mult_cond from Post_if *)
   unfold Post_if.
+  assert_PROP (Fast2Mult_cond a b) as HFC by entailer!.
   forward_call (st, a, b).
-  entailer!.
+  entailer!!.
 Qed.

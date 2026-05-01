@@ -6,7 +6,7 @@ Local Open Scope string_scope.
 Local Open Scope clight_scope.
 
 Module Info.
-  Definition version := "3.15".
+  Definition version := "3.17".
   Definition build_number := "".
   Definition build_tag := "".
   Definition build_branch := "".
@@ -73,14 +73,21 @@ Definition ___compcert_va_composite : ident := $"__compcert_va_composite".
 Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
+Definition _a : ident := $"a".
+Definition _b : ident := $"b".
 Definition _fabs : ident := $"fabs".
 Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fast2_mult_check2 : ident := $"fast2_mult_check2".
+Definition _fast2_sum_check : ident := $"fast2_sum_check".
 Definition _fin : ident := $"fin".
+Definition _fin_diff : ident := $"fin_diff".
+Definition _fin_sum : ident := $"fin_sum".
 Definition _isfinite_double : ident := $"isfinite_double".
 Definition _ldexp : ident := $"ldexp".
 Definition _main : ident := $"main".
+Definition _s : ident := $"s".
 Definition _thresh : ident := $"thresh".
+Definition _two_sum_check : ident := $"two_sum_check".
 Definition _x : ident := $"x".
 Definition _y : ident := $"y".
 Definition _z : ident := $"z".
@@ -185,6 +192,82 @@ Definition f_fast2_mult_check := {|
                     (Sset _t'7 (Ecast (Etempvar _t'7 tint) tbool)))))
               (Sset _t'7 (Econst_int (Int.repr 0) tint)))
             (Sreturn (Some (Etempvar _t'7 tint)))))))))
+|}.
+
+Definition f_fast2_sum_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_a, tdouble) :: (_b, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_s, tdouble) :: (_fin, tint) :: (_t'4, tdouble) ::
+               (_t'3, tdouble) :: (_t'2, tint) :: (_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Sset _s (Ebinop Oadd (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'1)
+        (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+        ((Etempvar _s tdouble) :: nil))
+      (Sset _fin (Etempvar _t'1 tint)))
+    (Ssequence
+      (Sifthenelse (Etempvar _fin tint)
+        (Ssequence
+          (Ssequence
+            (Scall (Some _t'3)
+              (Evar _fabs (Tfunction (tdouble :: nil) tdouble cc_default))
+              ((Etempvar _b tdouble) :: nil))
+            (Scall (Some _t'4)
+              (Evar _fabs (Tfunction (tdouble :: nil) tdouble cc_default))
+              ((Etempvar _a tdouble) :: nil)))
+          (Sset _t'2
+            (Ecast
+              (Ebinop Ole (Etempvar _t'3 tdouble) (Etempvar _t'4 tdouble)
+                tint) tbool)))
+        (Sset _t'2 (Econst_int (Int.repr 0) tint)))
+      (Sreturn (Some (Etempvar _t'2 tint))))))
+|}.
+
+Definition f_two_sum_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_a, tdouble) :: (_b, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_fin_sum, tint) :: (_fin_diff, tint) :: (_t'5, tdouble) ::
+               (_t'4, tint) :: (_t'3, tint) :: (_t'2, tint) ::
+               (_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+      ((Ebinop Oadd (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble) ::
+       nil))
+    (Sset _fin_sum (Etempvar _t'1 tint)))
+  (Ssequence
+    (Ssequence
+      (Scall (Some _t'2)
+        (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+        ((Ebinop Osub (Etempvar _a tdouble) (Etempvar _b tdouble) tdouble) ::
+         nil))
+      (Sset _fin_diff (Etempvar _t'2 tint)))
+    (Ssequence
+      (Ssequence
+        (Sifthenelse (Etempvar _fin_sum tint)
+          (Sset _t'3 (Ecast (Etempvar _fin_diff tint) tbool))
+          (Sset _t'3 (Econst_int (Int.repr 0) tint)))
+        (Sifthenelse (Etempvar _t'3 tint)
+          (Ssequence
+            (Scall (Some _t'5)
+              (Evar _fabs (Tfunction (tdouble :: nil) tdouble cc_default))
+              ((Etempvar _b tdouble) :: nil))
+            (Sset _t'4
+              (Ecast
+                (Ebinop Olt (Etempvar _t'5 tdouble)
+                  (Econst_float (Float.of_bits (Int64.repr 9218868437227405311)) tdouble)
+                  tint) tbool)))
+          (Sset _t'4 (Econst_int (Int.repr 0) tint))))
+      (Sreturn (Some (Etempvar _t'4 tint))))))
 |}.
 
 Definition f_fast2_mult_check2 := {|
@@ -525,11 +608,14 @@ Definition global_definitions : list (ident * globdef fundef type) :=
      (tdouble :: nil) tdouble cc_default)) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
  (_fast2_mult_check, Gfun(Internal f_fast2_mult_check)) ::
+ (_fast2_sum_check, Gfun(Internal f_fast2_sum_check)) ::
+ (_two_sum_check, Gfun(Internal f_two_sum_check)) ::
  (_fast2_mult_check2, Gfun(Internal f_fast2_mult_check2)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast2_mult_check2 :: _fast2_mult_check :: _isfinite_double :: _fabs ::
- _ldexp :: ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+(_fast2_mult_check2 :: _two_sum_check :: _fast2_sum_check ::
+ _fast2_mult_check :: _isfinite_double :: _fabs :: _ldexp ::
+ ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
  ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
  ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::

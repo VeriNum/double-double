@@ -44,6 +44,38 @@ Definition fast2_mult_check_spec :=
     SEP().
 
 
+Definition SumResultIsSafeForTwoSum (a b : ftype Tdouble) : Prop :=
+  TwoSum_cond a b.
+
+Definition two_sum_check_spec :=
+  DECLARE _two_sum_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP()
+    PARAMS ( Vfloat x; Vfloat y )
+    SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> SumResultIsSafeForTwoSum x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+Definition SumResultIsSafeForFast2Sum (a b : ftype Tdouble) : Prop :=
+  Fast2Sum_cond a b.
+
+Definition fast2_sum_check_spec :=
+  DECLARE _fast2_sum_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP()
+    PARAMS ( Vfloat x; Vfloat y )
+    SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> SumResultIsSafeForFast2Sum x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
 Definition MulResultIsSafeForFast2Mult2 (a b c : ftype Tdouble) : Prop :=
   Fast2Mult_cond2 a b c.
 
