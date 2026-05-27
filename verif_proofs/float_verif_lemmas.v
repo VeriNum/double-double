@@ -11,7 +11,7 @@ From Flocq Require Import Pff2Flocq Core.
 From Stdlib Require Import Reals.Reals.
 From Stdlib Require Import micromega.Lra.
 
-Require Import float_acc_lems real_extras.
+Require Import float_acc_lems real_extras common.
 From Stdlib Require Import Logic.Decidable.
 
 Lemma Float_cmp_Ceq_zero_finite:
@@ -200,6 +200,117 @@ Proof.
     simpl in H; try discriminate.
   - apply Req_le; apply Rcompare_Eq_inv; exact Hcmp.
   - apply Rlt_le; apply Rcompare_Lt_inv; exact Hcmp.
+Qed.
+
+(* q_omega_val: IEEE-754 double for 2^1022 = Omega/4 in Tdouble.
+   Mirrors ldexp_val's construction: scale 1.0 (bit pattern 0x3FF0000000000000)
+   by 2^1022 via Bldexp. Used by Float_cmp_Cle_bpow1022 to lift the C runtime
+   check `fabs(a) <= ldexp(1.0, 1022)` into the abstract bound
+   Rabs (FT2R a) <= /4 * Omega. *)
+Definition q_omega_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) 1022.
+
+Lemma q_omega_val_finite : is_finite (ftype_of_float q_omega_val) = true.
+Proof.
+  cbv [q_omega_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_omega_val_FT2R :
+  FT2R (ftype_of_float q_omega_val) = bpow Zaux.radix2 1022.
+Proof.
+  cbv [q_omega_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+(* Float.cmp Cle (fabs b) q_omega_val = true → Rabs (FT2R b) <= /4 * Omega *)
+Lemma Float_cmp_Cle_bpow1022 :
+  forall (b : ftype Tdouble),
+  is_finite b = true ->
+  Float.cmp Cle
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b))
+    q_omega_val = true ->
+  Rabs (FT2R b) <= /4 * bpow Zaux.radix2 (femax Tdouble).
+Proof.
+  intros b Hb H.
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hb. }
+  assert (Hfq : Binary.is_finite (fprec Tdouble) (femax Tdouble) q_omega_val = true).
+  { generalize q_omega_val_finite. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfb | exact Hfq].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  assert (Heq : FT2R (ftype_of_float q_omega_val) = Binary.B2R 53 1024 q_omega_val).
+  { rewrite FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  pose proof q_omega_val_FT2R as Hft2r.
+  assert (Hqval : Binary.B2R 53 1024 q_omega_val = bpow Zaux.radix2 1022) by lra.
+  assert (Hqomega : bpow Zaux.radix2 1022 = /4 * bpow Zaux.radix2 (femax Tdouble)).
+  { change (femax Tdouble) with 1024%Z.
+    replace 1024%Z with (2 + 1022)%Z by lia.
+    rewrite bpow_plus. simpl. lra. }
+  destruct (Rcompare (Rabs (FT2R b)) (Binary.B2R 53 1024 q_omega_val)) eqn:Hcmp;
+    simpl in H; try discriminate.
+  - apply Req_le.
+    apply Rcompare_Eq_inv in Hcmp. lra.
+  - apply Rlt_le.
+    apply Rcompare_Lt_inv in Hcmp. lra.
+Qed.
+
+(* Float.cmp Ceq (Float.add a b) a = true → FT2R a = round(FT2R a + FT2R b),
+   i.e., (a, b) satisfies the double-word relation in IEEE-754 RN.
+   The C-level test `(a + b) == a` lifts to double_word_prop. *)
+Lemma Float_add_eq_dw : forall (a b : ftype Tdouble),
+  is_finite a = true ->
+  is_finite b = true ->
+  Float.cmp Ceq (Float.add (float_of_ftype a) (float_of_ftype b))
+                (float_of_ftype a) = true ->
+  FT2R a = rounded Tdouble (FT2R a + FT2R b).
+Proof.
+  intros a b Ha Hb Hcmp.
+  set (sum := Float.add (float_of_ftype a) (float_of_ftype b)) in *.
+  rewrite is_finite_Binary in Ha, Hb.
+  (* Derive finiteness of sum from Hcmp: Ceq with finite a forces sum to be
+     finite (otherwise Bcompare returns Gt/Lt for Inf, or None for NaN). *)
+  assert (Hfin_sum : Binary.is_finite 53 1024 sum = true).
+  { destruct sum; auto; cbv [Float.cmp cmp_of_comparison Float.compare] in Hcmp;
+    destruct (float_of_ftype a); simpl in Hcmp; try discriminate;
+    destruct s; simpl in Hcmp; try discriminate;
+    destruct s0; simpl in Hcmp; discriminate. }
+  (* Now Bcompare yields B2R sum = B2R a. *)
+  cbv [Float.cmp cmp_of_comparison Float.compare] in Hcmp.
+  rewrite Binary.Bcompare_correct in Hcmp; [| exact Hfin_sum | exact Ha].
+  destruct (Rcompare (Binary.B2R 53 1024 sum)
+                     (Binary.B2R 53 1024 (float_of_ftype a))) eqn:Hcmpeq;
+    simpl in Hcmp; try discriminate.
+  apply Rcompare_Eq_inv in Hcmpeq.
+  (* Hcmpeq : Binary.B2R 53 1024 sum = Binary.B2R 53 1024 (float_of_ftype a) *)
+  (* For Tdouble standard: Binary.B2R 53 1024 = FT2R definitionally. *)
+  change (Binary.B2R 53 1024 (float_of_ftype a)) with (FT2R a) in Hcmpeq.
+  (* sum = Float.add (float_of_ftype a) (float_of_ftype b) = BPLUS a b *)
+  unfold sum in Hcmpeq.
+  rewrite Float_add_rewrite in Hcmpeq.
+  change (Binary.B2R 53 1024
+            (@BPLUS _ Tdouble _ (float_of_ftype a) (float_of_ftype b)))
+    with (FT2R (BPLUS a b)) in Hcmpeq.
+  (* Hcmpeq : FT2R (BPLUS a b) = FT2R a *)
+  assert (Hfin_BPLUS : is_finite (BPLUS a b) = true).
+  { rewrite is_finite_Binary. change (BPLUS a b) with sum. exact Hfin_sum. }
+  pose proof (BPLUS_round_correct Tdouble a b Hfin_BPLUS) as Hbplus.
+  simpl in Hbplus.
+  (* Hbplus : round (FT2R a + FT2R b) = FT2R (BPLUS a b) *)
+  unfold rounded.
+  transitivity (FT2R (BPLUS a b)); [exact (eq_sym Hcmpeq)|].
+  symmetry. etransitivity; [|exact Hbplus]. reflexivity.
 Qed.
 
 (* Float.cmp Clt (fabs b) DBL_MAX = true → Rabs (FT2R b) < pred radix2 fexp Omega *)

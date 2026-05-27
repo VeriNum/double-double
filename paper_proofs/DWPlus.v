@@ -3193,6 +3193,1387 @@ apply s0. rewrite hx hy. rewrite Hr.
 rewrite (rnd_p_sym _ _ choiceP). nra.
 Qed.
 
+(* Extension of DWPlusDW_relerr_bound_pre that additionally exposes the
+   cexp inequality at the (sh, c) Fast2Sum callsite as a third conjunct.
+
+   The first two conjuncts are inherited directly from
+   DWPlusDW_relerr_bound_pre. The third conjunct (cexp c <= cexp sh) is
+   established locally inside DWPlusDW_relerr_bound_pre's proof body via
+   the σ-case-split (line 2024 σ=1 cexp branch, line 2753 σ=2 |c|<=|sh|
+   branch), but isn't exposed there. *)
+Theorem DWPlusDW_relerr_bound_pre' :
+  (double_word zh zl) /\
+  relative_errorDWDW <= (3 * u^2) / (1 - 4 * u) /\
+  ((cexp c <= cexp sh)%Z \/ c = 0%R) /\
+  (Rabs w <= Rabs vh \/ vh = 0%R \/ w = 0%R).
+Proof.
+have rn_sym:= (rnd_p_sym _ _ choiceP).
+have upos : 0 < u by apply:bpow_gt_0.
+have ulpxh: ulp xh = 2 * u.
+  have->: 2 = pow 1 by [].
+  rewrite ulp_neq_0 // /cexp /fexp  bpow_plus /u (mag_unique_pos _ _ 1) //= IZR_Zpower_pos /=; lra.
+have xlu: Rabs xl <= u.
+  move:(dw_ulp xDW);rewrite  -/ulp ulpxh; lra.
+have ylu: Rabs yl <= u. 
+  apply:(Rle_trans _ (/ 2 * (ulp yh))); first by apply:(dw_ulp yDW).
+  apply:(Rle_trans _ (/ 2 * (ulp xh))); try lra.
+  by apply:Rmult_le_compat_l; try lra; apply:ulp_le.
+have shn0: rnd_p (xh + yh) <> 0.
+  by move=> sh0; apply s0; apply: (FLX_round_N_eq0  sh0).
+case:(xDW)=>[[Fxh Fxl] hx].  
+case:(yDW)=>[[Fyh Fyl] hy].
+(* xh is a multiple of 2u *)
+  move:(Fxh); rewrite /generic_format.
+set fx:= {| Fnum := Ztrunc (mant xh); Fexp := cexp xh |}.
+rewrite /fx /F2R /cexp (mag_unique_pos _ _ 1); last first.
+  have ->: (1 -1)%Z = 0%Z by ring.
+  by move: xh2; rewrite /u; move: (bpow_gt_0 two (-p)); rewrite /= IZR_Zpower_pos /=; lra.
+  move => xhe.
+  have {} xhe: xh = IZR ( Ztrunc (mant xh)) * pow (1 -p) by [].
+  have {} xhe : xh = IZR ( Ztrunc (mant xh)) * (2 * u) .
+    by rewrite {1}xhe  bpow_plus /= -/u -Rmult_assoc.
+  move:xhy; 
+    rewrite (Rabs_pos_eq xh ); last lra.
+  move=> xhy'.
+  
+case/Rabs_le_inv: (xhy')=> xhyh yhxh.
+(* set sh := (rnd_p (xh + yh)); set sl := (TwoSum_err xh yh). *)
+(* pose th :=  (rnd_p( xl + yl)). *)
+(* pose tl :=  (TwoSum_err xl yl). *)
+have thu: Rabs th <= 2 * u.
+  rewrite   TwoSum_sumE ZNE -round_NE_abs -ZNE.
+  have -> : 2 * u = rnd_p (pow 1 * u).
+    rewrite round_generic // /u -bpow_plus; apply: generic_format_bpow.
+    rewrite /fexp; move : Hp; lia.
+  apply: round_le; apply:(Rle_trans _ (Rabs xl + Rabs yl)) => /=; first by apply:Rabs_triang.
+  rewrite IZR_Zpower_pos /=; lra.
+have tlu2: Rabs tl <= u * u.
+  rewrite  TwoSum_correct  //=  -Rabs_Ropp Ropp_minus_distr.
+  apply:(Rle_trans _ (/ 2 * pow (- p) * pow (1 -p))).
+    apply: error_le_half_ulp'; first exact Hp.
+     apply:(Rle_trans _ (Rabs xl + Rabs yl)); first by apply:Rabs_triang.
+     rewrite bpow_plus /= -/u IZR_Zpower_pos /=; lra.
+  rewrite bpow_plus /= /u IZR_Zpower_pos /=; lra.
+case: (Rle_lt_dec yh (-xh/2) )=> hyx.
+  have she:  sh = xh + yh.
+    rewrite  TwoSum_sumE  round_generic //.
+    have ->:  (xh + yh ) = (xh - (- yh)) by ring.
+    apply: sterbenz'; (try apply:generic_format_opp) =>//.
+    by split; lra.
+  have sl0: sl = 0 by  rewrite TwoSum_correct //  she; ring.  (* rewrite sl0 Rplus_0_l (round_round Hp). *)
+  (* set  c := (rnd_p (sl + th)). *)
+  have ce: c = th 
+    by rewrite  sl0 Rplus_0_l round_generic /th // ; apply:  generic_format_round.
+(* need boolean comparison here ... *)
+  pose sigma := if  Rle_dec yh (-1) is left _ then 2%Z else 1%Z.
+  have sigmae: sigma = 1%Z \/ sigma = 2%Z.
+    by rewrite /sigma; case:(Rle_dec yh (-1)); [right|left].
+  have sigma2: yh <= -1 -> IZR sigma = 2.
+      by move=> hy1 ; rewrite /sigma; case:(Rle_dec yh (-1)).        
+  have sigma1: ~ yh <= -1 -> IZR sigma = 1.
+      by move=> hy1 ; rewrite /sigma; case:(Rle_dec yh (-1)).      
+  have lnb_yh: (pow (mag radix2 yh)) = IZR sigma.
+    case:(Rle_dec yh (-1))=> hy1; [rewrite sigma2 //|rewrite sigma1 //].
+    rewrite(mag_unique two yh 1) //= ; first last.
+      by rewrite  Rabs_left1 /= ?IZR_Zpower_pos /=; try lra; split;lra. 
+    rewrite(mag_unique two yh 0) //=.
+    by rewrite  Rabs_left1 /= ?IZR_Zpower_pos /=; try lra; split;lra.
+  have ylusig: Rabs yl <= IZR sigma /2 * u.
+    move:(dw_ulp yDW).
+    rewrite /u u_ulp1 !ulp_neq_0; try lra; rewrite /cexp /fexp.
+    rewrite !bpow_plus /= lnb_yh.
+    by rewrite /sigma (mag_unique_pos two 1 1)/= IZR_Zpower_pos /=;lra.
+  have h6_1 : -xh < yh <= (1 - IZR sigma) + xh/2 * (IZR sigma -2).
+    by case:(Rle_dec yh (-1))=> hy1; [rewrite sigma2 //|rewrite sigma1 //]; lra.
+  have spos: 0 < xh+yh  by lra.
+  have h6_2: xh+yh  <= 1 + IZR sigma * (xh/2 -1)<= 1 - IZR sigma * u.
+    by case:(Rle_dec yh (-1))=> hy1; [rewrite sigma2 //|rewrite sigma1 //]; lra.
+  have xh_mul_su: exists z, xh = IZR z * (IZR sigma * u).
+    case:sigmae=> ->.
+      exists ((Fnum fx) * 2)%Z.
+      rewrite xhe mult_IZR /= /mant; ring.
+    by exists (Fnum fx); rewrite xhe /= /mant; ring.      
+(* yh is a multiple of sigma*u *)  
+  have yh_mul_su: exists z, yh = IZR z * (IZR sigma * u).
+    move:(Fyh); rewrite /generic_format.
+    set fy:= {| Fnum := Ztrunc (mant yh); Fexp := cexp yh |}.
+    rewrite /F2R  => yhe.
+    have fye: Fexp fy = (mag two yh  - p)%Z by rewrite /fy /= /cexp /fexp.
+    exists (Fnum fy).
+    rewrite yhe fye bpow_plus -/u.
+    suff -> : (pow (mag radix2 yh)) = IZR sigma by ring.
+    case:(Rle_dec yh (-1))=> hy1; [rewrite sigma2 //|rewrite sigma1 //].
+      rewrite(mag_unique two yh 1) //= ; first last.
+      by rewrite  Rabs_left1 /= ?IZR_Zpower_pos /=; try lra; split;lra.
+    rewrite(mag_unique two yh 0) //=; first last.
+    by rewrite  Rabs_left1 /= ?IZR_Zpower_pos /= ; try lra; split;lra.
+  have h6: IZR sigma * u <= sh <= 1 - IZR sigma * u. (* 6 *)
+    split;try  lra.
+    move:spos; rewrite she.
+    case: xh_mul_su => xz ->; case: yh_mul_su => yz ->.
+    have -> : IZR xz * (IZR sigma * u) + IZR yz * (IZR sigma * u) = (IZR xz +  IZR yz) * (IZR sigma * u) by ring.
+    have supos:0 < (IZR sigma * u) by case:  sigmae => -> /=  ; lra.
+    move=> hpos.
+    suff h1: 1 <= (IZR xz + IZR yz).
+      rewrite -{1} (Rmult_1_l (IZR sigma * u)).
+      by apply: Rmult_le_compat_r; lra.
+    have hinv: 0< /(IZR sigma * u) by apply: Rinv_0_lt_compat.
+    move:(Rmult_lt_0_compat _ (/(IZR sigma * u)) hpos hinv).
+    rewrite Rmult_assoc Rinv_r;try lra.
+    rewrite Rmult_1_r -plus_IZR.
+    (* have ->: 0 = IZR 0 by [].*)
+    change 1 with (IZR 1).
+    by move/lt_IZR => ?; apply: IZR_le; lia.
+  have sle: Rabs (xl + yl) <= (1 + IZR sigma / 2) * u.
+    apply:(Rle_trans _  (Rabs xl + Rabs yl)).
+      by apply: Rabs_triang.
+    rewrite /=; lra.
+  have thle:Rabs th <= (1 + IZR sigma/2) * u.
+    apply:abs_round_le_generic =>//.
+    have ->: (1 + IZR sigma / 2) * u = (2 + IZR sigma ) * pow (-1 -p).
+      by rewrite /u bpow_plus /= IZR_Zpower_pos /= ; lra.
+    apply:formatS.
+    case: sigmae=> ->; [apply: (generic_format_F2R' _ _ _ (Float _  (2 + 1)  (0))) |
+      apply: (generic_format_F2R' _ _ _ (Float _  (2 + 2)  (0)))]; rewrite /F2R /=; try lra;
+      move=> _; rewrite /= /cexp /fexp.
+      rewrite (mag_unique_pos two (2 + 1) 2); first by lia.
+      rewrite /= ?IZR_Zpower_pos /=;  lra.
+    rewrite (mag_unique_pos two (2 + 2) 3); first by lia.
+    by rewrite /= ?IZR_Zpower_pos /=; lra.
+  have Fsh: format sh by apply : generic_format_round.
+  case: (Req_dec (rnd_p (xl + yl))  0)=>[th0|th0].
+    have xlyl0: xl + yl = 0 by move/ FLX_round_N_eq0: th0.
+    have tl0: tl = 0 .
+    by rewrite TwoSum_correct // TwoSum_sumE th0 xlyl0 ; ring.
+    rewrite /relative_errorDWDW.
+    suff zE: (zh + zl - (x + y)) = 0. 
+    rewrite zE Rabs_mult Rabs0 // Rmult_0_l; split;
+    [| split; [ exact:  boundDWDW_ge_0 | split]].
+    split; [split; apply:generic_format_round|].
+      have-> : zh+zl = x + y by lra.
+ rewrite sl0 !(Rplus_0_l, Rminus_0_r, th0, round_round) // Fast2Sumf0 //= Rplus_0_r tl0 round_0 Rplus_0_r (round_generic _ _ _ sh) //.
+suff->: x + y = xh + yh by [].
+lra.
+(* c = 0 sub-case: th = 0, so c = rnd_p (sl + th) = rnd_p 0 = 0.
+   Choose the right disjunct. *)
+{ right.
+  rewrite sl0 Rplus_0_l TwoSum_sumE.
+  rewrite (round_round Hp).
+  exact th0. }
+(* w = 0 sub-case: c = rnd_p(sl + th) = 0 (sl = 0, th = 0), so vl = F2Sum_err sh 0 = 0,
+   and tl = 0, hence w = rnd_p(0 + 0) = 0. *)
+right; right.
+have c_eq : rnd_p (sl + th) = 0
+  by rewrite sl0 Rplus_0_l TwoSum_sumE round_round // -TwoSum_sumE; exact th0.
+have vl_eq : F2Sum_err sh (rnd_p (sl + th)) = 0
+  by rewrite c_eq Fast2Sumf0 //= ; apply: generic_format_round.
+rewrite vl_eq Rplus_0_r tl0 round_0 //.
+
+
+
+
+
+
+     rewrite sl0 !(Rplus_0_l, Rminus_0_r, th0, round_round) // Fast2Sumf0 //= Rplus_0_r tl0 round_0 Rplus_0_r (round_generic _ _ _ sh) //
+
+             ( Rminus_diag_eq sh)// round_0 Rminus_0_r round_0 she;lra.
+
+
+  have {} th0 : th <> 0 by rewrite /th  //.
+  case:h6 => h61 h62.
+  have hcexp :(cexp th <= cexp sh)%Z.
+    have: Rabs th < bpow two  (-p + sigma ).
+      rewrite bpow_plus -/u /=.
+      apply:(Rle_lt_trans _ ((1 + IZR sigma / 2) * u))=>//.
+      by case:sigmae=> ->; rewrite  /= IZR_Zpower_pos /=; lra.
+    move/mag_le_bpow.
+    move/(_ th0)=> h1.
+    move: h61.
+    have -> : IZR sigma = pow (sigma - 1)%Z.
+      by  case:sigmae=> ->.
+    rewrite -(Rabs_pos_eq sh) /u; try lra.
+    rewrite -bpow_plus.
+    have -> : (sigma - 1 + - p)%Z = (-p + sigma -1)%Z by ring.
+    move/mag_ge_bpow=> h2.
+    by rewrite /cexp /fexp Rabs_pos_eq; try lra; try lia.
+  have h1: vh + vl = sh + c.
+    rewrite  F2Sum_correct_cexp //=; try apply: generic_format_round.
+      ring.
+    by rewrite ce.
+  have h2: vh + vl = x + y -tl.
+    rewrite h1 she ce  TwoSum_correct  // ; ring.
+  have: Rabs (sh + th) <= 1 + u/2.
+    apply: (Rle_trans _ (Rabs sh + Rabs th)).
+      exact: Rabs_triang.
+    by rewrite Rabs_pos_eq ; lra.
+  move=> hst.
+  have vh1: Rabs vh <= 1.
+    rewrite /vh ZNE -round_NE_abs -ZNE ce.
+    rewrite -[X in _ <= X] r1pu2.
+    by apply:round_le.
+  have hvl: Rabs vl <= u/2.
+    case: (Rle_lt_dec (Rabs (sh + th)) 1).
+      have ->: 1 = pow 0 by [].
+      move/(error_le_half_ulp' Hp choice).
+      have ->: (rnd_p (sh + th) - (sh + th)) = - vl.
+      move: h1 ; rewrite /= ce; lra.
+      
+      by rewrite Rabs_Ropp /u /=; lra.
+    move/Rlt_le=> h3.
+    have: rnd_p 1 <= rnd_p (Rabs (sh + th)).
+      by apply:round_le.
+    rewrite ZNE round_NE_abs  -ZNE.
+    have <-: 1 = rnd_p 1.
+      rewrite round_generic //.
+      change 1 with (pow 0%Z).
+      apply:generic_format_bpow.
+      by rewrite Zplus_0_l /fexp; move:Hp; lia.
+    have-> :  (rnd_p (sh + th))= vh by rewrite /vh  ce.
+    move=> h4.
+    have : Rabs vh = 1 by lra.
+    move=> hvh1.
+    case/Rabs_le_inv: hst.
+    case/Rabs_ge_inv: h3.
+      move=> g1 g2 _.
+      move:hvh1.
+      rewrite -{1}(Rabs_pos_eq 1); try lra.
+      case/ Rabs_eq_Rabs.
+        suff: vh <= 0 by lra.
+        rewrite /vh  ce.
+        have ->: 0 = rnd_p 0 by rewrite round_0.
+        by apply:round_le; lra.
+      move=> v1.
+      have ->: vl = sh + th -vh.
+      rewrite -{2}ce; lra.
+      rewrite v1.
+      by apply: Rabs_le; lra.
+    move=> g1 _ g2.
+    move:hvh1.
+    rewrite -{1}(Rabs_pos_eq 1); try lra.
+    case/ Rabs_eq_Rabs; last first.
+      suff: 0<= vh  by lra.
+      rewrite   ce.
+      have ->: 0 = rnd_p 0 by rewrite round_0.
+      by apply:round_le; lra.
+    move=> v1.
+    have ->: vl = sh + th -vh by rewrite -{2}ce ; lra.
+    rewrite v1.
+    by apply: Rabs_le;lra.
+  have h8_1:  Rabs e2 <= /2 * (ulp (tl + vl)).
+    rewrite -Rabs_Ropp.
+    have->: - (tl + vl - rnd_p (tl + vl))= ( rnd_p (tl + vl) - (tl + vl)) by ring.
+    by apply: error_le_half_ulp.
+  have h8 : Rabs e2 <= (u^2)/2.
+    apply:(Rle_trans _ (/2 * ( ulp (tl + vl)))) =>//.
+    suff: ulp (tl + vl) <= u ^ 2 by lra.
+    rewrite -ulp_abs -/ulp.
+    apply:(Rle_trans _ (ulp (Rabs tl + Rabs vl))).
+      by apply:ulp_le_pos; try apply:Rabs_pos; apply: Rabs_triang.
+    apply:(Rle_trans _ (ulp  (u^2 + u/2))).
+      apply:ulp_le_pos; try apply:Rabs_pos; try lra.
+      by move:(Rabs_pos tl) (Rabs_pos vl); lra.
+    suff : ulp  (u ^ 2 + u / 2) <= u ^ 2 by lra.
+    rewrite  ulp_neq_0.
+      rewrite /cexp /fexp.
+      set ln:= ((mag radix2 (u ^ 2 + u / 2)))%Z.
+      rewrite /u bpow_plus /=.
+      suff->:  pow ln = pow (- p) by lra.
+      move:(mag_unique_pos two (u^2 + u/2) (-p)).
+      rewrite /ln => -> //.
+      split.
+        suff:  pow (- p - 1) =  u / 2 by move:(pow2_ge_0 u); lra.
+        by rewrite bpow_plus /u .
+      rewrite /u /Rdiv.
+      have->: /2 = pow (-1) by [].
+      have->:  pow (- p) ^ 2 + pow (- p) * pow (-1) =  pow (- p) * (pow (- p) + (pow (-1))) 
+        by ring.
+      have: (pow (- p) + pow (-1)) < 1.
+        apply:(Rmult_lt_reg_l  (pow (p))).
+          by apply:bpow_gt_0.
+        rewrite Rmult_plus_distr_l -!bpow_plus.
+        apply:(Rlt_le_trans _ (pow (p -1) + pow (p -1))).
+          rewrite  /Zminus /=.
+          apply:Rplus_lt_compat_r.
+          apply:bpow_lt.
+          by move:Hp; lia.
+        rewrite -double.
+        have ->: 2 = pow 1 by [].
+        rewrite -bpow_plus.
+        ring_simplify.
+        have->: (1 + (p -1))%Z = p by ring.
+        by lra.
+      by move/(Rmult_lt_compat_l (pow (-p))_ _  (bpow_gt_0 two (-p))); lra.
+    rewrite /Rdiv /u /=.
+    have->: /2 = pow (-1) by [].
+    rewrite Rmult_1_r -!bpow_plus.
+    by move: (bpow_gt_0 two (- p + - p) ) (bpow_gt_0 two (- p + -1)); lra.
+(* 0 <= x + y *)
+  have xypos: 0 <= x + y.
+    case:(Rle_lt_dec 0 (x + y))=>// hxy.
+    have {} hxy: x <= -y by lra.
+    have: rnd_p (xh + xl) <= rnd_p(- (yh + yl)) by apply: round_le.
+    by rewrite -hx ZNE round_NE_opp -ZNE -hy; lra.
+  have:  Rabs e2 <= /2 * ulp ( /2 *ulp (xl + yl) + /2* ulp ((x + y) + /2* ulp (xl + yl))).
+    apply:(Rle_trans _  (/ 2 * ulp (tl + vl)))=>//.
+    apply: Rmult_le_compat_l; try lra.
+    apply: ulp_le.
+    rewrite [X in _ <= X]Rabs_pos_eq; last first.
+      rewrite -(Rplus_0_l 0); apply: Rplus_le_compat;
+        by rewrite -(Rmult_0_r (/2)); apply: Rmult_le_compat; try lra; apply: ulp_ge_0.
+    apply:(Rle_trans _ ((Rabs tl)+ Rabs vl)); try apply: Rabs_triang.
+    apply:Rplus_le_compat.
+      by rewrite /tl; apply: TwoSum_err_bound.
+      have Fth: format th by apply : generic_format_round.
+      have: Rabs (F2Sum_err sh th )  <= /2 * (ulp  (sh  + th)).
+      rewrite F2Sum_correct_cexp /Fast2Sum //=.
+      rewrite -Ropp_minus_distr Rabs_Ropp;  apply: error_le_half_ulp.
+    have shth: sh + th = x + y + -tl.
+      by rewrite she  TwoSum_correct  //; ring.
+    rewrite -{1}ce shth.
+    move/(Rle_trans _ _ (/ 2 * ulp (x + y + / 2 * ulp (xl + yl)))).
+    apply.
+    apply:Rmult_le_compat_l; try lra.
+    apply:ulp_le.
+    apply:(Rle_trans _ ((Rabs (x + y))+ (Rabs (-tl)))) ; first by apply:Rabs_triang.
+    rewrite [X in _ <= X] Rabs_pos_eq.
+      apply:Rplus_le_compat.
+        by rewrite Rabs_pos_eq //; lra.
+      by rewrite Rabs_Ropp /tl; apply: TwoSum_err_bound.
+    rewrite -(Rplus_0_l 0); apply:Rplus_le_compat=>//.
+    move:(ulp_ge_0 two fexp (xl + yl)).
+    by rewrite /ulp; lra.
+  move => h9.
+  have husigma: ulp (IZR sigma * u) = 2 * IZR sigma * u^2.
+    rewrite  ulp_neq_0.
+      rewrite /cexp /fexp bpow_plus -/u.
+      rewrite /= Rmult_1_r -Rmult_assoc.
+      apply: Rmult_eq_compat_r.
+      case:sigmae => -> /=.
+        rewrite Rmult_1_l  (mag_unique_pos two u (-p +1)%Z).
+          by rewrite /u bpow_plus /= ?IZR_Zpower_pos /= ; lra.
+        rewrite /u; split.
+          by apply: bpow_le; lia.
+        by apply: bpow_lt; lia.
+      rewrite (mag_unique_pos two (2 * u) (-p +2)%Z).
+        by rewrite /u bpow_plus /= IZR_Zpower_pos /= ; lra.
+      rewrite /u !bpow_plus /=; split.
+        rewrite ?IZR_Zpower_pos /=; lra.
+      by rewrite -/u IZR_Zpower_pos /=; lra.
+    by case:sigmae => -> /=; lra.
+  case: (Req_dec (sh + th) 0)=> shth0.
+    have vh0: vh = 0 by rewrite   ce /=  shth0 round_0.
+    rewrite /relative_errorDWDW vh0 Fast2Sum0f //= ce   shth0;
+      last apply:generic_format_round.
+    rewrite  !(Rminus_0_r, Rplus_0_l, round_round, round_0) -/th // Rabs0.
+      split; [| split; [by apply: boundDWDW_ge_0 | split]].
+      have Ftl: format tl by apply:generic_format_round.
+      rewrite Rminus_0_l ZNE round_NE_opp -ZNE (round_generic _ _ _ (sh)) //.
+      have-> : th - - sh = 0 by lra.
+      rewrite round_0 Rplus_0_r round_generic //.
+      split;[split|] => //; try apply:generic_format_0.
+      by rewrite Rplus_0_r round_generic.
+    (* shth0 sub-case disjunction: c = th = -sh, so cexp c = cexp sh *)
+    { left.
+      have th_neg : th = -sh by lra.
+      rewrite th_neg /cexp mag_opp.
+      apply Z.le_refl. }
+    (* w_le_vh disjunct: vh = 0 (middle disjunct). *)
+    by right; left.
+    rewrite Rminus_0_l Rplus_0_r (round_generic _ _ _ (-sh)).
+    have->: th - - sh = 0 by lra.
+    rewrite round_0 Rplus_0_r round_generic; try apply:generic_format_round.
+      rewrite TwoSum_correct //.
+      suff->: (xl + yl - th - (xh + xl + (yh + yl))) = 0.
+      by rewrite /Rdiv Rmult_0_l.
+    have->: (xl + yl - th) = tl by rewrite  TwoSum_correct.
+      rewrite  TwoSum_correct //.
+      ring_simplify.
+        by move:shth0; rewrite she /th; lra.
+    by apply/generic_format_opp/generic_format_round.        
+  have: Rabs vh >= (IZR sigma)* u ^2.
+    have <-: /2* ulp (IZR sigma * u)=  IZR sigma * u^2  by lra.
+    rewrite   ce.
+    apply:(Rge_trans _  (Rmax ((ulp  sh)/2)   ((ulp th)/ 2))).
+      apply/Rle_ge/roundN_plus_ulp=>//.
+      by rewrite /th; apply:generic_format_round.
+    apply:(Rge_trans _  (ulp sh / 2)).
+    apply/Rle_ge/ Rmax_l.
+    suff: ulp sh >= ulp (IZR sigma * u) by lra.
+    apply/Rle_ge/ulp_le_pos=>//.
+    by case:sigmae=> -> /=; lra.
+  move=> hvhge.
+  have vh0: vh <> 0.
+    move=>vh0; apply: shth0.
+    move:vh0; rewrite /vh  ce.
+    by move/FLX_round_N_eq0.
+(* page 10 *)
+  have u20: 0 < u ^ 2 by apply: pow_lt.
+  have hf2S: Rabs w <= Rabs vh.
+    case/Rge_le: hvhge => hvhe; last first.
+      have:Rabs (vl + tl) <= (IZR sigma ) * u ^ 3 + u ^2.
+        apply:(Rle_trans _ (Rabs vl + Rabs tl)); first  by apply: Rabs_triang.
+        apply: Rplus_le_compat=>//.
+          apply:(Rle_trans _ (/ 2 * ulp vh)).
+            rewrite  ce.
+            rewrite F2Sum_correct_cexp // ; try apply:generic_format_round.
+            have->:(sh + th - rnd_p (sh + th)) = - (rnd_p (sh + th) - (sh + th)) by ring.
+            by rewrite Rabs_Ropp; apply: error_le_half_ulp_round.
+          have ulpvh:/2* ulp vh <= (Rabs vh) * u.
+            rewrite ulp_neq_0/cexp /fexp //.
+            rewrite  bpow_plus -/u -Rmult_assoc.
+            apply: Rmult_le_compat_r; try lra.
+            have ->: /2 = pow (-1) by [].
+            rewrite Rmult_comm -bpow_plus /=.
+            by apply: bpow_mag_le.
+          rewrite -hvhe in   ulpvh.
+          lra.
+        rewrite /= ; lra.
+      move=> htlvl.
+      have: Rabs w <= IZR  sigma * u ^2.
+        rewrite /w ZNE -round_NE_abs -ZNE.
+        apply:(Rle_trans _ (rnd_p(IZR sigma * u ^ 3 + u ^ 2))).
+          apply:round_le=>//.
+          by rewrite Rplus_comm.
+        have sigmapow: IZR sigma = pow (sigma -1)%Z.
+          by case:sigmae => -> /=.
+        rewrite sigmapow.
+        have ->: (pow (sigma - 1) * u ^ 3 + u ^ 2) =  
+                 pow (sigma - 1) * u ^ 2 *(u + pow (1 - sigma)).
+          ring_simplify.
+          suff ->: pow (sigma - 1) * u ^ 2 * pow (1 - sigma) = u ^2 by ring.
+          set uu := u^2.
+          rewrite (Rmult_comm _ uu) Rmult_assoc -bpow_plus.
+          have ->: (sigma - 1 + (1 - sigma))%Z = 0%Z by ring.
+          by rewrite /=; ring.
+        rewrite /u.
+        have ->: pow (sigma - 1) * u ^ 2 = pow (sigma -1 -2 *p).
+          rewrite /u !bpow_plus.
+          suff->:  pow (- p) ^ 2 = pow (- (2 * p)) by [].
+          rewrite [_^_]/=.
+          rewrite Rmult_1_r -bpow_plus.
+          congr bpow.
+          by ring.
+        rewrite Rmult_comm round_bpow.
+        rewrite -[X in _<= X]Rmult_1_l.
+        apply:Rmult_le_compat_r.
+          by apply:bpow_ge_0.
+        case:sigmae => ->.
+          have-> : (1 -1 )%Z= 0%Z by ring.
+          rewrite -/u /=.
+          by rewrite  Rplus_comm  r1pu; lra.
+        have ->: 1 = rnd_p 1.
+          rewrite round_generic //.
+          have->: 1 = pow 0 by [].
+          apply:generic_format_bpow.
+          by rewrite /fexp; move:Hp; lia.
+        apply:  round_le.
+        rewrite /= IZR_Zpower_pos /= Rmult_1_r.
+        suff h: pow (-1) <= /2 .
+          have ->: 1 = /2 + /2 by lra.
+          apply:Rplus_le_compat_r =>//.
+          have ->: /2 =  pow (-1) by [].
+          apply: bpow_le.
+          by move:Hp; lia.
+        have ->: /2 =  pow (-1) by [].
+        apply: bpow_le.
+        lia.
+      lra.
+    have su2pow: (IZR sigma * u ^ 2) =  pow (sigma - 1 - p - p).
+          have ->: IZR sigma = pow (sigma -1).
+        by case:sigmae => ->.
+        have ->: 2%nat = (1 + 1)%nat by [].
+        by rewrite pow_add pow_1 /u -!bpow_plus; congr bpow; ring.
+    have ulpsu2: ulp (IZR sigma * u ^ 2)= 2* u * (IZR sigma * u ^ 2).
+
+      rewrite su2pow  ulp_bpow /fexp.
+      have ->: 2* u = pow (1 -p).
+        have ->: 2 = pow 1 by [].
+        by rewrite /u bpow_plus.
+      by rewrite -bpow_plus; congr bpow; ring.
+    have: succ two fexp ( IZR sigma * u ^ 2 ) <= Rabs vh.
+      apply: succ_le_lt=>//. 
+        by rewrite  su2pow; apply:generic_format_bpow; rewrite /fexp; move:Hp; lia.
+      by apply/generic_format_abs/generic_format_round.
+    rewrite succ_eq_pos; first last.
+      by rewrite su2pow; apply:bpow_ge_0.
+    rewrite su2pow   ulp_bpow.
+    have ->:   pow (sigma - 1 - p - p) + pow (fexp (sigma - 1 - p - p + 1)) = 
+               (IZR sigma * u ^ 2)*(1 + 2*u).
+      rewrite /fexp -su2pow.
+      have->:  pow (sigma - 1 - p - p + 1 - p)=  (IZR sigma * u ^ 2)* (2 *u).
+        have -> : 2 * u = pow (1 -p).
+          by rewrite /u bpow_plus.
+        rewrite  su2pow -bpow_plus.
+        by congr bpow ; ring.
+      by ring.
+    move=>h.
+    have: (IZR sigma * u ^ 2/(1-u)) <= Rabs vh.
+      apply:(Rle_trans _ (IZR sigma * u ^ 2 * (1 + 2 * u)))=>//.
+      rewrite /Rdiv.
+      apply:Rmult_le_compat_l.
+        by rewrite  su2pow; apply bpow_ge_0. 
+      apply:(Rmult_le_reg_l (1 -u)).
+        by rewrite /u; move : (bpow_lt_1 two p_gt_0); lra.
+      rewrite Rinv_r; last by rewrite /u; move : (bpow_lt_1 two p_gt_0); lra.
+      have->:  (1 - u) * (1 + 2 * u) = 1 +  u * (1 - 2 * u) by ring.
+      suff : 0 <= u * (1 - 2 *u) by lra.
+      have ->: 0 = u * 0 by ring.
+      by apply: Rmult_le_compat_l; lra.
+    move=>g.
+    have : u * Rabs vh +  IZR sigma * u ^ 2 <= Rabs vh.
+      have gg:0 <= 1 -u by move:(@bpow_lt_1 two (-p)); lra.
+      move/(Rmult_le_compat_r (1 -u) _ _ gg):g; rewrite /Rdiv.
+      rewrite Rmult_assoc Rinv_l.
+        lra.
+      by move:(@bpow_lt_1 two (-p)); lra.
+    move=> hh.
+    have:Rabs vl + Rabs tl <= Rabs vh.
+      apply:(Rle_trans _ (u * Rabs vh + IZR sigma * u ^ 2))=>//.
+      apply:Rplus_le_compat; last by case:sigmae => -> /=; lra.
+      rewrite  ce  F2Sum_correct_cexp //; try apply:generic_format_round.
+      have ->: sh + th - rnd_p (sh + th) = - ( rnd_p( sh+ th) - ( sh + th)) by ring.
+      rewrite  Rabs_Ropp.
+      apply:(Rle_trans _ (/ 2 * bpow two (- p + 1) * Rabs vh)).
+        rewrite  ce; apply: relative_error_N_FLX_round.
+        by move:Hp; lia.
+      by rewrite   bpow_plus -/u /= IZR_Zpower_pos /= -{2}ce; lra.
+    move/(round_le radix2 fexp (Znearest choice)).
+    rewrite ZNE round_NE_abs -ZNE.
+    rewrite [X in _ <= Rabs X]round_generic; last apply:generic_format_round.
+    apply/(Rle_trans (Rabs w)).
+    rewrite /w  ZNE -round_NE_abs -ZNE //.
+    by apply/round_le; rewrite Rplus_comm; apply:Rabs_triang.
+  case:(Req_dec w 0)=>w0.
+    have Fvh : format vh by apply:generic_format_round.
+    rewrite /relative_errorDWDW w0 Fast2Sumf0 /=; last by apply:generic_format_round.
+    rewrite Rplus_0_r Rabs0.
+       split; [| split; [by exact: boundDWDW_ge_0 | split;
+                         [left; rewrite ce; exact: hcexp
+                         | by right; right]]].
+       split;[split|]; try apply:generic_format_round; try apply:generic_format_0.
+       by rewrite Rplus_0_r round_round.
+    suff->: vh - (xh + xl + (yh + yl)) = 0 by rewrite /Rdiv Rmult_0_l.
+    have->:  (xh + xl + (yh + yl)) = xh+yh +(xl +yl) by ring.
+    rewrite -she.
+    have ->: xl + yl= th + tl by rewrite  TwoSum_correct //; ring.
+    have ->: vh = sh + th - vl.
+      rewrite  ce F2Sum_correct_cexp //=; try apply:generic_format_round.
+    ring.
+    have: vl + tl = 0 by move/FLX_round_N_eq0 : w0; lra.
+    by lra.
+  rewrite  /relative_errorDWDW  F2Sum_correct_cexp //; try apply:generic_format_round; 
+   last by rewrite ce.
+  have f2sc: (Fast2Sum_correct p choice vh w).
+   by  apply:F2Sum_correct_abs=> //; try apply:generic_format_round.
+  have->: (sh + c - vh) = vl by lra.
+  split; first by apply F2Sum_correct_DW'.
+  rewrite   f2sc.
+  set fs:= F2Sum_sum _ _.
+  have->: fs + (vh + w - fs)= vh + w by ring.
+  have->: (vh + w - (xh + xl + (yh + yl))) = -e2.
+    have ->: vh = sh + th - vl by lra.
+    have->:  (xh + xl + (yh + yl)) = xh+yh +(xl +yl) by ring.
+    rewrite -she /e2; ring_simplify.
+    by rewrite  (TwoSum_correct Fxl Fyl); ring.
+  have ->: - e2 / (xh + xl + (yh + yl)) = - (e2 /(xh + xl + (yh + yl))) 
+    by rewrite /Rdiv; ring.
+  rewrite Rabs_Ropp /Rdiv Rabs_mult.
+  case:  (xh_mul_su) => xhm xhem.
+  case:  (yh_mul_su) => yhm yhem.
+  have xhyh_msu: xh + yh = IZR (xhm + yhm) * (IZR sigma * u).
+    by rewrite   xhem  yhem plus_IZR; ring.
+  have xhyh_msu0: (xhm + yhm <> 0)%Z.
+    move=> xhyhm0.
+    by move: xhyh_msu; rewrite xhyhm0 /=; lra.
+  have xhyhm1: (1 <= xhm + yhm)%Z.
+    suff: (0 <  xhm + yhm)%Z by lia.
+    have : 0< xh + yh by lra.
+    rewrite xhyh_msu -(Rmult_0_l (IZR sigma * u)).
+    have h: 0<IZR sigma * u by case:sigmae => -> /=; lra.
+    move/(Rmult_lt_reg_r _ _ _ h).
+    by move/lt_IZR.
+  have : (IZR sigma * u) <= xh + yh.
+    move/IZR_le: xhyhm1 =>/= xhyhm1.
+    rewrite xhyh_msu; case:sigmae => -> /=.
+      by apply:Rmult_le_compat; lra.
+    have{1}->: (2 * u) = 1 * (2 * u) by ring.
+    by apply:Rmult_le_compat=>//; lra.
+  move=> h.
+  have : Rabs (xl + yl) <= 3/2*(xh+yh).
+    apply:(Rle_trans _ ((1 + IZR sigma / 2) * u)) =>//.
+    apply:(Rle_trans _ (3/2 * ( IZR sigma * u))); last by  lra.
+    by case:sigmae => -> /=; lra.
+  move/Rabs_le_inv=>   [hxlyl hxlylsup].
+  case:(Rle_lt_dec (xl + yl) (- /2 * (xh + yh))) =>   hxlylsup2.
+    have: vh = sh +th.
+      rewrite  ce /=.
+      have ->:  (sh + th ) = (sh - (- th)) by ring.
+      rewrite round_generic=>//.
+      apply: sterbenz'; (try apply:generic_format_opp) =>//.
+(* th generic ... gu up *)
+        by apply:generic_format_round.
+      split.
+        have: rnd_p (xl + yl) <= rnd_p (- / 2 * (xh + yh)) by apply:round_le.
+        have -> : rnd_p (- / 2 * (xh + yh))  = - /2 * rnd_p (xh + yh).
+          rewrite Ropp_mult_distr_l_reverse ZNE round_NE_opp -ZNE.
+          have ->: /2 = pow (-1) by [].
+          by rewrite  Rmult_comm round_bpow; ring.
+       by rewrite !TwoSum_sumE; lra.
+      have hl: -(2 * (xh + yh)) <= xl + yl.
+        by apply:(Rle_trans _ (- (3 / 2 * (xh + yh)))); lra.
+      have: rnd_p(- (2 * (xh + yh))) <= rnd_p( xl + yl) by apply:round_le.
+      rewrite  ZNE round_NE_opp -ZNE.
+      have ->: 2 = pow (1) by [].
+      by rewrite  Rmult_comm round_bpow /= !TwoSum_sumE ; lra.
+    move=> vhe; have vl0: vl = 0.
+      rewrite  ce F2Sum_correct_cexp //; try apply: generic_format_round.
+      rewrite /= -{1}vhe  -{2}ce /=; ring.
+    rewrite vl0 Rplus_0_r.  
+    have ->:  rnd_p tl = tl by rewrite round_generic //; apply: generic_format_round.
+    rewrite  Rabs0; last by ring.
+    split; [by rewrite Rmult_0_l; move=>*; apply: boundDWDW_ge_0
+           | split; [left; rewrite ce; exact: hcexp
+                    | left]].
+    have Ftl: format tl by apply: generic_format_round.
+    have w_eq : rnd_p (tl + vl) = tl
+      by rewrite vl0 Rplus_0_r round_generic.
+    rewrite -w_eq. exact: hf2S.
+  split; [| split; [left; rewrite ce; exact: hcexp | by left; exact: hf2S]].
+    (* move=> hrel; *) apply:(Rle_trans _ (2* u^2)); last first.
+    have h4u: 0 < 1 - 4 * u.
+      have->: 4 = pow 2 by [].
+      rewrite -bpow_plus.
+      have -> : (2 + -p = - (p -2))%Z by ring.
+      suff : (pow (- (p -2))) < 1 by lra.
+      by apply: bpow_lt_1; move :Hp3; lia.
+    apply: (Rmult_le_reg_l ((1 - 4 * u))) =>//.
+    rewrite [X in _ <= X] Rmult_comm [X in _ <= X]Rmult_assoc Rinv_l; last by  lra.
+    rewrite -Rmult_assoc Rmult_1_r.
+    apply:Rmult_le_compat_r; last by lra.
+    by rewrite /u /= Rmult_1_r -bpow_plus; apply : bpow_ge_0.
+  have xy0: 0 < x + y by  lra.
+  rewrite -/x -/y Rabs_Rinv ; try lra; rewrite (Rabs_pos_eq (x + y)); try lra.
+   apply:(Rmult_le_reg_r (x + y)); rewrite // Rmult_assoc Rinv_l; last by lra.
+   rewrite Rmult_1_r.
+  have: Rabs (xl + yl) < Rabs (x + y).
+    rewrite (Rabs_pos_eq (x + y)) //.
+    by apply: Rabs_lt; lra.
+  move/Rlt_le/(ulp_le two fexp)=>hulp.
+  have: /2* (ulp ((x + y) + /2*ulp (xl +yl))) <= ulp (x + y).
+    have ulpxy: ulp (x + y) <= Rabs(x + y) * pow (1 -p) by apply: ulp_FLX_le.
+    have : /2* ulp (x + y) <= /2 * Rabs(x + y) * pow (1 -p) by lra.
+    rewrite bpow_plus /= IZR_Zpower_pos /=  => ulpxy2.
+    have:  /2* ulp (x + y) <=  Rabs(x + y).
+      apply:(Rle_trans _  (Rabs (x + y) * pow (- p))); try lra.
+      rewrite -[X in _<= X] Rmult_1_r.
+      apply:Rmult_le_compat_l; try apply:Rabs_pos.
+      by apply/Rlt_le/bpow_lt_1;  lia.
+    rewrite Rabs_pos_eq // => h11.
+    have h21: x + y + / 2 * ulp (xl + yl) <=  x + y + / 2 * ulp (x + y) by  lra.
+    have h22:  x + y + / 2 * ulp (xl + yl) <= x + y + (x + y) by lra.
+    have: ulp  (x + y + / 2 * ulp (xl + yl) ) <= ulp (x + y + (x + y)).
+      apply/ulp_le.
+      rewrite !Rabs_pos_eq; try lra.
+      by move:(ulp_ge_0 two fexp (xl + yl)); lra.
+    have->: (x + y + (x + y)) = 2 * (x + y) by ring.
+    have->:  ulp (2 * (x + y))= 2 *ulp(x + y).
+      rewrite !ulp_neq_0 //; last by  lra.
+      rewrite Rmult_comm.
+      have->: 2 = pow 1 by [].
+      rewrite cexp_bpow. rewrite bpow_plus. lra.   
+      1,2: apply Rgt_not_eq; nra.
+    move=> h3. 
+    rewrite Rmult_1_r; apply/(Rmult_le_reg_l 2); lra.
+  move=> h4.
+  apply:(Rle_trans _ (/2* ulp (3/2*ulp(x+y)))).
+    apply:(Rle_trans _ 
+     (/ 2 * ulp (/ 2 * ulp (xl + yl) + / 2 * ulp (x + y + / 2 * ulp (xl + yl))))) =>//.
+    apply:Rmult_le_compat_l; try lra.
+    apply:ulp_le_pos.
+      suff: 0<= ulp (xl + yl) + ulp (x + y + / 2 * ulp (xl + yl)) by lra.
+      rewrite -(Rplus_0_r 0).
+      by apply/Rplus_le_compat; apply:ulp_ge_0.
+    apply: (Rle_trans _  (/ 2 * ulp (xl + yl) +   ulp (x + y))).
+      lra.
+    apply:(Rle_trans _  (/ 2 * ulp (x + y) + ulp (x + y))); try lra.
+(* move out *)
+  have ulp32: forall r, ulp (3/2* (ulp r)) = ulp (ulp r).
+    move=>r.
+    case:(Req_dec r 0)=>[->|hr0].
+      by rewrite  ulp_FLX_0  Rmult_0_r ulp_FLX_0.
+    case:(mag two r)=> ulpr /(_ hr0) hulpr  /=.
+    rewrite(ulp_neq_0 _ _ r) // /cexp (mag_unique _ _ ulpr) // {2 4}/fexp.
+    rewrite   ( ulp_neq_0  two fexp (pow (ulpr - p))); last by move:(bpow_gt_0 two (ulpr -p)); lra.
+    rewrite /= /cexp (mag_unique_pos _ _ (ulpr -p +1)); last first.
+      by split;[apply: bpow_le |apply: bpow_lt] ; lia.
+    rewrite  ulp_neq_0 /cexp /fexp.
+      congr bpow.
+      suff ->: (mag radix2 (3 / 2 * pow (ulpr - p)))%Z = (ulpr - p + 1)%Z :> Z by ring.
+      apply:mag_unique_pos.
+      split.
+        ring_simplify((ulpr - p + 1 - 1)%Z); 
+         rewrite -[X in X <= _]Rmult_1_l; apply:Rmult_le_compat.
+        + exact Rle_0_1.
+        + apply:bpow_ge_0.
+        + lra.
+        exact: Req_le.
+      rewrite [X in _ < X]bpow_plus /=  Rmult_comm.
+      apply:Rmult_lt_compat_l; first by apply: bpow_gt_0.
+      rewrite IZR_Zpower_pos /=;lra.
+    apply:Rmult_integral_contrapositive_currified; try lra.
+    by move:(bpow_gt_0 two (ulpr -p)); lra.
+  rewrite ulp32.
+  move:(@ulp_FLX_le two p p_gt_0 (x + y)).
+  move/(ulp_le_pos two fexp).
+  move/(_ (ulp_ge_0 two fexp (x + y))).
+  rewrite -/ulp =>h0.
+  apply:(Rle_trans _  (ulp (Rabs (x + y) * pow ( - p)))).
+    rewrite Rmult_comm.
+    apply:(Rmult_le_reg_r 2); first by lra.
+    rewrite Rmult_assoc Rinv_l ?Rmult_1_r.
+      suff->:  (ulp (Rabs (x + y) * pow (- p)) * 2) = (ulp (Rabs (x + y) * pow (1 - p))) by [].
+      rewrite !ulp_neq_0 /cexp /fexp.
+      + rewrite !bpow_plus /= !mag_mult_bpow.
+          rewrite -! bpow_plus.
+          have ->: 2 * pow (- p) = pow (1 -p) by rewrite bpow_plus /=.
+          rewrite !mag_mult_bpow.
+            set l := (mag _ _).
+            have ->: 2 = pow 1 by [].
+            by rewrite -bpow_plus; congr bpow; ring.
+          by rewrite Rabs_pos_eq;lra.
+        by rewrite Rabs_pos_eq;lra.
+      + rewrite Rabs_pos_eq; try lra.
+        apply:Rmult_integral_contrapositive_currified; try lra.
+        by move:(bpow_gt_0 two (1 -p)); lra.
+      apply:Rmult_integral_contrapositive_currified; try lra.
+        by rewrite Rabs_pos_eq;lra.
+      by move:(bpow_gt_0 two (-p)); lra.
+    lra.
+  apply:(Rle_trans _ (Rabs(x+y) * pow (-p) * (pow (1 -p)))).
+    rewrite {1}Rabs_pos_eq; try lra.
+    rewrite /ulp; move:(@ulp_FLX_le two p p_gt_0 ((x + y) * pow (- p))).
+    rewrite !Rabs_pos_eq // -(Rmult_0_r 0).
+    apply:Rmult_le_compat; try lra.
+    by apply:bpow_ge_0.
+  rewrite Rabs_pos_eq; try lra.
+  rewrite /u !bpow_plus /=.
+  rewrite Rmult_assoc.
+  suff ->:  pow (- p) * (2 * pow (- p)) =  2 * (pow (- p) * (pow (- p) * 1)) by lra.
+  ring.
+
+(* cas 2 : -xh/2 < yh <= xh *)
+have : xh/2 < xh + yh <= 2*xh by lra.
+case =>/Rlt_le /(round_le two fexp (Znearest choice))   hd hu0.
+move/(round_le two fexp (Znearest choice)):(hu0) => hu.
+move: hd hu.
+have ->: rnd_p (2*xh) = 2* rnd_p xh.
+have->: 2 = pow 1 by [].
+rewrite Rmult_comm round_bpow; ring.
+have ->:   rnd_p (xh / 2) = rnd_p xh /2.
+rewrite /Rdiv.
+have -> : /2 = pow (-1) by [].
+by rewrite  round_bpow.
+rewrite (round_generic _ _ _ xh) // => hd hu.
+have: /2 < xh + yh by lra.
+case:(Rle_lt_dec (xh + yh) (2 - 4*u))=> hu' hd'.
+  pose sigma := if  Rle_dec (xh + yh)  (1 -2 *u) is left _ then 1%Z else 2%Z.
+  have sigmae: sigma = 1%Z \/ sigma = 2%Z.
+    by rewrite /sigma; case:Rle_dec;[left|right].
+  have sigma1: xh + yh <= 1 - 2*u  -> IZR sigma = 1.
+    by rewrite  /sigma; case:Rle_dec.
+  have sigma2: ~ (xh + yh) <= 1 - 2*u -> IZR sigma = 2.
+    by rewrite  /sigma; case:Rle_dec.
+  have sigmapow: IZR sigma = pow (sigma -1)%Z.
+    by case:sigmae => -> /=. 
+  have hF1m2u: format (1 - 2 * u).
+    rewrite /u  u_ulp1 -Rmult_assoc Rinv_r ?Rmult_1_l; try lra.
+    rewrite ulp_neq_0; last lra.
+    rewrite /u. 
+    apply:(@FLX_format_Rabs_Fnum _ (Float two (2^p -2)%Z (-p)%Z)).
+      rewrite /F2R  /= minus_IZR (IZR_Zpower two); last lia.
+      rewrite Rmult_minus_distr_r -(bpow_plus _ p); congr Rminus; first by rewrite Z.add_opp_diag_r.
+      rewrite /cexp /fexp bpow_plus; congr Rmult.
+      suff->: ((mag radix2 1) = 1%Z :>Z) by rewrite /= IZR_Zpower_pos.
+      apply:mag_unique_pos; rewrite /=  IZR_Zpower_pos /=; lra.
+    rewrite /=  minus_IZR (IZR_Zpower two) ?Rabs_pos_eq; move:(bpow_ge_0 two p); try lra; try lia.
+    suff : (pow 1 ) <= pow p by rewrite /= IZR_Zpower_pos /=; lra.
+    apply:bpow_le; lia.
+  have h11_1: IZR sigma /2 * ( 1 - 2 * u) <= sh <= IZR sigma * ( 1 - 2 * u).
+    rewrite /sigma; case:Rle_dec => /=.
+      move/( round_le two fexp (Znearest choice)).
+      rewrite [X in _<=X] round_generic // => hu''.
+      by rewrite Rmult_1_l  TwoSum_sumE ; split;lra.
+    move/Rnot_le_lt/Rlt_le /(round_le two fexp (Znearest choice)).
+    rewrite round_generic// => hu''; split.
+      rewrite /Rdiv Rinv_r ?Rmult_1_l ?TwoSum_sumE ; lra.
+    move /(round_le two fexp (Znearest choice)): (hu').
+    rewrite [X in _<=X]round_generic ?TwoSum_sumE; first lra.
+    have->: (2 - 4 * u) = 2 * (1 - 2*u) by ring.
+    have->: (2 * (1 - 2 * u))= (1 - 2 * u) * (pow 1) by rewrite /= IZR_Zpower_pos; ring.
+    by apply:formatS.
+  have h11_2: Rabs sl <= IZR sigma / 2 * u.
+    apply:(Rle_trans _ (/2* ulp sh)).
+      rewrite  TwoSum_correct  // -Rabs_Ropp Ropp_minus_distr /ulp.
+      by  apply: error_le_half_ulp_round.
+    have shpos: 0 <= sh.
+      have : 0 <= xh + yh by lra.
+      by move/( round_le two fexp (Znearest choice)); rewrite round_0.
+    suff : ulp sh <= IZR sigma * u by lra.
+    have : sh <= IZR sigma * (1 - 2 * u) by lra.
+    move/(ulp_le_pos two fexp  _ _ shpos).
+    rewrite -/ulp.
+    suff ->: ulp (IZR sigma * (1 - 2 * u)) = IZR sigma * u by [].
+    rewrite ulp_neq_0.
+      rewrite /cexp /fexp bpow_plus {3} /u.
+      congr (_ *_).
+      rewrite sigmapow.
+      congr bpow.
+      rewrite /= ; apply:  mag_unique_pos.
+      set ps := pow (sigma -1).
+      rewrite bpow_plus /= -/ps.
+      have h2u: 0 < 2 * u by lra.
+      split; last first.
+        rewrite -[X in _ < X]Rmult_1_r; apply: Rmult_lt_compat_l; try lra.
+        by rewrite /ps; apply: bpow_gt_0.
+      apply:Rmult_le_compat_l.
+        by rewrite /ps; apply: bpow_ge_0.
+      suff:  4 * u <= 1 by rewrite IZR_Zpower_pos /=;lra.
+      have->: 4 = pow 2 by [].
+      rewrite /u -bpow_plus.
+      have->: 1 = pow 0 by [].
+      apply: bpow_le.
+      move:Hp3; lia.
+    apply:Rmult_integral_contrapositive_currified; lra.
+(* try to factorize keeping sigma *)
+  have h12_0: Rabs yl <= IZR sigma /2 *u.
+    rewrite /sigma; case :Rle_dec=> hxhyhle.
+      have yhboubds: -xh/2 < yh < 0 by split;  lra.
+      have ylyh:Rabs yl <= /2*ulp yh by apply: dw_ulp. 
+      apply:(Rle_trans  _(/ 2 * ulp yh)) =>//=.
+      suff: ulp yh <= u by lra.
+      rewrite ulp_neq_0 ; try lra; rewrite /cexp /fexp.
+      rewrite bpow_plus /u.
+      apply:(Rmult_le_reg_r (pow p)).
+        exact : bpow_gt_0.
+      rewrite Rmult_assoc -bpow_plus.
+      ring_simplify (- p + p)%Z=>//=.
+      rewrite Rmult_1_r.
+      have -> : 1 = pow 0 by [].
+      apply: bpow_le.
+      apply:mag_le_bpow.
+        lra.
+      rewrite /=  -Rabs_Ropp Rabs_pos_eq /=; lra.
+    have yhboubds: Rabs yh <= 2 -2 *u by lra.
+    apply:(Rle_trans  _(/ 2 * ulp yh)) =>//=.
+      by apply: dw_ulp.
+    suff: ulp yh <= 2*  u by lra.
+    case:(Req_dec yh 0)=>[->| hyh0].
+      by rewrite ulp_FLX_0; lra.
+    rewrite ulp_neq_0 ; try lra; rewrite /cexp /fexp.
+    rewrite bpow_plus /u.
+    apply:Rmult_le_compat_r.
+      by apply:bpow_ge_0.
+    have->:2 = pow 1 by [].
+    apply: bpow_le.
+    apply:mag_le_bpow=>//.
+    rewrite /= IZR_Zpower_pos /=;  lra.
+  have h12_00: Rabs (xl + yl) <= (1 + (IZR sigma)/2) *u.
+    apply:(Rle_trans _ (Rabs xl + Rabs  yl)); first  exact: Rabs_triang; lra.
+(* ! duplication *)
+  have h12_1: Rabs th <= (1 + (IZR sigma)/2)*u.
+    move/(round_le two fexp (Znearest choice)): (h12_00).
+    rewrite ZNE round_NE_abs -ZNE.
+    rewrite [X in _ <= X] round_generic.
+      by rewrite /th .
+    rewrite /u; apply:formatS.
+    case:sigmae => -> /=.
+      apply: (@FLX_format_Rabs_Fnum _ (Float two 3 (-1))).
+        rewrite /F2R /= IZR_Zpower_pos /= ; field.
+      rewrite /=; rewrite Rabs_pos_eq; try lra.
+      apply:(Rlt_le_trans _ (pow 2)); first by rewrite /= IZR_Zpower_pos /= ; lra.
+      apply:bpow_le; move : Hp; lia.
+    have->: 1 + 2/2 = pow 1 by rewrite /= IZR_Zpower_pos /= ; field.
+    apply:generic_format_bpow; rewrite /fexp; move:Hp;lia.
+  have h13_0: Rabs (sl + th) <= (1 + IZR sigma ) *u.
+    apply:(Rle_trans _ (Rabs sl + Rabs th)); first by apply:Rabs_triang.
+    lra.
+  move/(round_le two fexp (Znearest choice)):(h13_0).
+  rewrite ZNE round_NE_abs -ZNE.
+  rewrite [X in _ <= X]round_generic; last first.
+    rewrite /u; apply:formatS.
+    pose s1 := (1+sigma)%Z.
+    apply: (@FLX_format_Rabs_Fnum _ (Float two s1 0)).
+      rewrite /F2R /= /s1 plus_IZR /=; ring.
+    rewrite /= /s1; case:sigmae => -> /=; rewrite Rabs_pos_eq; try lra.
+      have -> : 2 = pow 1 by [].
+      apply:bpow_lt; move :Hp; lia.
+    apply:(Rlt_le_trans _ 4); first lra.
+    have ->: 4 = pow 2 by [].
+    apply:bpow_le;  lia.
+  move=> h13_1.
+  have h13_2:  Rabs e1 <= IZR sigma * u ^2.
+    rewrite  -Rabs_Ropp Ropp_minus_distr.   
+    apply:(Rle_trans _ (/ 2 * pow (- p) * pow (sigma -p))).
+      apply: error_le_half_ulp'; first exact: Hp.
+      move: h13_0.
+      rewrite sigmapow !bpow_plus /= /u=> *.
+      apply:(Rle_trans _ ((1 + pow sigma * / 2) * pow (- p))_ )=>//.
+      apply:Rmult_le_compat_r; first by apply:bpow_ge_0.
+      suff : 2 <= pow sigma by lra.
+      have->:2= pow 1 by [].
+      apply : bpow_le; move:Hp; lia.
+    by rewrite sigmapow !bpow_plus /= /u IZR_Zpower_pos /= ; lra.
+  have Fsh : format sh by apply:generic_format_round.
+  have Fc: format c by  apply:generic_format_round.
+  have hcsh: Rabs c <= Rabs sh.
+    apply:(Rle_trans _ ((1 + IZR sigma) * u))=>//.
+    apply:(Rle_trans _ (/2)).
+      apply:(Rmult_le_reg_l 2); try lra.
+      rewrite Rinv_r /u; try lra.
+      case:sigmae => -> /=.
+        have ->: 1 + 1 = 2 by [].
+        have ->: 1 = pow 0 by [].
+        have->: 2 = pow 1 by [].
+        rewrite -!bpow_plus; apply: bpow_le; move:Hp;lia.
+      apply:(Rle_trans _ (8 * pow (-p))).
+        rewrite -Rmult_assoc; apply: Rmult_le_compat_r; try lra.
+        exact: bpow_ge_0.
+      have ->: 8 = pow 3 by [].
+      have {1}->: 1 = pow 0 by [].
+      rewrite -bpow_plus; apply:bpow_le; move:Hp3; lia.
+    have->: /2 =  (pow (-1)) by [].
+    have ->: (pow (-1)) = rnd_p (pow (-1)).
+      rewrite round_generic //; apply: generic_format_bpow.
+      rewrite /fexp; move:Hp; lia.
+    rewrite TwoSum_sumE ZNE -round_NE_abs -ZNE.
+    apply: round_le.
+    rewrite /= Rabs_pos_eq ?IZR_Zpower_pos /=; lra.
+     move:(eq_refl relative_errorDWDW).
+    rewrite {-1}/relative_errorDWDW F2Sum_correct_abs //.
+  have h14_0: Rabs (sh + c ) <= IZR sigma.
+    apply:(Rle_trans _ ((Rabs sh ) + (Rabs c))); first by exact:Rabs_triang.
+    apply:(Rle_trans _ ( (IZR sigma) * (1 - 2 * u) + (1 + IZR sigma) * u)).
+      apply:Rplus_le_compat=>//.
+      rewrite Rabs_pos_eq; lra.
+    by case:sigmae => -> /=; lra.
+  have h14_1: Rabs vh <= IZR sigma.
+    rewrite sigmapow.
+    have <-:  rnd_p (pow (sigma - 1)) = (pow (sigma - 1)).
+      rewrite round_generic //; apply:generic_format_bpow.
+      rewrite /fexp /=.
+      case:sigmae => ->; move:Hp; lia.
+    rewrite /vh   ZNE -round_NE_abs -ZNE.
+    apply: round_le.
+    by rewrite -sigmapow.
+  have f2sc_shc: Fast2Sum_correct  p choice sh c by apply: F2Sum_correct_abs.
+  have h14_2: Rabs vl <= (IZR sigma)/2 * u.
+    rewrite   f2sc_shc -Rabs_Ropp Ropp_minus_distr.   
+    have->: IZR sigma / 2 * u = / 2 * pow (- p) * pow (sigma -1) 
+     by rewrite /u sigmapow; field.
+    apply: error_le_half_ulp'; first exact: Hp.
+    by rewrite -sigmapow.
+  have h15_0: Rabs (tl + vl) <= u^2 + (IZR sigma)/2 * u.
+    apply:(Rle_trans _ ((Rabs tl) + (Rabs vl))); first by apply:Rabs_triang.
+    lra.
+  have vlE: (sh + c - vh) = vl by rewrite   f2sc_shc .
+  rewrite vlE.
+  have h15_1: Rabs w <=  (IZR sigma)/2 * u +  u^2.
+    have: rnd_p (Rabs (tl + vl)) <= rnd_p (u^2 + (IZR sigma)/2 * u) by apply:round_le.
+    rewrite ZNE round_NE_abs -ZNE /w.
+    move/(Rle_trans (Rabs (rnd_p (tl + vl)))  (rnd_p (u ^ 2 + IZR sigma / 2 * u))   
+                      (IZR sigma / 2 * u + u ^ 2)).
+    apply.
+    rewrite Rplus_comm.
+    have ->: ( IZR sigma / 2 * u + u ^ 2) = ( IZR sigma / 2  + u) * u by ring.
+    rewrite round_bpow.
+    apply:Rmult_le_compat_r.
+      exact: bpow_ge_0.
+    case:sigmae=> -> /=; last first.
+      rewrite /Rdiv Rinv_r ?r1pu; move:(bpow_ge_0 two (-p)); lra.
+    have->: 1/2 + u = ((pow (-1))* (1 + 2 * u)) by rewrite /= IZR_Zpower_pos /=;  field.
+    rewrite Rmult_comm round_bpow.
+    apply:Rmult_le_compat_r.
+      exact: bpow_ge_0.
+    rewrite round_generic; try lra.
+    rewrite /u u_ulp1 -Rmult_assoc Rinv_r ?Rmult_1_l; try lra.
+    apply:generic_format_succ_aux1; try lra.
+    apply:(generic_format_bpow _ _ 0); rewrite /fexp; move:Hp; lia.
+  have h15_2: Rabs e2 <= (IZR sigma) / 2 * u ^2.
+    rewrite  -Rabs_Ropp Ropp_minus_distr.  
+    have ->:  IZR sigma / 2 * u ^ 2 =  / 2 * pow (- p) * pow (sigma - 1 - p).
+      rewrite sigmapow !bpow_plus /u; field.
+    apply: error_le_half_ulp'; first exact : Hp.
+    apply:(Rle_trans _ (IZR sigma / 2 * u + u ^ 2)); first  lra.
+    rewrite bpow_plus -sigmapow -/u /=.
+    suff : u * u  <= /2 * (IZR sigma * u) by lra.
+    have->: /2 = pow (-1) by [].
+    rewrite -Rmult_assoc.
+    apply:Rmult_le_compat_r; try lra.
+    rewrite /u sigmapow - bpow_plus; apply: bpow_le.
+    case:sigmae => -> /=; move : Hp; lia.
+  have h16_0 : (IZR sigma)/2 - u * (2* (IZR sigma)  + 1) <= sh + c.
+    by case/Rabs_le_inv:   h13_1; lra.
+  have h16_1: rnd_p (IZR sigma / 2 - u * (2 * IZR sigma + 1)) <=  
+               rnd_p (sh + c) by apply:round_le.
+  have h16_2: (IZR sigma / 2 - u * (2 * IZR sigma + 1)) <= Rabs vh.
+    apply: Rabs_ge.
+    right.
+    suff <-: rnd_p (IZR sigma / 2 - u * (2 * IZR sigma + 1)) = 
+               IZR sigma / 2 - u * (2 * IZR sigma + 1) by rewrite /= ;lra.
+    rewrite round_generic //.
+    case:sigmae => -> /=; last first.
+      have -> : 2 / 2 - u * (4 + 1) = (pow p  - 5) * (pow (- p)).
+        rewrite Rmult_minus_distr_r -bpow_plus.
+        rewrite Z.add_opp_diag_r -/u /Rdiv Rinv_r /=; lra.
+      apply:(@FLX_format_Rabs_Fnum  ((pow p - 5) * pow (- p)) 
+              (Float two ((two ^ p) - 5)%Z (-p)%Z));
+        rewrite /F2R /= minus_IZR /= (IZR_Zpower two p) //.
+      + move:Hp; lia.
+      + rewrite Rabs_pos_eq ; try lra.
+        apply: (Rle_trans _ (pow p - pow 3)).
+          suff: pow 3  <= pow p by  lra.
+          apply:bpow_le; move : Hp3; lia.
+        suff: 5 <= pow 3 by lra.
+        by rewrite /= IZR_Zpower_pos /= ; lra.
+      lia.
+    apply:(@FLX_format_Rabs_Fnum ((1 / 2 - u * (2 * 1 + 1))) 
+            (Float two ((two ^ p) - 6)%Z (- p -1)%Z));
+      rewrite /F2R minus_IZR  (IZR_Zpower two p) //.
+    + set p6:= (pow p - IZR 6).
+      set pp:= (-2 * p - 1)%Z.
+      rewrite /= /p6 /pp !bpow_plus.
+      have ->:  1 / 2 - u * (2 * 1 + 1) = /2 * (1 - 6 * u) by field.
+      apply:(Rmult_eq_reg_l 2); try lra; rewrite  -Rmult_assoc Rinv_r; 
+        try lra; rewrite Rmult_1_l.
+      rewrite /u [IZR _]/= ; ring_simplify.
+      have ->:2 = pow 1 by [].
+      rewrite -!bpow_plus.
+      ring_simplify  (1 + - p + p + - (1))%Z.
+      rewrite -/u /= IZR_Zpower_pos /=  ; field.
+    + lia.
+    + rewrite Rabs_pos_eq.
+         rewrite /=;  lra.
+      rewrite /=.
+      suff : 8 <= pow p by lra.
+      have ->: 8 = pow 3 by [].
+      apply: bpow_le; move: Hp3; lia.
+     lia.
+  have h16_3: Rabs w <= Rabs vh.
+    apply:(Rle_trans _ (IZR sigma / 2 * u + u ^ 2))=>//.
+    apply:(Rle_trans _   (IZR sigma / 2 - u * (2 * IZR sigma + 1))) =>//.
+    suff: u * (7 +  (pow (2 - sigma))* u ) <= 1.
+      case:sigmae => -> /=; rewrite ?IZR_Zpower_pos /=; lra.
+    apply: (Rmult_le_reg_l (pow p)); first exact:bpow_gt_0.
+    rewrite Rmult_1_r -!Rmult_assoc /u -bpow_plus Z.add_opp_diag_r   Rmult_1_l.
+    apply:(Rle_trans _ (pow 3)).
+      rewrite - bpow_plus.
+      suff: pow (2 - sigma + - p) <= 1 by  rewrite /= IZR_Zpower_pos /= ;lra.
+      have->: 1 = pow 0 by [].
+      apply:bpow_le; move:Hp; lia.
+    apply:bpow_le; move:Hp3; lia.
+  move => hrel; rewrite -hrel. 
+  have f2sc: (Fast2Sum_correct  p choice vh (rnd_p (tl + (sh + c - vh)))).
+   by apply: F2Sum_correct_abs=>//; try apply:generic_format_round; rewrite vlE.
+  have -> : relative_errorDWDW = Rabs((e1 + e2)/(x + y)).
+    exact: rel_errorDWDWe_abs.
+  split;   first by apply:F2Sum_correct_DW'; rewrite vlE in f2sc.
+  split; [|
+    split; [case: (Req_dec c 0) => [c0 | c0]; [by right | left; by apply/FLX_exp_monotone/mag_le_abs]
+           | by left; exact: h16_3]].
+
+  have h16_4: Rabs (e1 + e2) <= 3 * (IZR sigma)/2 * u ^2.
+    apply:(Rle_trans _ (Rabs e1 + Rabs e2)); first by  apply: Rabs_triang.
+    lra.
+  have h16_5: (xh - u) + (yh - (IZR sigma) * u /2) <= x + y.
+    suff: (- u <= xl) /\ (-(IZR sigma) *u/2 <=  yl) by lra.
+    split.
+      by case/Rabs_le_inv:  xlu.
+    by case/Rabs_le_inv:  h12_0; lra.
+  have hs2: (sigma = 2)%Z -> 1 -4*u < x + y.
+    move:  h16_5.
+    rewrite /sigma;  case:( Rle_dec (xh + yh) (1 - 2 * u)) =>//=.
+    move/Rnot_le_lt.
+    lra.
+  have hs1: (sigma = 1)%Z -> 1/2 -3*u/2 < x + y.
+    move:  h16_5.
+    rewrite /sigma; case:( Rle_dec (xh + yh) (1 - 2 * u)) =>//=; lra.
+  move:   h16_4 hs2 hs1; rewrite /sigma.
+  case:  (Rle_dec (xh + yh) (1 - 2 * u))=>//=.
+    move=> g1 g2 _ /(_ (eq_refl 1%Z))g3.
+    rewrite /Rdiv Rabs_mult.
+    apply:(Rle_trans _ ((3/2*u*u)*/(/2 -3*u/2))).
+      apply: Rmult_le_compat; try apply: Rabs_pos; try lra.
+      rewrite Rabs_Rinv; try lra.
+      rewrite Rabs_pos_eq; try lra.
+      apply: Rinv_le;  lra.
+    field_simplify.
+    + rewrite /Rdiv; apply:Rmult_le_compat_l.
+      move:(pow2_ge_0 u); lra.
+    + apply:Rle_Rinv.
+      - suff : 4*u <1 by lra.
+        have ->: 1 = pow 0 by [].
+        have->:4 = pow 2 by [].
+        rewrite /u -bpow_plus; apply: bpow_lt; move:Hp3; lia.
+      - suff : 3*u <1 by lra.
+        apply:(Rlt_trans _ (pow (2 -p))).
+          rewrite bpow_plus /= -/u IZR_Zpower_pos /= ; lra.
+      - have ->:1 = pow 0 by [].
+        apply: bpow_lt.
+        move: Hp3;lia.
+      - lra.
+    + suff : 4*u <1 by lra.
+      have ->: 1 = pow 0 by [].
+      have->:4 = pow 2 by [].
+      rewrite /u -bpow_plus; apply: bpow_lt; move:Hp3; lia.
+    suff : 3*u <1 by lra.
+    apply:(Rlt_trans _ (pow (2 -p))).
+      rewrite bpow_plus /= -/u IZR_Zpower_pos /=; lra.
+    have ->:1 = pow 0 by [].
+    apply: bpow_lt.
+    move: Hp3;lia.
+  move/Rnot_le_lt.
+  move=> g1 g2 /(_ (eq_refl 2%Z))g3 _ .
+  have h1m4u: 0< (1 - 4 * u ).
+    suff : 4*u <1 by lra.
+    have ->: 1 = pow 0 by [].
+    have->:4 = pow 2 by [].
+    rewrite /u -bpow_plus; apply: bpow_lt; move:Hp3; lia.
+  have xypos: 0 < x+y.
+  apply:(Rlt_trans _ (1 - 4 * u ))=>//.
+  rewrite /Rdiv Rabs_mult.
+  apply: Rmult_le_compat; try apply: Rabs_pos; try lra.
+  rewrite Rabs_Rinv; try lra.
+  rewrite Rabs_pos_eq; try lra.
+  apply: Rinv_le; lra.
+
+have F4u: format (2 -4 * u).
+  apply:(@FLX_format_Rabs_Fnum  (2 - 4 * u)( (Float two (two ^ (p) - 2)%Z (- p +1)%Z))).
+    rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p)) //.
+      rewrite /u Rmult_minus_distr_r  -bpow_plus.
+      congr Rminus.
+        have->: 2 = pow 1 by [].
+        congr bpow; ring.
+      rewrite bpow_plus /= IZR_Zpower_pos /=; ring.
+    move:Hp; lia.
+  rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p )) //.
+    rewrite Rabs_pos_eq; try lra.
+    suff: pow 1 <= pow p by rewrite /= IZR_Zpower_pos /=;lra.
+    apply:bpow_le; move:Hp; lia.
+  lia.
+have shd: 2 - 4 * u <= sh.
+  rewrite -[X in X <= _](round_generic two fexp (Znearest choice))=>//.
+  by apply:round_le; lra.
+have hu'': sh <= 4 - 4*u.
+  rewrite -[X in _ <= X](round_generic two fexp (Znearest choice))=>//.
+    apply:round_le; lra.
+  apply:(@FLX_format_Rabs_Fnum (4 - 4 * u)( (Float two (two ^ (p) - 1)%Z (- p +2)%Z))).
+    rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p)) //.
+      rewrite !bpow_plus /=.
+      ring_simplify.
+      rewrite/u Rplus_comm IZR_Zpower_pos /=; congr (_ + _); try ring.
+      rewrite Rmult_1_r  -bpow_plus /= Z.add_opp_diag_r /= ; ring.
+    lia.
+  rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p )) //.
+    rewrite Rabs_pos_eq; try lra.
+    suff: pow 0  <= pow p by rewrite /=;lra.
+    apply:bpow_le; move:Hp;lia.
+   move:Hp;lia.
+have slu: Rabs sl <= 2*u.
+  rewrite TwoSum_correct // -Rabs_Ropp Ropp_minus_distr .
+  have->: 2 * u = / 2 * pow (- p) * pow 2 by  rewrite /u /= IZR_Zpower_pos /=; field.
+  apply:(error_le_half_ulp' Hp choice (xh + yh) 2).
+  move:  hu'';  rewrite /= IZR_Zpower_pos /=  /sh Rabs_pos_eq; lra.
+have thle: th + tl = xl + yl by rewrite  TwoSum_correct //; ring.
+have h17_0: Rabs (xl + yl) <= 2 * u.
+  apply:(Rle_trans _ (Rabs xl + Rabs  yl)); first  exact: Rabs_triang; lra.
+have h17_1 : Rabs th <= 2 * u.
+  rewrite  TwoSum_sumE ZNE -round_NE_abs -ZNE.
+  have -> : 2 * u = rnd_p (pow 1 * u).
+    rewrite round_generic // /u -bpow_plus; apply: generic_format_bpow.
+    rewrite /fexp; move : Hp; lia.
+  by apply: round_le.
+have h17_2: Rabs (sl + th)  <= 4 * u.
+  apply:(Rle_trans _ (Rabs sl + Rabs th)); first apply:Rabs_triang; lra.
+have cu: Rabs c <= 4 * u.
+  have ->: 4 * u = rnd_p ( pow 2 * u) .
+    rewrite round_generic -bpow_plus //;  apply : generic_format_bpow; rewrite /fexp;  lia.
+  by rewrite /c /= ZNE -round_NE_abs -ZNE; apply: round_le.
+have e1u: Rabs e1 <= 2 * u * u.
+  rewrite /e1 /c  -Rabs_Ropp Ropp_minus_distr.   
+  apply:(Rle_trans _ (/ 2 * pow (- p) * pow (  -p + 2))).
+    apply: error_le_half_ulp'; first exact: Hp.
+    by rewrite bpow_plus /= -/u Rmult_comm.
+  rewrite /u bpow_plus /= IZR_Zpower_pos /=; lra.
+pose vh := (rnd_p ( sh + c)).
+pose vl :=  (F2Sum_err sh c).
+have clesh: Rabs c <= Rabs sh.
+  rewrite (Rabs_pos_eq sh); last first.
+    apply:(Rle_trans _ (2 - 4 * u)) =>//.
+    apply: Rle_0_minus.
+    suff : pow 2 * u <= pow 1 by [].
+    rewrite /u -bpow_plus; apply: bpow_le; move:Hp; lia.
+  apply/(Rle_trans _ (4 * u) )=>//.
+  apply:(Rle_trans _ (2 - 4 * u))=>//.
+  suff: (pow 3 * u <= pow 1) by  rewrite /= ?IZR_Zpower_pos /=; lra.
+  rewrite /u -bpow_plus; apply: bpow_le; move:Hp3; lia.
+have hl4: vh + vl = sh + c.
+  rewrite /vh /vl  F2Sum_correct_abs //=; try apply:generic_format_round; try ring.
+have shcu: sh + c  <= 4.
+  case/Rabs_le_inv: cu; lra.
+have vhu : vh <= 4.
+  rewrite -(round_generic two fexp (Znearest choice ) 4).
+    by apply: round_le.
+  have -> : 4 = pow 2 by [].
+  apply: generic_format_bpow; rewrite /fexp; move:Hp; lia.
+have vlu: Rabs vl <= 2 * u.
+  have ->: vl = sh + c - rnd_p (sh + c)  by move: hl4; rewrite /vh ; lra.
+  have -> : 2 * u = /2 * u * pow 2 by rewrite /= IZR_Zpower_pos /=; field.
+  rewrite -Rabs_Ropp Ropp_minus_distr; apply:error_le_half_ulp'.
+    exact Hp.
+  rewrite Rabs_pos_eq //.
+  apply:(Rle_trans _ (2 - 8 * u)).
+    suff: pow 3 * u <= pow 1 by rewrite /= ?IZR_Zpower_pos /=; lra.
+    rewrite /u -bpow_plus; apply: bpow_le.
+    lia.
+  case/Rabs_le_inv: cu; lra.
+have tlvlu: Rabs (tl + vl) <= 2 * u + u * u.
+  apply:(Rle_trans _ (Rabs tl + Rabs vl)); first apply:Rabs_triang; lra.
+pose  w := (rnd_p (tl + vl)).
+pose  e2 := ((tl + vl) - w).
+have ulpw: ulp (2 * u ) = pow (-p -p + 2).
+  rewrite ulp_neq_0 /cexp /fexp.
+    rewrite bpow_plus /u.
+    have->:2 = pow 1 by []. 
+    rewrite -!bpow_plus mag_bpow.
+    congr bpow; ring.
+  lra.
+have e2u: Rabs e2 <= u * u.
+  rewrite /e2 /w -Rabs_Ropp Ropp_minus_distr.
+  case:(Rlt_le_dec   (Rabs (tl + vl)) (2 * u))=> tlvlu'.
+    have -> : u * u = /2 * (pow (-p))* (pow (-p + 1)) by rewrite /u bpow_plus /= IZR_Zpower_pos /= ; field.
+    apply:error_le_half_ulp'.
+      exact Hp.
+    rewrite bpow_plus /= -/u IZR_Zpower_pos /= ; lra.
+  have we :Rabs  w = 2 * u.
+    apply: Rle_antisym; last first.
+      have ->: 2 * u = rnd_p (pow 1 * pow (-p)).
+        rewrite round_generic //.
+        rewrite -bpow_plus ; apply:generic_format_bpow; rewrite /fexp; move:Hp; lia.
+      rewrite /w ZNE -round_NE_abs -ZNE.
+      by apply:round_le; rewrite  -/u.
+    rewrite /w ZNE -round_NE_abs -ZNE.
+    suff ->:  2 * u = rnd_p (2 * u + u * u).
+      by apply:round_le; rewrite  -/u.
+    have -> : (2 * u + u * u) = (1 + u/2) * (pow (1 -p)) by rewrite bpow_plus -/u /= IZR_Zpower_pos /= ; field.
+     by rewrite round_bpow r1pu2 bpow_plus -/u /= IZR_Zpower_pos /= ; ring.
+  case :(Rle_lt_dec 0  (tl + vl)) => tlvl0.
+    apply:Rabs_le.
+    move/(round_le two fexp (Znearest choice)):  (tlvl0).
+    rewrite round_0 -/w=>*.
+    rewrite Rabs_pos_eq // in we.
+    rewrite we.
+    rewrite Rabs_pos_eq // in tlvlu'   tlvlu.
+    lra.
+  move/Rlt_le/(round_le two fexp (Znearest choice)):  (tlvl0).
+  rewrite round_0 -/w=>*.
+  rewrite -Rabs_Ropp Rabs_pos_eq in  we; try lra.
+  apply:Rabs_le.
+  have h: Rabs (tl + vl) = -(tl + vl) by rewrite -Rabs_Ropp Rabs_pos_eq; lra.
+  move:  tlvlu tlvlu'; rewrite h.
+  lra.
+have vhd : 2 - 8 * u <= vh.
+  suff <- : rnd_p (2 - 8 * u) = (2 - 8 * u).
+    apply: round_le.
+    case/Rabs_le_inv: cu.
+    lra.
+  rewrite round_generic //.
+  apply:(@FLX_format_Rabs_Fnum  (2 - 8 * u)( (Float two (two ^ (p) - 4)%Z (- p +1)%Z))).
+    rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p)) //.
+      rewrite !bpow_plus /=.
+      ring_simplify.
+      rewrite/u Rplus_comm IZR_Zpower_pos /=; congr (_ + _); try ring.
+      rewrite Rmult_1_r  -bpow_plus /= Z.add_opp_diag_r /=  ; ring.
+    lia.
+  rewrite /F2R /= minus_IZR /= (IZR_Zpower two (p )) //.
+    rewrite Rabs_pos_eq; try lra.
+    suff: pow 2  <= pow p by rewrite /= IZR_Zpower_pos /= ;lra.
+    apply:bpow_le; move:Hp;lia.
+   move:Hp;lia.
+have wu: Rabs w <= 2 * u.
+  suff ->:  2 * u = rnd_p (2 * u + u * u).
+    rewrite /w ZNE -round_NE_abs -ZNE.
+    by apply:round_le; rewrite  -/u.
+  (* a remonter: duplication *)
+  have -> : (2 * u + u * u) = (1 + u/2) * (pow (1 -p)) by rewrite bpow_plus -/u /= IZR_Zpower_pos /=; field.
+  by rewrite round_bpow r1pu2 bpow_plus -/u /= IZR_Zpower_pos /= ; ring.
+(* pose zh :=  (rnd_p (vh +  w)). *)
+(* pose  zl :=  (F2Sum_err vh w). *)
+have wlevh: Rabs w <= Rabs vh.
+  apply:(Rle_trans _ (2 * u)) =>//.
+  apply:(Rle_trans _ (2 - 8 * u)).
+    suff: 10 * u <= 2  by lra.
+    apply:(Rle_trans _ (16 * u)); try lra.
+    have ->: 16 = pow 4 by [].
+    have ->: 2 = pow 1 by [].
+    rewrite -bpow_plus; apply: bpow_le; move: Hp3; lia.
+  rewrite Rabs_pos_eq //.
+  apply:(Rle_trans _ (2 - 8 * u))=>//.
+  suff: 8 * u <= 2 by lra.
+  have ->: 8 = pow 3  by [].
+  have ->: 2 = pow 1 by [].
+  rewrite -bpow_plus; apply: bpow_le;  lia.
+have f2sc: Fast2Sum_correct  p choice vh w.
+  apply:  F2Sum_correct_abs =>//; try apply: generic_format_round.
+split; first by apply:  F2Sum_correct_DW'.
+split; [|
+  split; [case: (Req_dec c 0) => [c0 | c0]; [by right | left; by apply/FLX_exp_monotone/mag_le_abs]
+         | by left; exact: wlevh]].
+have fstE A (a b : A) : fst (a, b) = a  by [].
+have hl6: zh + zl = vh + w. 
+  rewrite   f2sc fstE ; ring.
+have -> : relative_errorDWDW  = Rabs((e1 + e2)/(x + y)).
+  by apply: rel_errorDWDWe_abs.
+rewrite /Rdiv Rabs_mult Rabs_Rinv //.
+have:   Rabs (e1 + e2) <= 3 * u * u.
+  apply:(Rle_trans _ (Rabs e1 + Rabs e2)); first apply: Rabs_triang; lra.
+have xyd: (xh - u) + (yh - u) <= x + y.
+  apply:Rplus_le_compat.
+    case/Rabs_le_inv: xlu; lra.
+  case/Rabs_le_inv: ylu; lra.
+have xyd': 2 - 6 *u < x + y.
+  apply:(Rlt_le_trans _ (xh - u + (yh - u)))=>//.
+  lra.
+move=>*; apply: Rmult_le_compat =>//=; try apply:Rabs_pos; try lra.
+  apply/Rlt_le/Rinv_0_lt_compat/Rabs_pos_lt.
+have xypos: 0 < x + y.
+  apply:(Rlt_trans _ (2 - 6  * u)) =>//.
+  suff: 6 * u < 2 by lra.
+  apply:(Rlt_trans _ ((pow 3) * (pow (-p)))) ; first by rewrite -/u /= IZR_Zpower_pos /= ;lra.
+  rewrite -bpow_plus.
+  have ->: 2 = pow 1 by [].
+  apply:bpow_lt; move: Hp3; lia.  
+by apply Rgt_not_eq.
+rewrite Rabs_pos_eq; try lra.
+apply: Rinv_le.
+  suff : (pow 2 ) * pow (-p) < 1 by rewrite /= -/u IZR_Zpower_pos /=; lra.
+  have ->: 1 = pow 0 by [].
+  rewrite -bpow_plus; apply: bpow_lt; move: Hp3; lia.
+apply:(Rle_trans _ (2 - 6 * u)); try lra.
+have xypos: 0 < x + y.
+  apply:(Rlt_trans _ (2 - 6  * u)) =>//.
+  suff: 6 * u < 2 by lra.
+  apply:(Rlt_trans _ ((pow 3) * (pow (-p)))) ; first by rewrite -/u /= IZR_Zpower_pos /= ;lra.
+  rewrite -bpow_plus.
+  have ->: 2 = pow 1 by [].
+  apply:bpow_lt; move: Hp3; lia.
+nra.
+destruct (Req_dec (x + y) 0); [exfalso|nra].
+apply Rplus_opp_r_uniq in H.
+have Hr: (rnd_p y = rnd_p (-x)) by f_equal.
+apply s0. rewrite hx hy. rewrite Hr.
+rewrite (rnd_p_sym _ _ choiceP). nra.
+Qed.
+
 End  DWPlusDW_Pre.
 
 Section DWPlusDW.
@@ -3317,8 +4698,497 @@ Qed.
 
 (* Notation TwoSum_sum a b := (rnd_p (a + b)). *)
 
+(* Helper facts: cexp(c) <= cexp(sh) \/ c = 0 is preserved by the three
+   WLOG transformations used in DWPlusDW_relerr_bound. *)
 
-Theorem  DWPlusDW_relerr_bound (xh xl yh yl: R) 
+(* x <-> y swap: TwoSum is commutative on (xh,yh), so cexp_or_zero is
+   syntactically identical. *)
+Fact cexp_or_zero_C (xh xl yh yl: R)
+  (Fxh: format xh) (Fxl: format xl) (Fyh: format yh) (Fyl: format yl):
+  ((cexp (rnd_p (TwoSum_err yh xh + TwoSum_sum yl xl)) <=
+    cexp (TwoSum_sum yh xh))%Z
+   \/ rnd_p (TwoSum_err yh xh + TwoSum_sum yl xl) = 0%R) ->
+  ((cexp (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) <=
+    cexp (TwoSum_sum xh yh))%Z
+   \/ rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = 0%R).
+Proof.
+have Esh : TwoSum_sum yh xh = TwoSum_sum xh yh by rewrite !TwoSum_sumE Rplus_comm.
+have Esl : TwoSum_err yh xh = TwoSum_err xh yh by rewrite TwoSum_errC.
+have Eth : TwoSum_sum yl xl = TwoSum_sum xl yl by rewrite !TwoSum_sumE Rplus_comm.
+by rewrite Esh Esl Eth.
+Qed.
+
+(* Negation: TwoSum is odd, rnd_p is odd, cexp is even (cexp(-x) = cexp(x)). *)
+Fact cexp_or_zero_Sym (xh xl yh yl: R)
+  (Fxh: format xh) (Fxl: format xl) (Fyh: format yh) (Fyl: format yl):
+  ((cexp (rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl))) <=
+    cexp (TwoSum_sum (-xh) (-yh)))%Z
+   \/ rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl)) = 0%R) ->
+  ((cexp (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) <=
+    cexp (TwoSum_sum xh yh))%Z
+   \/ rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = 0%R).
+Proof.
+move=> H.
+have rn_sym := (rnd_p_sym p _ choiceP).
+have Fxh_n : format (-xh) by apply: generic_format_opp.
+have Fyh_n : format (-yh) by apply: generic_format_opp.
+have Fxl_n : format (-xl) by apply: generic_format_opp.
+have Fyl_n : format (-yl) by apply: generic_format_opp.
+have Esh : TwoSum_sum (-xh) (-yh) = - (TwoSum_sum xh yh).
+  rewrite !TwoSum_sumE.
+  by have ->: ((-xh) + (-yh)) = -(xh + yh) by ring.
+have Esl : TwoSum_err (-xh) (-yh) = - (TwoSum_err xh yh).
+  have H1 : TwoSum_err (-xh) (-yh) = (-xh) + (-yh) - TwoSum_sum (-xh) (-yh)
+    by apply: TwoSum_correct.
+  have H2 : TwoSum_err xh yh = xh + yh - TwoSum_sum xh yh
+    by apply: TwoSum_correct.
+  rewrite H1 H2 Esh; ring.
+have Eth : TwoSum_sum (-xl) (-yl) = - (TwoSum_sum xl yl).
+  rewrite !TwoSum_sumE.
+  by have ->: ((-xl) + (-yl)) = -(xl + yl) by ring.
+have Ec : rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl)) =
+         - rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl).
+  rewrite Esl Eth.
+  have ->: -TwoSum_err xh yh + -TwoSum_sum xl yl =
+          -(TwoSum_err xh yh + TwoSum_sum xl yl) by ring.
+  by [].
+rewrite Esh Ec in H.
+case: H => [hcexp | h0].
+- left. by rewrite /cexp !mag_opp in hcexp.
+- right. lra.
+Qed.
+
+(* bpow scaling: cexp(x * pow e) = cexp(x) + e (when x <> 0), so both sides
+   shift equally. Requires xh + yh <> 0 so that sh = rnd_p(xh+yh) <> 0
+   (via FLX_round_N_eq0). *)
+Fact cexp_or_zero_S (xh xl yh yl: R) (ee: Z)
+  (Fxh: format xh) (Fxl: format xl) (Fyh: format yh) (Fyl: format yl)
+  (Hsxy: xh + yh <> 0):
+  ((cexp (rnd_p (TwoSum_err (xh * pow ee) (yh * pow ee) +
+                 TwoSum_sum (xl * pow ee) (yl * pow ee))) <=
+    cexp (TwoSum_sum (xh * pow ee) (yh * pow ee)))%Z
+   \/ rnd_p (TwoSum_err (xh * pow ee) (yh * pow ee) +
+             TwoSum_sum (xl * pow ee) (yl * pow ee)) = 0%R) ->
+  ((cexp (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) <=
+    cexp (TwoSum_sum xh yh))%Z
+   \/ rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = 0%R).
+Proof.
+move=> H.
+have epos : 0 < pow ee by apply: bpow_gt_0.
+have ene : pow ee <> 0 by lra.
+have Esh : TwoSum_sum (xh * pow ee) (yh * pow ee) =
+           TwoSum_sum xh yh * pow ee.
+  rewrite !TwoSum_sumE.
+  by rewrite -Rmult_plus_distr_r round_bpow.
+have Esl : TwoSum_err (xh * pow ee) (yh * pow ee) =
+           TwoSum_err xh yh * pow ee.
+  have H1 : TwoSum_err (xh * pow ee) (yh * pow ee) =
+            (xh * pow ee) + (yh * pow ee) - TwoSum_sum (xh * pow ee) (yh * pow ee).
+    apply: TwoSum_correct; by apply: formatS.
+  have H2 : TwoSum_err xh yh = xh + yh - TwoSum_sum xh yh
+    by apply: TwoSum_correct.
+  rewrite H1 H2 Esh; ring.
+have Eth : TwoSum_sum (xl * pow ee) (yl * pow ee) =
+           TwoSum_sum xl yl * pow ee.
+  rewrite !TwoSum_sumE.
+  by rewrite -Rmult_plus_distr_r round_bpow.
+have Ec : rnd_p (TwoSum_err (xh * pow ee) (yh * pow ee) +
+                 TwoSum_sum (xl * pow ee) (yl * pow ee)) =
+          rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow ee.
+  rewrite Esl Eth -Rmult_plus_distr_r round_bpow //.
+have hsh_nz : TwoSum_sum xh yh <> 0.
+  rewrite TwoSum_sumE => Hsh0; apply: Hsxy; exact: (FLX_round_N_eq0 Hsh0).
+move: H. rewrite Esh Ec.
+case: (Req_dec (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) 0) => [hc0|hc_nz].
+  by move=> _; right.
+case=> [hcexp | h0].
+- left.
+  rewrite (cexp_bpow _ ee hc_nz) in hcexp.
+  rewrite (cexp_bpow _ ee hsh_nz) in hcexp.
+  lia.
+- exfalso. apply: hc_nz.
+  case: (Rmult_integral _ _ h0); [done | lra].
+Qed.
+
+(* Auxiliary lemma: mirror the WLOG dispatch from DWPlusDW_relerr_bound, but
+   extract the cexp_or_zero conjunct from _pre' instead of the rel_err bound.
+   The three helper facts above carry the conjunct through each WLOG step. *)
+Lemma DWPlusDW_cexp_or_zero_aux (xh xl yh yl: R)
+  (Hp3': (3 <= p)%Z)
+  (DWx: double_word xh xl) (DWy: double_word yh yl)
+  (Hxh_nz: xh <> 0) (Hnz: xh + yh <> 0):
+  (cexp (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) <=
+   cexp (TwoSum_sum xh yh))%Z
+  \/ rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = 0%R.
+Proof.
+(* Step 1: WLOG Rabs yh <= Rabs xh *)
+wlog xhy: xh xl yh yl DWx DWy Hxh_nz Hnz / Rabs yh <= Rabs xh.
+{ move=> Hwlog.
+  case: (Rle_lt_dec (Rabs yh) (Rabs xh)) => absyxh.
+  - by apply: Hwlog.
+  - case: (DWx) => [[Fxh Fxl] _]; case: (DWy) => [[Fyh Fyl] _].
+    have Hyh_nz : yh <> 0.
+    { move=> Hyh0. move: absyxh; rewrite Hyh0 Rabs_R0 => H.
+      move: (Rabs_pos xh); lra. }
+    apply: cexp_or_zero_C =>//.
+    apply: Hwlog =>//; first by rewrite Rplus_comm.
+    by apply: Rlt_le. }
+(* Step 2: WLOG 0 < xh *)
+case: (DWx) => [[Fxh Fxl] hx]; case: (DWy) => [[Fyh Fyl] hy].
+wlog xhpos: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy / 0 < xh.
+{ move=> Hwlog.
+  case: (Rle_lt_dec 0 xh) => xh0.
+  - apply: Hwlog =>//. lra.
+  - apply: cexp_or_zero_Sym =>//.
+    apply: Hwlog =>//.
+    + by apply: DW_asym.
+    + by apply: DW_asym.
+    + lra.
+    + have ->: -xh + -yh = -(xh + yh) by ring. lra.
+    + by rewrite !Rabs_Ropp.
+    + by apply: generic_format_opp.
+    + by apply: generic_format_opp.
+    + by apply: generic_format_opp.
+    + by apply: generic_format_opp.
+    + have ->: -xh + -xl = -(xh + xl) by ring.
+      rewrite ZNE round_NE_opp -ZNE -hx //.
+    + have ->: -yh + -yl = -(yh + yl) by ring.
+      rewrite ZNE round_NE_opp -ZNE -hy //.
+    + lra. }
+(* Step 3: WLOG 1 <= xh <= 2 - 2*u *)
+wlog [xh1 xh2]: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy xhpos /
+                  1 <= xh <= 2 - 2*u.
+{ move=> Hwlog.
+  case: (scale_generic_12 Fxh xhpos) => exh Hxhs.
+  have epos := bpow_gt_0 two exh.
+  have epne : pow exh <> 0 by lra.
+  have hsh_nz : TwoSum_sum xh yh <> 0.
+  { rewrite TwoSum_sumE => Hsh0; apply: Hnz; exact: (FLX_round_N_eq0 Hsh0). }
+  have Esh : TwoSum_sum (xh * pow exh) (yh * pow exh) =
+             TwoSum_sum xh yh * pow exh.
+    rewrite !TwoSum_sumE.
+    by rewrite -Rmult_plus_distr_r round_bpow.
+  have Esl : TwoSum_err (xh * pow exh) (yh * pow exh) =
+             TwoSum_err xh yh * pow exh.
+    have H1 : TwoSum_err (xh * pow exh) (yh * pow exh) =
+              (xh * pow exh) + (yh * pow exh) - TwoSum_sum (xh * pow exh) (yh * pow exh).
+      apply: TwoSum_correct; by apply: formatS.
+    have H2 : TwoSum_err xh yh = xh + yh - TwoSum_sum xh yh
+      by apply: TwoSum_correct.
+    rewrite H1 H2 Esh; ring.
+  have Eth : TwoSum_sum (xl * pow exh) (yl * pow exh) =
+             TwoSum_sum xl yl * pow exh.
+    rewrite !TwoSum_sumE.
+    by rewrite -Rmult_plus_distr_r round_bpow.
+  have Ec : rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                   TwoSum_sum (xl * pow exh) (yl * pow exh)) =
+            rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh.
+    rewrite Esl Eth -Rmult_plus_distr_r round_bpow //.
+  (* The scaled WLOG dispatch gives a scaled disjunction; rewrite to
+     transport back to the unscaled goal. *)
+  case: (Req_dec (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) 0) => [hc0|hc_nz].
+    by right.
+  left.
+  have Hwlog' : (cexp (rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                              TwoSum_sum (xl * pow exh) (yl * pow exh))) <=
+                cexp (TwoSum_sum (xh * pow exh) (yh * pow exh)))%Z
+              \/ rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                        TwoSum_sum (xl * pow exh) (yl * pow exh)) = 0%R.
+  { apply: Hwlog.
+    - split; first by split; apply: formatS.
+      rewrite -Rmult_plus_distr_r round_bpow.
+      by case: DWx => _ {1}->.
+    - split; first by split; apply: formatS.
+      rewrite -Rmult_plus_distr_r round_bpow.
+      by case: DWy => _ {1}->.
+    - nra.
+    - have ->: xh * pow exh + yh * pow exh = (xh + yh) * pow exh by ring.
+      by apply: Rmult_integral_contrapositive_currified.
+    - rewrite !Rabs_mult (Rabs_pos_eq (pow _)); try lra.
+      by apply: Rmult_le_compat_r; lra.
+    - by apply: formatS.
+    - by apply: formatS.
+    - by apply: formatS.
+    - by apply: formatS.
+    - rewrite -Rmult_plus_distr_r round_bpow.
+      by case: DWx => _ {1}->.
+    - rewrite -Rmult_plus_distr_r round_bpow.
+      by case: DWy => _ {1}->.
+    - nra.
+    - exact: Hxhs. }
+  (* Transport scaled cexp inequality back to unscaled *)
+  rewrite Esh Ec in Hwlog'.
+  case: Hwlog' => [hcexp | h0].
+  - rewrite (cexp_bpow _ exh hc_nz) in hcexp.
+    rewrite (cexp_bpow _ exh hsh_nz) in hcexp.
+    lia.
+  - exfalso. apply: hc_nz.
+    case: (Rmult_integral _ _ h0); [done | lra]. }
+(* Now WLOG-normalized; invoke _pre' and extract third conjunct *)
+have xh1' : 1 <= xh by lra.
+have xh2' : xh <= 2 - 2*u by lra.
+by case: (DWPlusDW_relerr_bound_pre' Hp3' DWx DWy xhy Hnz Hxh_nz xhpos xh1' xh2')
+        => _ [_ [? _]].
+Qed.
+
+(* Outer paper-level lemma: extract the 4th conjunct of _pre' (Rabs w <=
+   Rabs vh \/ vh = 0 \/ w = 0) for general inputs via the same WLOG
+   dispatch used in DWPlusDW_cexp_or_zero_aux. The transformations preserve
+   the disjunction:
+   - swap (xh,xl) <-> (yh,yl): TwoSum/Fast2Sum operations are symmetric, so
+     vh, w are unchanged.
+   - negation: vh -> -vh, w -> -w; Rabs preserved, zero condition preserved.
+   - bpow scaling by e: vh -> e*vh, w -> e*w; Rabs scales by |e| on both
+     sides, zero condition preserved (since e <> 0).
+
+   To avoid the noise of deeply-nested helper signatures, the preservation
+   reasoning is inlined at each WLOG step. *)
+Lemma DWPlusDW_w_le_vh_aux (xh xl yh yl: R)
+  (Hp3': (3 <= p)%Z)
+  (DWx: double_word xh xl) (DWy: double_word yh yl)
+  (Hxh_nz: xh <> 0) (Hnz: xh + yh <> 0):
+  Rabs (rnd_p (TwoSum_err xl yl +
+               F2Sum_err (TwoSum_sum xh yh)
+                          (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)))) <=
+  Rabs (F2Sum_sum (TwoSum_sum xh yh)
+                   (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)))
+  \/ F2Sum_sum (TwoSum_sum xh yh)
+                (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) = 0%R
+  \/ rnd_p (TwoSum_err xl yl +
+            F2Sum_err (TwoSum_sum xh yh)
+                       (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))) = 0%R.
+Proof.
+(* WLOG Rabs yh <= Rabs xh *)
+wlog xhy: xh xl yh yl DWx DWy Hxh_nz Hnz / Rabs yh <= Rabs xh.
+{ move=> Hwlog.
+  case: (Rle_lt_dec (Rabs yh) (Rabs xh)) => absyxh.
+  - by apply: Hwlog.
+  - case: (DWx) => [[Fxh Fxl] _]; case: (DWy) => [[Fyh Fyl] _].
+    have Hyh_nz : yh <> 0.
+    { move=> Hyh0. move: absyxh; rewrite Hyh0 Rabs_R0 => H.
+      move: (Rabs_pos xh); lra. }
+    have Esh : TwoSum_sum yh xh = TwoSum_sum xh yh by rewrite !TwoSum_sumE Rplus_comm.
+    have Esl : TwoSum_err yh xh = TwoSum_err xh yh by rewrite TwoSum_errC.
+    have Eth : TwoSum_sum yl xl = TwoSum_sum xl yl by rewrite !TwoSum_sumE Rplus_comm.
+    have Etl : TwoSum_err yl xl = TwoSum_err xl yl by rewrite TwoSum_errC.
+    have := Hwlog yh yl xh xl DWy DWx Hyh_nz ltac:(rewrite Rplus_comm; exact Hnz)
+                  (Rlt_le _ _ absyxh).
+    by rewrite Esh Esl Eth Etl.
+}
+(* WLOG 0 < xh *)
+case: (DWx) => [[Fxh Fxl] hx]; case: (DWy) => [[Fyh Fyl] hy].
+wlog xhpos: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy / 0 < xh.
+{ move=> Hwlog.
+  case: (Rle_lt_dec 0 xh) => xh0.
+  - apply: Hwlog =>//. lra.
+  - have rn_sym := (rnd_p_sym p _ choiceP).
+    have DWxn : double_word (-xh) (-xl) by apply: DW_asym.
+    have DWyn : double_word (-yh) (-yl) by apply: DW_asym.
+    have Fxhn : format (-xh) by apply: generic_format_opp.
+    have Fxln : format (-xl) by apply: generic_format_opp.
+    have Fyhn : format (-yh) by apply: generic_format_opp.
+    have Fyln : format (-yl) by apply: generic_format_opp.
+    (* Compute negated TwoSum/Fast2Sum values *)
+    have Esh : TwoSum_sum (-xh) (-yh) = - TwoSum_sum xh yh.
+      rewrite !TwoSum_sumE.
+      by have ->: ((-xh) + (-yh)) = -(xh + yh) by ring.
+    have Esl : TwoSum_err (-xh) (-yh) = - TwoSum_err xh yh.
+      have H1 : TwoSum_err (-xh) (-yh) = (-xh) + (-yh) - TwoSum_sum (-xh) (-yh)
+        by apply: TwoSum_correct.
+      have H2 : TwoSum_err xh yh = xh + yh - TwoSum_sum xh yh
+        by apply: TwoSum_correct.
+      rewrite H1 H2 Esh; ring.
+    have Eth : TwoSum_sum (-xl) (-yl) = - TwoSum_sum xl yl.
+      rewrite !TwoSum_sumE.
+      by have ->: ((-xl) + (-yl)) = -(xl + yl) by ring.
+    have Etl : TwoSum_err (-xl) (-yl) = - TwoSum_err xl yl.
+      have H1 : TwoSum_err (-xl) (-yl) = (-xl) + (-yl) - TwoSum_sum (-xl) (-yl)
+        by apply: TwoSum_correct.
+      have H2 : TwoSum_err xl yl = xl + yl - TwoSum_sum xl yl
+        by apply: TwoSum_correct.
+      rewrite H1 H2 Eth; ring.
+    have Ec : rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl)) =
+             - rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl).
+      rewrite Esl Eth.
+      have ->: -TwoSum_err xh yh + -TwoSum_sum xl yl =
+              -(TwoSum_err xh yh + TwoSum_sum xl yl) by ring.
+      by [].
+    have Evh : F2Sum_sum (TwoSum_sum (-xh) (-yh))
+                          (rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl))) =
+               - F2Sum_sum (TwoSum_sum xh yh)
+                            (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)).
+      rewrite Esh Ec.
+      have ->: F2Sum (- TwoSum_sum xh yh) (- rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) =
+               pair_opp (F2Sum (TwoSum_sum xh yh) (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))).
+        by apply: Fast2Sum_asym.
+      by rewrite /pair_opp /=.
+    have Evl : F2Sum_err (TwoSum_sum (-xh) (-yh))
+                          (rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl))) =
+               - F2Sum_err (TwoSum_sum xh yh)
+                            (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)).
+      rewrite Esh Ec.
+      have ->: F2Sum (- TwoSum_sum xh yh) (- rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) =
+               pair_opp (F2Sum (TwoSum_sum xh yh) (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))).
+        by apply: Fast2Sum_asym.
+      by rewrite /pair_opp /=.
+    have Ew : rnd_p (TwoSum_err (-xl) (-yl) +
+                     F2Sum_err (TwoSum_sum (-xh) (-yh))
+                                (rnd_p (TwoSum_err (-xh) (-yh) + TwoSum_sum (-xl) (-yl)))) =
+             - rnd_p (TwoSum_err xl yl +
+                      F2Sum_err (TwoSum_sum xh yh)
+                                 (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))).
+      rewrite Etl Evl.
+      have ->: - TwoSum_err xl yl +
+               - F2Sum_err (TwoSum_sum xh yh)
+                            (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) =
+               - (TwoSum_err xl yl +
+                  F2Sum_err (TwoSum_sum xh yh)
+                             (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)))
+        by ring.
+      by [].
+    have Hnxh_nz : -xh <> 0 by lra.
+    have Hnxhyh_nz : -xh + -yh <> 0.
+      have ->: -xh + -yh = -(xh + yh) by ring. lra.
+    have absnxhyh : Rabs (-yh) <= Rabs (-xh) by rewrite !Rabs_Ropp.
+    have hxn : -xh = rnd_p (-xh + -xl).
+      have ->: -xh + -xl = -(xh + xl) by ring.
+      by rewrite ZNE round_NE_opp -ZNE -hx.
+    have hyn : -yh = rnd_p (-yh + -yl).
+      have ->: -yh + -yl = -(yh + yl) by ring.
+      by rewrite ZNE round_NE_opp -ZNE -hy.
+    have Hxhpos_n : 0 < -xh by lra.
+    have HW := Hwlog (-xh) (-xl) (-yh) (-yl) DWxn DWyn Hnxh_nz Hnxhyh_nz
+                  absnxhyh Fxhn Fxln Fyhn Fyln hxn hyn Hxhpos_n.
+    move: HW. rewrite Evh Ew !Rabs_Ropp.
+    case=> [Hle | [Hvh | Hw]].
+    + by left.
+    + by right; left; lra.
+    + by right; right; lra.
+}
+(* WLOG 1 <= xh <= 2 - 2*u *)
+wlog [xh1 xh2]: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy xhpos /
+                  1 <= xh <= 2 - 2*u.
+{ move=> Hwlog.
+  case: (scale_generic_12 Fxh xhpos) => exh Hxhs.
+  have epos := bpow_gt_0 two exh.
+  have epne : pow exh <> 0 by lra.
+  have Esh : TwoSum_sum (xh * pow exh) (yh * pow exh) =
+             TwoSum_sum xh yh * pow exh.
+    rewrite !TwoSum_sumE.
+    by rewrite -Rmult_plus_distr_r round_bpow.
+  have Esl : TwoSum_err (xh * pow exh) (yh * pow exh) =
+             TwoSum_err xh yh * pow exh.
+    have H1 : TwoSum_err (xh * pow exh) (yh * pow exh) =
+              (xh * pow exh) + (yh * pow exh) - TwoSum_sum (xh * pow exh) (yh * pow exh).
+      apply: TwoSum_correct; by apply: formatS.
+    have H2 : TwoSum_err xh yh = xh + yh - TwoSum_sum xh yh
+      by apply: TwoSum_correct.
+    rewrite H1 H2 Esh; ring.
+  have Eth : TwoSum_sum (xl * pow exh) (yl * pow exh) =
+             TwoSum_sum xl yl * pow exh.
+    rewrite !TwoSum_sumE.
+    by rewrite -Rmult_plus_distr_r round_bpow.
+  have Etl : TwoSum_err (xl * pow exh) (yl * pow exh) =
+             TwoSum_err xl yl * pow exh.
+    have H1 : TwoSum_err (xl * pow exh) (yl * pow exh) =
+              (xl * pow exh) + (yl * pow exh) - TwoSum_sum (xl * pow exh) (yl * pow exh).
+      apply: TwoSum_correct; by apply: formatS.
+    have H2 : TwoSum_err xl yl = xl + yl - TwoSum_sum xl yl
+      by apply: TwoSum_correct.
+    rewrite H1 H2 Eth; ring.
+  have Ec : rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                   TwoSum_sum (xl * pow exh) (yl * pow exh)) =
+            rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh.
+    rewrite Esl Eth -Rmult_plus_distr_r round_bpow //.
+  have Fsh : format (TwoSum_sum xh yh) by rewrite TwoSum_sumE; apply: generic_format_round.
+  have Fc : format (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))
+    by apply: generic_format_round.
+  have EFast2 : F2Sum (TwoSum_sum xh yh * pow exh)
+                       (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh) =
+                ((F2Sum_sum (TwoSum_sum xh yh)
+                             (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))) * pow exh,
+                 (F2Sum_err (TwoSum_sum xh yh)
+                             (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))) * pow exh).
+    by apply: Fast2SumS.
+  have Evh : F2Sum_sum (TwoSum_sum (xh * pow exh) (yh * pow exh))
+                        (rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                                TwoSum_sum (xl * pow exh) (yl * pow exh))) =
+             F2Sum_sum (TwoSum_sum xh yh)
+                        (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) * pow exh.
+    rewrite Esh Ec.
+    change (F2Sum_sum (TwoSum_sum xh yh * pow exh)
+                       (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh))
+      with (fst (F2Sum (TwoSum_sum xh yh * pow exh)
+                        (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh))).
+    by rewrite EFast2.
+  have Evl : F2Sum_err (TwoSum_sum (xh * pow exh) (yh * pow exh))
+                        (rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                                TwoSum_sum (xl * pow exh) (yl * pow exh))) =
+             F2Sum_err (TwoSum_sum xh yh)
+                        (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) * pow exh.
+    rewrite Esh Ec.
+    change (F2Sum_err (TwoSum_sum xh yh * pow exh)
+                       (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh))
+      with (snd (F2Sum (TwoSum_sum xh yh * pow exh)
+                        (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) * pow exh))).
+    by rewrite EFast2.
+  have Ew : rnd_p (TwoSum_err (xl * pow exh) (yl * pow exh) +
+                   F2Sum_err (TwoSum_sum (xh * pow exh) (yh * pow exh))
+                              (rnd_p (TwoSum_err (xh * pow exh) (yh * pow exh) +
+                                      TwoSum_sum (xl * pow exh) (yl * pow exh)))) =
+           rnd_p (TwoSum_err xl yl +
+                  F2Sum_err (TwoSum_sum xh yh)
+                             (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))) * pow exh.
+    rewrite Etl Evl -Rmult_plus_distr_r round_bpow //.
+  have DWx_S : double_word (xh * pow exh) (xl * pow exh).
+  { split; first by split; apply: formatS.
+    rewrite -Rmult_plus_distr_r round_bpow.
+    by case: DWx => _ {1}->. }
+  have DWy_S : double_word (yh * pow exh) (yl * pow exh).
+  { split; first by split; apply: formatS.
+    rewrite -Rmult_plus_distr_r round_bpow.
+    by case: DWy => _ {1}->. }
+  have Hxh_nz_S : xh * pow exh <> 0 by nra.
+  have Hnz_S : xh * pow exh + yh * pow exh <> 0.
+  { have ->: xh * pow exh + yh * pow exh = (xh + yh) * pow exh by ring.
+    by apply: Rmult_integral_contrapositive_currified. }
+  have xhy_S : Rabs (yh * pow exh) <= Rabs (xh * pow exh).
+  { rewrite !Rabs_mult (Rabs_pos_eq (pow _)); try lra.
+    by apply: Rmult_le_compat_r; lra. }
+  have Fxh_S : format (xh * pow exh) by apply: formatS.
+  have Fxl_S : format (xl * pow exh) by apply: formatS.
+  have Fyh_S : format (yh * pow exh) by apply: formatS.
+  have Fyl_S : format (yl * pow exh) by apply: formatS.
+  have hx_S : xh * pow exh = rnd_p (xh * pow exh + xl * pow exh).
+  { rewrite -Rmult_plus_distr_r round_bpow.
+    by case: DWx => _ {1}->. }
+  have hy_S : yh * pow exh = rnd_p (yh * pow exh + yl * pow exh).
+  { rewrite -Rmult_plus_distr_r round_bpow.
+    by case: DWy => _ {1}->. }
+  have xhpos_S : 0 < xh * pow exh by nra.
+  have HW := Hwlog (xh * pow exh) (xl * pow exh) (yh * pow exh) (yl * pow exh)
+                   DWx_S DWy_S Hxh_nz_S Hnz_S xhy_S Fxh_S Fxl_S Fyh_S Fyl_S
+                   hx_S hy_S xhpos_S Hxhs.
+  move: HW.
+  rewrite Evh Ew.
+  case=> [Hle | [Hvh | Hw]].
+  - left.
+    move: Hle; rewrite !Rabs_mult (Rabs_pos_eq (pow exh)); last by lra.
+    move=> Hle.
+    apply: (Rmult_le_reg_r (pow exh)); lra.
+  - right; left.
+    case: (Rmult_integral _ _ Hvh); [done | lra].
+  - right; right.
+    case: (Rmult_integral _ _ Hw); [done | lra].
+}
+(* Apply _pre' and extract conjunct 4 *)
+have xh1' : 1 <= xh by lra.
+have xh2' : xh <= 2 - 2*u by lra.
+by case: (DWPlusDW_relerr_bound_pre' Hp3' DWx DWy xhy Hnz Hxh_nz xhpos xh1' xh2')
+        => _ [_ [_ ?]].
+Qed.
+
+Theorem  DWPlusDW_relerr_bound (xh xl yh yl: R)
          (DWx: double_word xh xl)(DWy: double_word yh yl)  (* (xyn0: (xh+xl + (yh + yl) <> 0)) *): 
          (relative_errorDWDW xh xl yh yl )<=  (3 * u^2) / (1 - 4 * u).
 Proof.
@@ -3408,6 +5278,75 @@ apply s0. rewrite hx hy. rewrite Hr.
 rewrite (rnd_p_sym _ _ choiceP). nra.
 (* *)
 by  case:( DWPlusDW_relerr_bound_pre Hp3 DWx DWy).
+Qed.
+
+(* FLX disjunction at the (sh, c) callsite inside DWPlusDW: covers each
+   sufficient condition for Fast2Sum_correct sh c:
+     - cexp c <= cexp sh         -> F2Sum_correct_cexp (paper σ branches)
+     - sh = 0                    -> Fast2Sum0f         (paper cancellation)
+     - rnd_p (sl + th) = 0       -> Fast2Sumf0         (c = 0 branch)
+   The c = 0 branch is needed because when c = 0 and sh is small (|sh| < 1),
+   cexp 0 = -p > cexp sh, so the cexp condition fails — but Fast2Sumf0 still
+   gives the exact decomposition.
+*)
+Lemma DWPlusDW_sh_c_cexp_or_zero (xh xl yh yl: R)
+  (DWx: double_word xh xl)(DWy: double_word yh yl):
+  (cexp (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) <=
+   cexp (TwoSum_sum xh yh))%Z
+  \/ TwoSum_sum xh yh = 0%R
+  \/ rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = 0%R.
+Proof.
+case:(DWx)=>[[Fxh Fxl] hx]. case:(DWy)=>[[Fyh Fyl] hy].
+(* Case 1: xh + yh = 0 -> sh = round(0) = 0 -> second disjunct *)
+case:(Req_dec (xh + yh) 0) => [Hzero | Hnz].
+{ right; left; rewrite TwoSum_sumE Hzero round_0; reflexivity. }
+(* Case 2: c = rnd_p (sl + th) = 0 -> third disjunct *)
+case:(Req_dec (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) 0) => [Hc0 | Hc_nz].
+{ right; right; exact Hc0. }
+left.
+(* Case 3: xh + yh <> 0 AND c <> 0 -> need cexp c <= cexp sh.
+   Sub-case 3a: xh = 0. Derive xl = 0 from DW(xh, xl) in FLX, then
+   sh = yh and c = yl. The cexp inequality follows from DW(yh, yl). *)
+case:(Req_dec xh 0) => [Hxh0 | Hxh_nz].
+{ have xl0 : xl = 0.
+    have H1 : rnd_p (xh + xl) = 0 by rewrite -hx; exact Hxh0.
+    rewrite Hxh0 Rplus_0_l in H1.
+    exact (FLX_round_N_eq0 H1).
+  have she : TwoSum_sum xh yh = yh.
+    by rewrite TwoSum_sumE Hxh0 Rplus_0_l round_generic.
+  have sl0 : TwoSum_err xh yh = 0.
+    by rewrite TwoSum_correct // TwoSum_sumE Hxh0 Rplus_0_l round_generic //; ring.
+  have the : TwoSum_sum xl yl = yl.
+    by rewrite TwoSum_sumE xl0 Rplus_0_l round_generic.
+  have ce_eq : rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = yl.
+    by rewrite sl0 the Rplus_0_l round_generic.
+  rewrite ce_eq she.
+  (* Goal: cexp yl <= cexp yh.  We have yl <> 0 from Hc_nz. *)
+  have yl_nz : yl <> 0.
+    move=> Hyl0; apply Hc_nz; rewrite ce_eq Hyl0; reflexivity.
+  (* From DW(yh, yl): |yl| <= /2 ulp yh = bpow (cexp yh - 1).
+     So mag yl <= cexp yh, hence cexp yl = mag yl - p <= cexp yh - p < cexp yh. *)
+  have Hyl_bnd : Rabs yl <= /2 * ulp yh by apply: dw_ulp.
+  have yh_nz : yh <> 0.
+    move=> Hyh0; apply Hnz; rewrite Hxh0 Hyh0; ring.
+  have Hulp_yh : ulp yh = pow (cexp yh).
+    by rewrite ulp_neq_0.
+  rewrite Hulp_yh in Hyl_bnd.
+  have Hyl_lt : Rabs yl < pow (cexp yh).
+    apply: (Rle_lt_trans _ (/ 2 * pow (cexp yh))) =>//.
+    have hpos: 0 < pow (cexp yh) by apply: bpow_gt_0.
+    lra.
+  have Hmag_yl : (mag two yl <= cexp yh)%Z by apply: mag_le_bpow.
+  rewrite /cexp /fexp.
+  move: Hmag_yl. rewrite /cexp /fexp.
+  move: Hp; lia. }
+(* Sub-case 3b: xh <> 0, xh + yh <> 0, c <> 0.  Use DWPlusDW_cexp_or_zero_aux
+   (mirrors the WLOG dispatch of DWPlusDW_relerr_bound to invoke
+   DWPlusDW_relerr_bound_pre' under normalized inputs and extract its third
+   conjunct). *)
+case: (DWPlusDW_cexp_or_zero_aux Hp3 DWx DWy Hxh_nz Hnz) => [Hcexp | Hc0].
+- exact Hcexp.
+- by exfalso; apply: Hc_nz.
 Qed.
 
 End  DWPlusDW.

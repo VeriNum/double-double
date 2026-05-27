@@ -14,6 +14,44 @@ Require Import mathcomp.ssreflect.ssreflect.
 (* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
+
+Section DWHighBnd.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 (the
+   sum-form bound used by older lemma statements), then |xh| <= Omega/4
+   (the high-part bound preferred by DWPlusFP_cond / DWPlusDW_cond).
+   The implication holds because Omega/4 = 2^(femax - 2) is a power of two,
+   hence in generic_format, and round-to-nearest cannot push a value with
+   |x| < B above B when B is representable. *)
+Lemma dw_high_bnd_of_sum (xh xl : ftype t)
+  (Hdw  : double_word_prop xh xl)
+  (Hsum : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))) :
+  Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)).
+Proof.
+have Hquot : /4 * bpow radix2 (femax t) = bpow radix2 (femax t - 2).
+{ have -> : (femax t - 2 = -2 + femax t)%Z by ring.
+  rewrite bpow_plus. cbn. nra. }
+have Hvexp : Valid_exp (SpecFloat.fexp (fprec t) (femax t))
+  by apply FLT.FLT_exp_valid; apply fprec_gt_0.
+have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
+                             (bpow radix2 (femax t - 2)).
+{ apply generic_format_bpow; auto.
+  rewrite /SpecFloat.fexp /SpecFloat.emin.
+  pose proof (fprec_lt_femax t).
+  pose proof (@fprec_lb t).
+  apply Z.max_lub; lia. }
+rewrite /double_word_prop/rounded in Hdw.
+rewrite Hdw Hquot.
+apply (@abs_round_le_generic radix2 _ Hvexp _
+                              (BinarySingleNaN.valid_rnd_round_mode _)).
+- exact Hfmt.
+- apply Rlt_le. rewrite -Hquot. exact Hsum.
+Qed.
+
+End DWHighBnd.
+
+
 Section CorrectDWPlusFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -299,10 +337,10 @@ Hypothesis DWx : double_word xh  xl.
 Notation t:= Tdouble.
 
 Lemma TwoSumF_sum_finite
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
 (Hxh : Rabs (FT2R xh) <= /2 * (bpow radix2 (femax t)))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t))) : 
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t))) :
 let sh := TwoSumF_sum xh y in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype sh) = true.
 Proof.
@@ -340,149 +378,45 @@ Qed.
 Notation fexp:= ((SpecFloat.fexp (fprec t) (femax t))).
 
 Lemma TwoSumF_err_finite_ubnd
-(Hxh : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))):
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
   FT2R xh <=  / 2 * bpow radix2 (femax t).
 Proof.
-have Hbnd : - / 4 * bpow radix2 (femax t) - FT2R xl <= 
-                FT2R xh  <= / 4 * bpow radix2 (femax t) - FT2R xl.
-{ destruct (Req_dec 0 (FT2R xh)).
-rewrite -H Rplus_0_l in Hxh.
-apply Rabs_lt_inv in Hxh. split; destruct Hxh; nra.
-apply not_eq_sym in H.
-apply dw_le in DWx => //. apply Rabs_le_inv in DWx.
-apply Rabs_lt_inv in Hxh. split; destruct Hxh.
-by apply Rcomplements.Rlt_minus_l in H0; nra.
-by apply Rcomplements.Rlt_minus_r in H1; nra.  }
-
-have HDWx :  double_word xh xl by assumption.
-
-have A:  2 * FT2R xh <= 
-   / 2 * bpow radix2 (femax t) + ulp radix2 fexp (FT2R xh).
-{ destruct Hbnd. 
-replace (2 * FT2R xh) with (FT2R xh * 2) by nra.
-apply Rcomplements.Rle_div_r; try nra. field_simplify.
-refine (Rle_trans _ _ _ H0  _). 
-apply Rcomplements.Rle_div_l; try nra; field_simplify.
-apply Rplus_le_compat_l.
-apply dw_ulp in HDWx. 
-  apply Rabs_le_inv in HDWx. destruct HDWx. 
-nra. }
- 
-destruct (Req_dec 0 (FT2R xh)).
-
-(** case 1/2: FT2R xh = 0 *)
-{ rewrite -H; nra. } 
-(** case 2/2: FT2R xh <> 0 *)
-apply not_eq_sym in H.
-apply dw_le in DWx => //. apply Rabs_le_inv in DWx.
-destruct (Rlt_dec (FT2R xh) 0).
-
-(** case 1/2 : FT2R xh < 0 *)
-{ pose proof Rabs_left (FT2R xh)  r as H1. 
-move: DWx. rewrite H1 Ropp_involutive. move => HDWx'.
-have B : 2 * FT2R xh <=  / 2 * bpow radix2 (femax t) - FT2R xh ; [| nra].
-refine (Rle_trans _ _ _ A _). 
-apply Rplus_le_compat_l; rewrite -ulp_opp. 
-apply  ulp_le_id; try nra.
-apply generic_format_opp.
-apply Binary.generic_format_B2R. }
-(** case 2/2: 0 <= FT2R xh *) 
-apply Rnot_lt_le in n. apply Rle_ge in n.
-pose proof Rabs_right (FT2R xh) n as H1. 
-move: DWx. rewrite H1. move => HDWx'.
-
-have B :  2 * FT2R xh <=  / 2 * bpow radix2 (femax t) + FT2R xh ; [| nra].
-refine (Rle_trans _ _ _ A _).
-apply Rplus_le_compat_l.
-apply  ulp_le_id; try nra.
-apply Binary.generic_format_B2R.
+apply Rabs_le_inv in Hxh; destruct Hxh as [_ Hxh].
+have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
+nra.
 Qed.
 
 
 
 Lemma TwoSumF_err_finite_lbnd
-(Hxh : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))):
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
  - (/ 2 * bpow radix2 (femax t)) <= FT2R xh.
 Proof.
-have Hbnd : - / 4 * bpow radix2 (femax t) - FT2R xl <= 
-                FT2R xh  <= / 4 * bpow radix2 (femax t) - FT2R xl.
-{ destruct (Req_dec 0 (FT2R xh)).
-rewrite -H Rplus_0_l in Hxh.
-apply Rabs_lt_inv in Hxh. split; destruct Hxh; nra.
-apply not_eq_sym in H.
-apply dw_le in DWx => //. apply Rabs_le_inv in DWx.
-apply Rabs_lt_inv in Hxh. split; destruct Hxh.
-by apply Rcomplements.Rlt_minus_l in H0; nra.
-by apply Rcomplements.Rlt_minus_r in H1; nra.  }
-
-have HDWx :  double_word xh xl by assumption.
-
-have A: - / 2 * bpow radix2 (femax t) 
-  - ulp radix2 fexp (FT2R xh) <= 2 * FT2R xh.
-{ destruct Hbnd.
-replace (2 * FT2R xh) with (FT2R xh * 2) by nra.
-apply Rcomplements.Rle_div_l; try nra. field_simplify.
-refine (Rle_trans _ _ _ _  _). 2: apply H.
-apply Rcomplements.Rle_div_l; try nra; field_simplify.
-apply Rplus_le_compat_l.
-apply dw_ulp in HDWx. 
-  apply Rabs_le_inv in HDWx. destruct HDWx.
-apply Ropp_le_contravar; nra. }
- 
-destruct (Req_dec 0 (FT2R xh)).
-
-(** case 1/2: FT2R xh = 0 *)
-{ rewrite -H; nra. } 
-(** case 2/2: FT2R xh <> 0 *)
-apply not_eq_sym in H.
-apply dw_le in DWx => //. apply Rabs_le_inv in DWx.
-destruct (Rlt_dec (FT2R xh) 0).
-
-(** case 1/2 : FT2R xh < 0 *)
-{ pose proof Rabs_left (FT2R xh)  r as H1. 
-move: DWx. rewrite H1 Ropp_involutive. move => HDWx'.
-have B : - / 2 * bpow radix2 (femax t) 
-    + FT2R xh <= 2 * FT2R xh; [| nra].
-refine (Rle_trans _ _ _ _  _). 2: apply A.
-apply Rplus_le_compat_l, Ropp_le_cancel.
-rewrite Ropp_involutive -ulp_opp. 
-apply  ulp_le_id; try nra.
-apply generic_format_opp.
-apply Binary.generic_format_B2R. }
-(** case 2/2: 0 <= FT2R xh *) 
-apply Rnot_lt_le in n. apply Rle_ge in n.
-pose proof Rabs_right (FT2R xh) n as H1. 
-move: DWx. rewrite H1. move => HDWx'.
-
-have B : - / 2 * bpow radix2 (femax t) 
-    - FT2R xh <= 2 * FT2R xh; [| nra].
-refine (Rle_trans _ _ _ _  _). 2: apply A.
-apply Rplus_le_compat_l, Ropp_le_cancel.
-rewrite !Ropp_involutive. 
-apply  ulp_le_id; try nra.
-apply Binary.generic_format_B2R.
+apply Rabs_le_inv in Hxh; destruct Hxh as [Hxh _].
+have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
+nra.
 Qed.
 
 Lemma TwoSumF_err_finite_bnd
-(Hxh : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))):
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
 Rabs (FT2R xh) <=  (/ 2 * bpow radix2 (femax t)) .
 Proof.
-apply Rabs_le; split;
- [apply TwoSumF_err_finite_lbnd |  apply TwoSumF_err_finite_ubnd] => //.
+have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
+refine (Rle_trans _ _ _ Hxh _); nra.
 Qed.
 
 Lemma TwoSumF_err_finite'
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hy : Rabs (FT2R y) < /4 * (bpow radix2 (femax t)))
-(Hxh : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))):
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hy : Rabs (FT2R y) <= /4 * (bpow radix2 (femax t)))
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
 let sl := TwoSumF_err xh y in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype sl) = true.
 Proof.
 rewrite /TwoSumF_sum/TwoSumF_err/TwoSumF/fst/snd => //.
-have HA:  
-Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024) by 
-  (apply TwoSumF_err_finite_bnd ;nra).
+have HA:
+Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024) by
+  (apply TwoSumF_err_finite_bnd ;auto).
 have HFIN : Binary.is_finite (fprec t) (femax t) (float_of_ftype (BPLUS xh y)) = true by
    apply TwoSumF_sum_finite => //. 
 
@@ -702,17 +636,17 @@ Qed.
 
 
 Lemma TwoSumF_err_finite
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hxh : Rabs (FT2R xh + FT2R xl) < / 4 * bpow radix2 (femax t))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t)))  :
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxh : Rabs (FT2R xh) <= / 4 * bpow radix2 (femax t))
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t)))  :
 let sl := TwoSumF_err xh y in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype sl) = true.
 Proof.
 rewrite /TwoSumF_sum/TwoSumF_err/TwoSumF/fst/snd => //.
-have HA:  
-Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024) by  
-  (apply TwoSumF_err_finite_bnd ; try nra).
+have HA:
+Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024) by
+  (apply TwoSumF_err_finite_bnd ; try auto).
 have HFIN : Binary.is_finite (fprec t) (femax t) (float_of_ftype (BPLUS xh y)) = true.
 apply TwoSumF_sum_finite => //.
 (* *)
@@ -927,13 +861,13 @@ rewrite Rlt_bool_true. move =>  [] A [] Hp _; auto.
 auto.
 Qed.
 
-Theorem is_finite_p_TwoSum 
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hxh : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t)))  :
+Theorem is_finite_p_TwoSum
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)))
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t)))  :
 is_finite_p (TwoSumF xh y).
-Proof. 
+Proof.
 rewrite /is_finite_p; split.
 apply TwoSumF_sum_finite => //.
 apply TwoSumF_err_finite_bnd => //.
@@ -965,20 +899,20 @@ subst g. rewrite ulp_bpow. simpl; nra.
 Qed.
 
 Theorem DWPlusFP_zh_finite
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hxhl : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t))): 
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxhl : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)))
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t))):
 let zh := Fast2Sum_sum sh (BPLUS xl sl) in
  Binary.is_finite (fprec t) (femax t) (float_of_ftype zh) = true.
 Proof.
 rewrite /Fast2Sum_err/fst/snd => //.
 rewrite /Fast2Sum_sum/fst/Fast2Sum.
 
-have Hxh:  
-Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024). by  
-  (apply TwoSumF_err_finite_bnd ; try nra).
+have Hxh:
+Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024). by
+  (apply TwoSumF_err_finite_bnd ; try auto).
 
 have HFIN : Binary.is_finite (fprec t) (femax t) (float_of_ftype (BPLUS xh y)) = true.
 apply TwoSumF_sum_finite => //.
@@ -1055,17 +989,17 @@ interval with (i_prec 128).
 Qed.
 
 Theorem DWPlusFP_zl_finite
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hxhl : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t))) :
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxhl : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)))
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t))) :
 let zl := Fast2Sum_err sh (BPLUS xl sl) in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype zl) = true.
 Proof.
-have Hxh:  
-Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024). by  
-  (apply TwoSumF_err_finite_bnd ; try nra).
+have Hxh:
+Rabs (FT2R xh) <= / 2 * IZR (Z.pow_pos 2 1024). by
+  (apply TwoSumF_err_finite_bnd ; try auto).
 
 set zh := Fast2Sum_sum sh (BPLUS xl sl).
 have : Binary.is_finite (fprec t) (femax t) (float_of_ftype zh) = true . 
@@ -1193,12 +1127,12 @@ Qed.
 Let zh := Fast2Sum_sum sh (BPLUS xl sl) .
 Let zl := Fast2Sum_err sh (BPLUS xl sl) .
 
-Theorem DWPlusFP_finite 
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true) 
-(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true) 
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true) 
-(Hxhl : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
-(Hy :  Rabs (FT2R y)  < /4 * (bpow radix2 (femax t))):
+Theorem DWPlusFP_finite
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxhl : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)))
+(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t))):
 is_finite_p (DWPlusFP xh xl y).
 Proof.
 rewrite /is_finite_p/DWPlusFP.
@@ -1208,6 +1142,25 @@ rewrite /fst/snd => //.
 rewrite /Fast2Sum_sum/fst/Fast2Sum. split.
 apply DWPlusFP_zh_finite => //.
 apply DWPlusFP_zl_finite => //.
+Qed.
+
+(* Backward-compatible variant taking the sum-form precondition.
+   Used by external callers (e.g. DWPlusFP_vcfloat) that haven't yet
+   migrated to the high-part bound; internally bridges via
+   dw_high_bnd_of_sum. *)
+Corollary DWPlusFP_finite_from_sum
+(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
+(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true)
+(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
+(Hxhl : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
+(Hy :   Rabs (FT2R y) < /4 * (bpow radix2 (femax t))) :
+is_finite_p (DWPlusFP xh xl y).
+Proof.
+have Hdw : double_word_prop xh xl
+  by rewrite /double_word_prop; exact DWx.
+apply DWPlusFP_finite => //.
+- by apply (dw_high_bnd_of_sum xh xl Hdw Hxhl).
+- by apply Rlt_le.
 Qed.
 
 End DWPlusFPFinite.

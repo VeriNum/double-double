@@ -96,13 +96,55 @@ End Fast2MultCond.
 Section DWord.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Definition 1.4 *) 
+(** Definition 1.4 *)
 Definition double_word : ftype t -> ftype t -> Type :=
   fun xh xl => FT2R xh = rounded t (FT2R xh + FT2R xl).
 
-Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+(* Propositional double_word, suitable for VST PROP clauses. *)
+Definition double_word_prop (xh xl : ftype t) : Prop :=
+  FT2R xh = rounded t (FT2R xh + FT2R xl).
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 End DWord.
+
+
+Section DWPlusDWCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+Definition DWPlusDW_cond (xh xl yh yl : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite yh = true /\
+  is_finite yl = true /\
+  double_word_prop xh xl /\
+  double_word_prop yh yl /\
+  Rabs (FT2R xh) <= /4 * Omega /\
+  Rabs (FT2R yh) <= /4 * Omega.
+
+End DWPlusDWCond.
+
+
+Section DWPlusFPCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+(* High-part-only precondition for DWPlusFP, matching DWPlusDW_cond's shape.
+   The DW relation forces |xl| <= ulp(xh)/2, so no separate magnitude bound
+   on xl is required.  is_finite xl is NOT implied by double_word_prop
+   (which lives in R via FT2R), so it must be asserted explicitly. *)
+Definition DWPlusFP_cond (xh xl y : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y  = true /\
+  double_word_prop xh xl /\
+  Rabs (FT2R xh) <= /4 * Omega /\
+  Rabs (FT2R y)  <= /4 * Omega.
+
+End DWPlusFPCond.
 
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -184,21 +226,65 @@ let cl3 := BPLUS cl1 cl2 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
 (** Algorithm 13 : Division of a DW number by a FP number*)
-Definition DWDivFP1 := True.
+Definition DWDivFP1 (xh xl y : ftype t) :=
+let th := BDIV xh y in
+let (pih, pil) := Fast2Mult th y in
+let (dh, d1) := TwoSumF xh (BOPP pih) in
+let d2 := BMINUS xl pil in
+let dl := BPLUS d1 d2 in
+let d  := BPLUS dh dl in
+let tl := BDIV d y in
+let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
 (** Algorithm 14 : Division of a DW number by a FP number*)
-Definition DWDivFP2 := True.
+Definition DWDivFP2 (xh xl y : ftype t) :=
+let th := BDIV xh y in
+let (pih, pil) := Fast2Mult th y in
+let dh := BMINUS xh pih in
+let dl := BMINUS xl pil in
+let d  := BPLUS dh dl in
+let tl := BDIV d y in
+let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
 (** Algorithm 15 : Division of a DW number by a FP number*)
-Definition DWDivFP3 := True.
+Definition DWDivFP3 (xh xl y : ftype t) :=
+let th := BDIV xh y in
+let (pih, pil) := Fast2Mult th y in
+let dh := BMINUS xh pih in
+let dt := BMINUS dh pil in
+let d  := BPLUS dt xl in
+let tl := BDIV d y in
+let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
 (** Algorithm 16 : Division of a DW number by a DW number*)
-Definition DWDivDW1 := True.
+Definition DWDivDW1 (xh xl yh yl : ftype t) :=
+let th := BDIV xh yh in
+let (rh, rl) := DWTimesFP1 yh yl th in
+let (pih, pil) := TwoSumF xh (BOPP rh) in
+let dh := BMINUS pil rl in
+let dl := BPLUS dh xl in
+let d  := BPLUS pih dl in
+let tl := BDIV d yh in
+let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
 (** Algorithm 17 : Division of a DW number by a DW number*)
-Definition DWDivDW2 := True.
+Definition DWDivDW2 (xh xl yh yl : ftype t) :=
+let th := BDIV xh yh in
+let (rh, rl) := DWTimesFP1 yh yl th in
+let pih := BMINUS xh rh in
+let dl  := BMINUS xl rl in
+let d   := BPLUS pih dl in
+let tl  := BDIV d yh in
+let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
 (** Algorithm 18 : Division of a DW number by a DW number*)
-Definition DWDivDW3 := True.
+Definition DWDivDW3 (xh xl yh yl : ftype t) :=
+let th := BDIV (Zconst t 1) yh in
+let rh := BFMA (BOPP yh) th (Zconst t 1) in
+let rl := BOPP (BMULT yl th) in
+let (eh, el) := Fast2Sum rh rl in
+let (dh, dl) := DWTimesFP3 eh el th in
+let (mh, ml) := DWPlusFP dh dl th in
+let (zh, zl) := DWTimesDW2 xh xl mh ml in (zh, zl).
 
 End DWops.

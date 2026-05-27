@@ -621,8 +621,8 @@ have Hy : Rabs (FT2R y) < / 4 * bpow radix2 (femax Tdouble).
 apply finite_bnds_y_1 => //.
 
 (* is_finite_p (DWPlusFP f f0 y)  *)
-have HFin : is_finite_p (DWPlusFP f f0 y) by 
-  apply (DWPlus_acc.DWPlusFP_finite f f0 y Hdw e e0
+have HFin : is_finite_p (DWPlusFP f f0 y) by
+  apply (DWPlus_acc.DWPlusFP_finite_from_sum f f0 y Hdw e e0
   (finite_bnds_y_2 y HD HC) Hb
   (finite_bnds_y_1 y HC HD)); auto.
 
