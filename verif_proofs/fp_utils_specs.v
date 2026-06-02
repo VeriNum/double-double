@@ -29,27 +29,21 @@ Definition isfinite_double_spec :=
 
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
-Definition MulResultIsSafeForFast2Mult (a b : ftype Tdouble) : Prop :=
-  Fast2Mult_cond a b.
-
-(* The function returns an int, and that int is `1` iff `is_finite x` 
+(* The function returns an int, and that int is `1` iff `is_finite x`
 is true; otherwise it's `0`. And it doesn't touch memory.*)
-Definition fast2_mult_check_spec := 
+Definition fast2_mult_check_spec :=
   DECLARE _fast2_mult_check
-  WITH x : ftype Tdouble, y : ftype Tdouble 
+  WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ] (* c lang types *)
     PROP()
     PARAMS ( Vfloat x; Vfloat y ) (* functions params *)
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> MulResultIsSafeForFast2Mult x y)
+    PROP(b = true -> Fast2Mult_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
-
-Definition SumResultIsSafeForTwoSum (a b : ftype Tdouble) : Prop :=
-  TwoSum_cond a b.
 
 Definition two_sum_check_spec :=
   DECLARE _two_sum_check
@@ -60,12 +54,16 @@ Definition two_sum_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> SumResultIsSafeForTwoSum x y)
+    PROP(b = true -> TwoSum_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
+(* The C check fast2_sum_check verifies fin && |b| <= |a|.  We expose the
+   magnitude form directly (rather than weakening to the ulp/zero disjunction
+   of Fast2Sum_cond) so callers can derive both Fast2Sum_cond (via ulp_le_abs)
+   and FastTwoSum_accuracy_from_cond. *)
 Definition SumResultIsSafeForFast2Sum (a b : ftype Tdouble) : Prop :=
-  Fast2Sum_cond a b.
+  is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R.
 
 Definition fast2_sum_check_spec :=
   DECLARE _fast2_sum_check
@@ -80,9 +78,6 @@ Definition fast2_sum_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
-Definition MulResultIsSafeForFast2Mult2 (a b c : ftype Tdouble) : Prop :=
-  Fast2Mult_cond2 a b c.
-
 Definition fast2_mult_check2_spec :=
   DECLARE _fast2_mult_check2
   WITH x : ftype Tdouble, y : ftype Tdouble, z : ftype Tdouble
@@ -92,7 +87,7 @@ Definition fast2_mult_check2_spec :=
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> MulResultIsSafeForFast2Mult2 x y z)
+    PROP(b = true -> Fast2Mult_cond2 x y z)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
@@ -102,10 +97,6 @@ Definition dword := Tstruct _dword noattr.
 
 Definition f2val (pq : ftype Tdouble * ftype Tdouble) : reptype dword :=
   (Vfloat (fst pq), Vfloat (snd pq)).
-
-Definition SumResultIsSafeForDWPlusDW
-  (xh xl yh yl : ftype Tdouble) : Prop :=
-  DWPlusDW_cond xh xl yh yl.
 
 Definition dw_plus_dw_check_spec :=
   DECLARE _dw_plus_dw_check
@@ -120,14 +111,10 @@ Definition dw_plus_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         SumResultIsSafeForDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))
+         DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
-
-Definition SumResultIsSafeForDWPlusFP
-  (xh xl y : ftype Tdouble) : Prop :=
-  DWPlusFP_cond xh xl y.
 
 Definition dw_plus_fp_check_spec :=
   DECLARE _dw_plus_fp_check
@@ -141,6 +128,6 @@ Definition dw_plus_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         SumResultIsSafeForDWPlusFP (fst xh) (snd xh) y)
+         DWPlusFP_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).

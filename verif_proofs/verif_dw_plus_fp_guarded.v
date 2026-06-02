@@ -25,10 +25,6 @@ Definition f2val (pq: ftype Tdouble * ftype Tdouble) : reptype dword :=
 (* Re-declare the check spec locally with THIS file's CompSpecs.
    The body proof in verif_fp_utils.v is verified against fp_utils's CompSpecs;
    the structs are identical, so the spec is equivalent. *)
-Definition SumResultIsSafeForDWPlusFP
-  (xh xl y : ftype Tdouble) : Prop :=
-  DWPlusFP_cond xh xl y.
-
 Definition dw_plus_fp_check_spec :=
   DECLARE _dw_plus_fp_check
   WITH x : val,
@@ -41,7 +37,7 @@ Definition dw_plus_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         SumResultIsSafeForDWPlusFP (fst xh) (snd xh) y)
+         DWPlusFP_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -99,7 +95,6 @@ forward_if Post_if.
 - (* check returned 1 → DWPlusFP_cond holds *)
   forward.
   unfold Post_if. entailer!.
-  unfold SumResultIsSafeForDWPlusFP in H.
   apply H.
   destruct vret_fin; auto.
 - (* continuation: call dw_plus_fp with the lifted cond *)

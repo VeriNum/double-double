@@ -3,7 +3,7 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* fast2_sum_check(x,y) returns 1 only if Fast2Sum_cond x y holds:
+(* fast2_sum_check(x,y) returns 1 only if SumResultIsSafeForFast2Sum x y:
    (a+b) is finite (derived by isfinite_double(s)), and |b| ≤ |a| (by fabs comparison).
    Because the C uses short-circuit &&, fabs is called only when fin=true,
    so is_finite x and is_finite y can be derived from is_finite (BPLUS x y)
@@ -47,15 +47,10 @@ Proof.
     entailer!.
     split.
     + intro Hcmp_true.
-      unfold SumResultIsSafeForFast2Sum, DDModels.Fast2Sum_cond.
+      unfold SumResultIsSafeForFast2Sum.
       split.
       { rewrite is_finite_Binary; exact Hfin_sum. }
-      { (* Fast2Sum_cond's disjunction: take the ulp leg via Ulp.ulp_le. *)
-        left.
-        apply Ulp.ulp_le.
-        - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
-        - apply FLT_exp_monotone.
-        - apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }
+      { apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }
     + change (femax Tdouble) with 1024%Z;
       change (float_of_ftype y) with y;
       change (float_of_ftype x) with x;

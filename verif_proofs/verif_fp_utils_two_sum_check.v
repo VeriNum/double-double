@@ -48,7 +48,7 @@ Proof.
     rename H into H_b_fd.
     set (Post_final :=
       EX b_fin : bool,
-      PROP(b_fin = true -> SumResultIsSafeForTwoSum x y)
+      PROP(b_fin = true -> TwoSum_cond x y)
       LOCAL(temp _t'4 (Vint (if b_fin then Int.one else Int.zero));
             temp _a (Vfloat (float_of_ftype x));
             temp _b (Vfloat (float_of_ftype y)))
@@ -71,7 +71,7 @@ Proof.
       entailer!.
       split.
       { intro Hcmp_true.
-        unfold SumResultIsSafeForTwoSum, DDModels.TwoSum_cond.
+        unfold DDModels.TwoSum_cond.
         split; [exact Hfin_plus | split; [exact Hfin_minus |]].
         apply Float_cmp_Clt_dbl_max; [exact Hy_fin | exact Hcmp_true]. }
       { change (femax Tdouble) with 1024%Z;

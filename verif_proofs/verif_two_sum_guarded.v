@@ -7,6 +7,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels common real_extras.
+Require Import TwoSum_acc.
 Require Import two_sum_guarded fp_utils_specs.
 Require Import DD.verif_proofs.verif_two_sum.
 
@@ -31,7 +32,8 @@ Definition two_sum_guarded_spec :=
     PARAMS (p; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword p)
   POST [ tvoid ]
-    PROP()
+    PROP(TwoSum_cond a b /\
+         (Rabs (FT2R (TwoSumF_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (TwoSumF a b)) p).
 
@@ -68,7 +70,6 @@ forward_if Post_if.
 - (* else: check returned true, so vret_fin = true *)
   forward.
   unfold Post_if. entailer!.
-  unfold SumResultIsSafeForTwoSum.
   apply H.
   destruct vret_fin; auto.
 
@@ -77,4 +78,5 @@ forward_if Post_if.
   assert_PROP (TwoSum_cond a b) as HFC by entailer!.
   forward_call (p, a, b).
   entailer!!.
+  apply TwoSum_accuracy_from_cond, HFC.
 Qed.

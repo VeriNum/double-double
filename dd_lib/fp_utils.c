@@ -78,6 +78,30 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && xh_bnd && yh_bnd;
 }
 
+int dw_mult_fp_check(struct dword *x, double y) {
+    /* Verifies DWTimesFP_cond: xh, xl, y finite; (x->s, x->t) is a double-word;
+       |x->s|, |y| <= Omega/4; Fast2Mult(x->s, y) is safe (finite + the
+       underflow disjunction shared with fast2_mult_check).  The DW prop alone
+       does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
+       so fin_xl is asserted, even though x->s + x->t == x->s implies it
+       under IEEE comparison semantics. */
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y  = isfinite_double(y);
+    int dwx    = fin_xh && fin_xl && (x->s + x->t == x->s);
+    double q_omega = ldexp(1.0, 1022);  /* Omega/4 for IEEE-754 double */
+    int xh_bnd = fabs(x->s) <= q_omega;
+    int y_bnd  = fabs(y)    <= q_omega;
+    /* Fast2Mult(x->s, y) safety — mirror fast2_mult_check */
+    double z = x->s * y;
+    double thresh = DBL_MIN * ldexp(1.0, 53);  /* 2^(emin + 2*p - 1) */
+    int fin_z = isfinite_double(z);
+    int zxh = x->s == 0.0 && fin_y;
+    int zy  = y    == 0.0 && fin_xh;
+    int mult_safe = fin_z && ((zxh || zy) || thresh < fabs(z));
+    return dwx && fin_y && xh_bnd && y_bnd && mult_safe;
+}
+
 int dw_plus_fp_check(struct dword *x, double y) {
     /* Verifies DWPlusFP_cond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone

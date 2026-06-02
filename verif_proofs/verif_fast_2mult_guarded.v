@@ -7,6 +7,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels common real_extras.
+Require Import Fast2Mult_acc.
 Require Import fast_2mult_guarded fp_utils_specs.
 Require Import verif_fast_2mult.
 
@@ -31,7 +32,8 @@ Definition fast_2mult_guarded_spec :=
     PARAMS (st; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword st)
   POST [ tvoid ]
-    PROP()
+    PROP(Fast2Mult_cond a b /\
+         (Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 
@@ -68,7 +70,6 @@ forward_if Post_if.
 - (* else: Sskip; fast2_mult_check returned true, so vret_fin = true *)
   forward.
   unfold Post_if. entailer!.
-  unfold MulResultIsSafeForFast2Mult.
   apply H.
   destruct vret_fin; auto.
 
@@ -77,4 +78,5 @@ forward_if Post_if.
   assert_PROP (Fast2Mult_cond a b) as HFC by entailer!.
   forward_call (st, a, b).
   entailer!!.
+  apply Fast2Mult_accuracy_from_safety, HFC.
 Qed.

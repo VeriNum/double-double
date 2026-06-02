@@ -288,7 +288,7 @@ Proof.
                        destruct (Hb14 eq_refl) as [Hb6t [Hb8t [Hbxht Hbyht]]].
                        destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                        destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
-                       unfold SumResultIsSafeForDWPlusDW, DDModels.DWPlusDW_cond.
+                       unfold DDModels.DWPlusDW_cond.
                        repeat (split; try assumption).
                        { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                          unfold bxh, q_omega_val in Hbxht.

@@ -223,7 +223,7 @@ Proof.
         Exists false.
         entailer!.
 
-      * (* Join: discharge MulResultIsSafeForFast2Mult2 from Post_t7.
+      * (* Join: discharge Fast2Mult_cond2 from Post_t7.
            proj1 Hfin_spec converts vret = true to is_finite (BPLUS (BMULT x y) z) = true. *)
         unfold Post_t7; clear Post_t7.
         Intros b_lb.
@@ -232,7 +232,7 @@ Proof.
         Exists b_lb.
         entailer!.
         destruct (H_lb eq_refl) as [Hvf Hdisj].
-        unfold MulResultIsSafeForFast2Mult2, DDModels.Fast2Mult_cond2.
+        unfold DDModels.Fast2Mult_cond2.
         split.
         { apply (proj1 Hfin_spec); exact Hvf. }
         { destruct Hdisj as [Hpx | [Hpy | Hpuf]].

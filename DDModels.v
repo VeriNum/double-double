@@ -158,6 +158,35 @@ Definition DWPlusFP_cond (xh xl y : ftype t) : Prop :=
 
 End DWPlusFPCond.
 
+
+Section DWTimesFPCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+(* Precondition for DWTimesFP3 (Algorithm 9).  Bundles:
+     - finiteness of xh, xl, y;
+     - the double-word relation on (xh, xl);
+     - Fast2Mult(xh, y) safety (overflow + the underflow disjunction
+       shared with Fast2Mult_cond);
+     - magnitude bounds on |xh|, |y| matching DWPlusFP_cond, to give
+       the final Fast2Sum enough headroom to stay finite.
+   The check in C (dw_mult_fp_check) verifies exactly this shape.  *)
+Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y  = true /\
+  double_word_prop xh xl /\
+  is_finite (BMULT xh y) = true /\
+  (FT2R xh * FT2R y = 0 \/
+   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+   <= Rabs (FT2R xh * FT2R y)) /\
+  Rabs (FT2R xh) <= /4 * Omega /\
+  Rabs (FT2R y)  <= /4 * Omega.
+
+End DWTimesFPCond.
+
+
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

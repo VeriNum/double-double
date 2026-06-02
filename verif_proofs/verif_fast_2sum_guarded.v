@@ -7,6 +7,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels common real_extras.
+Require Import Fast2Sum_acc.
 Require Import fast_2sum_guarded fp_utils_specs.
 Require Import verif_fast_2sum.
 
@@ -31,7 +32,8 @@ Definition fast_2sum_guarded_spec :=
     PARAMS (p; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword p)
   POST [ tvoid ]
-    PROP()
+    PROP(Fast2Sum_cond a b /\
+         (Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 
@@ -56,7 +58,7 @@ start_function.
 forward_call (a, b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (Fast2Sum_cond a b)
+  PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)
   LOCAL (temp _st p; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at_ Tsh dword p)).
 forward_if Post_if.
@@ -68,13 +70,23 @@ forward_if Post_if.
 - (* else: check returned true, so vret_fin = true *)
   forward.
   unfold Post_if. entailer!.
-  unfold SumResultIsSafeForFast2Sum.
+  unfold SumResultIsSafeForFast2Sum in H.
   apply H.
   destruct vret_fin; auto.
 
-- (* continuation: call fast_2sum with Fast2Sum_cond from Post_if *)
+- (* continuation: derive Fast2Sum_cond from |b| <= |a|, call fast_2sum,
+     conclude accuracy via FastTwoSum_accuracy_from_cond. *)
   unfold Post_if.
-  assert_PROP (Fast2Sum_cond a b) as HFC by entailer!.
+  assert_PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)
+    as Hsafe by entailer!.
+  destruct Hsafe as [Hfin Hle].
+  assert (HFC : Fast2Sum_cond a b).
+  { split; [exact Hfin |].
+    left. apply Ulp.ulp_le.
+    - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
+    - apply FLT.FLT_exp_monotone.
+    - exact Hle. }
   forward_call (p, a, b).
   entailer!!.
+  apply FastTwoSum_accuracy_from_cond; assumption.
 Qed.
