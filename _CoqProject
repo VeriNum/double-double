@@ -16,11 +16,14 @@ common/real_extras.v
 
 DDModels.v
 DWord_defs.v
+accuracy_proofs/TwoSum_acc_helpers.v
 accuracy_proofs/TwoSum_acc.v
+accuracy_proofs/Fast2Sum_acc_helpers.v
 accuracy_proofs/Fast2Sum_acc.v
 accuracy_proofs/Fast2Mult_acc.v
 accuracy_proofs/DWPlus_acc.v
 accuracy_proofs/DWPlusDW.v
+accuracy_proofs/TwoSum_acc_wip.v
 
 verif_proofs/verif_objs/fp_utils.v
 verif_proofs/verif_objs/two_sum.v
