@@ -68,9 +68,21 @@ End TwoSumCond.
 Section Fast2SumCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
+(* Sufficient condition for fast_2sum(a,b) to be correct (s + t = a + b,
+   with s = round(a+b)).  Stated with ulp, which is well-behaved at 0
+   (ulp 0 = bpow emin, the minimum):
+     - ulp b <= ulp a   covers both the Dekker case |b| <= |a| (ulp_le) and
+                        Boldo's exponent case (ulp b <= ulp a <-> cexp b <=
+                        cexp a for nonzero b,a).  It also subsumes b = 0,
+                        since ulp 0 <= ulp a always.
+     - a = 0            (Fast2Sum0f: fast_2sum(0,b) is exact).
+   The old `|b| <= |a|` precondition implies `ulp b <= ulp a` by ulp_le, so
+   any caller that established it still discharges this by `left; ulp_le`. *)
 Definition Fast2Sum_cond (a b : ftype t) : Prop :=
   is_finite (BPLUS a b) = true /\
-  Rabs (FT2R b) <= Rabs (FT2R a).
+  ((Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
+    Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%R \/
+   FT2R a = 0%R).
 
 End Fast2SumCond.
 

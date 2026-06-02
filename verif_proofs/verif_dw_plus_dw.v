@@ -6,7 +6,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
 Require Import DDModels.
-Require Import DD.accuracy_proofs.DWPlusDW.   (* exposes the bridge lemmas *)
+Require Import DD.accuracy_proofs.dw_opps.DWPlusDW.   (* exposes the bridge lemmas *)
 Require Import DD.verif_proofs.verif_objs.dw_plus_dw.
 
 #[export] Instance CompSpecs :

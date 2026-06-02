@@ -47,8 +47,3 @@ forward.
 forward.
 entailer!.
 Qed.
-
-Corollary Fast2Sum_acc (a b : ftype Tdouble) :
-  Fast2Sum_cond a b ->
-  (Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R.
-Proof. apply FastTwoSum_accuracy_from_cond. Qed.

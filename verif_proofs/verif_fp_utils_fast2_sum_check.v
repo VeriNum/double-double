@@ -50,7 +50,12 @@ Proof.
       unfold SumResultIsSafeForFast2Sum, DDModels.Fast2Sum_cond.
       split.
       { rewrite is_finite_Binary; exact Hfin_sum. }
-      { apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }
+      { (* Fast2Sum_cond's disjunction: take the ulp leg via Ulp.ulp_le. *)
+        left.
+        apply Ulp.ulp_le.
+        - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
+        - apply FLT_exp_monotone.
+        - apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }
     + change (femax Tdouble) with 1024%Z;
       change (float_of_ftype y) with y;
       change (float_of_ftype x) with x;

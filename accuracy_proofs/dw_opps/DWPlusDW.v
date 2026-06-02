@@ -541,12 +541,10 @@ destruct H as (d3 & Hd3 & B).
   end.
 Qed.
 
-(* Fast2Sum precondition |c| <= |sh|: under our hypotheses this fails when
-   sh = 0 with c ≠ 0 (i.e. xh + yh = 0 but xl + yl ≠ 0). The finiteness chain
-   for FIN_zh does NOT require Hc_le_sh — FIN_vl is proved directly above.
-   Retained for downstream accuracy claims. *)
-Lemma Hc_le_sh : Rabs (FT2R c) <= Rabs (FT2R sh).
-Proof. Admitted.
+(* Hc_le_sh (Rabs c <= Rabs sh) used to live here as an admitted accuracy
+   claim, but it is genuinely false in the cancellation regime (sh = 0,
+   c = th nonzero).  It is replaced by DWPlusDW_sh_c_disjunction below,
+   which gives the Fast2Sum precondition in ulp form. *)
 
 (* DWPlusDW_sh_c_disjunction: the property at the (sh, c) Fast2Sum callsite
    needed to apply Flocq's F2Sum_correct_cexp_flt (which gives Fast2Sum_correct
@@ -559,20 +557,36 @@ Proof. Admitted.
    This corresponds to the paper's case-split inside DWPlusDW_relerr_bound's
    proof (paper_proofs/DWPlus.v lines 2041, 2753, 3372).
 *)
-Lemma DWPlusDW_sh_c_disjunction :
-  (Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R c) <=
-   Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R sh))%Z
-  \/ FT2R sh = 0%R
-  \/ FT2R c = 0%R.
+(* |b| <= |a| implies ulp b <= ulp a (Flocq ulp_le; holds including b = 0,
+   since ulp is total and ulp 0 = bpow emin is the minimum ulp). *)
+Lemma ulp_le_abs (a b : R) :
+  Rabs b <= Rabs a ->
+  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) b <=
+   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) a)%R.
 Proof.
-(* Case 1: FT2R sh = 0 → second disjunct. *)
-destruct (Req_dec (FT2R sh) 0) as [Hsh0 | Hsh_nz]; [right; left; exact Hsh0|].
-(* Case 2: FT2R sh <> 0. Need cexp c <= cexp sh.
+intro Hab.
+apply Ulp.ulp_le;
+  [ apply BinarySingleNaN.fexp_correct; apply fprec_gt_0
+  | apply FLT_exp_monotone
+  | exact Hab ].
+Qed.
 
-   Sub-case 2a: FT2R xh + FT2R yh = 0 contradicts Hsh_nz (because
-   sh = round(xh + yh) and round(0) = 0). *)
+(* The (sh, c) Fast2Sum precondition, in ulp form: ulp c <= ulp sh \/ sh = 0.
+This is exactly the shape Fast2Sum_cond consumes.  The substantive content is
+the FLX-level DWPlusDW_sh_c_cexp_or_zero, bridged via TwoSumEq_FLT +
+rnd_plus_FLT_FLX_eq' and converted cexp -> ulp by ulp_neq_0 + bpow_le. *)
+Lemma DWPlusDW_sh_c_disjunction :
+  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R c) <=
+   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R sh))%R
+  \/ FT2R sh = 0%R.
+Proof.
+(* sh = 0 -> right disjunct. *)
+destruct (Req_dec (FT2R sh) 0) as [Hsh0 | Hsh_nz]; [right; exact Hsh0 | left].
+(* c = 0 -> ulp 0 <= ulp sh (0 <= |sh|). *)
+destruct (Req_dec (FT2R c) 0) as [Hc0 | Hc_nz].
+{ rewrite Hc0. apply ulp_le_abs. rewrite Rabs_R0; apply Rabs_pos. }
+(* c <> 0, sh <> 0: bridge to FLX cexp, then cexp <= -> ulp <=.
+   Sub-case FT2R xh + FT2R yh = 0 contradicts Hsh_nz. *)
 have HFIN_sh : is_finite (BPLUS xh yh) = true.
 { change (is_finite (TwoSumF_sum xh yh) = true); exact FIN_sh. }
 destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
@@ -581,11 +595,6 @@ destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
   change (FT2R (TwoSumF_sum xh yh) = 0).
   change (TwoSumF_sum xh yh) with (BPLUS xh yh).
   rewrite Heq Hxhyh_zero Rmult_0_l; reflexivity. }
-(* Sub-case 2b: FT2R xh + FT2R yh <> 0 and FT2R sh <> 0.
-   Apply the FLX-level corollary DWPlusDW_sh_c_cexp_or_zero, identify paper's
-   sh/sl/th/c with our FT2R-lifted versions via TwoSumEq_FLT and
-   rnd_plus_FLT_FLX_eq', then lift FLX cexp inequality to FLT via monotonicity
-   of FLT_exp = max(FLX_exp, emin). *)
 have DWx_R : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
   by apply (dw_word_DWdouble xh xl xh DWx).
 have DWy_R : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
@@ -614,16 +623,18 @@ destruct (@DWPlus.DWPlusDW_sh_c_cexp_or_zero (fprec t) (fprec_gt_one t)
             choice (eq_refl _) Hp3
             (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) DWx_R DWy_R)
   as [Hcexp_FLX | [Hsh_FLX_0 | Hc_FLX_0]].
-- (* FLX cexp inequality: lift to FLT by monotonicity of max(_, emin). *)
-  left.
-  rewrite Hsh_eq Hc_eq in Hcexp_FLX.
-  unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp in *.
-  unfold FLX_exp in Hcexp_FLX.
-  apply Z.max_le_compat_r. exact Hcexp_FLX.
+- (* FLX cexp inequality: lift to FLT cexp, then cexp -> ulp. *)
+  have Hcexp : (Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R c) <=
+                Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R sh))%Z.
+  { rewrite Hsh_eq Hc_eq in Hcexp_FLX.
+    unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp in *.
+    unfold FLX_exp in Hcexp_FLX.
+    apply Z.max_le_compat_r. exact Hcexp_FLX. }
+  rewrite !ulp_neq_0 //. apply bpow_le. exact Hcexp.
 - (* FLX sh = 0: contradicts Hsh_nz. *)
   exfalso. apply Hsh_nz. rewrite -Hsh_eq. exact Hsh_FLX_0.
-- (* FLX c = 0: FT2R c = 0, third disjunct. *)
-  right; right. rewrite -Hc_eq. exact Hc_FLX_0.
+- (* FLX c = 0: contradicts Hc_nz. *)
+  exfalso. apply Hc_nz. rewrite -Hc_eq. exact Hc_FLX_0.
 Qed.
 
 (* Analogous disjunction at the (vh, w) callsite. The paper's now-fixed
@@ -631,22 +642,8 @@ Qed.
    cexp_le_abs this gives cexp w <= cexp vh. Hence the cexp disjunct holds
    unconditionally (vh = 0 only when sh = 0 = c, but we keep the disjunct
    for symmetry). *)
-Lemma DWPlusDW_vh_w_disjunction :
-  (Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R w) <=
-   Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R vh))%Z
-  \/ FT2R vh = 0%R
-  \/ FT2R w = 0%R.
-Proof.
-(* NB: the bridge proof uses BPLUS_round_correct on w = BPLUS tl vl, which
-   needs FIN_w (defined later in this section at line 831). Move-this-block
-   after FIN_w to close: the proof body is exactly the parallel of
-   DWPlusDW_sh_c_disjunction, using DWPlus.DWPlusDW_w_le_vh_aux (in
-   paper_proofs/DWPlus.v at line 4946) to extract the 4th conjunct of _pre'
-   under the same WLOG dispatch, and mag_le_abs + Z.max_le_compat_r for the
-   FLX -> FLT lift. *)
-Admitted.
+(* DWPlusDW_vh_w_disjunction is defined later in this section (after FIN_w,
+   which its bridge proof needs for BPLUS_round_correct on w = BPLUS tl vl). *)
 
 (* Stage 5: w = BPLUS tl vl. Bound vl by expanding through the Fast2Sum_err
    structure, then bound round(tl + vl) by interval. *)
@@ -746,6 +743,45 @@ unfold w.
 exact (no_overflow_sum_is_finite t tl vl FIN_tl FIN_vl no_ov_w).
 Qed.
 
+(* For any double-word (a, b) with both words nonzero, cexp b <= cexp a.
+   Reason: |b| <= /2 ulp(a) = /2 bpow(cexp a) < bpow(cexp a), so
+   mag b <= cexp a, hence cexp b = max(mag b - prec, emin) <= cexp a. *)
+Lemma cexp_dw_le (a b : ftype t) :
+  double_word a b -> FT2R a <> 0 -> FT2R b <> 0 ->
+  (Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
+   Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%Z.
+Proof.
+move=> DWab Ha_nz Hb_nz.
+have Hbnd := dw_ulp a b DWab.
+have Hulp : Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a) =
+            bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
+              (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))
+  by rewrite ulp_neq_0.
+rewrite Hulp in Hbnd.
+have Hlt : Rabs (FT2R b) <
+           bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
+             (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)).
+{ have Hpow : 0 < bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
+                (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)) by apply: bpow_gt_0.
+  lra. }
+have Hmag := mag_le_bpow Zaux.radix2 (FT2R b) _ Hb_nz Hlt.
+have Hp0 : (0 < fprec t)%Z by apply fprec_gt_0.
+unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp in *.
+apply Z.max_lub; [lia | apply Z.le_max_r].
+Qed.
+
+(* For any double-word (a, b) with both words nonzero, ulp b <= ulp a.
+   This is the ulp analog of cexp_dw_le, used as the closer in the
+   ulp-form (vh, w) disjunction. *)
+Lemma ulp_dw_le (a b : ftype t) :
+  double_word a b -> FT2R a <> 0 -> FT2R b <> 0 ->
+  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
+   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%R.
+Proof.
+intros DWab Ha Hb.
+rewrite !ulp_neq_0 //. apply bpow_le. exact (cexp_dw_le a b DWab Ha Hb).
+Qed.
+
 (* DWPlusDW_vh_w_disjunction (closed version, placed after FIN_w which the proof
    uses for BPLUS_round_correct on w = BPLUS tl vl).
    Mirrors DWPlusDW_sh_c_disjunction: applies DWPlus.DWPlusDW_w_le_vh_aux
@@ -753,28 +789,117 @@ Qed.
    vh, w with our FT2R-lifted versions via TwoSumEq_FLT + FastTwoSumEq_FLT +
    rnd_plus_FLT_FLX_eq', and lifts Rabs <= to cexp <= via mag_le_abs +
    Z.max_le_compat_r. *)
-Lemma DWPlusDW_vh_w_disjunction_full :
-  (Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R w) <=
-   Generic_fmt.cexp Zaux.radix2
-     (SpecFloat.fexp (fprec t) (femax t)) (FT2R vh))%Z
-  \/ FT2R vh = 0%R
-  \/ FT2R w = 0%R.
+(* The (vh, w) Fast2Sum precondition in ulp form: ulp w <= ulp vh \/ vh = 0.
+   This is exactly the shape Fast2Sum_cond consumes; no separate `w = 0`
+   disjunct is needed because w = 0 folds into `ulp w <= ulp vh` via
+   ulp_le_abs (0 <= |vh|).  The substantive content is DWPlus's
+   DWPlusDW_w_le_vh_aux, bridged via TwoSumEq_FLT/FastTwoSumEq_FLT/
+   rnd_plus_FLT_FLX_eq' and converted to ulp via ulp_le_abs.  The boundary
+   sub-cases (xh + yh = 0; xh = 0) are closed by ulp_dw_le on the input
+   double-word (th, tl) or (yh, yl). *)
+Lemma DWPlusDW_vh_w_disjunction :
+  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R w) <=
+   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R vh))%R
+  \/ FT2R vh = 0%R.
 Proof.
-destruct (Req_dec (FT2R vh) 0) as [Hvh0 | Hvh_nz]; [right; left; exact Hvh0|].
-destruct (Req_dec (FT2R w) 0) as [Hw0 | Hw_nz]; [right; right; exact Hw0|].
+destruct (Req_dec (FT2R vh) 0) as [Hvh0 | Hvh_nz]; [right; exact Hvh0|].
+destruct (Req_dec (FT2R w) 0) as [Hw0 | Hw_nz];
+  [left; rewrite Hw0; apply ulp_le_abs; rewrite Rabs_R0; apply Rabs_pos|].
 left.
 have HFIN_sh : is_finite (BPLUS xh yh) = true.
 { change (is_finite (TwoSumF_sum xh yh) = true); exact FIN_sh. }
 destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
-{ (* xh + yh = 0 -> sh = 0 -> Fast2Sum0f -> vh = round(c). If c = 0 vh = 0.
-     Otherwise vh = round(c) <> 0. Then w = tl + (c - round(c)). We can't
-     conclude cexp w <= cexp vh directly here without paper-level support.
-     This sub-case is the cancellation regime; deferred. *)
-  admit. }
+{ (* xh + yh = 0: sh = 0, sl = 0, c = th, vh = th, vl = 0, w = tl.
+     vh, w already known nonzero, so reduce to cexp tl <= cexp th on the
+     double word (th, tl) = TwoSumF xl yl, closed by cexp_dw_le. *)
+  have Fth := generic_format_FLT_FT2R th.
+  have Hsh0 : FT2R sh = 0.
+  { change (FT2R sh) with (FT2R (BPLUS xh yh)).
+    rewrite -(BPLUS_round_correct t xh yh HFIN_sh) Hxhyh_zero round_0 //. }
+  have Hsl0 : FT2R sl = 0.
+  { change (FT2R sl) with (FT2R (TwoSumF_err xh yh)).
+    rewrite (TwoSumF_correct xh yh (conj FIN_sh FIN_sl)).
+    change (FT2R (TwoSumF_sum xh yh)) with (FT2R sh).
+    rewrite Hxhyh_zero Hsh0; ring. }
+  have Hc_th : FT2R c = FT2R th.
+  { change (FT2R c) with (FT2R (BPLUS sl th)).
+    rewrite -(BPLUS_round_correct t sl th FIN_c) Hsl0 Rplus_0_l.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hvh_th : FT2R vh = FT2R th.
+  { change (FT2R vh) with (FT2R (BPLUS sh c)).
+    rewrite -(BPLUS_round_correct t sh c FIN_vh) Hsh0 Rplus_0_l Hc_th.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hz_th : FT2R (BMINUS (BPLUS sh c) sh) = FT2R th.
+  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh FIN_z).
+    change (FT2R (BPLUS sh c)) with (FT2R vh).
+    rewrite Hvh_th Hsh0 Rminus_0_r.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hvl0 : FT2R vl = 0.
+  { change (FT2R vl) with (FT2R (BMINUS c (BMINUS (BPLUS sh c) sh))).
+    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) FIN_vl).
+    rewrite Hz_th Hc_th.
+    have ->: FT2R th - FT2R th = 0 by ring.
+    rewrite round_0 //. }
+  have Hw_tl : FT2R w = FT2R tl.
+  { change (FT2R w) with (FT2R (BPLUS tl vl)).
+    rewrite -(BPLUS_round_correct t tl vl FIN_w) Hvl0 Rplus_0_r.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  rewrite Hw_tl Hvh_th.
+  apply: ulp_dw_le.
+  - exact (TwoSum_is_DW xl yl (conj FIN_th FIN_tl)).
+  - rewrite -Hvh_th; exact Hvh_nz.
+  - rewrite -Hw_tl; exact Hw_nz. }
 destruct (Req_dec (FT2R xh) 0) as [Hxh_zero | Hxh_nz].
-{ (* xh = 0 case: similar deferred sub-case. *)
-  admit. }
+{ (* xh = 0 (and xh + yh <> 0): xl = 0, sh = yh, sl = 0, th = yl, tl = 0,
+     c = yl, vh = yh, vl = yl, w = yl. Reduce to cexp yl <= cexp yh on the
+     double word (yh, yl) = DWy, closed by cexp_dw_le. *)
+  have Hxl0 : FT2R xl = 0 by exact (double_word_0 xh xl DWx Hxh_zero).
+  have Hsh_yh : FT2R sh = FT2R yh.
+  { change (FT2R sh) with (FT2R (BPLUS xh yh)).
+    rewrite -(BPLUS_round_correct t xh yh HFIN_sh) Hxh_zero Rplus_0_l.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hsl0 : FT2R sl = 0.
+  { change (FT2R sl) with (FT2R (TwoSumF_err xh yh)).
+    rewrite (TwoSumF_correct xh yh (conj FIN_sh FIN_sl)).
+    change (FT2R (TwoSumF_sum xh yh)) with (FT2R sh).
+    rewrite Hxh_zero Hsh_yh; ring. }
+  have Hth_yl : FT2R th = FT2R yl.
+  { change (FT2R th) with (FT2R (BPLUS xl yl)).
+    rewrite -(BPLUS_round_correct t xl yl FIN_th) Hxl0 Rplus_0_l.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Htl0 : FT2R tl = 0.
+  { change (FT2R tl) with (FT2R (TwoSumF_err xl yl)).
+    rewrite (TwoSumF_correct xl yl (conj FIN_th FIN_tl)).
+    change (FT2R (TwoSumF_sum xl yl)) with (FT2R th).
+    rewrite Hxl0 Hth_yl; ring. }
+  have Hc_yl : FT2R c = FT2R yl.
+  { change (FT2R c) with (FT2R (BPLUS sl th)).
+    rewrite -(BPLUS_round_correct t sl th FIN_c) Hsl0 Rplus_0_l Hth_yl.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hvh_yh : FT2R vh = FT2R yh.
+  { change (FT2R vh) with (FT2R (BPLUS sh c)).
+    rewrite -(BPLUS_round_correct t sh c FIN_vh) Hsh_yh Hc_yl.
+    move: DWy; rewrite /double_word /rounded => HDWy; symmetry; exact HDWy. }
+  have Hz0 : FT2R (BMINUS (BPLUS sh c) sh) = 0.
+  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh FIN_z).
+    change (FT2R (BPLUS sh c)) with (FT2R vh).
+    rewrite Hvh_yh Hsh_yh.
+    have ->: FT2R yh - FT2R yh = 0 by ring.
+    rewrite round_0 //. }
+  have Hvl_yl : FT2R vl = FT2R yl.
+  { change (FT2R vl) with (FT2R (BMINUS c (BMINUS (BPLUS sh c) sh))).
+    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) FIN_vl).
+    rewrite Hz0 Hc_yl Rminus_0_r.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  have Hw_yl : FT2R w = FT2R yl.
+  { change (FT2R w) with (FT2R (BPLUS tl vl)).
+    rewrite -(BPLUS_round_correct t tl vl FIN_w) Htl0 Rplus_0_l Hvl_yl.
+    rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
+  rewrite Hw_yl Hvh_yh.
+  apply: ulp_dw_le.
+  - exact DWy.
+  - rewrite -Hvh_yh; exact Hvh_nz.
+  - rewrite -Hw_yl; exact Hw_nz. }
 have DWx_R : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
   by apply (dw_word_DWdouble xh xl xh DWx).
 have DWy_R : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
@@ -837,10 +962,7 @@ case: (@DWPlus.DWPlusDW_w_le_vh_aux (fprec t) (fprec_gt_one t) choice (eq_refl _
                   FT2R vh.
   { rewrite Hsh_eq Hc_eq. exact Hvh_eq. }
   rewrite Hw_FT2R Hvh_FT2R in Hle.
-  have Hmag : (mag Zaux.radix2 (FT2R w) <= mag Zaux.radix2 (FT2R vh))%Z
-    by apply: mag_le_abs.
-  unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp.
-  lia.
+  exact (ulp_le_abs _ _ Hle).
 - exfalso. apply Hvh_nz.
   rewrite -Hvh_eq -Hsh_eq -Hc_eq. exact HvhFLX.
 - exfalso. apply Hw_nz.
@@ -857,7 +979,7 @@ case: (@DWPlus.DWPlusDW_w_le_vh_aux (fprec t) (fprec_gt_one t) choice (eq_refl _
     change (FT2R w) with (FT2R (BPLUS tl vl)).
     apply BPLUS_round_correct. exact FIN_w. }
   by rewrite -Hw_FT2R.
-Admitted.
+Qed.
 
 (* vh = BPLUS sh c. Bound |vh| via BPLUS_accurate' + sh_bnd, c_bnd. *)
 Lemma vh_bnd : Rabs (FT2R vh) <=
@@ -1020,8 +1142,16 @@ destruct H as (d5 & Hd5 & B).
   end.
 Qed.
 
+(* Hw_le_vh is genuinely false in cancellation (vh = 0, w = tl <> 0); it is
+   replaced by DWPlusDW_vh_w_disjunction (ulp form) for the Fast2Sum_cond
+   discharge.  It still appears below as the hypothesis to is_finite_FastSum
+   in AccurateDWPlusDW_finite (zl finiteness), a shortcut whose correct
+   replacement is a direct no-overflow chain on the outer
+   BMINUS w (BMINUS (BPLUS vh w) vh) (analogous to no_ov_z/FIN_z for the
+   inner Fast2Sum).  Leaving as admitted with the load-bearing use isolated
+   to that one finiteness shortcut. *)
 Lemma Hw_le_vh : Rabs (FT2R w) <= Rabs (FT2R vh).
-Proof. Admitted. (* same edge-case issue as Hc_le_sh; not used in FIN_zh chain *)
+Proof. Admitted.
 
 (* Main result for FIN_zh: the fst component of AccurateDWPlusDW is finite.
    This is provable under our hypotheses (DWx, DWy, finiteness of inputs,
@@ -1085,7 +1215,7 @@ Proof.
   unfold Fast2Sum_cond; split.
   - change (is_finite (BPLUS sh c) = true).
     change (is_finite vh = true). exact FIN_vh.
-  - exact Hc_le_sh.
+  - exact DWPlusDW_sh_c_disjunction.
 Qed.
 
 Lemma Fast2Sum_cond_vh_w_inner : Fast2Sum_cond vh w.
@@ -1093,7 +1223,7 @@ Proof.
   unfold Fast2Sum_cond; split.
   - change (is_finite (BPLUS vh w) = true).
     exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
-  - exact Hw_le_vh.
+  - exact DWPlusDW_vh_w_disjunction.
 Qed.
 
 End DWPlusDWFinite.
