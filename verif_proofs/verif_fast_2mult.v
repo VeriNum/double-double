@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -29,7 +29,7 @@ Definition fast_2mult_spec :=
   DECLARE _fast_2mult
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
-    PROP(Fast2Mult_cond a b)
+    PROP()
     PARAMS (st; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword st)
   POST [ tvoid ]

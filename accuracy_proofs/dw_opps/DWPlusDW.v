@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import vcfloat.VCFloat.
@@ -1142,16 +1142,6 @@ destruct H as (d5 & Hd5 & B).
   end.
 Qed.
 
-(* Hw_le_vh is genuinely false in cancellation (vh = 0, w = tl <> 0); it is
-   replaced by DWPlusDW_vh_w_disjunction (ulp form) for the Fast2Sum_cond
-   discharge.  It still appears below as the hypothesis to is_finite_FastSum
-   in AccurateDWPlusDW_finite (zl finiteness), a shortcut whose correct
-   replacement is a direct no-overflow chain on the outer
-   BMINUS w (BMINUS (BPLUS vh w) vh) (analogous to no_ov_z/FIN_z for the
-   inner Fast2Sum).  Leaving as admitted with the load-bearing use isolated
-   to that one finiteness shortcut. *)
-Lemma Hw_le_vh : Rabs (FT2R w) <= Rabs (FT2R vh).
-Proof. Admitted.
 
 (* Main result for FIN_zh: the fst component of AccurateDWPlusDW is finite.
    This is provable under our hypotheses (DWx, DWy, finiteness of inputs,
@@ -1181,10 +1171,9 @@ split.
   unfold Fast2Sum, fst.
   exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
 - (* zl = snd (Fast2Sum vh w) *)
-  unfold Fast2Sum_err.
-  apply (is_finite_FastSum vh w Hw_le_vh).
-  unfold Fast2Sum, fst.
-  exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
+  apply (is_finite_FastSum_ulp vh w).
+  + exact DWPlusDW_vh_w_disjunction.
+  + exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
 Qed.
 
 (* Bridge lemmas exposed for VST verification of dw_plus_dw2:

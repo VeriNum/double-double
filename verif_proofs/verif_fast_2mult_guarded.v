@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -32,8 +32,7 @@ Definition fast_2mult_guarded_spec :=
     PARAMS (st; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword st)
   POST [ tvoid ]
-    PROP(Fast2Mult_cond a b /\
-         (Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
+    PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 

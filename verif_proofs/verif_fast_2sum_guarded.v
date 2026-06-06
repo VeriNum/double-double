@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -32,8 +32,7 @@ Definition fast_2sum_guarded_spec :=
     PARAMS (p; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh dword p)
   POST [ tvoid ]
-    PROP(Fast2Sum_cond a b /\
-         (Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
+    PROP((Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 

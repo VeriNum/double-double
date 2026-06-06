@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -129,5 +129,21 @@ Definition dw_plus_fp_check_spec :=
     EX b : bool,
     PROP(b = true ->
          DWPlusFP_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x ).
+
+Definition dw_mult_fp_check_spec :=
+  DECLARE _dw_mult_fp_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP()
+    PARAMS ( x; Vfloat y )
+    SEP( data_at Tsh dword (f2val xh) x )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWTimesFP_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).

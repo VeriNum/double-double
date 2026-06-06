@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -28,7 +28,7 @@ Definition dw_plus_fp_spec :=
   WITH s: val, x : val,
       xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble ] (* c lang types *)
-    PROP(DWPlusFP_cond (fst xh) (snd xh) y)   (* threaded cond *)
+    PROP()  
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
           data_at Tsh dword (f2val xh) x) (* preds on mem *)

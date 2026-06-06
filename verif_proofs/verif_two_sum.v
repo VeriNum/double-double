@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -28,7 +28,7 @@ Definition two_sum_spec :=
   DECLARE _two_sum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr st, tdouble, tdouble ]
-    PROP(TwoSum_cond a b)
+    PROP()
     PARAMS (s; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh st s)
   POST [ tvoid ]
@@ -51,8 +51,3 @@ forward.
 forward.
 entailer!.
 Qed.
-
-Corollary TwoSum_acc (a b : ftype Tdouble) :
-  TwoSum_cond a b ->
-  (Rabs (FT2R (TwoSumF_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R.
-Proof. apply TwoSum_accuracy_from_cond. Qed.

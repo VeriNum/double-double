@@ -618,6 +618,58 @@ split=>//; split; first by apply:FLT_mant_le.
 by rewrite /fa /= /cexp; apply/FLT_exp_monotone/mag_le_abs.
 Qed.
 
+(* Fast2Sum is correct under the *ulp ordering* on the inputs, the weaker
+   precondition  ulp b <= ulp a  (equivalent to the exponent condition
+   ce b <= ce a for nonzero inputs).  This mirrors F2Sum_correct_abs_flt but
+   takes the ulp ordering rather than the magnitude ordering |b| <= |a|. *)
+Theorem F2Sum_correct_ulp_flt a b (Fa : format a) (Fb : format b) :
+   (Ulp.ulp beta fexp b <= Ulp.ulp beta fexp a)%R \/ a = 0%R ->
+   Fast2Sum_correct_flt a b.
+Proof.
+move=> Hor.
+case:(Req_dec a 0)=> [a0|a0].
+  by rewrite a0 /Fast2Sum_correct_flt Fast2Sum0f_flt //=; ring.
+case:(Req_dec b 0)=> [b0|b0].
+  by rewrite b0 /Fast2Sum_correct_flt Fast2Sumf0_flt //=; ring.
+have ulp_le : (Ulp.ulp beta fexp b <= Ulp.ulp beta fexp a)%R.
+  by case: Hor => [//| a00]; case: (a0 a00).
+apply: (F2Sum_correct_cexp_flt Fa Fb).
+apply: (le_bpow beta).
+rewrite -(Ulp.ulp_neq_0 beta fexp a a0) -(Ulp.ulp_neq_0 beta fexp b b0).
+exact: ulp_le.
+Qed.
+
+(* The first Fast2Sum step  z = rnd(s - a)  is *exact* under the exponent
+   condition  ce b <= ce a  (z = s - a, no rounding error).  Same chain as
+   F2Sum_correct_cexp_flt, using the section's sma_exact fact. *)
+Theorem F2Sum_sma_exact_cexp_flt a b (Fa : format a) (Fb : format b) :
+   (ce b <= ce a)%Z ->
+   (rnd_p (rnd_p (a + b) - a) = rnd_p (a + b) - a)%R.
+Proof.
+move=> cexp_le.
+move:(Fa); rewrite /generic_format.
+set Ma := Ztrunc _.
+set fa := Float beta _ _.
+move=> afE.
+apply: (@sma_exact _ _ fa)=>//.
+split=>//; split.
+  by apply:FLT_mant_le.
+by rewrite /fa.
+Qed.
+
+(* ... and the same exactness under the ulp ordering, for nonzero inputs. *)
+Theorem F2Sum_sma_exact_ulp_flt a b (Fa : format a) (Fb : format b)
+   (a0 : a <> 0%R) (b0 : b <> 0%R) :
+   (Ulp.ulp beta fexp b <= Ulp.ulp beta fexp a)%R ->
+   (rnd_p (rnd_p (a + b) - a) = rnd_p (a + b) - a)%R.
+Proof.
+move=> ulp_le.
+apply: (F2Sum_sma_exact_cexp_flt Fa Fb).
+apply: (le_bpow beta).
+rewrite -(Ulp.ulp_neq_0 beta fexp a a0) -(Ulp.ulp_neq_0 beta fexp b b0).
+exact: ulp_le.
+Qed.
+
 Theorem  F2Sum_correct_DW_flt a b : Fast2Sum_correct_flt  a b ->
 let s := fst (Fast2Sum a b) in let t := snd (Fast2Sum a b) in 
      (format s /\format t) /\ s = rnd_p (s + t).

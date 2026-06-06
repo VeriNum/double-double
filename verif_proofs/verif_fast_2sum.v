@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -28,7 +28,7 @@ Definition fast_2sum_spec :=
   DECLARE _fast_2sum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr st, tdouble, tdouble ]
-    PROP(Fast2Sum_cond a b)
+    PROP()
     PARAMS (s; Vfloat a; Vfloat b)
     SEP(data_at_ Tsh st s)
   POST [ tvoid ]

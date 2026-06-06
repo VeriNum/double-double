@@ -1,4 +1,4 @@
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 (* Accuracy / relative-error proofs for AccurateDWPlusDW.
@@ -62,12 +62,87 @@ Let y1 := BPLUS xl yl.
 Let f1 := BPLUS x1 y1.
 Let y  := snd (Fast2Sum f0 f1).
 
-(* Pre-existing proof from before the DWPlusDW_cond refactor; uses
-   surjective_pairing rewriting that no longer matches under the current
-   Coq/Flocq versions. Body admitted as a known pre-existing issue;
-   independent of the DWPlusDWFinite refactor and DWPlusDW_cond bridges. *)
 Lemma is_finite_p_of_zh : is_finite_p (AccurateDWPlusDW xh xl yh yl).
-Proof. Admitted.
+Proof.
+(* ---- Step 1: Backward propagation of finiteness from FIN_zh ---- *)
+have hfin_outer : is_finite (BPLUS (fst (Fast2Sum f0 f1)) (BPLUS x y)) = true.
+{ change (is_finite (fst (AccurateDWPlusDW xh xl yh yl)) = true); exact FIN_zh. }
+have [hfin_vh hfin_w] := BPLUS_finite_e _ _ _ hfin_outer.
+have hfin_f0f1 : is_finite (BPLUS f0 f1) = true := hfin_vh.
+have [hfin_f0 hfin_f1] := BPLUS_finite_e _ _ _ hfin_f0f1.
+have [hfin_x1 hfin_y1] := BPLUS_finite_e _ _ _ hfin_f1.
+have [hfin_x hfin_y] := BPLUS_finite_e _ _ _ hfin_w.
+(* ---- Step 2: Build is_finite_p for TwoSum and Fast2Sum components ---- *)
+have fin_tsxhyh : is_finite_p (TwoSumF xh yh).
+{ split; [exact hfin_f0 | exact hfin_x1]. }
+have fin_tsxlyl : is_finite_p (TwoSumF xl yl).
+{ split; [exact hfin_y1 | exact hfin_x]. }
+have fin_f2s : is_finite_p (Fast2Sum f0 f1).
+{ split; [exact hfin_f0f1 | exact hfin_y]. }
+(* ---- Step 3: FLX bridge equations ---- *)
+have HDWx : DWPlus.double_word p choice xhr xlr.
+{ unfold xhr, xlr; apply @dw_word_DWdouble => //. }
+have HDWy : DWPlus.double_word p choice yhr ylr.
+{ unfold yhr, ylr; apply @dw_word_DWdouble => //. }
+have heq_ts_xhyh : TwoSum p choice xhr yhr = F2Rp (TwoSumF xh yh).
+{ exact (TwoSumEq_FLT xh yh fin_tsxhyh). }
+have heq_ts_xlyl : TwoSum p choice xlr ylr = F2Rp (TwoSumF xl yl).
+{ exact (TwoSumEq_FLT xl yl fin_tsxlyl). }
+have heq_f2s : F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1) = F2Rp (Fast2Sum f0 f1).
+{ exact (FastTwoSumEq_FLT f0 f1 fin_f2s). }
+(* ---- Step 4: Component-level bridges ---- *)
+have h_te_xhyh : TwoSum_err p choice xhr yhr = FT2R x1.
+{ unfold TwoSum_err. rewrite heq_ts_xhyh /F2Rp/snd //. }
+have h_ts_xhyh : TwoSum_sum p choice xhr yhr = FT2R f0.
+{ unfold TwoSum_sum. rewrite heq_ts_xhyh /F2Rp/fst //. }
+have h_te_xlyl : TwoSum_err p choice xlr ylr = FT2R x.
+{ unfold TwoSum_err. rewrite heq_ts_xlyl /F2Rp/snd //. }
+have h_ts_xlyl : TwoSum_sum p choice xlr ylr = FT2R y1.
+{ unfold TwoSum_sum. rewrite heq_ts_xlyl /F2Rp/fst //. }
+have h_f1_rnd : FT2R f1 =
+  round radix2 (FLX_exp p) (Znearest choice)
+    (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr).
+{ have step1 : FT2R (BPLUS x1 y1) =
+    round radix2 (FLX_exp p) (Znearest choice) (FT2R x1 + FT2R y1).
+  { symmetry. rewrite rnd_plus_FLT_FLX_eq'.
+    apply BPLUS_round_correct. exact hfin_f1. }
+  rewrite step1 -h_te_xhyh -h_ts_xlyl //. }
+have h_vh_fs : FT2R (fst (Fast2Sum f0 f1)) =
+  fst (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
+    (round radix2 (FLX_exp p) (Znearest choice)
+       (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr))).
+{ have H : fst (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1)) = FT2R (fst (Fast2Sum f0 f1))
+  by rewrite heq_f2s /F2Rp //.
+  rewrite -H -h_ts_xhyh h_f1_rnd //. }
+have h_y_fe : FT2R y =
+  snd (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
+    (round radix2 (FLX_exp p) (Znearest choice)
+       (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr))).
+{ have H : snd (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1)) = FT2R y
+  by rewrite heq_f2s /F2Rp //.
+  rewrite -H -h_ts_xhyh h_f1_rnd //. }
+have h_w_rnd : FT2R (BPLUS x y) =
+  round radix2 (FLX_exp p) (Znearest choice)
+    (TwoSum_err p choice xlr ylr +
+     snd (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
+       (round radix2 (FLX_exp p) (Znearest choice)
+          (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr)))).
+{ have step1 : FT2R (BPLUS x y) =
+    round radix2 (FLX_exp p) (Znearest choice) (FT2R x + FT2R y).
+  { symmetry. rewrite rnd_plus_FLT_FLX_eq'.
+    apply BPLUS_round_correct. exact hfin_w. }
+  rewrite step1 h_te_xlyl h_y_fe //. }
+(* ---- Step 5: Apply FLX bound ---- *)
+have hBound : Rabs (FT2R (BPLUS x y)) <= Rabs (FT2R (fst (Fast2Sum f0 f1))).
+{ have hW := @DWPlusDW_wlevh p (fprec_gt_one t) choice eq_refl Hp3
+    xhr xlr yhr ylr HDWx HDWy.
+  rewrite -h_w_rnd -h_vh_fs in hW; exact hW. }
+(* ---- Step 6: Conclude is_finite_p ---- *)
+rewrite /is_finite_p.
+split.
+- exact FIN_zh.
+- apply (is_finite_FastSum (fst (Fast2Sum f0 f1)) (BPLUS x y) hBound hfin_outer).
+Qed.
 
 (* Original broken proof preserved below as a comment for future repair. *)
 (*
