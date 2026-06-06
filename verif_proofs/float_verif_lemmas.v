@@ -1,6 +1,6 @@
 
 (* verif_float_lemmas.v: helpers lemmas for compcert floats*)
-(* Copyright 2025 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.

@@ -1,5 +1,5 @@
 # A Formally Verified Library of Double-Word Arithmetic
-Copyright (c) 2023 Ariel Kellison
+Copyright (c) 2023-2026 Ariel Kellison
 
 This library is open-source licensed according to the LGPL (Gnu Lesser General
 Public License) version 3 or any later version.
