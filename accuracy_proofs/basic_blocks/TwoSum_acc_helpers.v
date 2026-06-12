@@ -1135,24 +1135,6 @@ Qed.
 
 Variables (a b : ftype t).
 
-Lemma BPLUS_UF_exact:
-  is_finite (BPLUS a b) = true ->
-  Rabs (FT2R a + FT2R b) < bpow radix2 (emin + fprec t - 1) ->
-   FT2R (BPLUS a b) = FT2R a + FT2R b.
-Proof.
-intros FIN BND.
-BPLUS_correct t a b.
-rewrite round_generic => //.
-by rewrite !B2R_float_of_ftype.
-apply Plus_error.FLT_format_plus_small => //;
-rewrite -B2R_float_of_ftype;
-try apply (Binary.generic_format_B2R (fprec t) (femax t)).
-apply Rlt_le.
-rewrite B2R_float_of_ftype.
-refine (Rlt_le_trans _ _ _ BND _).
-apply bpow_le; fold emin; lia.
-Qed.
-
 Hypothesis (FIN : is_finite_p (TwoSumF a b)).
 
 Theorem TwoSumF_correct :
@@ -1245,7 +1227,7 @@ BPLUS_correct t a b; field_simplify. rewrite H => //. rewrite !B2R_float_of_ftyp
 f_equal => //.
 rewrite TwoSumF_correct DWPlus.TwoSum_correct => //. f_equal => //.
 apply fprec_gt_one.
-all: (apply (@generic_format_FLX_FLT radix2 emin);
+all: (apply ( @generic_format_FLX_FLT radix2 emin);
 rewrite -B2R_float_of_ftype;
 apply Binary.generic_format_B2R).
 Qed.
@@ -1267,7 +1249,7 @@ destruct (Rlt_or_le (Rabs (FT2R a + FT2R b)) (bpow radix2 (emin + fprec t - 1)) 
     try rewrite -FT2R_ftype_of_float ftype_of_float_of_ftype.
     refine (Rlt_le_trans _ _ _ BND _).
     apply bpow_le; fold emin; lia. }
-rewrite !BPLUS_UF_exact => //. f_equal.
+rewrite !(BPLUS_UF_exact t a b) => //. f_equal.
 rewrite round_generic => //.
 by apply (generic_format_FLX_FLT _ emin).
 set (f1:= (BMINUS a (BMINUS (BPLUS a b) b))) in *.
@@ -1292,7 +1274,7 @@ BMINUS_correct t f4 f6; subst f6; clear H12.
 rewrite -is_finite_Binary in H11.
 BMINUS_correct t f4 b; subst f4; clear H14.
  rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
-rewrite !BPLUS_UF_exact => //.
+rewrite !(BPLUS_UF_exact t a b) => //.
 rewrite -!B2R_float_of_ftype.
 rewrite -!B2R_float_of_ftype in A.
 rewrite !round_generic => //;

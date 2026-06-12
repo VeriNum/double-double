@@ -109,6 +109,7 @@ Definition _y : ident := $"y".
 Definition _y_bnd : ident := $"y_bnd".
 Definition _yh_bnd : ident := $"yh_bnd".
 Definition _z : ident := $"z".
+Definition _z_bnd : ident := $"z_bnd".
 Definition _zx : ident := $"zx".
 Definition _zxh : ident := $"zxh".
 Definition _zy : ident := $"zy".
@@ -132,6 +133,8 @@ Definition _t'24 : ident := 151%positive.
 Definition _t'25 : ident := 152%positive.
 Definition _t'26 : ident := 153%positive.
 Definition _t'27 : ident := 154%positive.
+Definition _t'28 : ident := 155%positive.
+Definition _t'29 : ident := 156%positive.
 Definition _t'3 : ident := 130%positive.
 Definition _t'4 : ident := 131%positive.
 Definition _t'5 : ident := 132%positive.
@@ -575,39 +578,40 @@ Definition f_dw_mult_fp_check := {|
   fn_temps := ((_fin_xh, tint) :: (_fin_xl, tint) :: (_fin_y, tint) ::
                (_dwx, tint) :: (_q_omega, tdouble) :: (_xh_bnd, tint) ::
                (_y_bnd, tint) :: (_z, tdouble) :: (_thresh, tdouble) ::
-               (_fin_z, tint) :: (_zxh, tint) :: (_zy, tint) ::
-               (_mult_safe, tint) :: (_t'19, tint) :: (_t'18, tint) ::
-               (_t'17, tint) :: (_t'16, tint) :: (_t'15, tdouble) ::
+               (_fin_z, tint) :: (_z_bnd, tint) :: (_zxh, tint) ::
+               (_zy, tint) :: (_mult_safe, tint) :: (_t'21, tint) ::
+               (_t'20, tint) :: (_t'19, tint) :: (_t'18, tint) ::
+               (_t'17, tint) :: (_t'16, tdouble) :: (_t'15, tint) ::
                (_t'14, tint) :: (_t'13, tint) :: (_t'12, tint) ::
-               (_t'11, tint) :: (_t'10, tint) :: (_t'9, tdouble) ::
+               (_t'11, tdouble) :: (_t'10, tint) :: (_t'9, tdouble) ::
                (_t'8, tdouble) :: (_t'7, tdouble) :: (_t'6, tdouble) ::
                (_t'5, tint) :: (_t'4, tint) :: (_t'3, tint) ::
-               (_t'2, tint) :: (_t'1, tint) :: (_t'27, tdouble) ::
-               (_t'26, tdouble) :: (_t'25, tdouble) :: (_t'24, tdouble) ::
-               (_t'23, tdouble) :: (_t'22, tdouble) :: (_t'21, tdouble) ::
-               (_t'20, tdouble) :: nil);
+               (_t'2, tint) :: (_t'1, tint) :: (_t'29, tdouble) ::
+               (_t'28, tdouble) :: (_t'27, tdouble) :: (_t'26, tdouble) ::
+               (_t'25, tdouble) :: (_t'24, tdouble) :: (_t'23, tdouble) ::
+               (_t'22, tdouble) :: nil);
   fn_body :=
 (Ssequence
   (Ssequence
     (Ssequence
-      (Sset _t'27
+      (Sset _t'29
         (Efield
           (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
             (Tstruct _dword noattr)) _s tdouble))
       (Scall (Some _t'1)
         (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
-        ((Etempvar _t'27 tdouble) :: nil)))
+        ((Etempvar _t'29 tdouble) :: nil)))
     (Sset _fin_xh (Etempvar _t'1 tint)))
   (Ssequence
     (Ssequence
       (Ssequence
-        (Sset _t'26
+        (Sset _t'28
           (Efield
             (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
               (Tstruct _dword noattr)) _t tdouble))
         (Scall (Some _t'2)
           (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
-          ((Etempvar _t'26 tdouble) :: nil)))
+          ((Etempvar _t'28 tdouble) :: nil)))
       (Sset _fin_xl (Etempvar _t'2 tint)))
     (Ssequence
       (Ssequence
@@ -623,26 +627,26 @@ Definition f_dw_mult_fp_check := {|
               (Sset _t'4 (Econst_int (Int.repr 0) tint)))
             (Sifthenelse (Etempvar _t'4 tint)
               (Ssequence
-                (Sset _t'23
+                (Sset _t'25
                   (Efield
                     (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
                       (Tstruct _dword noattr)) _s tdouble))
                 (Ssequence
-                  (Sset _t'24
+                  (Sset _t'26
                     (Efield
                       (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
                         (Tstruct _dword noattr)) _t tdouble))
                   (Ssequence
-                    (Sset _t'25
+                    (Sset _t'27
                       (Efield
                         (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
                           (Tstruct _dword noattr)) _s tdouble))
                     (Sset _t'5
                       (Ecast
                         (Ebinop Oeq
-                          (Ebinop Oadd (Etempvar _t'23 tdouble)
-                            (Etempvar _t'24 tdouble) tdouble)
-                          (Etempvar _t'25 tdouble) tint) tbool)))))
+                          (Ebinop Oadd (Etempvar _t'25 tdouble)
+                            (Etempvar _t'26 tdouble) tdouble)
+                          (Etempvar _t'27 tdouble) tint) tbool)))))
               (Sset _t'5 (Econst_int (Int.repr 0) tint))))
           (Sset _dwx (Etempvar _t'5 tint)))
         (Ssequence
@@ -656,13 +660,13 @@ Definition f_dw_mult_fp_check := {|
           (Ssequence
             (Ssequence
               (Ssequence
-                (Sset _t'22
+                (Sset _t'24
                   (Efield
                     (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
                       (Tstruct _dword noattr)) _s tdouble))
                 (Scall (Some _t'7)
                   (Evar _fabs (Tfunction (tdouble :: nil) tdouble cc_default))
-                  ((Etempvar _t'22 tdouble) :: nil)))
+                  ((Etempvar _t'24 tdouble) :: nil)))
               (Sset _xh_bnd
                 (Ebinop Ole (Etempvar _t'7 tdouble)
                   (Etempvar _q_omega tdouble) tint)))
@@ -676,12 +680,12 @@ Definition f_dw_mult_fp_check := {|
                     (Etempvar _q_omega tdouble) tint)))
               (Ssequence
                 (Ssequence
-                  (Sset _t'21
+                  (Sset _t'23
                     (Efield
                       (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
                         (Tstruct _dword noattr)) _s tdouble))
                   (Sset _z
-                    (Ebinop Omul (Etempvar _t'21 tdouble)
+                    (Ebinop Omul (Etempvar _t'23 tdouble)
                       (Etempvar _y tdouble) tdouble)))
                 (Ssequence
                   (Ssequence
@@ -703,79 +707,99 @@ Definition f_dw_mult_fp_check := {|
                       (Sset _fin_z (Etempvar _t'10 tint)))
                     (Ssequence
                       (Ssequence
-                        (Ssequence
-                          (Sset _t'20
-                            (Efield
-                              (Ederef
-                                (Etempvar _x (tptr (Tstruct _dword noattr)))
-                                (Tstruct _dword noattr)) _s tdouble))
-                          (Sifthenelse (Ebinop Oeq (Etempvar _t'20 tdouble)
-                                         (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
-                                         tint)
-                            (Sset _t'11 (Ecast (Etempvar _fin_y tint) tbool))
-                            (Sset _t'11 (Econst_int (Int.repr 0) tint))))
-                        (Sset _zxh (Etempvar _t'11 tint)))
+                        (Scall (Some _t'11)
+                          (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                        cc_default))
+                          ((Etempvar _z tdouble) :: nil))
+                        (Sset _z_bnd
+                          (Ebinop Ole (Etempvar _t'11 tdouble)
+                            (Etempvar _q_omega tdouble) tint)))
                       (Ssequence
                         (Ssequence
-                          (Sifthenelse (Ebinop Oeq (Etempvar _y tdouble)
-                                         (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
-                                         tint)
-                            (Sset _t'12
-                              (Ecast (Etempvar _fin_xh tint) tbool))
-                            (Sset _t'12 (Econst_int (Int.repr 0) tint)))
-                          (Sset _zy (Etempvar _t'12 tint)))
+                          (Ssequence
+                            (Sset _t'22
+                              (Efield
+                                (Ederef
+                                  (Etempvar _x (tptr (Tstruct _dword noattr)))
+                                  (Tstruct _dword noattr)) _s tdouble))
+                            (Sifthenelse (Ebinop Oeq (Etempvar _t'22 tdouble)
+                                           (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
+                                           tint)
+                              (Sset _t'12
+                                (Ecast (Etempvar _fin_y tint) tbool))
+                              (Sset _t'12 (Econst_int (Int.repr 0) tint))))
+                          (Sset _zxh (Etempvar _t'12 tint)))
                         (Ssequence
                           (Ssequence
-                            (Sifthenelse (Etempvar _fin_z tint)
-                              (Ssequence
-                                (Sifthenelse (Etempvar _zxh tint)
-                                  (Sset _t'14 (Econst_int (Int.repr 1) tint))
-                                  (Sset _t'14
-                                    (Ecast (Etempvar _zy tint) tbool)))
-                                (Sifthenelse (Etempvar _t'14 tint)
-                                  (Sset _t'13
-                                    (Ecast (Econst_int (Int.repr 1) tint)
-                                      tbool))
-                                  (Ssequence
-                                    (Ssequence
-                                      (Scall (Some _t'15)
-                                        (Evar _fabs (Tfunction
-                                                      (tdouble :: nil)
-                                                      tdouble cc_default))
-                                        ((Etempvar _z tdouble) :: nil))
-                                      (Sset _t'13
-                                        (Ecast
-                                          (Ebinop Olt
-                                            (Etempvar _thresh tdouble)
-                                            (Etempvar _t'15 tdouble) tint)
-                                          tbool)))
-                                    (Sset _t'13
-                                      (Ecast (Etempvar _t'13 tint) tbool)))))
+                            (Sifthenelse (Ebinop Oeq (Etempvar _y tdouble)
+                                           (Econst_float (Float.of_bits (Int64.repr 0)) tdouble)
+                                           tint)
+                              (Sset _t'13
+                                (Ecast (Etempvar _fin_xh tint) tbool))
                               (Sset _t'13 (Econst_int (Int.repr 0) tint)))
-                            (Sset _mult_safe (Etempvar _t'13 tint)))
+                            (Sset _zy (Etempvar _t'13 tint)))
                           (Ssequence
+                            (Ssequence
+                              (Sifthenelse (Etempvar _fin_z tint)
+                                (Ssequence
+                                  (Sifthenelse (Etempvar _zxh tint)
+                                    (Sset _t'15
+                                      (Econst_int (Int.repr 1) tint))
+                                    (Sset _t'15
+                                      (Ecast (Etempvar _zy tint) tbool)))
+                                  (Sifthenelse (Etempvar _t'15 tint)
+                                    (Sset _t'14
+                                      (Ecast (Econst_int (Int.repr 1) tint)
+                                        tbool))
+                                    (Ssequence
+                                      (Ssequence
+                                        (Scall (Some _t'16)
+                                          (Evar _fabs (Tfunction
+                                                        (tdouble :: nil)
+                                                        tdouble cc_default))
+                                          ((Etempvar _z tdouble) :: nil))
+                                        (Sset _t'14
+                                          (Ecast
+                                            (Ebinop Olt
+                                              (Etempvar _thresh tdouble)
+                                              (Etempvar _t'16 tdouble) tint)
+                                            tbool)))
+                                      (Sset _t'14
+                                        (Ecast (Etempvar _t'14 tint) tbool)))))
+                                (Sset _t'14 (Econst_int (Int.repr 0) tint)))
+                              (Sset _mult_safe (Etempvar _t'14 tint)))
                             (Ssequence
                               (Ssequence
                                 (Ssequence
-                                  (Sifthenelse (Etempvar _dwx tint)
-                                    (Sset _t'16
-                                      (Ecast (Etempvar _fin_y tint) tbool))
-                                    (Sset _t'16
-                                      (Econst_int (Int.repr 0) tint)))
-                                  (Sifthenelse (Etempvar _t'16 tint)
-                                    (Sset _t'17
-                                      (Ecast (Etempvar _xh_bnd tint) tbool))
-                                    (Sset _t'17
+                                  (Ssequence
+                                    (Ssequence
+                                      (Sifthenelse (Etempvar _dwx tint)
+                                        (Sset _t'17
+                                          (Ecast (Etempvar _fin_y tint)
+                                            tbool))
+                                        (Sset _t'17
+                                          (Econst_int (Int.repr 0) tint)))
+                                      (Sifthenelse (Etempvar _t'17 tint)
+                                        (Sset _t'18
+                                          (Ecast (Etempvar _xh_bnd tint)
+                                            tbool))
+                                        (Sset _t'18
+                                          (Econst_int (Int.repr 0) tint))))
+                                    (Sifthenelse (Etempvar _t'18 tint)
+                                      (Sset _t'19
+                                        (Ecast (Etempvar _y_bnd tint) tbool))
+                                      (Sset _t'19
+                                        (Econst_int (Int.repr 0) tint))))
+                                  (Sifthenelse (Etempvar _t'19 tint)
+                                    (Sset _t'20
+                                      (Ecast (Etempvar _z_bnd tint) tbool))
+                                    (Sset _t'20
                                       (Econst_int (Int.repr 0) tint))))
-                                (Sifthenelse (Etempvar _t'17 tint)
-                                  (Sset _t'18
-                                    (Ecast (Etempvar _y_bnd tint) tbool))
-                                  (Sset _t'18 (Econst_int (Int.repr 0) tint))))
-                              (Sifthenelse (Etempvar _t'18 tint)
-                                (Sset _t'19
-                                  (Ecast (Etempvar _mult_safe tint) tbool))
-                                (Sset _t'19 (Econst_int (Int.repr 0) tint))))
-                            (Sreturn (Some (Etempvar _t'19 tint)))))))))))))))))
+                                (Sifthenelse (Etempvar _t'20 tint)
+                                  (Sset _t'21
+                                    (Ecast (Etempvar _mult_safe tint) tbool))
+                                  (Sset _t'21 (Econst_int (Int.repr 0) tint))))
+                              (Sreturn (Some (Etempvar _t'21 tint))))))))))))))))))
 |}.
 
 Definition f_dw_plus_fp_check := {|

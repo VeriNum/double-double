@@ -1,12 +1,14 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** This file contains accuracy proofs for double-word 
-plus a (double-word, floating-point number *)
+(** This file contains helper lemmas for accuracy proofs 
+for double-word  plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics common.
-Require Import DWPlus DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas.
+Require Import DWPlus DDModels DWord_defs.
+Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -15,44 +17,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 
-Section DWHighBnd.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-
-(* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 (the
-   sum-form bound used by older lemma statements), then |xh| <= Omega/4
-   (the high-part bound preferred by DWPlusFP_cond / DWPlusDW_cond).
-   The implication holds because Omega/4 = 2^(femax - 2) is a power of two,
-   hence in generic_format, and round-to-nearest cannot push a value with
-   |x| < B above B when B is representable. *)
-Lemma dw_high_bnd_of_sum (xh xl : ftype t)
-  (Hdw  : double_word_prop xh xl)
-  (Hsum : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))) :
-  Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)).
-Proof.
-have Hquot : /4 * bpow radix2 (femax t) = bpow radix2 (femax t - 2).
-{ have -> : (femax t - 2 = -2 + femax t)%Z by ring.
-  rewrite bpow_plus. cbn. nra. }
-have Hvexp : Valid_exp (SpecFloat.fexp (fprec t) (femax t))
-  by apply FLT.FLT_exp_valid; apply fprec_gt_0.
-have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
-                             (bpow radix2 (femax t - 2)).
-{ apply generic_format_bpow; auto.
-  rewrite /SpecFloat.fexp /SpecFloat.emin.
-  pose proof (fprec_lt_femax t).
-  pose proof (@fprec_lb t).
-  apply Z.max_lub; lia. }
-rewrite /double_word_prop/rounded in Hdw.
-rewrite Hdw Hquot.
-apply (@abs_round_le_generic radix2 _ Hvexp _
-                              (BinarySingleNaN.valid_rnd_round_mode _)).
-- exact Hfmt.
-- apply Rlt_le. rewrite -Hquot. exact Hsum.
-Qed.
-
-End DWHighBnd.
-
-
-Section CorrectDWPlusFP.
+Section FiniteFactsDWPlusFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl y : ftype t).
@@ -84,152 +49,16 @@ Proof. prove_finite. Qed.
 Fact FINxl : is_finite xl = true.
 Proof. prove_finite. Qed.
 
-End CorrectDWPlusFP.
+End FiniteFactsDWPlusFP.
 
 Section  CorrectDWPlusFP'.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
-Notation u   := (bpow Zaux.radix2 (- fprec t)).
-
-Fact fexp_not_FTZ :  Exp_not_FTZ fexp.
-Proof.
-rewrite /Exp_not_FTZ/fexp; intros.
-have H1: (1 - fprec t <= 0)%Z.
-pose proof (@fprec_lb t); lia.
-destruct (Z.le_ge_cases  (e - fprec t) (SpecFloat.emin (fprec t) (femax t))).
-apply Z.max_r in H; rewrite H => //.
-destruct (Z.le_ge_cases  (SpecFloat.emin (fprec t) (femax t) + 1 - fprec t)
-   (SpecFloat.emin (fprec t) (femax t))) => //.
-apply Z.max_r in H0; rewrite H0; try lia => //.
-apply Z.max_l in H0; rewrite H0; try lia => //.
-apply Z.max_l in H; rewrite H => //.
-destruct (Z.le_ge_cases  (e - fprec t + 1 - fprec t) 
-  (SpecFloat.emin (fprec t) (femax t))) .
-apply Z.max_r in H0; rewrite H0; try lia => //.
-apply Z.max_l in H0; rewrite H0; try lia => //.
-Qed.
-
-(* Lemma 2.1 *)
-Lemma roundN_plus_ulp_FLT  (a b : ftype t) : 
-      ( (FT2R a + FT2R b) <> 0) ->
-        Rmax (ulp (FT2R a) /2) (ulp (FT2R b)/ 2) <= Rabs (rounded t (FT2R a + FT2R b)).
-Proof.
-move=> sn0.
-have Hv: Valid_exp fexp by apply FLT.FLT_exp_valid.
-have Hexp: Exp_not_FTZ fexp by apply  fexp_not_FTZ.
-have Hv2: 
-Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
-  by apply BinarySingleNaN.valid_rnd_round_mode.
-have Ha: generic_format radix2 fexp (FT2R a) by
-  rewrite -!B2R_float_of_ftype; apply Binary.generic_format_B2R. 
-have Hb: generic_format radix2 fexp (FT2R b) by 
-  rewrite -!B2R_float_of_ftype; apply Binary.generic_format_B2R. 
-have Hrnd: rounded t (FT2R a + FT2R b) <> 0.
-rewrite /rounded; apply Plus_error.round_plus_neq_0 => //.
-have Hbpow : 
-bpow radix2 (@emin t) / 2 <=
-bpow radix2 (@emin t) .
-  apply Rdiv_le_left; try nra.
-  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
-  try nra. apply bpow_ge_0.
-destruct (Req_dec (FT2R a) 0). 
-{ move : sn0. rewrite H Rplus_0_l. 
-  move=> sn0. 
-  rewrite /rounded round_generic => //.
-  apply Rmax_lub.
-  refine (Rle_trans _ (ulp 0) _ _ _ ).
-  rewrite /ulp ulp_FLT_0 => //. 
-  refine (Rle_trans _ _ _ _ (ulp_le_abs radix2 fexp _ _ _)) => //.
-  apply ulp_ge_ulp_0 => //.
-  apply Rdiv_le_left; try nra.
-  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
-    try nra.  rewrite Rmult_1_r. apply ulp_le_abs => //. 
-  apply Rabs_pos. } 
-destruct (Req_dec (FT2R b) 0). 
-{ move : sn0. rewrite H0 Rplus_0_r. 
-  move=> sn0. 
-  rewrite /rounded round_generic => //.
-  apply Rmax_lub.
-  apply Rdiv_le_left; try nra.
-  refine (Rle_trans _ _ _ _  (Rmult_le_compat_l _ 1 _ _ _ ));
-    try nra.  rewrite Rmult_1_r. apply ulp_le_abs => //. 
-  apply Rabs_pos.
-  refine (Rle_trans _ (ulp 0) _ _ _ ).
-  rewrite /ulp ulp_FLT_0 => //.
-  refine (Rle_trans _ _ _ _ (ulp_le_abs radix2 fexp _ _ _)) => //.
-  apply ulp_ge_ulp_0 => //. } 
-unfold Rmax.
-destruct (Rle_dec (ulp (FT2R a) /2) (ulp (FT2R b) / 2)).
-destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t)) (Rabs (FT2R b))).
-{ rewrite Rplus_comm.
-  refine (Rle_trans _ _ _ _  _).
-  2: apply round_plus_ge_ulp => //.
-  replace (FT2R b / IZR radix2) with (FT2R b  * bpow radix2 (-1)) => //.
-  rewrite ulp_FLT_exact_shift /ulp/fexp/FLT_exp => //=. 
-  field_simplify; try nra. 
-  apply mag_ge_bpow => //.
-  eapply Rle_trans.
-  2: apply H1. apply bpow_le. rewrite /emin. lia.
-  have : 
-  (SpecFloat.emin (fprec t) (femax t) + fprec t + 1  <= mag radix2 (FT2R b))%Z.
-  apply mag_ge_bpow => //.
-  eapply Rle_trans.
-  2: apply H1. apply bpow_le. rewrite /emin. lia.
-  lia. rewrite Rplus_comm => //. } 
-rewrite Rplus_comm.
-  refine (Rle_trans _ _ _ _  _).
-2: apply round_plus_ge_ulp => //.
-rewrite /ulp !ulp_FLT_small => //.
-  refine (Rlt_trans _ _ _ _ H1). 
-rewrite Rabs_div_Raux.
-apply Rdiv_lt_left.
-apply Rabs_pos_lt.
-apply not_0_IZR => //.
-  refine (Rle_lt_trans _ _ _ _  (Rmult_lt_compat_l _ 1 _ _ _ ));
-    try nra.  
-apply Rabs_pos_lt => //.
-simpl; rewrite Rabs_right; try nra.
-apply not_0_IZR => //.
-rewrite Rplus_comm => //.
-apply Rnot_le_lt in n.
-destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t)) (Rabs (FT2R a))).
-{ refine (Rle_trans _ _ _ _  _).
-  2: apply round_plus_ge_ulp => //.
-  replace (FT2R a / IZR radix2) with (FT2R a  * bpow radix2 (-1)) => //.
-  rewrite ulp_FLT_exact_shift /ulp/fexp/FLT_exp => //=. 
-  field_simplify; try nra. 
-  apply mag_ge_bpow => //.
-  eapply Rle_trans.
-  2: apply H1. apply bpow_le. rewrite /emin. lia.
-  have : 
-  (SpecFloat.emin (fprec t) (femax t) + fprec t + 1  <= mag radix2 (FT2R a))%Z.
-  apply mag_ge_bpow => //.
-  eapply Rle_trans.
-  2: apply H1. apply bpow_le. rewrite /emin. lia.
-  lia. } 
-refine (Rle_trans _ _ _ _  _).
-2: apply round_plus_ge_ulp => //.
-rewrite /ulp !ulp_FLT_small => //.
-  refine (Rlt_trans _ _ _ _ H1). 
-rewrite Rabs_div_Raux.
-apply Rdiv_lt_left.
-apply Rabs_pos_lt.
-apply not_0_IZR => //.
-  refine (Rle_lt_trans _ _ _ _  (Rmult_lt_compat_l _ 1 _ _ _ ));
-    try nra.  
-apply Rabs_pos_lt => //.
-simpl; rewrite Rabs_right; try nra.
-apply not_0_IZR => //.
-Qed.
-
-
-Let rnd_p {t} := round radix2 (FLX_exp (fprec t)) (Znearest choice).
 Let emin :=  (@common.emin t).
 
-
 Variables (xh xl y : ftype t).
+
 Hypothesis  xE : double_word xh xl.
 Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
 Hypothesis Hp3 : (3 <= fprec t)%Z.
@@ -333,7 +162,7 @@ Section DWPlusFPFinite.
 Context {NANS: Nans} .
 Variables (xh xl y : ftype Tdouble).
 
-Hypothesis DWx : double_word xh  xl.
+Hypothesis DWx : double_word xh xl.
 Notation t:= Tdouble.
 
 Lemma TwoSumF_sum_finite
@@ -385,8 +214,6 @@ apply Rabs_le_inv in Hxh; destruct Hxh as [_ Hxh].
 have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
 nra.
 Qed.
-
-
 
 Lemma TwoSumF_err_finite_lbnd
 (Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
@@ -1164,145 +991,3 @@ apply DWPlusFP_finite => //.
 Qed.
 
 End DWPlusFPFinite.
-
-Section AccuracyDWPlusFP.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-
-Variables (xh xl y : ftype t).
-Let zh := (FT2R (fst (DWPlusFP xh xl y))).
-Let zl := (FT2R (snd (DWPlusFP xh xl y))).
-Let xr := (FT2R xh + FT2R xl).
-Let yr := (FT2R y).
-Let sl := snd (TwoSumF xh y).
-Let v  := BPLUS xl sl.
-
-(* start section hyps *)
-Hypothesis  xE : double_word xh xl.
-Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
-Hypothesis Hp3 : (3 <= fprec t)%Z.
-(* end section hyps *)
-
-Notation u   := (bpow Zaux.radix2 (- fprec t)).
-Definition relative_error_DWPlusFP := Rabs (((zh + zl) - (xr  + yr)) / (xr  + yr)).
-Definition errorDWFP := (FT2R xh + FT2R xl + FT2R y) - (zh + zl).
-Local Notation p := (fprec t).
-Definition rnd := 
-  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
-
-(* connect paper proofs to local defs *)
-Fact rel_errorE: relative_error_DWPlusFP = Rabs errorDWFP * (Rabs (/( (FT2R xh + FT2R xl) + FT2R y))).
-Proof.
-rewrite /relative_error_DWPlusFP /errorDWFP /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
-Qed.
-
-Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0.
-Proof.
-move => H0. 
-pose proof DWPlusFP_eq xh xl y FIN.
-rewrite /F2Rp in H. 
-destruct (Req_dec xr 0).
-{ have xh0: FT2R xh = 0.
-move: xE; rewrite /double_word. 
-fold xr; by rewrite H1 /rounded round_0.
-(* cases on underflow *)
-destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t - 1)) (Rabs xr)).
-{  have Hv2: 
-Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
-  by apply BinarySingleNaN.valid_rnd_round_mode.
-have Hxl: FT2R xl = 0.
-move: H2 xE; subst xr; rewrite /double_word xh0; move => H2.
-rewrite /rounded round_FLT_FLX Rplus_0_l => //. move => Hz. 
-apply: (@eq_0_round_0_FLX radix2 (fprec t) _ 
-  (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) Hv2) => //.
-fold (@emin t); by rewrite Rplus_0_l in H2.
-rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
-inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
-rewrite /DWPlus.double_word; repeat split.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-by rewrite xh0 Hxl Rplus_0_l round_0.
-rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R. }  
-have Hxl : FT2R xl = 0.
-{  move: xE; subst xr; rewrite /double_word. 
-rewrite /rounded round_generic. rewrite xh0 Rplus_0_l => //.
-apply Plus_error.FLT_format_plus_small.
-apply fprec_gt_0.
-1,2 : rewrite -!B2R_float_of_ftype;
-  apply: Binary.generic_format_B2R.
-fold (@emin t). eapply Rle_trans. apply Rlt_le, H2.
-apply bpow_le; lia. } 
-
-rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
-inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
-rewrite /DWPlus.double_word; repeat split.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-by rewrite xh0 Hxl Rplus_0_l round_0.
-rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R. }  
-
-move: H. 
-unfold DWPlus.DWPlusFP.
-rewrite DWPlus.TwoSum_correct => //.
-rewrite -!Rplus_assoc.
-replace (FT2R xl + FT2R xh) with xr. fold yr.
-rewrite H0 Rplus_0_l. 
-rewrite F2Sum.Fast2Sum0 => //. fold zl zh. move => Hz.
-inversion Hz => //=; lra.
-move => x.
-apply round_NE_opp.
-apply Fth; lia.
-rewrite /TwoSum_sum/fst/TwoSum.
-rewrite round_NE_opp.
-rewrite Bayleyaux.round_round => //; lia.
-subst xr. rewrite Rplus_comm => //. lia.
-1,2 : rewrite -!B2R_float_of_ftype;
-apply: generic_format_FLX_FLT;
-  apply: Binary.generic_format_B2R.
-Qed.
-
-Theorem relative_errorDWPlusFP_correct : relative_error_DWPlusFP <= 2 * u ^ 2.
-Proof.
-have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
-{ apply (@generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)).
-  rewrite -!B2R_float_of_ftype. 
-  apply (Binary.generic_format_B2R). }  
-destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
-  Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
-apply dw_word_DWdouble => //.
-apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
-apply Req_le.
-rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
-pose proof DWPlusFP_eq xh  xl y FIN.
- rewrite /F2Rp/DWPlus.DWPlusFP in H1.
-repeat f_equal.
-all: by rewrite H1.
-Qed.
-
-Theorem relative_errorDWPlusFP_correct' : 
-  exists del, (zh + zl) = (xr + yr) * (1 + del) /\
-    Rabs del <= 2 * u ^ 2.
-Proof.
-have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
-{ apply (@generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)). 
-  rewrite -!B2R_float_of_ftype. 
-  apply (Binary.generic_format_B2R). }  
-destruct (@DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
-  Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
-apply dw_word_DWdouble => //.
-destruct (Req_dec (xr + yr) 0) as [Hx0|Hx0].
-{ exists 0; rewrite Hx0; split; [field_simplify; 
-  now rewrite DWPlusFP_0 | now rewrite Rabs_R0; nra]. } 
-exists (((zh + zl) - (xr  + yr)) / (xr  + yr)); split. 
-{ now field_simplify. } 
-apply relative_errorDWPlusFP_correct.
-Qed.
-
-End AccuracyDWPlusFP.
-
-

@@ -169,9 +169,15 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
      - the double-word relation on (xh, xl);
      - Fast2Mult(xh, y) safety (overflow + the underflow disjunction
        shared with Fast2Mult_cond);
-     - magnitude bounds on |xh|, |y| matching DWPlusFP_cond, to give
-       the final Fast2Sum enough headroom to stay finite.
-   The check in C (dw_mult_fp_check) verifies exactly this shape.  *)
+     - magnitude bounds on |xh|, |y|;
+     - the *product* bound |round(xh*y)| <= Omega/4, which bounds the high
+       part of the result and leaves the final Fast2Sum enough headroom to
+       stay finite.  (Bounding the factors |xh|, |y| alone does NOT bound the
+       product: it only gives |xh*y| <= Omega^2/16, and is_finite (BMULT xh y)
+       merely keeps |xh*y| just below the overflow threshold, with no margin
+       for the closing Fast2Sum.)
+   The check in C (dw_mult_fp_check) verifies exactly this shape (the product
+   bound is the fabs(z) <= q_omega test on z = x->s * y).  *)
 Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -182,7 +188,8 @@ Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R xh * FT2R y)) /\
   Rabs (FT2R xh) <= /4 * Omega /\
-  Rabs (FT2R y)  <= /4 * Omega.
+  Rabs (FT2R y)  <= /4 * Omega /\
+  Rabs (FT2R (BMULT xh y)) <= /4 * Omega.
 
 End DWTimesFPCond.
 

@@ -130,6 +130,42 @@ rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
   rewrite /BPLUS/BINOP float_of_ftype_of_float => //.
 Qed.
 
+(* Same exactness as FastTwoSum_correct, but under the weaker Fast2Sum_cond
+   disjunction (ulp b <= ulp a, or a = 0) instead of the magnitude ordering
+   |b| <= |a|.  Needed at the (sh, c) Fast2Sum site of DWPlusDW, where the
+   magnitude ordering is false in the cancellation regime. *)
+Theorem FastTwoSum_correct_ulp (Hcond : Fast2Sum_cond a b) :
+  FT2R (Fast2Sum_err a b) = FT2R a + FT2R b - FT2R (Fast2Sum_sum a b).
+Proof.
+destruct Hcond as [Hfin_plus Hdisj].
+have FIN : is_finite_p (DD.DDModels.Fast2Sum a b) :=
+  conj Hfin_plus (is_finite_FastSum_ulp a b Hdisj Hfin_plus).
+set (s := BPLUS a b).
+set (z := BMINUS s a).
+move: FIN.
+rewrite /Fast2Sum_err/Fast2Sum_sum/DDModels.Fast2Sum/fst/snd/=.
+move => []; rewrite /fst/snd; fold s z; move => FINs FINd.
+BMINUS_correct t b z; field_simplify. clear H4.
+unfold z.
+have FINsa: is_finite z = true by rewrite is_finite_Binary.
+unfold z in FINsa.
+BMINUS_correct t s a; field_simplify. unfold s in *. BPLUS_correct t a b; field_simplify.
+have Ga: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R a) by
+  rewrite -B2R_float_of_ftype;
+  apply (Binary.generic_format_B2R (fprec t) (femax t)).
+have Gb: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R b) by
+  rewrite -B2R_float_of_ftype;
+  apply (Binary.generic_format_B2R (fprec t) (femax t)).
+have Hr : (radix2 <= 3)%Z by (simpl; auto).
+have: Fast2Sum_correct_flt radix2 emin (fprec t) choice (FT2R a) (FT2R b).
+apply F2Sum_correct_ulp_flt => //. apply (fprec_gt_one t).
+rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
+  rewrite -!B2R_float_of_ftype;
+  move => H. rewrite H; f_equal.
+  rewrite -!B2R_float_of_ftype in H9.
+  rewrite /BPLUS/BINOP float_of_ftype_of_float => //.
+Qed.
+
 Theorem Fast2Sum_is_DW
   (Hfin_plus : is_finite (BPLUS a b) = true)
   (Hle : Rabs (FT2R b) <= Rabs (FT2R a)) :

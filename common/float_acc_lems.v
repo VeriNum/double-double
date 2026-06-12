@@ -413,6 +413,63 @@ destruct (float_of_ftype a), (float_of_ftype b);
 destruct s,s0; discriminate; auto.
 Qed.
 
+Lemma BPLUS_UF_exact {NAN: Nans} {STD: is_standard t} :
+ forall (a b : ftype t),
+  is_finite (BPLUS a b) = true ->
+  Rabs (FT2R a + FT2R b) < bpow radix2 ((@common.emin t) + fprec t - 1) ->
+   FT2R (BPLUS a b) = FT2R a + FT2R b.
+Proof.
+intros a b FIN BND.
+have Hgeneric: 
+  generic_format radix2 (SpecFloat.fexp (fprec t) (femax t)) (Rabs (FT2R a + FT2R b)).
+-
+apply generic_format_abs.
+rewrite -!B2R_float_of_ftype.
+apply Plus_error.FLT_format_plus_small => //;
+try apply (Binary.generic_format_B2R (fprec t) (femax t)).
+apply Rlt_le.
+rewrite !B2R_float_of_ftype.
+refine (Rlt_le_trans _ _ _ BND _).
+apply bpow_le; unfold emin; lia.
+-
+destruct (BPLUS_finite_e a b FIN) as [FINa  FINb].
+rewrite !is_finite_Binary in FINa FINb.
+set (ap := float_of_ftype a).
+set (bp := float_of_ftype b).
+pose proof (Binary.Bplus_correct  (fprec t) (femax t) (fprec_gt_0 t) 
+                    (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
+                      BinarySingleNaN.mode_NE ap bp FINa FINb) as H0.
+pose proof (
+   Raux.Rlt_bool_spec
+        (Rabs
+           (Generic_fmt.round Zaux.radix2
+              (SpecFloat.fexp (fprec t) (femax t))
+              (BinarySingleNaN.round_mode
+                 BinarySingleNaN.mode_NE) 
+                  (Binary.B2R _ _ ap + Binary.B2R _ _ bp)))
+        (Raux.bpow Zaux.radix2 (femax t))) as H.
+destruct H.
++
+destruct H0 as [H0 _].
+rewrite /BPLUS/BINOP -B2R_float_of_ftype float_of_ftype_of_float H0.
+rewrite round_generic !B2R_float_of_ftype => //.
+apply generic_format_abs_inv => //.
++
+exfalso.
+eapply Rle_not_lt.
+apply H.
+eapply Rle_lt_trans; [ | eapply Rlt_trans; [apply BND|]].
+apply abs_round_le_generic => //.
+apply fexp_valid.
+apply valid_rnd_NE.
+rewrite !B2R_float_of_ftype; nra.
+apply bpow_lt.
+rewrite /emin /SpecFloat.emin.
+pose proof (fprec_gt_one t).
+pose proof (fprec_lt_femax t).
+lia.
+Qed.
+
 Definition Bplus_no_overflow (x y: R) : Prop :=
   (Rabs ( Generic_fmt.round Zaux.radix2
               (SpecFloat.fexp (fprec t) (femax t))

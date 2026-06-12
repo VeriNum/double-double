@@ -80,11 +80,13 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
 
 int dw_mult_fp_check(struct dword *x, double y) {
     /* Verifies DWTimesFP_cond: xh, xl, y finite; (x->s, x->t) is a double-word;
-       |x->s|, |y| <= Omega/4; Fast2Mult(x->s, y) is safe (finite + the
-       underflow disjunction shared with fast2_mult_check).  The DW prop alone
-       does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
-       so fin_xl is asserted, even though x->s + x->t == x->s implies it
-       under IEEE comparison semantics. */
+       |x->s|, |y| <= Omega/4; |x->s * y| <= Omega/4 (the *product* bound, which
+       bounds the high part of the result and leaves margin for the final
+       Fast2Sum — bounding the factors alone does not bound the product);
+       Fast2Mult(x->s, y) is safe (finite + the underflow disjunction shared
+       with fast2_mult_check).  The DW prop alone does not pin down finiteness
+       of x->t in R (FT2R sends NaN/Inf to 0), so fin_xl is asserted, even
+       though x->s + x->t == x->s implies it under IEEE comparison semantics. */
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -96,10 +98,11 @@ int dw_mult_fp_check(struct dword *x, double y) {
     double z = x->s * y;
     double thresh = DBL_MIN * ldexp(1.0, 53);  /* 2^(emin + 2*p - 1) */
     int fin_z = isfinite_double(z);
+    int z_bnd = fabs(z) <= q_omega;  /* |round(x->s * y)| <= Omega/4 */
     int zxh = x->s == 0.0 && fin_y;
     int zy  = y    == 0.0 && fin_xh;
     int mult_safe = fin_z && ((zxh || zy) || thresh < fabs(z));
-    return dwx && fin_y && xh_bnd && y_bnd && mult_safe;
+    return dwx && fin_y && xh_bnd && y_bnd && z_bnd && mult_safe;
 }
 
 int dw_plus_fp_check(struct dword *x, double y) {

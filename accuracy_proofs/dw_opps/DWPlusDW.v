@@ -17,9 +17,8 @@ Require Import mathcomp.ssreflect.ssreflect.
 Require Import Logic.FunctionalExtensionality.
 
 Section DWPlusDWFinite.
-Context {NANS : Nans}.
-Variables (xh xl yh yl : ftype Tdouble).
-Notation t := Tdouble.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+Variables (xh xl yh yl : ftype t).
 
 Hypothesis DWx : double_word xh xl.
 Hypothesis DWy : double_word yh yl.
@@ -34,6 +33,11 @@ Hypothesis HFINyl : is_finite yl = true.
    used in the paper) but suffice for every downstream use here. *)
 Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
 Hypothesis Hyh : Rabs (FT2R yh) <= /4 * bpow radix2 (femax t).
+
+(* Every real floating-point type has fprec >= 11 (binary16 is the smallest);
+   the Fast2Sum-stage overflow bounds need fprec >= 3 to leave headroom below
+   Omega.  VCFloat itself only guarantees fprec >= 2, so we assume this. *)
+Hypothesis Hprec : (3 <= fprec t)%Z.
 
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
 Notation Omega := (bpow radix2 (femax t)).
@@ -68,6 +72,60 @@ have HO : 0 <= Omega by apply bpow_ge_0.
 apply (Rle_trans _ _ _ Hyh). lra.
 Qed.
 
+(* Helper: 2 * bpow e = bpow (e+1), used to discharge the overflow bounds
+   for the (small) low-word sums without relying on a concrete precision. *)
+Lemma two_mul_bpow : forall e : Z, bpow radix2 e * 2 = bpow radix2 (e + 1).
+Proof.
+intros e.
+have H2 : (2:R) = bpow radix2 1 by (simpl; lra).
+rewrite H2 -bpow_plus. f_equal; lia.
+Qed.
+
+(* The relative-error factor produced by FLT_plus_error_N_ex, after unfolding
+   default_rel/u_ro, is bpow (Z.pos_sub 1 (fprecp t)); this is the same exponent
+   as default_rel's bpow (- fprec t + 1). *)
+Lemma pos_sub_fprec : Z.pos_sub 1 (fprecp t) = (- fprec t + 1)%Z.
+Proof. rewrite -Pos2Z.add_pos_neg fprec_eq. lia. Qed.
+
+Lemma uro_eq_rel : / 2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) = default_rel t.
+Proof. unfold default_rel. rewrite pos_sub_fprec. reflexivity. Qed.
+
+Lemma default_rel_pos : 0 < default_rel t.
+Proof. unfold default_rel. have := bpow_gt_0 radix2 (- fprec t + 1). lra. Qed.
+
+(* fprec >= 3  ==>  default_rel t = /2 * bpow(1 - fprec) <= /2 * bpow(-2) = /8. *)
+Lemma default_rel_le8 : default_rel t <= /8.
+Proof.
+unfold default_rel.
+have Hle : bpow radix2 (- fprec t + 1) <= bpow radix2 (-2)
+  by (apply bpow_le; lia).
+have Heq : bpow radix2 (-2) = /4 by (simpl; lra).
+rewrite Heq in Hle. lra.
+Qed.
+
+(* The error bound from FLT_plus_error_N_ex has the form u_ro/(1+u_ro); since
+   u_ro = default_rel t <= /8 and u_ro/(1+u_ro) <= u_ro, any such delta is <= /8. *)
+Lemma uro_frac_le8 : forall d : R,
+  Rabs d <= Relative.u_ro radix2 (fprec t) / (1 + Relative.u_ro radix2 (fprec t)) ->
+  Rabs d <= /8.
+Proof.
+intros d Hd.
+have Hule : Relative.u_ro radix2 (fprec t) <= /8.
+{ unfold Relative.u_ro.
+  have Hle : bpow radix2 (- fprec t + 1) <= bpow radix2 (-2) by (apply bpow_le; lia).
+  have Heq : bpow radix2 (-2) = /4 by (simpl; lra).
+  rewrite Heq in Hle. lra. }
+have Hupos : 0 < Relative.u_ro radix2 (fprec t).
+{ unfold Relative.u_ro. have := bpow_gt_0 radix2 (- fprec t + 1). lra. }
+apply (Rle_trans _ _ _ Hd).
+apply Rle_trans with (Relative.u_ro radix2 (fprec t)); [|exact Hule].
+apply Rmult_le_reg_r with (1 + Relative.u_ro radix2 (fprec t)); [lra|].
+have Heq : Relative.u_ro radix2 (fprec t) / (1 + Relative.u_ro radix2 (fprec t))
+           * (1 + Relative.u_ro radix2 (fprec t)) = Relative.u_ro radix2 (fprec t)
+  by (field; lra).
+rewrite Heq. nra.
+Qed.
+
 (* Stage 1: TwoSumF xh yh *)
 
 (* no_ov_sh: |round(xh+yh)| < Omega.
@@ -85,10 +143,30 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hxhb, Hyhb.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd. simpl in Hxhb, Hyhb.
+(* Abstract the unit-roundoff factor; the bound holds for ANY precision. *)
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have HO : 0 < Omega by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+(* |d1| <= (b/2)/(1+b/2) < 1, since b/2 < 1+b/2. *)
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1 : Rabs d1 < 1 by nra.
+(* |(xh+yh)(1+d1)| = |xh+yh|*|1+d1| <= (Omega/2)*|1+d1| < (Omega/2)*2 = Omega. *)
+rewrite Rabs_mult.
+have Hsum : Rabs (FT2R xh + FT2R yh) <= /2 * Omega
+  by (eapply Rle_trans; [apply Rabs_triang | lra]).
+have H1d : Rabs (1 + d1) < 2
+  by (eapply Rle_lt_trans; [apply Rabs_triang | rewrite Rabs_R1; lra]).
+apply Rle_lt_trans with (/2*Omega * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum]. }
+apply Rlt_le_trans with (/2*Omega * 2).
+{ apply Rmult_lt_compat_l; [lra | exact H1d]. }
+lra.
 Qed.
 
 (* no_ov_minus_xhyh: same argument for subtraction. *)
@@ -105,10 +183,28 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hxhb, Hyhb.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd. simpl in Hxhb, Hyhb.
+(* Same precision-independent argument as no_ov_sh. *)
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have HO : 0 < Omega by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1 : Rabs d1 < 1 by nra.
+rewrite Rabs_mult.
+have Hsum : Rabs (FT2R xh + - FT2R yh) <= /2 * Omega
+  by (eapply Rle_trans; [apply Rabs_triang | rewrite Rabs_Ropp; lra]).
+have H1d : Rabs (1 + d1) < 2
+  by (eapply Rle_lt_trans; [apply Rabs_triang | rewrite Rabs_R1; lra]).
+apply Rle_lt_trans with (/2*Omega * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum]. }
+apply Rlt_le_trans with (/2*Omega * 2).
+{ apply Rmult_lt_compat_l; [lra | exact H1d]. }
+lra.
 Qed.
 
 Lemma FIN_sh : is_finite sh = true.
@@ -178,7 +274,9 @@ refine (Rle_trans _ (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))
   rewrite Hconv. rewrite Rabs_pos_eq;
     [nra | apply Rmult_le_pos; [lra | apply bpow_ge_0]].
 - rewrite Ulp.ulp_bpow.
-  apply Rle_refl.
+  apply bpow_le.
+  unfold SpecFloat.fexp, SpecFloat.emin.
+  pose proof fprec_lb t; pose proof femax_lb t; lia.
 Qed.
 
 Lemma yl_ul_bnd : Rabs (FT2R yl) <= /2 * bpow radix2 (femax t - 1 - fprec t).
@@ -199,7 +297,9 @@ refine (Rle_trans _ (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))
   rewrite Hconv. rewrite Rabs_pos_eq;
     [nra | apply Rmult_le_pos; [lra | apply bpow_ge_0]].
 - rewrite Ulp.ulp_bpow.
-  apply Rle_refl.
+  apply bpow_le.
+  unfold SpecFloat.fexp, SpecFloat.emin.
+  pose proof fprec_lb t; pose proof femax_lb t; lia.
 Qed.
 
 (* no_ov_th: |round(xl+yl)| < Omega.
@@ -217,10 +317,28 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hxl, Hyl.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd. simpl in Hxl, Hyl.
+(* |xl|,|yl| <= bpow(femax-1-fprec)/2, so |xl+yl| <= bpow(femax-1-fprec),
+   and 2*bpow(femax-1-fprec) = bpow(femax-fprec) <= Omega. *)
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1 : Rabs d1 < 1 by nra.
+rewrite Rabs_mult.
+have Hsum : Rabs (FT2R xl + FT2R yl) <= bpow radix2 (femax t - 1 - fprec t)
+  by (eapply Rle_trans; [apply Rabs_triang | lra]).
+have H1d : Rabs (1 + d1) < 2
+  by (eapply Rle_lt_trans; [apply Rabs_triang | rewrite Rabs_R1; lra]).
+apply Rle_lt_trans with (bpow radix2 (femax t - 1 - fprec t) * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum]. }
+apply Rlt_le_trans with (bpow radix2 (femax t - 1 - fprec t) * 2).
+{ apply Rmult_lt_compat_l; [apply bpow_gt_0 | exact H1d]. }
+rewrite two_mul_bpow. apply bpow_le. pose proof fprec_lb t; lia.
 Qed.
 
 Lemma no_ov_minus_xlyl : Bminus_no_overflow t (FT2R xl) (FT2R yl).
@@ -236,10 +354,26 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hxl, Hyl.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd. simpl in Hxl, Hyl.
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1 : Rabs d1 < 1 by nra.
+rewrite Rabs_mult.
+have Hsum : Rabs (FT2R xl + - FT2R yl) <= bpow radix2 (femax t - 1 - fprec t)
+  by (eapply Rle_trans; [apply Rabs_triang | rewrite Rabs_Ropp; lra]).
+have H1d : Rabs (1 + d1) < 2
+  by (eapply Rle_lt_trans; [apply Rabs_triang | rewrite Rabs_R1; lra]).
+apply Rle_lt_trans with (bpow radix2 (femax t - 1 - fprec t) * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum]. }
+apply Rlt_le_trans with (bpow radix2 (femax t - 1 - fprec t) * 2).
+{ apply Rmult_lt_compat_l; [apply bpow_gt_0 | exact H1d]. }
+rewrite two_mul_bpow. apply bpow_le. pose proof fprec_lb t; lia.
 Qed.
 
 Lemma FIN_th : is_finite th = true.
@@ -365,10 +499,40 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hsl, Hth.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd.
+(* |sl| <= bpow(femax-fprec)/2, |th| <= bpow(femax-1-fprec)*(1+rel); sum <=
+   2*bpow(femax-fprec), and 4*bpow(femax-fprec) = bpow(femax-fprec+2) <= Omega. *)
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1 : Rabs d1 < 1 by nra.
+rewrite Rabs_mult.
+have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+have HP : bpow radix2 (femax t - 1 - fprec t) = /2 * bpow radix2 (femax t - fprec t).
+{ have HH := two_mul_bpow (femax t - 1 - fprec t).
+  replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+  lra. }
+have Hrel : default_rel t <= /8 by apply default_rel_le8.
+have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+rewrite HP in Hth.
+have Hsum : Rabs (FT2R sl + FT2R th) <= 2 * bpow radix2 (femax t - fprec t).
+{ eapply Rle_trans; [apply Rabs_triang|]. nra. }
+have H1d : Rabs (1 + d1) < 2
+  by (eapply Rle_lt_trans; [apply Rabs_triang | rewrite Rabs_R1; lra]).
+apply Rle_lt_trans with (2 * bpow radix2 (femax t - fprec t) * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum]. }
+apply Rlt_le_trans with (2 * bpow radix2 (femax t - fprec t) * 2).
+{ apply Rmult_lt_compat_l; [lra | exact H1d]. }
+have H4a := two_mul_bpow (femax t - fprec t).
+have H4b := two_mul_bpow (femax t - fprec t + 1).
+replace (femax t - fprec t + 1 + 1)%Z with (femax t - fprec t + 2)%Z in H4b by lia.
+have Hbnd : bpow radix2 (femax t - fprec t + 2) <= Omega by (apply bpow_le; lia).
+lra.
 Qed.
 
 Lemma FIN_c : is_finite c = true.
@@ -434,10 +598,64 @@ destruct H as (d1 & Hd & B).
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hsh, Hc.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+intros Hd.
+(* This is the tight stage: |sh| can reach Omega/2, so the crude |1+d1| < 2
+   bound is insufficient.  We use the precise |1+d1| <= 1 + rel together with
+   |sh| <= Omega/2*(1+rel) and |c| <= Omega/4 (fprec >= 3); the worst case is
+   (Omega/2*(1+rel) + Omega/4)*(1+rel) = 117/128*Omega < Omega at rel = 1/8. *)
+set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
+have Hb : 0 < b by apply bpow_gt_0.
+have Hpd : 0 <= Rabs d1 by apply Rabs_pos.
+have Hrelb : default_rel t = /2 * b by (rewrite -uro_eq_rel; reflexivity).
+have Hmul : Rabs d1 * (1 + /2*b) <= /2*b.
+{ have Hstep : Rabs d1 * (1 + /2*b) <= (/2*b/(1+/2*b)) * (1+/2*b)
+    by (apply Rmult_le_compat_r; [lra | exact Hd]).
+  have Heq : (/2*b/(1+/2*b)) * (1+/2*b) = /2*b by (field; lra).
+  rewrite Heq in Hstep; exact Hstep. }
+have Hd1le : Rabs d1 <= /2*b by nra.
+have H1d : Rabs (1 + d1) <= 1 + default_rel t.
+{ rewrite Hrelb. eapply Rle_trans; [apply Rabs_triang|].
+  rewrite Rabs_R1. lra. }
+have HO : 0 < Omega by apply bpow_gt_0.
+have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+have HP : bpow radix2 (femax t - 1 - fprec t) = /2 * bpow radix2 (femax t - fprec t).
+{ have HH := two_mul_bpow (femax t - 1 - fprec t).
+  replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+  lra. }
+have HQO : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+{ have HH : /8 * Omega = bpow radix2 (femax t - 3).
+  { have H8 : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+    rewrite H8 -bpow_plus. f_equal; lia. }
+  rewrite HH. apply bpow_le. lia. }
+have Hrel : default_rel t <= /8 by apply default_rel_le8.
+have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+rewrite HP in Hc.
+have HcA : /2 * bpow radix2 (femax t - fprec t) +
+           /2 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+           <= 17/16 * bpow radix2 (femax t - fprec t) by nra.
+have HcB : Rabs (FT2R c) <=
+           17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t).
+{ apply (Rle_trans _ _ _ Hc).
+  apply Rmult_le_compat_r; [lra | exact HcA]. }
+have HcC : 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+           <= /4 * Omega by nra.
+have HcO : Rabs (FT2R c) <= /4 * Omega by (apply (Rle_trans _ _ _ HcB HcC)).
+rewrite Rabs_mult.
+apply Rle_lt_trans with
+  ((/2*Omega*(1+default_rel t) + /4*Omega) * Rabs (1+d1)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos|].
+  eapply Rle_trans; [apply Rabs_triang|].
+  apply Rplus_le_compat; [exact Hsh | exact HcO]. }
+apply Rle_lt_trans with
+  ((/2*Omega*(1+default_rel t) + /4*Omega) * (1 + default_rel t)).
+{ apply Rmult_le_compat_l; [nra | exact H1d]. }
+(* factor Omega out; the remaining factor in default_rel is < 1 (peaks at
+   117/128 when default_rel = 1/8). *)
+have Hfac : (/2*(1+default_rel t) + /4) * (1 + default_rel t) < 1 by nra.
+have Hring : (/2*Omega*(1+default_rel t) + /4*Omega) * (1 + default_rel t) =
+             Omega * ((/2*(1+default_rel t) + /4) * (1 + default_rel t)) by ring.
+rewrite Hring -{2}(Rmult_1_r Omega).
+apply Rmult_lt_compat_l; [exact HO | exact Hfac].
 Qed.
 
 Lemma FIN_vh : is_finite vh = true.
@@ -464,11 +682,76 @@ rewrite B. clear B.
 destruct (BPLUS_accurate' t sh c HFIN1) as (d1 & Hd1 & B1).
 rewrite B1.
 have Hsh := sh_bnd. have Hc := c_bnd.
-move: Hd1 Hd2. unfold default_rel, Relative.u_ro. simpl.
-intros. simpl in Hsh, Hc.
-match goal with |- Rabs ?a < _ =>
-  field_simplify a; interval with (i_prec 128)
-end.
+move: Hd2. unfold Relative.u_ro. simpl. intros Hd2.
+(* The inner value cancels: (sh+c)(1+d1) - sh = c + (sh+c)*d1, which is small.
+   With |d1|,|d2| <= 1/8 the result is <= 405/1024*Omega < Omega. *)
+have Hd1_8 : Rabs d1 <= /8 by (apply (Rle_trans _ _ _ Hd1 default_rel_le8)).
+have Hbpos : 0 < /2 * bpow radix2 (Z.pos_sub 1 (fprecp t))
+  by (have := bpow_gt_0 radix2 (Z.pos_sub 1 (fprecp t)); lra).
+have Hd2x : Rabs d2 <= /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)).
+{ have Hpd : 0 <= Rabs d2 by apply Rabs_pos.
+  have Hmul : Rabs d2 * (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))
+              <= /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)).
+  { have Hstep : Rabs d2 * (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))
+        <= (/2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) /
+            (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))) *
+           (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))
+      by (apply Rmult_le_compat_r; [lra | exact Hd2]).
+    have Heq : (/2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) /
+                (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))) *
+               (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))
+               = /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) by (field; lra).
+    rewrite Heq in Hstep; exact Hstep. }
+  nra. }
+have Hd2_8 : Rabs d2 <= /8.
+{ apply (Rle_trans _ _ _ Hd2x). rewrite uro_eq_rel. exact default_rel_le8. }
+have HO : 0 < Omega by apply bpow_gt_0.
+have Hrel : default_rel t <= /8 by apply default_rel_le8.
+have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+have HP : bpow radix2 (femax t - 1 - fprec t) = /2 * bpow radix2 (femax t - fprec t).
+{ have HH := two_mul_bpow (femax t - 1 - fprec t).
+  replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+  lra. }
+have HQO : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+{ have HH : /8 * Omega = bpow radix2 (femax t - 3).
+  { have H8 : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+    rewrite H8 -bpow_plus. f_equal; lia. }
+  rewrite HH. apply bpow_le. lia. }
+rewrite HP in Hc.
+have HcA : /2 * bpow radix2 (femax t - fprec t) +
+           /2 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+           <= 17/16 * bpow radix2 (femax t - fprec t) by nra.
+have HcB : Rabs (FT2R c) <=
+           17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t).
+{ apply (Rle_trans _ _ _ Hc).
+  apply Rmult_le_compat_r; [lra | exact HcA]. }
+have HcC : 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+           <= /4 * Omega by nra.
+have HcO : Rabs (FT2R c) <= /4 * Omega by (apply (Rle_trans _ _ _ HcB HcC)).
+have HSC : Rabs (FT2R sh) + Rabs (FT2R c) <= 13/16 * Omega.
+{ apply (Rle_trans _ (/2*Omega*(1+default_rel t) + /4*Omega));
+    [apply Rplus_le_compat; [exact Hsh | exact HcO] | nra]. }
+rewrite Rabs_mult.
+have Hrw : (FT2R sh + FT2R c) * (1 + d1) + - FT2R sh
+           = FT2R c + (FT2R sh + FT2R c) * d1 by ring.
+rewrite Hrw.
+have Hinner : Rabs (FT2R c + (FT2R sh + FT2R c) * d1)
+              <= /4 * Omega + 13/16 * Omega * (/8).
+{ eapply Rle_trans; [apply Rabs_triang|].
+  apply Rplus_le_compat; [exact HcO|].
+  rewrite Rabs_mult.
+  apply Rle_trans with ((Rabs (FT2R sh) + Rabs (FT2R c)) * Rabs d1).
+  - apply Rmult_le_compat_r; [apply Rabs_pos | apply Rabs_triang].
+  - apply Rmult_le_compat;
+      [apply Rplus_le_le_0_compat; apply Rabs_pos | apply Rabs_pos
+       | exact HSC | exact Hd1_8]. }
+apply Rle_lt_trans with ((/4*Omega + 13/16*Omega*(/8)) * Rabs (1+d2)).
+{ apply Rmult_le_compat_r; [apply Rabs_pos | exact Hinner]. }
+apply Rle_lt_trans with ((/4*Omega + 13/16*Omega*(/8)) * (9/8)).
+{ apply Rmult_le_compat_l; [nra|].
+  eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_R1. lra. }
+nra.
 Qed.
 
 (* FIN_z: BMINUS (BPLUS sh c) sh is finite. *)
@@ -534,11 +817,67 @@ destruct H as (d3 & Hd3 & B).
   destruct (BPLUS_accurate' t sh c HFIN1) as (d1 & Hd1 & B1).
   rewrite B1.
   have Hsh := sh_bnd. have Hc := c_bnd.
-  move: Hd1 Hd2 Hd3. unfold default_rel, Relative.u_ro. simpl.
-  intros. simpl in Hsh, Hc.
-  match goal with |- Rabs ?a < _ =>
-    field_simplify a; interval with (i_prec 128)
-  end.
+  (* The value is round(c - round((sh+c)(1+d1) - sh)), all of whose terms
+     carry a delta factor, so it is tiny (<= 149/1024*Omega before the outer
+     rounding).  Bound it loosely by Omega/4 < Omega. *)
+  have Hd1_8 : Rabs d1 <= /8 by (apply (Rle_trans _ _ _ Hd1 default_rel_le8)).
+  have Hd2_8 : Rabs d2 <= /8 by (apply uro_frac_le8; exact Hd2).
+  have Hd3_8 : Rabs d3 <= /8 by (apply uro_frac_le8; exact Hd3).
+  have HO : 0 < Omega by apply bpow_gt_0.
+  have Hrel : default_rel t <= /8 by apply default_rel_le8.
+  have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+  have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+  have HP : bpow radix2 (femax t - 1 - fprec t) = /2 * bpow radix2 (femax t - fprec t).
+  { have HH := two_mul_bpow (femax t - 1 - fprec t).
+    replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+    lra. }
+  have HQO : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+  { have HH : /8 * Omega = bpow radix2 (femax t - 3).
+    { have H8 : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+      rewrite H8 -bpow_plus. f_equal; lia. }
+    rewrite HH. apply bpow_le. lia. }
+  rewrite HP in Hc.
+  have HcA : /2 * bpow radix2 (femax t - fprec t) +
+             /2 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+             <= 17/16 * bpow radix2 (femax t - fprec t) by nra.
+  have HcB : Rabs (FT2R c) <=
+             17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t).
+  { apply (Rle_trans _ _ _ Hc).
+    apply Rmult_le_compat_r; [lra | exact HcA]. }
+  have HcC : 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+             <= /4 * Omega by nra.
+  have HcO : Rabs (FT2R c) <= /4 * Omega by (apply (Rle_trans _ _ _ HcB HcC)).
+  have HM : Rabs (FT2R sh + FT2R c) <= 13/16 * Omega.
+  { eapply Rle_trans; [apply Rabs_triang|].
+    apply (Rle_trans _ (/2*Omega*(1+default_rel t) + /4*Omega));
+      [apply Rplus_le_compat; [exact Hsh | exact HcO] | nra]. }
+  have Hcm : Rabs (FT2R c + (FT2R sh + FT2R c) * d1)
+             <= /4 * Omega + 13/16 * Omega * (/8).
+  { eapply Rle_trans; [apply Rabs_triang|].
+    apply Rplus_le_compat; [exact HcO|].
+    rewrite Rabs_mult.
+    apply Rmult_le_compat; [apply Rabs_pos | apply Rabs_pos | exact HM | exact Hd1_8]. }
+  have Hrw : FT2R c - ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) * (1 + d2)
+             = (- ((FT2R sh + FT2R c) * d1))
+               + (- ((FT2R c + (FT2R sh + FT2R c) * d1) * d2)) by ring.
+  rewrite Hrw Rabs_mult.
+  have Hval : Rabs ((- ((FT2R sh + FT2R c) * d1))
+                    + (- ((FT2R c + (FT2R sh + FT2R c) * d1) * d2)))
+              <= /4 * Omega.
+  { eapply Rle_trans; [apply Rabs_triang|].
+    rewrite !Rabs_Ropp !Rabs_mult.
+    apply Rle_trans with
+      (13/16*Omega*(/8) + (/4*Omega + 13/16*Omega*(/8))*(/8)).
+    - apply Rplus_le_compat.
+      + apply Rmult_le_compat; [apply Rabs_pos | apply Rabs_pos | exact HM | exact Hd1_8].
+      + apply Rmult_le_compat; [apply Rabs_pos | apply Rabs_pos | exact Hcm | exact Hd2_8].
+    - nra. }
+  apply Rle_lt_trans with (/4 * Omega * Rabs (1+d3)).
+  { apply Rmult_le_compat_r; [apply Rabs_pos | exact Hval]. }
+  apply Rle_lt_trans with (/4 * Omega * (9/8)).
+  { apply Rmult_le_compat_l; [lra|].
+    eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_R1. lra. }
+  lra.
 Qed.
 
 (* Hc_le_sh (Rabs c <= Rabs sh) used to live here as an admitted accuracy
@@ -618,7 +957,7 @@ have Hc_eq :
 { rewrite Hsl_eq Hth_eq rnd_plus_FLT_FLX_eq'.
   change (FT2R c) with (FT2R (BPLUS sl th)).
   apply BPLUS_round_correct. exact FIN_c. }
-have Hp3 : (3 <= fprec t)%Z by cbv; intros; discriminate.
+have Hp3 : (3 <= fprec t)%Z by exact Hprec.
 destruct (@DWPlus.DWPlusDW_sh_c_cexp_or_zero (fprec t) (fprec_gt_one t)
             choice (eq_refl _) Hp3
             (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) DWx_R DWy_R)
@@ -730,11 +1069,83 @@ destruct Houter as (d4 & Hd4 & B4).
       rewrite Heq2 in B2. rewrite B2. clear B2 Heq2.
       (* Now all rounds are expanded into deltas. Bound by interval. *)
       have Htl := tl_bnd. have Hsh := sh_bnd. have Hc := c_bnd.
-      move: Hd1 Hd2 Hd3 Hd4. unfold default_rel, Relative.u_ro. simpl.
-      intros. simpl in Htl, Hsh, Hc.
-      match goal with |- Rabs ?a < _ =>
-        field_simplify a; interval with (i_prec 128)
-      end.
+      (* a = (tl + (c - ((sh+c)(1+d1)-sh)(1+d2))*(1+d3))*(1+d4); the inner term
+         is the FIN_vl value (<= Omega/4) and |tl| <= Omega/16, so the whole
+         thing is <= 99/256*Omega < Omega. *)
+      have Hd1_8 : Rabs d1 <= /8 by (apply (Rle_trans _ _ _ Hd1 default_rel_le8)).
+      have Hd2_8 : Rabs d2 <= /8 by (apply uro_frac_le8; exact Hd2).
+      have Hd3_8 : Rabs d3 <= /8 by (apply uro_frac_le8; exact Hd3).
+      have Hd4_8 : Rabs d4 <= /8 by (apply uro_frac_le8; exact Hd4).
+      have HO : 0 < Omega by apply bpow_gt_0.
+      have Hrel : default_rel t <= /8 by apply default_rel_le8.
+      have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+      have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+      have HP : bpow radix2 (femax t - 1 - fprec t) =
+                /2 * bpow radix2 (femax t - fprec t).
+      { have HH := two_mul_bpow (femax t - 1 - fprec t).
+        replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+        lra. }
+      have HQO : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+      { have HH : /8 * Omega = bpow radix2 (femax t - 3).
+        { have H8 : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+          rewrite H8 -bpow_plus. f_equal; lia. }
+        rewrite HH. apply bpow_le. lia. }
+      rewrite HP in Hc.
+      have HcA : /2 * bpow radix2 (femax t - fprec t) +
+                 /2 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+                 <= 17/16 * bpow radix2 (femax t - fprec t) by nra.
+      have HcB : Rabs (FT2R c) <=
+                 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t).
+      { apply (Rle_trans _ _ _ Hc).
+        apply Rmult_le_compat_r; [lra | exact HcA]. }
+      have HcC : 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+                 <= /4 * Omega by nra.
+      have HcO : Rabs (FT2R c) <= /4 * Omega by (apply (Rle_trans _ _ _ HcB HcC)).
+      have HM : Rabs (FT2R sh + FT2R c) <= 13/16 * Omega.
+      { eapply Rle_trans; [apply Rabs_triang|].
+        apply (Rle_trans _ (/2*Omega*(1+default_rel t) + /4*Omega));
+          [apply Rplus_le_compat; [exact Hsh | exact HcO] | nra]. }
+      have Hcm : Rabs (FT2R c + (FT2R sh + FT2R c) * d1)
+                 <= /4 * Omega + 13/16 * Omega * (/8).
+      { eapply Rle_trans; [apply Rabs_triang|].
+        apply Rplus_le_compat; [exact HcO|].
+        rewrite Rabs_mult.
+        apply Rmult_le_compat;
+          [apply Rabs_pos | apply Rabs_pos | exact HM | exact Hd1_8]. }
+      have Hval : Rabs (FT2R c - ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) * (1 + d2))
+                  <= /4 * Omega.
+      { have Hrw : FT2R c - ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) * (1 + d2)
+                   = (- ((FT2R sh + FT2R c) * d1))
+                     + (- ((FT2R c + (FT2R sh + FT2R c) * d1) * d2)) by ring.
+        rewrite Hrw.
+        eapply Rle_trans; [apply Rabs_triang|].
+        rewrite !Rabs_Ropp !Rabs_mult.
+        apply Rle_trans with
+          (13/16*Omega*(/8) + (/4*Omega + 13/16*Omega*(/8))*(/8)).
+        - apply Rplus_le_compat.
+          + apply Rmult_le_compat;
+              [apply Rabs_pos | apply Rabs_pos | exact HM | exact Hd1_8].
+          + apply Rmult_le_compat;
+              [apply Rabs_pos | apply Rabs_pos | exact Hcm | exact Hd2_8].
+        - nra. }
+      have Htl16 : Rabs (FT2R tl) <= /16 * Omega
+        by (apply (Rle_trans _ _ _ Htl); nra).
+      rewrite Rabs_mult.
+      have Hsum2 : Rabs (FT2R tl +
+                     (FT2R c - ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) * (1 + d2))
+                     * (1 + d3))
+                   <= /16 * Omega + /4 * Omega * (9/8).
+      { eapply Rle_trans; [apply Rabs_triang|].
+        apply Rplus_le_compat; [exact Htl16|].
+        rewrite Rabs_mult.
+        apply Rmult_le_compat; [apply Rabs_pos | apply Rabs_pos | exact Hval|].
+        eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_R1. lra. }
+      apply Rle_lt_trans with ((/16*Omega + /4*Omega*(9/8)) * Rabs (1+d4)).
+      { apply Rmult_le_compat_r; [apply Rabs_pos | exact Hsum2]. }
+      apply Rle_lt_trans with ((/16*Omega + /4*Omega*(9/8)) * (9/8)).
+      { apply Rmult_le_compat_l; [nra|].
+        eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_R1. lra. }
+      nra.
 Qed.
 
 Lemma FIN_w : is_finite w = true.
@@ -936,7 +1347,7 @@ have Hvh_eq : fst (F2Sum.Fast2Sum (fprec t) choice (FT2R sh) (FT2R c)) = FT2R vh
 { rewrite heq_f2s /F2Rp /fst //. }
 have Hvl_eq : snd (F2Sum.Fast2Sum (fprec t) choice (FT2R sh) (FT2R c)) = FT2R vl.
 { rewrite heq_f2s /F2Rp /snd //. }
-have Hp3 : (3 <= fprec t)%Z by cbv; intros; discriminate.
+have Hp3 : (3 <= fprec t)%Z by exact Hprec.
 case: (@DWPlus.DWPlusDW_w_le_vh_aux (fprec t) (fprec_gt_one t) choice (eq_refl _)
          (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) Hp3
          DWx_R DWy_R Hxh_nz Hxhyh_nz)
@@ -1018,7 +1429,10 @@ have u_ro_le : Relative.u_ro Zaux.radix2 (fprec t) / (1 + Relative.u_ro Zaux.rad
 { unfold default_rel, Relative.u_ro. simpl.
   have Hu_pos : 0 < / 2 * bpow Zaux.radix2 (- fprec t + 1)
     by (apply Rmult_lt_0_compat; [lra | apply bpow_gt_0]).
-  apply Rdiv_le_left; lra. }
+  set x := / 2 * bpow Zaux.radix2 (- fprec t + 1) in Hu_pos *.
+  apply Rmult_le_reg_r with (1 + x); [lra|].
+  have Heq : x / (1 + x) * (1 + x) = x by (field; lra).
+  rewrite Heq. nra. }
 (* Outer: vl = round(c - z) *)
 have Hvl_eq : FT2R vl = round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
   (Znearest choice) (FT2R c - FT2R (BMINUS (BPLUS sh c) sh)).
@@ -1099,7 +1513,11 @@ apply Rmult_le_compat; try apply Rabs_pos.
   apply (Rle_trans _ _ _ Hd1). apply Rplus_le_compat_l. exact Hd.
 Qed.
 
-(* Final Fast2Sum vh w. Expand vh, w, vl entirely into deltas and bound by interval. *)
+(* Final Fast2Sum vh w.  Key fact: Fast2Sum(sh,c) is exact under the cexp
+   disjunction (FastTwoSum_correct_ulp), i.e. vh + vl = sh + c, hence
+   vl = -(sh+c)*dvh.  Then vh + w = (sh+c) + tl + (tl - (sh+c)*dvh)*dw, which
+   is bounded by 13/16*Omega; with the outer rounding (1+d5) this is
+   117/128*Omega < Omega.  No concrete precision needed (fprec >= 3). *)
 Lemma no_ov_zh : Bplus_no_overflow t (FT2R vh) (FT2R w).
 Proof.
 have HFIN_BPLUS_sh_c : is_finite (BPLUS sh c) = true.
@@ -1107,39 +1525,105 @@ have HFIN_BPLUS_sh_c : is_finite (BPLUS sh c) = true.
   unfold vh, Fast2Sum_sum, Fast2Sum, fst in HFIN_vh; exact HFIN_vh. }
 have HFIN_BPLUS_tl_vl : is_finite (BPLUS tl vl) = true.
 { change (is_finite w = true); exact FIN_w. }
-(* Express FT2R vh via BPLUS_accurate' *)
 destruct (BPLUS_accurate' t sh c HFIN_BPLUS_sh_c) as (dvh & Hdvh & Bvh).
 have Hvh_eq : FT2R vh = (FT2R sh + FT2R c) * (1 + dvh).
 { change (FT2R vh) with (FT2R (BPLUS sh c)). exact Bvh. }
-(* Express FT2R w via BPLUS_accurate' *)
 destruct (BPLUS_accurate' t tl vl HFIN_BPLUS_tl_vl) as (dw & Hdw & Bw).
 have Hw_eq : FT2R w = (FT2R tl + FT2R vl) * (1 + dw).
 { change (FT2R w) with (FT2R (BPLUS tl vl)). exact Bw. }
-(* Express FT2R vl via vl_bnd_eq *)
-destruct vl_bnd_eq as (d1 & d2 & d3 & Hd1 & Hd2 & Hd3 & Hvl_eq).
+(* Fast2Sum exactness at (sh,c) under the disjunction. *)
+have Hcond_sh_c : Fast2Sum_cond sh c.
+{ unfold Fast2Sum_cond; split.
+  - change (is_finite (BPLUS sh c) = true).
+    change (is_finite vh = true). exact FIN_vh.
+  - exact DWPlusDW_sh_c_disjunction. }
+have Hexact : FT2R vh + FT2R vl = FT2R sh + FT2R c.
+{ have HH := FastTwoSum_correct_ulp sh c Hcond_sh_c.
+  change (FT2R vl) with (FT2R (Fast2Sum_err sh c)).
+  change (FT2R vh) with (FT2R (Fast2Sum_sum sh c)).
+  rewrite HH. ring. }
+have Hvl_val : FT2R vl = - ((FT2R sh + FT2R c) * dvh).
+{ have Hv : FT2R vl = (FT2R sh + FT2R c) - FT2R vh by (rewrite -Hexact; ring).
+  rewrite Hv Hvh_eq. ring. }
 unfold Bplus_no_overflow.
-rewrite Hvh_eq Hw_eq Hvl_eq.
+rewrite Hvh_eq Hw_eq Hvl_val.
 pose proof (Plus_error.FLT_plus_error_N_ex Zaux.radix2
   (SpecFloat.emin (fprec t) (femax t)) (fprec t)
   (fun x0 : Z => negb (Z.even x0))
   ((FT2R sh + FT2R c) * (1 + dvh))
-  ((FT2R tl +
-    (FT2R c - (FT2R sh * d1 + FT2R c * (1 + d1)) * (1 + d2)) * (1 + d3))
-   * (1 + dw))) as H.
+  ((FT2R tl + - ((FT2R sh + FT2R c) * dvh)) * (1 + dw))) as H.
 destruct H as (d5 & Hd5 & B).
 - have Heq_vh : (FT2R sh + FT2R c) * (1 + dvh) = FT2R vh by (rewrite -Hvh_eq; reflexivity).
   rewrite Heq_vh -B2R_float_of_ftype. apply Binary.generic_format_B2R.
-- have Heq_w : (FT2R tl +
-    (FT2R c - (FT2R sh * d1 + FT2R c * (1 + d1)) * (1 + d2)) * (1 + d3))
-   * (1 + dw) = FT2R w by (rewrite -Hvl_eq -Hw_eq; reflexivity).
+- have Heq_w : (FT2R tl + - ((FT2R sh + FT2R c) * dvh)) * (1 + dw) = FT2R w
+    by (rewrite -Hvl_val -Hw_eq; reflexivity).
   rewrite Heq_w -B2R_float_of_ftype. apply Binary.generic_format_B2R.
 - rewrite B. clear B.
   have Hsh := sh_bnd. have Hc := c_bnd. have Htl := tl_bnd.
-  move: Hdvh Hdw Hd1 Hd2 Hd3 Hd5. unfold default_rel, Relative.u_ro. simpl.
-  intros. simpl in Hsh, Hc, Htl.
-  match goal with |- Rabs ?a < _ =>
-    field_simplify a; interval with (i_prec 128)
-  end.
+  have Hd_vh8 : Rabs dvh <= /8 by (apply (Rle_trans _ _ _ Hdvh default_rel_le8)).
+  have Hd_w8 : Rabs dw <= /8 by (apply (Rle_trans _ _ _ Hdw default_rel_le8)).
+  have Hd5_8 : Rabs d5 <= /8 by (apply uro_frac_le8; exact Hd5).
+  have HO : 0 < Omega by apply bpow_gt_0.
+  have Hrel : default_rel t <= /8 by apply default_rel_le8.
+  have Hrel0 : 0 < default_rel t by apply default_rel_pos.
+  have HB : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+  have HP : bpow radix2 (femax t - 1 - fprec t) =
+            /2 * bpow radix2 (femax t - fprec t).
+  { have HH := two_mul_bpow (femax t - 1 - fprec t).
+    replace (femax t - 1 - fprec t + 1)%Z with (femax t - fprec t)%Z in HH by lia.
+    lra. }
+  have HQO : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+  { have HH : /8 * Omega = bpow radix2 (femax t - 3).
+    { have H8 : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+      rewrite H8 -bpow_plus. f_equal; lia. }
+    rewrite HH. apply bpow_le. lia. }
+  rewrite HP in Hc.
+  have HcA : /2 * bpow radix2 (femax t - fprec t) +
+             /2 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+             <= 17/16 * bpow radix2 (femax t - fprec t) by nra.
+  have HcB : Rabs (FT2R c) <=
+             17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t).
+  { apply (Rle_trans _ _ _ Hc).
+    apply Rmult_le_compat_r; [lra | exact HcA]. }
+  have HcC : 17/16 * bpow radix2 (femax t - fprec t) * (1 + default_rel t)
+             <= 5/32 * Omega by nra.
+  have HcO : Rabs (FT2R c) <= 5/32 * Omega by (apply (Rle_trans _ _ _ HcB HcC)).
+  have HM : Rabs (FT2R sh + FT2R c) <= 23/32 * Omega.
+  { eapply Rle_trans; [apply Rabs_triang|].
+    apply (Rle_trans _ (/2*Omega*(1+default_rel t) + 5/32*Omega));
+      [apply Rplus_le_compat; [exact Hsh | exact HcO] | nra]. }
+  have Htl16 : Rabs (FT2R tl) <= /16 * Omega by (apply (Rle_trans _ _ _ Htl); nra).
+  rewrite Rabs_mult.
+  have Hrw : (FT2R sh + FT2R c) * (1 + dvh) +
+             (FT2R tl + - ((FT2R sh + FT2R c) * dvh)) * (1 + dw)
+             = (FT2R sh + FT2R c) + FT2R tl
+               + (FT2R tl + - ((FT2R sh + FT2R c) * dvh)) * dw by ring.
+  rewrite Hrw.
+  have HVterm : Rabs (FT2R tl + - ((FT2R sh + FT2R c) * dvh))
+                <= /16 * Omega + 23/32 * Omega * (/8).
+  { eapply Rle_trans; [apply Rabs_triang|].
+    rewrite Rabs_Ropp Rabs_mult.
+    apply Rplus_le_compat; [exact Htl16|].
+    apply Rmult_le_compat; [apply Rabs_pos | apply Rabs_pos | exact HM | exact Hd_vh8]. }
+  have HV : Rabs ((FT2R sh + FT2R c) + FT2R tl
+                  + (FT2R tl + - ((FT2R sh + FT2R c) * dvh)) * dw)
+            <= 13/16 * Omega.
+  { eapply Rle_trans; [apply Rabs_triang|].
+    apply Rle_trans with
+      ((23/32*Omega + /16*Omega) + (/16*Omega + 23/32*Omega*(/8))*(/8)).
+    - apply Rplus_le_compat.
+      + eapply Rle_trans; [apply Rabs_triang|].
+        apply Rplus_le_compat; [exact HM | exact Htl16].
+      + rewrite Rabs_mult.
+        apply Rmult_le_compat;
+          [apply Rabs_pos | apply Rabs_pos | exact HVterm | exact Hd_w8].
+    - nra. }
+  apply Rle_lt_trans with (13/16 * Omega * Rabs (1+d5)).
+  { apply Rmult_le_compat_r; [apply Rabs_pos | exact HV]. }
+  apply Rle_lt_trans with (13/16 * Omega * (9/8)).
+  { apply Rmult_le_compat_l; [nra|].
+    eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_R1. lra. }
+  nra.
 Qed.
 
 
@@ -1197,8 +1681,9 @@ Proof.
       [exact yl_le_qOmega | exact Omega4_lt_predOmega].
 Qed.
 
-(* Fast2Sum_cond requires |b| <= |a|, which here is Hc_le_sh / Hw_le_vh —
-   both currently admitted. The bridges thus depend on those admits. *)
+(* Fast2Sum_cond is the generalized ulp/zero disjunction (not the magnitude
+   ordering |b| <= |a|, which is false here in the cancellation regime); it is
+   discharged by DWPlusDW_sh_c_disjunction / DWPlusDW_vh_w_disjunction. *)
 Lemma Fast2Sum_cond_sh_c_inner : Fast2Sum_cond sh c.
 Proof.
   unfold Fast2Sum_cond; split.
@@ -1221,15 +1706,34 @@ End DWPlusDWFinite.
    This packages the DWPlusDWFinite section's hypotheses as a single Prop
    suitable for use as a VST PRE-condition. *)
 Section DWPlusDWCondBridge.
-Context {NANS : Nans}.
-Variables (xh xl yh yl : ftype Tdouble).
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+Variables (xh xl yh yl : ftype t).
 
-Theorem AccurateDWPlusDW_finite_from_cond :
+(* DWPlusDW genuinely requires fprec >= 3 (the Fast2Sum-stage overflow bounds
+   need headroom below Omega).  VCFloat only guarantees fprec >= 2, so this is
+   supplied as an explicit hypothesis; at any concrete real type (binary16 has
+   fprec = 11) it is discharged by computation. *)
+Theorem AccurateDWPlusDW_sum_finite_from_cond :
+  (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl ->
   is_finite (fst (AccurateDWPlusDW xh xl yh yl)) = true.
 Proof.
-intros [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply AccurateDWPlusDW_fst_finite; eassumption.
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply AccurateDWPlusDW_fst_finite; first [eassumption | cbv; intros; try discriminate].
+Qed.
+
+Theorem AccurateDWPlusDW_finite_from_cond :
+  (3 <= fprec t)%Z ->
+  DWPlusDW_cond xh xl yh yl ->
+  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+Proof.
+intros Hp3 Hcond.
+rewrite /is_finite_p; split.
+-
+exact (AccurateDWPlusDW_sum_finite_from_cond Hp3 Hcond).
+-
+destruct Hcond as [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply AccurateDWPlusDW_finite; first [eassumption | cbv; intros; try discriminate].
 Qed.
 
 (* Forwarders for the C-level VST forward_calls inside body_dw_plus_dw2:
@@ -1239,30 +1743,34 @@ Qed.
    - fast_2sum(st,  vh.s, w) needs Fast2Sum_cond vh w
 *)
 Theorem TwoSum_cond_from_DWPlusDW_cond_xh_yh :
+  (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl -> TwoSum_cond xh yh.
 Proof.
-intros [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_cond_xh_yh_inner; eassumption.
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply TwoSum_cond_xh_yh_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
 Theorem TwoSum_cond_from_DWPlusDW_cond_xl_yl :
+  (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl -> TwoSum_cond xl yl.
 Proof.
-intros [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_cond_xl_yl_inner; eassumption.
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply TwoSum_cond_xl_yl_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
-(* These two depend on Hc_le_sh / Hw_le_vh (admitted in DWPlusDWFinite). *)
+(* These two discharge the Fast2Sum_cond disjunction via the *_disjunction lemmas. *)
 Theorem Fast2Sum_cond_from_DWPlusDW_cond_sh_c :
+  (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl ->
   Fast2Sum_cond (TwoSumF_sum xh yh)
                 (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)).
 Proof.
-intros [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_cond_sh_c_inner; eassumption.
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply Fast2Sum_cond_sh_c_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
 Theorem Fast2Sum_cond_from_DWPlusDW_cond_vh_w :
+  (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl ->
   Fast2Sum_cond
     (Fast2Sum_sum (TwoSumF_sum xh yh)
@@ -1271,8 +1779,8 @@ Theorem Fast2Sum_cond_from_DWPlusDW_cond_vh_w :
            (Fast2Sum_err (TwoSumF_sum xh yh)
                          (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))).
 Proof.
-intros [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_cond_vh_w_inner; eassumption.
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+eapply Fast2Sum_cond_vh_w_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
 End DWPlusDWCondBridge.
