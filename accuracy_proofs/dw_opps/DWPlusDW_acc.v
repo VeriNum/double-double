@@ -25,7 +25,7 @@ Notation p := (fprec t).
 
 Variables (xh xl yh yl : ftype t).
 
-Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 Let emin :=  ( @common.emin t).
 
 Let xhr := (FT2R xh).
@@ -54,14 +54,14 @@ Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 (* end section hypotheses *)
 
-Let FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl) := 
+Let FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl) :=
   (AccurateDWPlusDW_finite_from_cond xh xl yh yl Hp3 Hcond).
 
 Ltac prove_finite :=
-move : FIN;
-rewrite /is_finite_p/AccurateDWPlusDW;
-rewrite /Fast2Sum/TwoSumF/snd/fst;
-move => [] ; repeat subexpr_finite => //
+  move : FIN;
+  rewrite /is_finite_p/AccurateDWPlusDW;
+  rewrite /Fast2Sum/TwoSumF/snd/fst;
+  move => [] ; repeat subexpr_finite => //
 .
 
 Let f0 := BPLUS xh yh.
@@ -86,9 +86,9 @@ Proof. prove_finite. Qed.
 Fact FIN5 : is_finite (BPLUS x y) = true.
 Proof. prove_finite. Qed.
 
-(* the result of the FLT format algorithm and the FLX format algorithm are 
+(* the result of the FLT format algorithm and the FLX format algorithm are
   equal, regardless of underflow. *)
-Lemma DWPlusDWEq_FLT : 
+Lemma DWPlusDWEq_FLT :
   DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl).
 Proof.
 pose proof FIN1 as fin1.
@@ -128,103 +128,86 @@ rewrite /F2Sum.Fast2Sum/F2SumFLX.Fast2Sum/fst/snd.
 replace (Fast2Sum f0 f1) with
   (fst (Fast2Sum f0 f1), snd (Fast2Sum f0 f1)) => //.
 have Hf0 : TwoSum_sum p choice xhr yhr = FT2R f0.
--
-subst f0. rewrite /TwoSum_sum.
-rewrite TwoSumEq_FLT /F2Rp/snd => //.
--
-have Hx1 : TwoSum_err p choice xhr yhr = FT2R x1.
-+
-subst x1. rewrite /TwoSum_err/TwoSumF_err.
-rewrite TwoSumEq_FLT /F2Rp/snd => //.
-+
-have Hy1 : TwoSum_sum p choice xlr ylr = FT2R y1.
-*
-subst y1. rewrite /TwoSum_sum.
-rewrite TwoSumEq_FLT /F2Rp/snd => //.
-* 
-have Hf1 : round radix2 (FLX_exp p) (Znearest choice)
-             (TwoSum_err p choice xhr yhr +
-              TwoSum_sum p choice xlr ylr) = FT2R f1.
---
-subst f1.
-BPLUS_correct t x1 y1.
-rewrite -rnd_plus_FLT_FLX_eq.
-++ f_equal. f_equal => //.
-++ apply generic_format_FLT_FT2R.
-++ apply generic_format_FLT_FT2R.
---
-have Heq1 : FT2R (fst (Fast2Sum f0 f1)) =
-  (fst (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1))).
-++ by rewrite (FastTwoSumEq_FLT f0 f1 fin1).
-++ have HA : A = FT2R (fst (Fast2Sum f0 f1)).
-**
-subst A.
-rewrite Heq1 /F2Sum.Fast2Sum/F2SumFLX.Fast2Sum/fst.
-f_equal. f_equal => //.
-** 
-have Hx : TwoSum_err p choice xlr ylr = FT2R x.
-subst x. rewrite /TwoSum_err/TwoSumF_err.
-rewrite TwoSumEq_FLT /F2Rp/snd => //.
-have Heq2 : FT2R (snd (Fast2Sum f0 f1)) =
-  (snd (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1))).
----
-by rewrite (FastTwoSumEq_FLT f0 f1 fin1).
----
-have Hy : snd (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
-  (round radix2 (FLX_exp p) (Znearest choice)
-  (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr))) = FT2R y.
-+++
-subst y.
-  rewrite Heq2.
-  rewrite /F2Sum.Fast2Sum/F2SumFLX.Fast2Sum/snd.
-  repeat f_equal => //. 
-+++
-have HB : B = FT2R f3.
-***
-subst B f3.
-  replace (TwoSumF_err xl yl) with x => //.
-  BPLUS_correct t x y.
-  rewrite -rnd_plus_FLT_FLX_eq.
-  ---- f_equal. f_equal => //.
-  ---- apply generic_format_FLT_FT2R.
-  ---- apply generic_format_FLT_FT2R.
-  ***
-repeat f_equal => //.
+- subst f0. rewrite /TwoSum_sum.
+  rewrite TwoSumEq_FLT /F2Rp/snd => //.
+- have Hx1 : TwoSum_err p choice xhr yhr = FT2R x1.
+  + subst x1. rewrite /TwoSum_err/TwoSumF_err.
+    rewrite TwoSumEq_FLT /F2Rp/snd => //.
+  + have Hy1 : TwoSum_sum p choice xlr ylr = FT2R y1.
+    * subst y1. rewrite /TwoSum_sum.
+      rewrite TwoSumEq_FLT /F2Rp/snd => //.
+    * have Hf1 : round radix2 (FLX_exp p) (Znearest choice)
+                   (TwoSum_err p choice xhr yhr +
+                    TwoSum_sum p choice xlr ylr) = FT2R f1.
+      -- subst f1.
+         BPLUS_correct t x1 y1.
+         rewrite -rnd_plus_FLT_FLX_eq.
+         ++ f_equal. f_equal => //.
+         ++ apply generic_format_FLT_FT2R.
+         ++ apply generic_format_FLT_FT2R.
+      -- have Heq1 : FT2R (fst (Fast2Sum f0 f1)) =
+                       (fst (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1))).
+         ++ by rewrite (FastTwoSumEq_FLT f0 f1 fin1).
+         ++ have HA : A = FT2R (fst (Fast2Sum f0 f1)).
+            ** subst A.
+               rewrite Heq1 /F2Sum.Fast2Sum/F2SumFLX.Fast2Sum/fst.
+               f_equal. f_equal => //.
+            ** have Hx : TwoSum_err p choice xlr ylr = FT2R x.
+               { subst x. rewrite /TwoSum_err/TwoSumF_err.
+                 rewrite TwoSumEq_FLT /F2Rp/snd => //. }
+               have Heq2 : FT2R (snd (Fast2Sum f0 f1)) =
+                             (snd (F2Sum.Fast2Sum p choice (FT2R f0) (FT2R f1))).
+               --- by rewrite (FastTwoSumEq_FLT f0 f1 fin1).
+               --- have Hy : snd (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
+                               (round radix2 (FLX_exp p) (Znearest choice)
+                               (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr))) = FT2R y.
+                   +++ subst y.
+                       rewrite Heq2.
+                       rewrite /F2Sum.Fast2Sum/F2SumFLX.Fast2Sum/snd.
+                       repeat f_equal => //.
+                   +++ have HB : B = FT2R f3.
+                       *** subst B f3.
+                           replace (TwoSumF_err xl yl) with x => //.
+                           BPLUS_correct t x y.
+                           rewrite -rnd_plus_FLT_FLX_eq.
+                           ---- f_equal. f_equal => //.
+                           ---- apply generic_format_FLT_FT2R.
+                           ---- apply generic_format_FLT_FT2R.
+                       *** repeat f_equal => //.
 Qed.
 
 
 Let zh := (FT2R (fst (AccurateDWPlusDW xh xl yh yl))).
-Let zl := (FT2R (snd (AccurateDWPlusDW xh xl yh yl))). 
+Let zl := (FT2R (snd (AccurateDWPlusDW xh xl yh yl))).
 
-Definition relative_error_DWPlusDW := 
+Definition relative_error_DWPlusDW :=
   Rabs ((zh + zl - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)).
 
 Definition errorDWDW := ((xhr + xlr + yhr + ylr) - (zh + zl)).
 
-Definition rnd := 
-  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)). 
+Definition rnd :=
+  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)).
 
 (* connect paper proofs to local defs *)
-Fact rel_errorE: relative_error_DWPlusDW = 
+Fact rel_errorE: relative_error_DWPlusDW =
     Rabs errorDWDW * (Rabs (/( xhr + xlr + yhr + ylr))).
 Proof.
-rewrite /relative_error_DWPlusDW  
+rewrite /relative_error_DWPlusDW
   /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
 Qed.
 
-
 Lemma relative_errorDWDW_eq :
-relative_errorDWDW p choice xhr xlr yhr ylr = relative_error_DWPlusDW.
+  relative_errorDWDW p choice xhr xlr yhr ylr = relative_error_DWPlusDW.
 Proof.
 rewrite /relative_errorDWDW/relative_error_DWPlusDW.
 f_equal. f_equal; try nra. f_equal; try nra.
 unfold zh, zl.
-fold DWPlusDW. 
-rewrite DWPlusDWEq_FLT => //. 
+fold DWPlusDW.
+rewrite DWPlusDWEq_FLT => //.
 Qed.
 
 Theorem relative_errorDWPlusDW_correct :
-relative_error_DWPlusDW <= (3 * u^2) / (1 - 4 * u).
+  relative_error_DWPlusDW <= (3 * u^2) / (1 - 4 * u).
 Proof.
 have [_ [_ [_ [_ [DWx [DWy _]]]]]] := Hcond.
 have HDWx : DWPlus.double_word p choice xhr xlr by apply (dw_word_DWdouble xh xl xh DWx).
@@ -239,88 +222,80 @@ Lemma DWPlusDW_0 : (xhr + xlr + yhr + ylr) = 0 -> zh + zl = 0.
 Proof.
 have [_ [_ [_ [_ [DWx [DWy _]]]]]] := Hcond.
 unfold zh, zl.
-have: DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl) by 
-  apply  DWPlusDWEq_FLT =>//. 
+have: DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl) by
+  apply DWPlusDWEq_FLT => //.
 rewrite /F2Rp.
 replace DWPlusDW with
   (fst DWPlusDW, snd DWPlusDW) => //.
 move => H1.
-inversion H1. rewrite -H0 -H2 ; clear H1 H0 H2.
+inversion H1. rewrite -H0 -H2; clear H1 H0 H2.
 destruct (Req_dec (xhr + xlr) 0).
-have xh0: xhr = 0.
--
-move: DWx; rewrite /double_word_prop. 
-by rewrite H /rounded round_0.
--
-rewrite H Rplus_0_l.
-move =>  Hy.
-have yh0: yhr = 0.
-+
-move: DWy; rewrite /double_word_prop. 
-by rewrite Hy /rounded round_0.
-+
-have xl0 : xlr = 0 by apply (double_word_0 xh).
-have yl0 : ylr = 0 by apply (double_word_0 yh).
-rewrite xh0 yh0  xl0 yl0. 
-rewrite /TwoSum_err/TwoSum_sum //=.
-repeat (try rewrite !Rplus_0_l;
-        try rewrite !Rminus_0_r;
-        try rewrite !round_0; 
-        try nra). 
--
-move => H1.
-have : yhr + ylr = - (xhr + xlr) by nra.
-move => H3.
-have Hxy : (yhr = -xhr).
-+
-move: DWx DWy; rewrite /double_word_prop. 
-rewrite H3 /rounded round_NE_opp. 
-move => HxE HyE.
-* 
-rewrite /yhr/xhr HxE HyE //=.
-+
-have Hxyl : (ylr = -xlr) by nra.
-have : TwoSum_sum p choice xhr yhr = 0 /\ 
-        TwoSum_err p choice xhr yhr = 0.
-apply null_case_pre => //; try nra.
-apply generic_format_FLX_FT2R.
-have : TwoSum_sum p choice xlr ylr = 0 /\ 
-        TwoSum_err p choice xlr ylr = 0.
-apply null_case_pre => //; try nra.
-apply generic_format_FLX_FT2R.
-move => [] HA HB [] HC HD. rewrite HA HB HC HD.
-repeat (try rewrite !Rplus_0_l;
-        try rewrite !Rminus_0_r;
-        try rewrite !round_0; 
-        try nra). 
+- have xh0: xhr = 0.
+  + move: DWx; rewrite /double_word_prop.
+    by rewrite H /rounded round_0.
+  + rewrite H Rplus_0_l.
+    move => Hy.
+    have yh0: yhr = 0.
+    * move: DWy; rewrite /double_word_prop.
+      by rewrite Hy /rounded round_0.
+    * have xl0 : xlr = 0 by apply (double_word_0 xh).
+      have yl0 : ylr = 0 by apply (double_word_0 yh).
+      rewrite xh0 yh0 xl0 yl0.
+      rewrite /TwoSum_err/TwoSum_sum //=.
+      repeat (try rewrite !Rplus_0_l;
+              try rewrite !Rminus_0_r;
+              try rewrite !round_0;
+              try nra).
+- move => H1.
+  have : yhr + ylr = - (xhr + xlr) by nra.
+  move => H3.
+  have Hxy : (yhr = -xhr).
+  + move: DWx DWy; rewrite /double_word_prop.
+    rewrite H3 /rounded round_NE_opp.
+    move => HxE HyE.
+    rewrite /yhr/xhr HxE HyE //=.
+  + have Hxyl : (ylr = -xlr) by nra.
+    have : TwoSum_sum p choice xhr yhr = 0 /\
+             TwoSum_err p choice xhr yhr = 0.
+    { apply null_case_pre => //; try nra.
+      apply generic_format_FLX_FT2R. }
+    have : TwoSum_sum p choice xlr ylr = 0 /\
+             TwoSum_err p choice xlr ylr = 0.
+    { apply null_case_pre => //; try nra.
+      apply generic_format_FLX_FT2R. }
+    move => [] HA HB [] HC HD. rewrite HA HB HC HD.
+    repeat (try rewrite !Rplus_0_l;
+            try rewrite !Rminus_0_r;
+            try rewrite !round_0;
+            try nra).
 Qed.
 
-Theorem relative_errorDWPlusFP_correct' : 
+Theorem relative_errorDWPlusFP_correct' :
   exists del, (zh + zl) = (xhr + xlr + yhr + ylr) * (1 + del) /\
     Rabs del <= (3 * u^2) / (1 - 4 * u).
 Proof.
 destruct (Req_dec (xhr + xlr + yhr + ylr) 0) as [Hx0|Hx0].
-{ exists 0; rewrite Hx0; split; [field_simplify ; by apply DWPlusDW_0
-  | rewrite Rabs_R0 /u //=].
-apply Rdiv_le_0_compat_Raux; try nra.
-move : Hp3.
-rewrite fprec_eq.
-move => Hp3'.
-apply Rlt_Rminus.
-refine (Rle_lt_trans _ 
-  (4 * / IZR (Z.pow_pos 2 3)) _ _ _); try nra.
-apply Generic_proof.Rdiv_le_mult_pos; try nra.
-rewrite !Zpower_pos_powerRZ power_RZ_inv; try nra.
-rewrite Rmult_assoc.
-rewrite -powerRZ_add; try nra.
-suff : powerRZ 2 (- Z.pos (fprecp t) + 3) <= 1; 
-  try nra. rewrite -( @powerRZ_O 2).
-apply Pff.Rle_powerRZ; try nra; lia. } 
-exists (((zh + zl) - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)); split. 
-{ now field_simplify. } 
-apply relative_errorDWPlusDW_correct.
+- exists 0; rewrite Hx0; split.
+  + field_simplify; by apply DWPlusDW_0.
+  + rewrite Rabs_R0 /u //=.
+    apply Rdiv_le_0_compat_Raux; try nra.
+    move : Hp3.
+    rewrite fprec_eq.
+    move => Hp3'.
+    apply Rlt_Rminus.
+    refine (Rle_lt_trans _
+      (4 * / IZR (Z.pow_pos 2 3)) _ _ _); try nra.
+    apply Generic_proof.Rdiv_le_mult_pos; try nra.
+    rewrite !Zpower_pos_powerRZ power_RZ_inv; try nra.
+    rewrite Rmult_assoc.
+    rewrite -powerRZ_add; try nra.
+    suff : powerRZ 2 (- Z.pos (fprecp t) + 3) <= 1;
+      try nra. rewrite -( @powerRZ_O 2).
+    apply Pff.Rle_powerRZ; try nra; lia.
+- exists (((zh + zl) - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)); split.
+  + now field_simplify.
+  + apply relative_errorDWPlusDW_correct.
 Qed.
 
 
 End AccuracyDWPlusDW.
-
