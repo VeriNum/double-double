@@ -6,8 +6,6 @@ Require Import float_acc_lems op_defs dd_tactics common.
 Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DDModels DWord_defs.
 Require DWPlus.
-(* DWPlus_acc / DWMul_acc / DWPlusDW_acc not needed for the finiteness chain;
-   they live downstream and have their own pre-existing build issues. *)
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
