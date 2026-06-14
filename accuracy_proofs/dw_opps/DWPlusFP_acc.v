@@ -109,7 +109,8 @@ Theorem relative_errorDWPlusFP_from_cond : relative_error_DWPlusFP xh xl y <= 2 
 Proof.
 destruct COND as [HFINxh [HFINxl [HFINy [HDW [HFINxhy [HBND [HBNDxh [HBNDy HBNDxhy]]]]]]] ].
 apply relative_errorDWPlusFP_correct => //.
-apply (DWPlusFP_finite xh xl).
-
+apply (DWPlusFP_finite xh xl) => //;
+rewrite -is_finite_Binary => //.
+Qed.
 
 End CondAccuracyDWPlusFP.
