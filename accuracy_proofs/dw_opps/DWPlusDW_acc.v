@@ -10,7 +10,6 @@ Require Import float_acc_lems op_defs dd_tactics common.
 Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlus DDModels DWord_defs DWPlusDW.
 From Flocq Require Import Pff2Flocq Core.
-Require Import Interval.Tactic.
 Require Import mathcomp.ssreflect.ssreflect.
 Require Import Logic.FunctionalExtensionality.
 

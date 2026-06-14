@@ -26,7 +26,7 @@ accuracy_proofs/basic_blocks/Fast2Mult_acc_helpers.v
 accuracy_proofs/basic_blocks/Fast2Mult_acc.v
 
 accuracy_proofs/dw_opps/DW_acc_lemmas.v
-accuracy_proofs/dw_opps/DWPlus_acc_helpers.v
+accuracy_proofs/dw_opps/DWPlusFP_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusFP_acc.v
 accuracy_proofs/dw_opps/DWPlusDW.v
 accuracy_proofs/dw_opps/DWMul_acc.v

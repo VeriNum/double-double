@@ -9,7 +9,6 @@ Require DWPlus.
 (* DWPlus_acc / DWMul_acc / DWPlusDW_acc not needed for the finiteness chain;
    they live downstream and have their own pre-existing build issues. *)
 From Flocq Require Import Pff2Flocq Core.
-Require Import Interval.Tactic.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
