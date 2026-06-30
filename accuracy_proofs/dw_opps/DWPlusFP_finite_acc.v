@@ -10,7 +10,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc DWPlus_acc.
+Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 From Flocq Require Import Pff2Flocq Core.
 
 From Stdlib Require Import Reals.Reals.
