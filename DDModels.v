@@ -194,6 +194,36 @@ Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
 End DWTimesFPCond.
 
 
+Section DWTimesDWCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+(* Precondition for DWTimesDW3 (Algorithm 12).  The double-word analog of
+   DWTimesFP_cond: it bundles the DWTimesFP_cond constraints on the high
+   product (xh, yh) together with the finiteness and double-word relation of
+   the second operand's parts (yh, yl), mirroring DWPlusDW_cond's high-part-only
+   magnitude bounds.  As in DWTimesFP_cond, the *product* bound
+   |round(xh*yh)| <= Omega/4 (not just |xh|,|yh| <= Omega/4) is what leaves the
+   closing Fast2Sum enough headroom to stay finite. *)
+Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite yh = true /\
+  is_finite yl = true /\
+  double_word_prop xh xl /\
+  double_word_prop yh yl /\
+  is_finite (BMULT xh yh) = true /\
+  (FT2R xh * FT2R yh = 0 \/
+   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+   <= Rabs (FT2R xh * FT2R yh)) /\
+  Rabs (FT2R xh) <= /4 * Omega /\
+  Rabs (FT2R yh) <= /4 * Omega /\
+  Rabs (FT2R (BMULT xh yh)) <= /4 * Omega.
+
+End DWTimesDWCond.
+
+
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

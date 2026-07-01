@@ -72,13 +72,6 @@ Definition dw_plus_dw1_spec :=
 (* Collect the function-API specs together into Gprog: list funspec *)
 Definition Gprog1 : funspecs := [fast_2sum_spec; two_sum_spec; dw_plus_dw1_spec].
 
-(* body_dw_plus_dw1: BODY ADMITTED. The proof relies on forward_call to
-   two_sum_spec and fast_2sum_spec, which require TwoSum_cond and Fast2Sum_cond
-   respectively. Discharging those for SloppyDWPlusDW (Algorithm 5) is parallel
-   to AccurateDWPlusDW (Algorithm 6) — see body_dw_plus_dw2 below. *)
-Lemma body_dw_plus_dw1: semax_body Vprog Gprog1 f_dw_plus_dw1 dw_plus_dw1_spec.
-Proof. Admitted.
-
 Definition dw_plus_dw2_spec :=
   DECLARE _dw_plus_dw2
   WITH s: val, x : val, y: val,

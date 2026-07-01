@@ -44,4 +44,6 @@ void dw_mult_dw12(struct dword *st, struct dword *x, struct dword *y);
 
 void dw_div_fp15(struct dword *st, struct dword *x, double y);
 
+void dw_div_dw18(struct dword *st, struct dword *x, struct dword *y);
+
 #endif /* DWARITH_DOT_H */
