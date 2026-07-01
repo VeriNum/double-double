@@ -7,7 +7,7 @@ Require Import vcfloat.FPCompCert.
 
 Require Import DDModels common real_extras.
 Require Import DD.paper_proofs.DWTimesFP.
-Require Import DD.accuracy_proofs.dw_opps.DWMul_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.verif_proofs.verif_objs.dw_mult_fp_guarded.
 Require Import DD.verif_proofs.verif_dw_mult_fp.
 

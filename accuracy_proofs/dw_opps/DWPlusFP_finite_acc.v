@@ -2,7 +2,7 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (** Finiteness and accuracy proofs for double-word + floating-point addition
-   (DWPlusFP).  These sections were factored out of DWMul_acc.v, where they had
+   (DWPlusFP).  These sections were factored out of DWMulFP_acc.v, where they had
    accumulated alongside the double-word multiplication (DWTimesFP) proofs; the
    content is unchanged.  Note: an independent DWPlusFP accuracy development
    also lives in DWPlus_acc.v (consumed by DWPlusFP_vcfloat.v); the theorems
