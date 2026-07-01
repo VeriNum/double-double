@@ -164,32 +164,31 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Precondition for DWTimesFP3 (Algorithm 9).  Bundles:
+(* Precondition for DWTimesFP3 (Algorithm 9).  Component-only, mirroring the
+   shape of DWPlusFP_cond:
      - finiteness of xh, xl, y;
      - the double-word relation on (xh, xl);
-     - Fast2Mult(xh, y) safety (overflow + the underflow disjunction
-       shared with Fast2Mult_cond);
-     - magnitude bounds on |xh|, |y|;
-     - the *product* bound |round(xh*y)| <= Omega/4, which bounds the high
-       part of the result and leaves the final Fast2Sum enough headroom to
-       stay finite.  (Bounding the factors |xh|, |y| alone does NOT bound the
-       product: it only gives |xh*y| <= Omega^2/16, and is_finite (BMULT xh y)
-       merely keeps |xh*y| just below the overflow threshold, with no margin
-       for the closing Fast2Sum.)
-   The check in C (dw_mult_fp_check) verifies exactly this shape (the product
-   bound is the fabs(z) <= q_omega test on z = x->s * y).  *)
+     - the underflow disjunction (needed for the Fast2Mult error term, not for
+       overflow);
+     - magnitude bounds on the components |xh|, |y|.
+   Because multiplication squares magnitudes (unlike the subadditive addition
+   case), the component threshold is at the *square-root* scale bpow(femax/2-1)
+   = 2^(femax/2-1), so |xh*y| <= 2^(femax-2) = Omega/4.  From this real-product
+   bound both is_finite (BMULT xh y) and |round(xh*y)| <= Omega/4 are DERIVED in
+   the accuracy proofs (via no_overflow_mult_is_finite and round monotonicity),
+   exactly as the addition case derives its intermediate finiteness from
+   |xh|,|y| <= Omega/4.  The Omega/4 product headroom is what keeps the closing
+   Fast2Sum finite. *)
 Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y  = true /\
   double_word_prop xh xl /\
-  is_finite (BMULT xh y) = true /\
   (FT2R xh * FT2R y = 0 \/
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R xh * FT2R y)) /\
-  Rabs (FT2R xh) <= /4 * Omega /\
-  Rabs (FT2R y)  <= /4 * Omega /\
-  Rabs (FT2R (BMULT xh y)) <= /4 * Omega.
+  Rabs (FT2R xh) <= bpow Zaux.radix2 (femax t / 2 - 1) /\
+  Rabs (FT2R y)  <= bpow Zaux.radix2 (femax t / 2 - 1).
 
 End DWTimesFPCond.
 
@@ -203,9 +202,10 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    DWTimesFP_cond: it bundles the DWTimesFP_cond constraints on the high
    product (xh, yh) together with the finiteness and double-word relation of
    the second operand's parts (yh, yl), mirroring DWPlusDW_cond's high-part-only
-   magnitude bounds.  As in DWTimesFP_cond, the *product* bound
-   |round(xh*yh)| <= Omega/4 (not just |xh|,|yh| <= Omega/4) is what leaves the
-   closing Fast2Sum enough headroom to stay finite. *)
+   magnitude bounds.  As in DWTimesFP_cond, the component bounds on |xh|, |yh|
+   are at the square-root scale bpow(femax/2-1), so |xh*yh| <= Omega/4; both
+   is_finite (BMULT xh yh) and |round(xh*yh)| <= Omega/4 are DERIVED from that,
+   leaving the closing Fast2Sum enough headroom to stay finite. *)
 Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -213,13 +213,11 @@ Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  is_finite (BMULT xh yh) = true /\
   (FT2R xh * FT2R yh = 0 \/
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R xh * FT2R yh)) /\
-  Rabs (FT2R xh) <= /4 * Omega /\
-  Rabs (FT2R yh) <= /4 * Omega /\
-  Rabs (FT2R (BMULT xh yh)) <= /4 * Omega.
+  Rabs (FT2R xh) <= bpow Zaux.radix2 (femax t / 2 - 1) /\
+  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t / 2 - 1).
 
 End DWTimesDWCond.
 
@@ -363,6 +361,6 @@ let rl := BOPP (BMULT yl th) in
 let (eh, el) := Fast2Sum rh rl in
 let (dh, dl) := DWTimesFP3 eh el th in
 let (mh, ml) := DWPlusFP dh dl th in
-let (zh, zl) := DWTimesDW2 xh xl mh ml in (zh, zl).
+let (zh, zl) := DWTimesDW3 xh xl mh ml in (zh, zl).
 
 End DWops.

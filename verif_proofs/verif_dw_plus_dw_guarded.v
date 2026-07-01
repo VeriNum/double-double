@@ -8,6 +8,7 @@ Require Import vcfloat.FPCompCert.
 Require Import DDModels common real_extras.
 Require Import dw_plus_dw_guarded.
 Require Import DD.verif_proofs.verif_dw_plus_dw.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 
 #[export] Instance CompSpecs :
   compspecs. make_compspecs prog. Defined.
@@ -55,7 +56,10 @@ Definition dw_plus_dw2_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP()
+    PROP(DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh) /\
+         (relative_error_DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)
+           <= (3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)
+              / (1 - 4 * (bpow Zaux.radix2 (- fprec Tdouble))))%R)
     RETURN()
     SEP(data_at Tsh dword
           (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
@@ -108,5 +112,10 @@ forward_if Post_if.
   assert_PROP
     (DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
-  entailer!.
+  assert (Hfp : (3 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  pose proof
+    (relative_errorDWPlusDW_correct (fst xh) (snd xh) (fst yh) (snd yh) HFC Hfp)
+    as Hacc.
+  entailer!!.
 Qed.

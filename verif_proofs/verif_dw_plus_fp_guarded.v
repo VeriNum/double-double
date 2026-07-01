@@ -6,6 +6,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
 Require Import DDModels common real_extras.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import dw_plus_fp_guarded.
 Require Import DD.verif_proofs.verif_dw_plus_fp.
 
@@ -52,7 +53,9 @@ Definition dw_plus_fp_guarded_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP()
+    PROP(DWPlusFP_cond (fst xh) (snd xh) y /\
+         (relative_error_DWPlusFP (fst xh) (snd xh) y
+           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
@@ -102,5 +105,10 @@ forward_if Post_if.
   assert_PROP
     (DWPlusFP_cond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
-  entailer!.
+  assert (Hfp : (3 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  pose proof
+    (@relative_errorDWPlusFP_from_cond _ Tdouble _ (fst xh) (snd xh) y HFC Hfp)
+    as Hacc.
+  entailer!!.
 Qed.

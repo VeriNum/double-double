@@ -99,7 +99,7 @@ Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R y).
 
 (* start section hyps *)
-Hypothesis COND : DWTimesFP_cond xh xl y. 
+Hypothesis COND : DWPlusFP_cond xh xl y.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 (* end section hyps *)
 
@@ -107,7 +107,7 @@ Notation u   := (bpow Zaux.radix2 (- fprec t)).
 
 Theorem relative_errorDWPlusFP_from_cond : relative_error_DWPlusFP xh xl y <= 2 * u ^ 2.
 Proof.
-destruct COND as [HFINxh [HFINxl [HFINy [HDW [HFINxhy [HBND [HBNDxh [HBNDy HBNDxhy]]]]]]] ].
+destruct COND as [HFINxh [HFINxl [HFINy [HDW [HBNDxh HBNDy]]]]].
 apply relative_errorDWPlusFP_correct => //.
 apply (DWPlusFP_finite xh xl) => //;
 rewrite -is_finite_Binary => //.
