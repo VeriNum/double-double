@@ -13,6 +13,11 @@ Require Import F2Sum.
 
 Set Implicit Arguments.
 
+(* Keep the two-product folded here as in DWTimesFP: proofs expose it via
+   TwoProdE, and simpl/[/=] must not unfold it. *)
+Opaque DWTimesFP.TwoProd.
+Arguments DWTimesFP.TwoProd : simpl never.
+
 Local Open Scope Z_scope.
 Local Open Scope R_scope.
 
@@ -101,6 +106,7 @@ Qed.
 Notation Hp1 := Hp1_6.
 
 Notation Fast2Mult := (Fast2Mult p choice).
+Notation TwoProd := (TwoProd p choice).
 Notation Fast2Sum := (Fast2Sum p choice).
 
 
@@ -113,7 +119,6 @@ Hypothesis Fast2Mult_correct:
 Notation F2P_errorE := (F2P_errorE Fast2Mult_correct).
 
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 
@@ -3939,6 +3944,7 @@ Qed.
 Notation Hp1 := Hp1_5_10.
 
 Notation Fast2Mult := (Fast2Mult p choice).
+Notation TwoProd := (TwoProd p choice).
 (* Notation F2S_err a b  :=  (F2Sum_err  p choice a b). *)
 
 
@@ -3955,7 +3961,6 @@ Hypothesis Fast2Mult_correct:
 Notation F2P_errorE := (F2P_errorE Fast2Mult_correct).
 
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 
@@ -4609,6 +4614,7 @@ Qed.
 Notation Hp1 := Hp1_4_10.
 
 Notation Fast2Mult := (Fast2Mult p choice).
+Notation TwoProd := (TwoProd p choice).
 Notation Fast2MultC := (Fast2MultC p choice).
 
 
@@ -4623,7 +4629,6 @@ Hypothesis Fast2Mult_correct:
 Notation F2P_errorE := (F2P_errorE Fast2Mult_correct).
 
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 

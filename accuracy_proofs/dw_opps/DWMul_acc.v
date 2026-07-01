@@ -19,6 +19,12 @@ From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Bullet Behavior "Strict Subproofs".
 
+(* Keep the paper's two-product folded (it is now a Definition = Fast2Mult in
+   DWTimesFP); proofs expose it explicitly via DWTimesFP.TwoProdE. *)
+Opaque DWTimesFP.TwoProd.
+Arguments DWTimesFP.TwoProd : simpl never.
+
+
 Lemma let_pair_eta {A B C} (p : A*B) (k : A -> B -> C) :
   (let '(a,b) := p in k a b) = k (fst p) (snd p).
 Proof. destruct p; reflexivity. Qed.
@@ -235,7 +241,6 @@ Hypothesis  xE : double_word xh xl.
 
 Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y).
 Hypothesis Hp3 : (3 <= fprec t)%Z.
-Hypothesis TwoProdE : TwoProd = DWTimesFP.Fast2Mult (fprec t) choice.
 Hypothesis DWTimesFPUnderflowHyp1:
   bpow radix2 (emin + 3 * fprec t) <= Rabs (FT2R xh * FT2R y).
 Hypothesis DWTimesFPUnderflowHyp2: 
@@ -316,7 +321,6 @@ Variables (xh xl y : ftype t).
 Hypothesis xE : double_word xh xl.
 Hypothesis FIN : is_finite_p (DWTimesFP3 xh xl y).
 Hypothesis Hp3 : (3 <= fprec t)%Z.
-Hypothesis TwoProdE : TwoProd = DWTimesFP.Fast2Mult (fprec t) choice.
 Hypothesis Hbig :
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R y).
 Hypothesis Hw :
@@ -773,7 +777,6 @@ Variables (xh xl y : ftype t).
    same modeling assumption already carried by DWTimesFP3_FLX_FLT and required by
    DWTimesFP9_correct; the C-level analog is that the compiled product realizes
    Fast2Mult. *)
-Hypothesis TwoProdE : TwoProd = DWTimesFP.Fast2Mult (fprec t) choice.
 
 Let zh := FT2R (fst (DWTimesFP3 xh xl y)).
 Let zl := FT2R (snd (DWTimesFP3 xh xl y)).
@@ -967,14 +970,23 @@ destruct Huf as [Hxy0 | Hbig].
         [ rewrite Rmult_1_r; apply Rle_refl
         | apply Rgt_not_eq, Rabs_pos_lt; exact Hxryrne ]. }
   + (* normal w: FLX bridge then the paper's tight 2u^2 bound *)
-    have Hbridge := DWTimesFP3_FLX_FLT_weak xh xl y Hfin TwoProdE Hbig Hwnorm.
+    have Hbridge := DWTimesFP3_FLX_FLT_weak xh xl y Hfin Hbig Hwnorm.
     have HFy : generic_format radix2 (FLX_exp (fprec t)) (FT2R y)
       by (apply (generic_format_FLX_FLT radix2 eminA (fprec t));
           apply generic_format_FLT_FT2R).
     have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
       by (apply (dw_word_DWdouble xh xl y); exact Hdw).
-    have Hpaper := @DWTimesFP9_correct (fprec t) choice eq_refl Hp3 TwoProdE
-                     (FT2R xh) (FT2R xl) (FT2R y) HDWx HFy.
+    (* Explicit (folded) type so the [let (zh,zl) := DWTimesFP9 ...] does not
+       cascade open now that TwoProd is a Definition; this keeps DWTimesFP9
+       foldable for the rewrite by Hbridge, exactly as when TwoProd was a
+       Parameter. *)
+    have Hpaper :
+      (let (zh, zl) := DWTimesFP9 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y) in
+       let xy := (FT2R xh + FT2R xl) * FT2R y in
+       Rabs ((zh + zl - xy) / xy) <= 2 * u ^ 2 /\
+       DWPlus.double_word (fprec t) choice zh zl)
+      := @DWTimesFP9_correct (fprec t) choice eq_refl Hp3
+           (FT2R xh) (FT2R xl) (FT2R y) HDWx HFy.
     rewrite Hbridge in Hpaper.
     destruct Hpaper as [Hb _].
     unfold relative_error_DWTimesFP. exact Hb.

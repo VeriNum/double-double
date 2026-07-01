@@ -203,9 +203,11 @@ Qed.
 
 
 
-Parameter TwoProd : R -> R -> R * R.
+Definition TwoProd := Fast2Mult.
+Lemma TwoProdE : TwoProd = Fast2Mult. Proof. by []. Qed.
+Opaque TwoProd.
+Arguments TwoProd : simpl never.
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 Fact fstE A (a b : A) : fst (a, b) = a. Proof.  by []. Qed.
@@ -270,7 +272,7 @@ have che: ch =  (xh * y).
     rewrite -Ropp_mult_distr_r ZNE round_NE_opp -ZNE round_bpow -xhE; ring.
   have tl1e : tl1 = xl * y.
     rewrite che cl2e F2Sum_correct_abs //; try apply:FP=>//.
-      by move : the; rewrite !fstE che cl2e=>->; ring.
+      by move : the; rewrite che cl2e !fstE=>->; ring.
 have f2s_corr: Fast2Sum_correct  p choice th tl2.
   apply:F2Sum_correct_abs=>//; try apply:generic_format_round.
   rewrite tl1e cl10 the Rplus_0_r round_generic //; last by apply:FP.
@@ -1160,7 +1162,6 @@ Notation Hp1 := Hp1_3.
 Notation double_word  := (double_word  p choice ).
 
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 Definition DWTimesFP8 (xh xl y : R) :=
@@ -1557,7 +1558,6 @@ Notation Hp1 := (Hp1_3 Hp3).
 Notation double_word  := (double_word  p choice ).
 
 
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 
 Definition FMA a b c := rnd_p (a + b * c).

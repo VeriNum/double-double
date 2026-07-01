@@ -11,15 +11,9 @@ Require Import DD.accuracy_proofs.dw_opps.DWMul_acc.
 Require Import DD.verif_proofs.verif_objs.dw_mult_fp_guarded.
 Require Import DD.verif_proofs.verif_dw_mult_fp.
 
-(* Modeling axiom: the abstract FLX two-product TwoProd of paper_proofs.DWTimesFP
-   is the FLX Fast2Mult at this precision.  This is the same assumption the paper
-   development carries as the TwoProdE hypothesis (DWTimesFP3_FLX_FLT,
-   DWTimesFP9_correct); at the C level it states that the compiled fused product
-   realizes the error-free transformation.  It is consistent (one equation on an
-   opaque Parameter) and is the instantiation expected by
-   DWTimesFP_accuracy_from_cond. *)
-Axiom TwoProd_Tdouble :
-  DWTimesFP.TwoProd = DWTimesFP.Fast2Mult (fprec Tdouble) choice.
+(* No modeling axiom is needed: paper_proofs.DWTimesFP now defines TwoProd as
+   the FMA-based Fast2Mult (with TwoProdE a proved lemma), so the accuracy
+   result DWTimesFP_accuracy_from_cond is unconditional. *)
 
 #[export] Instance CompSpecs :
   compspecs. make_compspecs prog. Defined.
@@ -118,8 +112,7 @@ forward_if Post_if.
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (@DWTimesFP_accuracy_from_cond _ Tdouble _ (fst xh) (snd xh) y
-       TwoProd_Tdouble Hfp HFC)
+    (@DWTimesFP_accuracy_from_cond _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hacc.
   entailer!!.
 Qed.
