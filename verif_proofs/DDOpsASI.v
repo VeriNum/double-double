@@ -1,0 +1,383 @@
+(* Copyright 2023-2026 Ariel Kellison *)
+(* Licensed under the MIT License. See LICENSE. *)
+
+(* Abstract Spec Interface (ASI) for the double-word *operations* translation
+   unit (dd_ops.c / verif_objs/dd_ops.v).  Every op / guarded-wrapper funspec is
+   DECLAREd here exactly once, under the dd_ops program's CompSpecs, so that the
+   body-proof file (verif_dd_ops.v) and the VSU builder (Ops_VSU.v) reference
+   the *same* funspec terms.  The check_* funspecs mirror fp_utils_specs.v
+   verbatim (same WITH/PRE/POST) so the ops VSU's Imports match the checks VSU's
+   Exports at link time.  fma is provided by MathASI; exit is a libc external. *)
+
+Require Import VST.floyd.proofauto.
+Require Import vcfloat.VCFloat.
+Require Import vcfloat.FPCompCert.
+
+Require Import VSTlib.spec_math.   (* fma_spec *)
+Require Import DDModels common real_extras.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
+Require Import DD.verif_proofs.verif_objs.dd_ops.
+
+#[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
+Definition Vprog : varspecs. mk_varspecs prog. Defined.
+
+Open Scope logic.
+
+Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec Tdouble) (femax Tdouble))).
+
+Definition dword := Tstruct _dword noattr.
+
+Definition f2val (pq: ftype Tdouble * ftype Tdouble) : reptype dword :=
+ (Vfloat (fst pq), Vfloat (snd pq)).
+
+(* ======================================================================== *)
+(*  Leaf primitives                                                          *)
+(* ======================================================================== *)
+
+Definition two_sum_spec :=
+  DECLARE _two_sum
+  WITH s: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
+  POST [ tvoid ]
+    PROP() RETURN() SEP(data_at Tsh dword (f2val (TwoSumF a b)) s).
+
+Definition fast_2sum_spec :=
+  DECLARE _fast_2sum
+  WITH s: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
+  POST [ tvoid ]
+    PROP() RETURN() SEP(data_at Tsh dword (f2val (Fast2Sum a b)) s).
+
+Definition fast_2mult_spec :=
+  DECLARE _fast_2mult
+  WITH s: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
+  POST [ tvoid ]
+    PROP() RETURN() SEP(data_at Tsh dword (f2val (Fast2Mult a b)) s).
+
+(* ======================================================================== *)
+(*  Composite operations                                                     *)
+(* ======================================================================== *)
+
+Definition dw_plus_fp_spec :=
+  DECLARE _dw_plus_fp
+  WITH s: val, x : val,
+      xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
+  PRE [tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+          data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_plus_dw1_spec :=
+  DECLARE _dw_plus_dw1
+  WITH s: val, x : val, y: val,
+      xh : ftype Tdouble * ftype Tdouble,
+      yh : ftype Tdouble * ftype Tdouble
+  PRE [tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+          data_at Tsh dword (f2val xh) x;
+          data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (SloppyDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_plus_dw2_spec :=
+  DECLARE _dw_plus_dw2
+  WITH s: val, x : val, y: val,
+      xh : ftype Tdouble * ftype Tdouble,
+      yh : ftype Tdouble * ftype Tdouble
+  PRE [tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+          data_at Tsh dword (f2val xh) x;
+          data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_mult_fp9_spec :=
+  DECLARE _dw_mult_fp9
+  WITH s: val, x : val,
+      xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
+  PRE [tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_mult_dw12_spec := 
+  DECLARE _dw_mult_dw12
+  WITH s: val, x : val, y: val,
+      xh : ftype Tdouble * ftype Tdouble, 
+      yh : ftype Tdouble * ftype Tdouble
+  PRE [tptr dword, tptr dword, tptr dword ] (* c lang types *)
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s; 
+          data_at Tsh dword (f2val xh) x;
+          data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword 
+          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s; 
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y). 
+
+Definition dw_div_dw18_spec :=
+  DECLARE _dw_div_dw18
+  WITH s: val, x : val, y: val,
+      xh : ftype Tdouble * ftype Tdouble,
+      yh : ftype Tdouble * ftype Tdouble
+  PRE [tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+          data_at Tsh dword (f2val xh) x;
+          data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+
+(* ======================================================================== *)
+(*  Guarded wrappers (exported public API)                                   *)
+(* ======================================================================== *)
+
+Definition two_sum_guarded_spec :=
+  DECLARE _two_sum_guarded
+  WITH p: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
+  POST [ tvoid ]
+    PROP((Rabs (FT2R (TwoSumF_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (TwoSumF a b)) p).
+
+Definition fast_2sum_guarded_spec :=
+  DECLARE _fast_2sum_guarded
+  WITH p: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
+  POST [ tvoid ]
+    PROP((Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
+
+Definition fast_2mult_guarded_spec :=
+  DECLARE _fast_2mult_guarded
+  WITH st: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
+  POST [ tvoid ]
+    PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
+
+Definition dw_plus_fp_guarded_spec :=
+  DECLARE _dw_plus_fp_guarded
+  WITH s: val, x: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP((relative_error_DWPlusFP (fst xh) (snd xh) y
+           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_plus_dw2_guarded_spec :=
+  DECLARE _dw_plus_dw2_guarded
+  WITH s: val, x: val, y: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       yh: ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP((relative_error_DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)
+           <= (3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)
+              / (1 - 4 * (bpow Zaux.radix2 (- fprec Tdouble))))%R)
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_mult_fp9_guarded_spec :=
+  DECLARE _dw_mult_fp9_guarded
+  WITH s: val, x: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP((relative_error_DWTimesFP (fst xh) (snd xh) y
+           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+(* ======================================================================== *)
+(*  Imported check specs (mirror fp_utils_specs.v verbatim)                  *)
+(* ======================================================================== *)
+
+(* Copy of fp_utils_specs.SumResultIsSafeForFast2Sum (a CompSpecs-free Prop);
+   defined here to avoid importing fp_utils_specs (which would clash on dword /
+   f2val / the check spec names and bring a second CompSpecs into scope).
+   Convertible to the original, so the link's funspec match still succeeds. *)
+Definition SumResultIsSafeForFast2Sum (a b : ftype Tdouble) : Prop :=
+  is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R.
+
+Definition two_sum_check_spec :=
+  DECLARE _two_sum_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> TwoSum_cond x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+Definition fast2_sum_check_spec :=
+  DECLARE _fast2_sum_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> SumResultIsSafeForFast2Sum x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+Definition fast2_mult_check_spec :=
+  DECLARE _fast2_mult_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> Fast2Mult_cond x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+Definition dw_plus_fp_check_spec :=
+  DECLARE _dw_plus_fp_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWPlusFP_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x ).
+
+Definition dw_plus_dw_check_spec :=
+  DECLARE _dw_plus_dw_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS ( x; y )
+    SEP( data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y ).
+
+Definition dw_mult_fp_check_spec :=
+  DECLARE _dw_mult_fp_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWTimesFP_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x ).
+
+(* ======================================================================== *)
+(*  libc external                                                            *)
+(* ======================================================================== *)
+
+Definition exit_spec :=
+  DECLARE _exit
+  WITH code : int
+  PRE [ tint ]
+    PROP() PARAMS (Vint (Int.repr 1)) SEP()
+  POST [ tvoid ]
+    PROP(False) LOCAL() SEP().
+
+(* ======================================================================== *)
+(*  Spec groupings for the ops VSU (and its body-proof Gprog)                *)
+(* ======================================================================== *)
+
+(* Externals the ops TU calls but does not define: fma (libm), exit (libc),
+   and the six runtime checks (provided by the checks VSU at link time). *)
+Definition Ops_Imports : funspecs :=
+  [ fma_spec; exit_spec;
+    two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
+    dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec ].
+
+(* Specs of the internal functions, in dd_ops prog order. *)
+Definition Ops_Internal : funspecs :=
+  [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
+    dw_plus_fp_spec; dw_plus_dw1_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
+    two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_mult_dw12_spec; dw_div_dw18_spec ].
+
+(* Public API exported by the ops VSU: the six guarded wrappers. *)
+Definition Ops_Exports : funspecs :=
+  [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec ].

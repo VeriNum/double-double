@@ -74,8 +74,24 @@ Qed.
 Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.
 
+(* VSU spec groupings for the checks translation unit (fp_utils).
+   Imports are the two libm functions the checks call (fabs, ldexp); the eight
+   internal check functions are listed in fp_utils prog order.  Gprog is exactly
+   the checks VSU's G = Imports ++ internal specs, so these body proofs feed
+   directly into solve_SF_internal in Checks_VSU.v. *)
+Definition Checks_Imports : funspecs := [ fabs_spec; ldexp_spec ].
+
+Definition Checks_Internal : funspecs :=
+  [ isfinite_double_spec; fast2_mult_check_spec; fast2_sum_check_spec;
+    two_sum_check_spec; fast2_mult_check2_spec; dw_plus_dw_check_spec;
+    dw_mult_fp_check_spec; dw_mult_dw_check_spec; dw_plus_fp_check_spec ].
+
+(* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
+Definition Checks_Exports : funspecs :=
+  [ two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
+    dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
+    dw_mult_dw_check_spec ].
+
 (* Collect the function-API specs together into Gprog: list funspec.
    Shared by all body-proof files. *)
-Definition Gprog : funspecs := MathASI ++
-  [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_check2_spec;
-    two_sum_check_spec; fast2_sum_check_spec; dw_plus_dw_check_spec ].
+Definition Gprog : funspecs := Checks_Imports ++ Checks_Internal.

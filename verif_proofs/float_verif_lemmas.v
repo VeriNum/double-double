@@ -266,6 +266,68 @@ Proof.
     apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 
+(* q_sqrt_val: IEEE-754 double for 2^(femax/2 - 1) = 2^511 in Tdouble, the
+   *factor* (square-root-scale) bound used by DWTimesFP_cond / DWTimesDW_cond.
+   Same construction as q_omega_val but scaling 1.0 by 2^511 instead of 2^1022.
+   Used by Float_cmp_Cle_bpow511 to lift the C runtime check
+   `fabs(a) <= ldexp(1.0, 511)` into the abstract bound
+   Rabs (FT2R a) <= bpow radix2 (femax/2 - 1). *)
+Definition q_sqrt_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) 511.
+
+Lemma q_sqrt_val_finite : is_finite (ftype_of_float q_sqrt_val) = true.
+Proof.
+  cbv [q_sqrt_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_sqrt_val_FT2R :
+  FT2R (ftype_of_float q_sqrt_val) = bpow Zaux.radix2 511.
+Proof.
+  cbv [q_sqrt_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+(* Float.cmp Cle (fabs b) q_sqrt_val = true → Rabs (FT2R b) <= 2^(femax/2 - 1).
+   The factor-bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
+   is bpow (femax/2 - 1) itself, matching DWTimesFP_cond directly). *)
+Lemma Float_cmp_Cle_bpow511 :
+  forall (b : ftype Tdouble),
+  is_finite b = true ->
+  Float.cmp Cle
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b))
+    q_sqrt_val = true ->
+  Rabs (FT2R b) <= bpow Zaux.radix2 (femax Tdouble / 2 - 1).
+Proof.
+  intros b Hb H.
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hb. }
+  assert (Hfq : Binary.is_finite (fprec Tdouble) (femax Tdouble) q_sqrt_val = true).
+  { generalize q_sqrt_val_finite. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfb | exact Hfq].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  pose proof q_sqrt_val_FT2R as Hft2r.
+  assert (Hqval : Binary.B2R 53 1024 q_sqrt_val = bpow Zaux.radix2 511).
+  { rewrite <- Hft2r, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  assert (Hfe : (femax Tdouble / 2 - 1)%Z = 511%Z) by (cbv [femax Tdouble]; reflexivity).
+  rewrite Hfe.
+  destruct (Rcompare (Rabs (FT2R b)) (Binary.B2R 53 1024 q_sqrt_val)) eqn:Hcmp;
+    simpl in H; try discriminate.
+  - apply Req_le. apply Rcompare_Eq_inv in Hcmp. lra.
+  - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp. lra.
+Qed.
+
 (* Float.cmp Ceq (Float.add a b) a = true → FT2R a = round(FT2R a + FT2R b),
    i.e., (a, b) satisfies the double-word relation in IEEE-754 RN.
    The C-level test `(a + b) == a` lifts to double_word_prop. *)

@@ -365,9 +365,64 @@ pose proof (Binary.Bmult_correct  (fprec t) (femax t)
 simpl in Hbmult; rewrite !B2R_float_of_ftype in Hbmult.
 apply Rlt_bool_true in Hfin1; rewrite Hfin1 in Hbmult; clear Hfin1;
 destruct Hbmult as (Hbmult & _).
-rewrite -Hbmult -!B2R_float_of_ftype !float_of_ftype_of_float; 
+rewrite -Hbmult -!B2R_float_of_ftype !float_of_ftype_of_float;
 f_equal.
-Qed. 
+Qed.
+
+(* Division analogue of Bmult_no_overflow / is_finite_BMULT_no_overflow.
+   Unlike multiplication, Bdiv_correct carries a divisor-nonzero side
+   condition (B2R y <> 0), so the no-overflow fact takes FT2R b <> 0. *)
+Definition Bdiv_no_overflow (x y: R) : Prop :=
+  (Rabs (rounded t (x / y)) < Raux.bpow Zaux.radix2 (femax t))%R.
+
+Lemma is_finite_BDIV_no_overflow {NAN: Nans} {STD: is_standard t} :
+  forall (x y : ftype t)
+  (Hy : FT2R y <> 0%R)
+  (HFINb : is_finite (BDIV x y) = true),
+  Bdiv_no_overflow (FT2R x) (FT2R y).
+Proof.
+intros.
+pose proof Rle_or_lt (bpow Zaux.radix2 (femax t))
+  (Rabs (rounded t (FT2R x / FT2R y)))  as Hor;
+  destruct Hor; auto.
+apply Rlt_bool_false in H; red.
+unfold rounded in H.
+set (xb := float_of_ftype x).
+set (yb := float_of_ftype y).
+assert (Hy' : Binary.B2R _ _ yb <> 0%R) by (rewrite B2R_float_of_ftype; exact Hy).
+pose proof (Binary.Bdiv_correct  (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (div_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE xb yb Hy') as
+  H0.
+rewrite <- !B2R_float_of_ftype in H.
+rewrite <- !B2R_float_of_ftype.
+fold xb yb in H; rewrite H in H0.
+fold xb yb. unfold BDIV, BINOP in HFINb.
+fold xb yb in HFINb.
+  rewrite is_finite_Binary float_of_ftype_of_float in HFINb.
+destruct ((Binary.Bdiv _ _ _ _ _ _ xb yb));
+simpl;  try discriminate.
+Qed.
+
+(** Relate BDIV to round NE in FLT format (divisor nonzero) *)
+Lemma BDIV_round_correct {NAN: Nans} {STD: is_standard t} :
+  forall a b (Hb : FT2R b <> 0%R) (Hfin : is_finite (BDIV a b) = true),
+  let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
+  round Zaux.radix2 fexp (Znearest choice) (FT2R a / FT2R b) = FT2R (BDIV a b).
+Proof.
+intros.
+pose proof (is_finite_BDIV_no_overflow a b Hb Hfin) as Hfin1.
+assert (Hb' : Binary.B2R _ _ (float_of_ftype b) <> 0%R)
+  by (rewrite B2R_float_of_ftype; exact Hb).
+pose proof (Binary.Bdiv_correct  (fprec t) (femax t)
+        (fprec_gt_0 t) (fprec_lt_femax t) (div_nan (fprec t) (femax t)
+        (fprec_gt_one t)) BinarySingleNaN.mode_NE (float_of_ftype a)
+        (float_of_ftype b) Hb') as Hbdiv.
+simpl in Hbdiv; rewrite !B2R_float_of_ftype in Hbdiv.
+apply Rlt_bool_true in Hfin1; rewrite Hfin1 in Hbdiv; clear Hfin1;
+destruct Hbdiv as (Hbdiv & _).
+rewrite -Hbdiv -!B2R_float_of_ftype !float_of_ftype_of_float;
+f_equal.
+Qed.
 
 Lemma BMULT_not_zero  {NAN: Nans} {STD: is_standard t} :
   forall (x y : ftype t)

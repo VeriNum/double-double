@@ -28,6 +28,9 @@ OBJ = two_sum.v two_sum_guarded.v fast_2mult.v fast_2mult_guarded.v fast_2sum.v 
 OBJ += dw_plus_fp.v dw_plus_fp_guarded.v dw_plus_dw.v dw_plus_dw_guarded.v
 OBJ += dw_mult_fp.v dw_mult_fp_guarded.v dw_mult_dw.v
 OBJ += fp_utils.v
+# dd_ops.c is an aggregation unit (#includes the op + guarded .c files) so the
+# whole operations translation unit compiles to one Clight program / CompSpecs.
+OBJ += dd_ops.v
 OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include

@@ -20,4 +20,6 @@ int dw_plus_fp_check(struct dword *x, double y);
 
 int dw_mult_fp_check(struct dword *x, double y);
 
+int dw_mult_dw_check(struct dword *x, struct dword *y);
+
 #endif
