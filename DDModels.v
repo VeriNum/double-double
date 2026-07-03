@@ -222,6 +222,35 @@ Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
 End DWTimesDWCond.
 
 
+Section DWDivFPCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
+Notation Omega := (bpow Zaux.radix2 (femax t)).
+
+(* Precondition for DWDivFP3 (Algorithm 15).  Division needs two no-overflow
+   bounds, both referencing only the components xh, y:
+   - the QUOTIENT bound |xh/y| <= Omega/4 = bpow(femax-2) covers the nodes whose
+     magnitude is the quotient (th = round(xh/y), tl = d/y, closing th+tl);
+   - the |xh| bound covers the intermediate product node pih = round(th*y) ~ xh,
+     which can overflow even under the quotient bound (e.g. xh = Omega, y = 4).
+   Unlike the mul-style split into two square-root bounds on xh and 1/y (which
+   would exclude valid small-magnitude or large-matched divisions), this is the
+   precise no-overflow condition and rejects only inputs that actually overflow.
+   The underflow bound on the quotient is the analog of the product underflow
+   bound in DWTimesFP_cond / DWTimesDW_cond, and it forces y <> 0. *)
+Definition DWDivFP_cond (xh xl y : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y  = true /\
+  double_word_prop xh xl /\
+  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh / FT2R y) /\
+  Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
+  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2).
+
+End DWDivFPCond.
+
+
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

@@ -418,6 +418,32 @@ destruct ((Binary.Bdiv _ _ _ _ _ _ xb yb));
 simpl;  try discriminate.
 Qed.
 
+(* Converse: a division whose rounded quotient stays below the overflow
+   threshold (with finite numerator and nonzero divisor) yields a finite BDIV.
+   Analog of no_overflow_mult_is_finite; note is_finite (Bdiv) = is_finite x. *)
+Lemma no_overflow_div_is_finite {NAN: Nans} {STD: is_standard t} :
+  forall (a b : ftype t),
+  is_finite a = true -> FT2R b <> 0%R ->
+  Rabs (rounded t (FT2R a / FT2R b)) < bpow Zaux.radix2 (femax t) ->
+  is_finite (BDIV a b) = true.
+Proof.
+  intros a b Ha Hb Hov.
+  rewrite is_finite_Binary in Ha.
+  rewrite is_finite_Binary /BDIV/BINOP float_of_ftype_of_float.
+  assert (Hb' : Binary.B2R _ _ (float_of_ftype b) <> 0%R)
+    by (rewrite B2R_float_of_ftype; exact Hb).
+  pose proof (Binary.Bdiv_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (div_nan (fprec t) (femax t) (fprec_gt_one t))
+    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b) Hb') as H.
+  cbv zeta in H.
+  rewrite !B2R_float_of_ftype in H.
+  unfold rounded in Hov.
+  apply Rlt_bool_true in Hov.
+  rewrite Hov in H.
+  destruct H as (_ & HF & _).
+  rewrite HF. exact Ha.
+Qed.
+
 (** Relate BDIV to round NE in FLT format (divisor nonzero) *)
 Lemma BDIV_round_correct {NAN: Nans} {STD: is_standard t} :
   forall a b (Hb : FT2R b <> 0%R) (Hfin : is_finite (BDIV a b) = true),
