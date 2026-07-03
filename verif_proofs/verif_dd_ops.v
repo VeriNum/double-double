@@ -16,6 +16,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels common real_extras op_defs.
+Require Import DD.verif_proofs.dd_float_reconcile.
 Require Import TwoSum_acc Fast2Sum_acc Fast2Mult_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
@@ -137,35 +138,9 @@ unfold f2val, SloppyDWPlusDW, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
 
-(* Leaf reconciliation lemmas: at Tdouble the VCFloat B-operators are the
-   CompCert Float operators used by the C code.  Each converts cheaply (a
-   single op, no nesting).  They let body_dw_div_dw18 rewrite the whole
-   DWDivDW3 spec term into the *exact* CompCert-float composition that the
-   forward_call cascade stored, so the two `data_at` values become
-   syntactically identical and the closing `entailer!!` needs NO whole-term
-   conversion between B-ops and Float-ops.
-
-   Why this matters: after the cascade the store holds
-     DWTimesDW3 . DWPlusFP . DWTimesFP3 . Fast2Sum
-   with CompCert-float leaves (Float.div/Float.mul/Float.neg, Binary.Bfma,
-   Float.of_bits 1.0), while the postcondition asks for DWDivDW3 with VCFloat
-   B-leaves (BDIV/BMULT/BOPP/BFMA/Zconst).  Letting `entailer!!` reconcile
-   those by conversion over the deeply-nested, unshared term does not
-   terminate in practice (>10h).  Rewriting the leaves first makes it instant. *)
-Lemma BDIV_Td  : forall x y : ftype Tdouble, BDIV  x y = Float.div x y.
-Proof. reflexivity. Qed.
-Lemma BMULT_Td : forall x y : ftype Tdouble, BMULT x y = Float.mul x y.
-Proof. reflexivity. Qed.
-Lemma BOPP_Td  : forall x : ftype Tdouble,   BOPP  x   = Float.neg x.
-Proof. reflexivity. Qed.
-Lemma BFMA_Td  : forall x y z : ftype Tdouble,
-  BFMA x y z =
-  Binary.Bfma (fprec Tdouble) 1024 (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble)
-    (FMA_NAN.fma_nan_pl (fprec Tdouble) 1024 (fprec_gt_one Tdouble))
-    BinarySingleNaN.mode_NE x y z.
-Proof. reflexivity. Qed.
-Lemma Zconst1_Td : Zconst Tdouble 1 = Float.of_bits (Int64.repr 4607182418800017408).
-Proof. apply Binary.B2FF_inj. vm_compute. reflexivity. Qed.
+(* Leaf reconciliation lemmas BDIV_Td/BMULT_Td/BOPP_Td/BFMA_Td/Zconst1_Td are
+   factored into dd_float_reconcile (imported above); body_dw_div_dw18 uses
+   them to make the stored value and the postcondition syntactically equal. *)
 
 (* body_dw_div_dw18: the callees (fma from MathASI, fast_2sum, dw_mult_fp9,
    dw_plus_fp, dw_mult_dw12) are all precondition-free -- each returns its

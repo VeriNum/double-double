@@ -7,6 +7,7 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDModels op_defs.
+Require Import DD.verif_proofs.dd_float_reconcile.
 Require Import DD.verif_proofs.verif_objs.dw_div_dw.
 
 #[export] Instance CompSpecs :
@@ -114,27 +115,8 @@ Definition Gprog : funspecs := MathASI ++
               [fast_2sum_spec; dw_mult_fp9_spec; dw_plus_fp_spec;
                dw_mult_dw12_spec; dw_div_dw18_spec].
 
-(* Leaf reconciliation lemmas: at Tdouble the VCFloat B-operators are the
-   CompCert Float operators used by the C code.  Each converts cheaply (single
-   op, no nesting).  body_dw_div_dw18 uses them to rewrite the DWDivDW3 spec
-   term into the exact CompCert-float composition the forward_call cascade
-   stored, so the two `data_at` values become syntactically identical and the
-   closing `entailer!!` needs NO whole-term B-op/Float-op conversion (that
-   conversion over the deeply-nested, unshared term does not terminate). *)
-Lemma BDIV_Td  : forall x y : ftype Tdouble, BDIV  x y = Float.div x y.
-Proof. reflexivity. Qed.
-Lemma BMULT_Td : forall x y : ftype Tdouble, BMULT x y = Float.mul x y.
-Proof. reflexivity. Qed.
-Lemma BOPP_Td  : forall x : ftype Tdouble,   BOPP  x   = Float.neg x.
-Proof. reflexivity. Qed.
-Lemma BFMA_Td  : forall x y z : ftype Tdouble,
-  BFMA x y z =
-  Binary.Bfma (fprec Tdouble) 1024 (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble)
-    (FMA_NAN.fma_nan_pl (fprec Tdouble) 1024 (fprec_gt_one Tdouble))
-    BinarySingleNaN.mode_NE x y z.
-Proof. reflexivity. Qed.
-Lemma Zconst1_Td : Zconst Tdouble 1 = Float.of_bits (Int64.repr 4607182418800017408).
-Proof. apply Binary.B2FF_inj. vm_compute. reflexivity. Qed.
+(* Leaf reconciliation lemmas BDIV_Td/BMULT_Td/BOPP_Td/BFMA_Td/Zconst1_Td are
+   factored into dd_float_reconcile (imported above). *)
 
 (* body_dw_div_dw18: the callees (fma from MathASI, fast_2sum, dw_mult_fp9,
    dw_plus_fp, dw_mult_dw12) are all precondition-free -- each returns its
