@@ -202,6 +202,13 @@ Ltac subexpr_finite_H0 fexpr HFIN :=
                     try subexpr_finite_H0 c H2;
                     try subexpr_finite_H0 d H3
           end
+      | BDIV ?b ?c =>
+          (* only the numerator's finiteness is implied by a finite quotient *)
+          try match goal with
+            | H1: is_finite b = true |- _ => try subexpr_finite_H0 b H1
+            | _ => let H0 := fresh in pose proof (BDIV_finite_e _ b c HFIN) as H0;
+                   try subexpr_finite_H0 b H0
+          end
   end
 .
   

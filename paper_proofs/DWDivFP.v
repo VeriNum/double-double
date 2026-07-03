@@ -74,6 +74,11 @@ Local Notation rnd_p := (round two fexp (Znearest choice)).
 Local Notation rnd_p_le := (round_le two fexp (Znearest choice)).
 Let u := pow (-p).
 
+(* The two-product operator imported from DWTimesFP is discharged over its
+   section variables, so it must be applied to (p, choice) here.  Without this
+   notation the bare [TwoProd] refers to the under-applied global. *)
+Local Notation TwoProd := (DWTimesFP.TwoProd p choice).
+
 Section Algo14.
 
 Definition TwoSum x y := (rnd_p (x + y), TwoSum_err p choice  x y).
@@ -1741,14 +1746,13 @@ Notation Fast2Mult := (Fast2Mult p choice).
 Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
 Notation F2P_error a b  :=  (snd (Fast2Mult a b)).
 
-
-Hypothesis Fast2Mult_correct: 
-  forall a b, a * b =  F2P_prod a b +  F2P_error a b.
-
-Notation F2P_errorE := (F2P_errorE Fast2Mult_correct).
-
-
-Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
+(* The two-product is the concrete FLX Fast2Mult, so its defining identity is a
+   theorem (for FLX-format inputs, via mult_error_FLX) rather than an abstract
+   hypothesis, and TwoProdE holds by reflexivity.  This mirrors how the
+   multiplication development (DWTimesFP.Algo9) keeps DWTimesFP9_correct free of
+   an abstract two-product hypothesis, and lets DWDFP3_correct be instantiated
+   at the concrete operator. *)
+Lemma TwoProdE : TwoProd = Fast2Mult. Proof. by []. Qed.
 
 
 
@@ -2148,8 +2152,12 @@ move:(E1).
 rewrite /DWDivFP3 TwoProdE /= -/th.
 set  pih := rnd_p (th * y).
 set pil := rnd_p(th *y - pih).
+have Fth : format th by rewrite /th; apply: generic_format_round.
 have pihlE : th * y = pih + pil.
-  by rewrite [in LHS]Fast2Mult_correct /= /pil /pih.
+  have Hpil : pil = th * y - pih.
+    rewrite /pil; apply: round_generic.
+    rewrite /pih -Ropp_minus_distr; apply/generic_format_opp/mult_error_FLX => //.
+  rewrite Hpil; ring.
 set dh := xh -pih.
 
 have Fdh: format dh.

@@ -369,6 +369,21 @@ rewrite -Hbmult -!B2R_float_of_ftype !float_of_ftype_of_float;
 f_equal.
 Qed.
 
+(* Numerator finiteness from BDIV finiteness.  Unlike BMULT_finite_e we can
+   only conclude finiteness of the numerator a: a finite quotient a/b can arise
+   with b infinite (a/inf = 0), so is_finite b is not implied. *)
+Lemma BDIV_finite_e {NAN: Nans} {STD: is_standard t} :
+ forall (a b : ftype t)
+ (Hfin : is_finite (BDIV a b) = true),
+ is_finite a = true.
+Proof.
+unfold BDIV, BINOP; intros.
+rewrite is_finite_Binary float_of_ftype_of_float in Hfin.
+rewrite !is_finite_Binary.
+destruct (float_of_ftype a), (float_of_ftype b);
+  cbn [Binary.Bdiv] in Hfin; try discriminate; auto.
+Qed.
+
 (* Division analogue of Bmult_no_overflow / is_finite_BMULT_no_overflow.
    Unlike multiplication, Bdiv_correct carries a divisor-nonzero side
    condition (B2R y <> 0), so the no-overflow fact takes FT2R b <> 0. *)
