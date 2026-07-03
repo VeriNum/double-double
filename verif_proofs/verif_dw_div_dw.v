@@ -6,7 +6,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
-Require Import DDModels.
+Require Import DDModels op_defs.
 Require Import DD.verif_proofs.verif_objs.dw_div_dw.
 
 #[export] Instance CompSpecs :
@@ -114,6 +114,28 @@ Definition Gprog : funspecs := MathASI ++
               [fast_2sum_spec; dw_mult_fp9_spec; dw_plus_fp_spec;
                dw_mult_dw12_spec; dw_div_dw18_spec].
 
+(* Leaf reconciliation lemmas: at Tdouble the VCFloat B-operators are the
+   CompCert Float operators used by the C code.  Each converts cheaply (single
+   op, no nesting).  body_dw_div_dw18 uses them to rewrite the DWDivDW3 spec
+   term into the exact CompCert-float composition the forward_call cascade
+   stored, so the two `data_at` values become syntactically identical and the
+   closing `entailer!!` needs NO whole-term B-op/Float-op conversion (that
+   conversion over the deeply-nested, unshared term does not terminate). *)
+Lemma BDIV_Td  : forall x y : ftype Tdouble, BDIV  x y = Float.div x y.
+Proof. reflexivity. Qed.
+Lemma BMULT_Td : forall x y : ftype Tdouble, BMULT x y = Float.mul x y.
+Proof. reflexivity. Qed.
+Lemma BOPP_Td  : forall x : ftype Tdouble,   BOPP  x   = Float.neg x.
+Proof. reflexivity. Qed.
+Lemma BFMA_Td  : forall x y z : ftype Tdouble,
+  BFMA x y z =
+  Binary.Bfma (fprec Tdouble) 1024 (fprec_gt_0 Tdouble) (fprec_lt_femax Tdouble)
+    (FMA_NAN.fma_nan_pl (fprec Tdouble) 1024 (fprec_gt_one Tdouble))
+    BinarySingleNaN.mode_NE x y z.
+Proof. reflexivity. Qed.
+Lemma Zconst1_Td : Zconst Tdouble 1 = Float.of_bits (Int64.repr 4607182418800017408).
+Proof. apply Binary.B2FF_inj. vm_compute. reflexivity. Qed.
+
 (* body_dw_div_dw18: the callees (fma from MathASI, fast_2sum, dw_mult_fp9,
    dw_plus_fp, dw_mult_dw12) are all precondition-free -- each returns its
    functional-model result -- so the forward_call cascade needs no cond
@@ -154,7 +176,16 @@ match goal with |- context [temp _th (Vfloat ?T)] =>
 (* dw_mult_dw12(z, x, &m): witness (s, x, v_m, xh, m-pair) *)
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
-unfold f2val, DWDivDW3, DWTimesDW3, DWTimesFP3, DWPlusFP, Fast2Sum,
-       Fast2Mult, TwoSumF, fst, snd.
-entailer!.
+(* Rewrite the postcondition's DWDivDW3 term into the exact composition the
+   cascade produced, so both `data_at` values become syntactically identical
+   and the closing entailer needs no whole-term B-op/Float-op conversion. *)
+match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
+  replace (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh)) with PROD end.
+2:{ unfold DWDivDW3.
+    rewrite ?BDIV_Td, ?BFMA_Td, ?BOPP_Td, ?BMULT_Td, ?Zconst1_Td.
+    destruct (Fast2Sum _ _)     as [eh el]; cbn [fst snd].
+    destruct (DWTimesFP3 _ _ _) as [dh dl]; cbn [fst snd].
+    destruct (DWPlusFP _ _ _)   as [mh ml]; cbn [fst snd].
+    reflexivity. }
+entailer!!.
 Qed.
