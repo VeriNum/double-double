@@ -254,14 +254,17 @@ Proof.
                  SEP (data_at Tsh dword (f2val xh) x)).
                forward_if Post_t13.
                ---- (* t'12 != 0 : t'13 = 1, zero product confirmed *)
+                    assert (b_xy = true) as Hbxy_eq
+                      by (destruct b_xy; auto; simpl in H; contradiction).
+                    assert (Hpxy : px \/ py) by (apply Hb_xy; exact Hbxy_eq).
                     forward.
                     unfold Post_t13; clear Post_t13; Exists true;
                       entailer!; try fix_cmp_locals.
-                    intros _.
-                    assert (b_xy = true) as Hbxy_eq
-                      by (destruct b_xy; auto; simpl in H; contradiction).
-                    destruct (Hb_xy Hbxy_eq) as [Hpx | Hpy];
-                      [left; exact Hpx | right; left; exact Hpy].
+                    repeat apply conj;
+                      try reflexivity; try cmp_val_eq;
+                      try (intros _);
+                      try (destruct Hpxy as [Hpx | Hpy];
+                             [left; exact Hpx | right; left; exact Hpy]).
                ---- (* t'12 = 0 : t'13 = (bool)(thresh < fabs(z)) *)
                     forward_call.
                     forward.
@@ -270,11 +273,10 @@ Proof.
                                  (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                                     (Float.mul (float_of_ftype (fst xh)) y))).
                     Exists bc; entailer!; try fix_cmp_locals.
-                    { intros Hbc; right; right; exact Hbc. }
-                    { unfold bc; match goal with
-                      | |- context [Float.cmp Clt ?a ?b] =>
-                          destruct (Float.cmp Clt a b); reflexivity
-                      end. }
+                    repeat apply conj;
+                      try reflexivity; try cmp_val_eq;
+                      try (unfold bc; destruct (Float.cmp Clt _ _); reflexivity);
+                      try (intros Hbc; right; right; exact Hbc).
                ---- (* store mult_safe *)
                     unfold Post_t13; clear Post_t13.
                     Intros b_ms; rename H into Hb_ms.
@@ -297,11 +299,9 @@ Proof.
                     assert (b6 = true) as Hb6_eq
                       by (destruct b6; auto; simpl in H; rep_lia).
                     forward.
-                    unfold Post_t15; Exists vret_fy; entailer!.
-                    split.
-                    { intros Hout. split; [reflexivity |].
-                      destruct vret_fy; [reflexivity | simpl in Hout; discriminate]. }
-                    { destruct vret_fy; simpl; auto. }
+                    unfold Post_t15; Exists vret_fy; entailer!;
+                      try (destruct vret_fy; reflexivity);
+                      try (intros Hout; repeat split; auto).
                ---- forward.
                     unfold Post_t15; Exists false; entailer!.
                ---- unfold Post_t15; clear Post_t15.
@@ -372,13 +372,12 @@ Proof.
                                     assert (b17 = true) as Hb17_eq
                                       by (destruct b17; auto; simpl in H; rep_lia).
                                     forward.
-                                    unfold Post_t18; Exists b_ms; entailer!.
-                                    split.
-                                    { intros Hout.
-                                      destruct (Hb17 eq_refl) as [Hb6t [Hfyt [Hbxht Hbyht]]].
-                                      repeat split; auto.
-                                      destruct b_ms; [reflexivity | simpl in Hout; discriminate]. }
-                                    { destruct b_ms; simpl; auto. }
+                                    unfold Post_t18; Exists b_ms; entailer!;
+                                      try (destruct b_ms; reflexivity);
+                                      try (intros Hout;
+                                           destruct (Hb17 eq_refl) as [Hb6t [Hfyt [Hbxht Hbyht]]];
+                                           repeat split; auto;
+                                           destruct b_ms; [reflexivity | simpl in Hout; discriminate]).
                               ----- forward.
                                     unfold Post_t18; Exists false; entailer!.
                               ----- unfold Post_t18; clear Post_t18.
