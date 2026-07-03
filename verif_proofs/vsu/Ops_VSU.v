@@ -30,7 +30,6 @@ Proof.
   1:{ solve_SF_dd body_fast_2sum. }
   1:{ solve_SF_dd body_fast_2mult. }
   1:{ solve_SF_dd body_dw_plus_fp. }
-  1:{ solve_SF_dd body_dw_plus_dw1. }
   1:{ solve_SF_dd body_dw_plus_dw2. }
   1:{ solve_SF_dd body_dw_mult_fp9. }
   1:{ solve_SF_dd body_two_sum_guarded. }

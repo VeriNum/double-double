@@ -79,25 +79,6 @@ Definition dw_plus_fp_spec :=
     SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_plus_dw1_spec :=
-  DECLARE _dw_plus_dw1
-  WITH s: val, x : val, y: val,
-      xh : ftype Tdouble * ftype Tdouble,
-      yh : ftype Tdouble * ftype Tdouble
-  PRE [tptr dword, tptr dword, tptr dword ]
-    PROP()
-    PARAMS (s; x; y)
-    SEP(data_at_ Tsh dword s;
-          data_at Tsh dword (f2val xh) x;
-          data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP()
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (SloppyDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
-        data_at Tsh dword (f2val xh) x;
-        data_at Tsh dword (f2val yh) y).
-
 Definition dw_plus_dw2_spec :=
   DECLARE _dw_plus_dw2
   WITH s: val, x : val, y: val,
@@ -372,7 +353,7 @@ Definition Ops_Imports : funspecs :=
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
-    dw_plus_fp_spec; dw_plus_dw1_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
+    dw_plus_fp_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
     dw_mult_dw12_spec; dw_div_dw18_spec ].

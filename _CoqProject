@@ -50,6 +50,7 @@ verif_proofs/verif_fp_utils_fast2_sum_check.v
 verif_proofs/verif_fp_utils_two_sum_check.v
 verif_proofs/verif_fp_utils_dw_plus_dw_check.v
 verif_proofs/verif_fp_utils_dw_mult_dw_check.v
+verif_proofs/verif_fp_utils_dw_plus_fp_check.v
 verif_proofs/dd_float_reconcile.v
 verif_proofs/DDOpsASI.v
 verif_proofs/verif_dd_ops.v

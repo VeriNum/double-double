@@ -4,9 +4,9 @@
 (* The checks VSU: packages the fp_utils translation unit (the nine runtime
    check functions) into a Verified Software Unit.  Imports fabs / ldexp (libm);
    exports the seven checks consumed by the ops VSU.  dw_mult_dw_check is proven
-   in verif_fp_utils_dw_mult_dw_check.  Two check bodies (dw_mult_fp_check,
-   dw_plus_fp_check) have no proofs in the repo, so their SF obligations are
-   kept open (Admitted) -- mirroring dw_plus_fp / dw_plus_dw1 on the ops side. *)
+   in verif_fp_utils_dw_mult_dw_check; dw_plus_fp_check in
+   verif_fp_utils_dw_plus_fp_check.  One check body (dw_mult_fp_check) has no
+   proof in the repo, so its SF obligation is kept open (Admitted). *)
 
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
@@ -25,15 +25,12 @@ Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_check.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_check2.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_mult_dw_check.
+Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_check.
 Require Import DD.verif_proofs.vsu.VSU_tactics.
 
-(* Kept-open check bodies (no proofs exist in the repo). *)
+(* Kept-open check body (no proof exists in the repo). *)
 Lemma body_dw_mult_fp_check :
   semax_body Vprog Gprog f_dw_mult_fp_check dw_mult_fp_check_spec.
-Proof. Admitted.
-
-Lemma body_dw_plus_fp_check :
-  semax_body Vprog Gprog f_dw_plus_fp_check dw_plus_fp_check_spec.
 Proof. Admitted.
 
 Definition ChecksVSU: @VSU NullExtension.Espec

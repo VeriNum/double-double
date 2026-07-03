@@ -7,8 +7,7 @@
    by ordinary forward_call against Gprog -- no per-file CompSpecs workarounds.
    Cross-module calls (guarded -> checks) use the check specs from DDOpsASI
    (mirroring fp_utils_specs); fma is from MathASI; both are discharged at VSU
-   link time.  dw_plus_dw1 (the sloppy variant) is intentionally Admitted (it has
-   no math proof); every other body is fully proved. *)
+   link time.  Every body is fully proved. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -88,10 +87,6 @@ Proof.
          TwoSumF_sum, TwoSumF_err, fst, snd.
   entailer!.
 Qed.
-
-(* Out of scope (kept open): the sloppy DWPlusDW variant has no math proof. *)
-Lemma body_dw_plus_dw1: semax_body Vprog Gprog f_dw_plus_dw1 dw_plus_dw1_spec.
-Proof. Admitted.
 
 Lemma body_dw_plus_dw2: semax_body Vprog Gprog f_dw_plus_dw2 dw_plus_dw2_spec.
 Proof.

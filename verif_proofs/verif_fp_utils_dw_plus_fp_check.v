@@ -91,8 +91,8 @@ Proof.
       (* === ldexp(1.0, 1022) returns q_omega_val === *)
       forward_call.
       forward.
-      (* xh_bnd: t'12 := x->s, fabs, then _xh_bnd := (fabs(x->s) <= q_omega) *)
-      forward.
+      (* xh_bnd: forward_call absorbs the t'12 := x->s read + fabs, then
+         forward stores _xh_bnd := (fabs(x->s) <= q_omega). *)
       forward_call (fst xh).
       forward.
       (* y_bnd: fabs(y), then _y_bnd := (fabs(y) <= q_omega) *)
