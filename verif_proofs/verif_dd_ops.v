@@ -7,8 +7,8 @@
    by ordinary forward_call against Gprog -- no per-file CompSpecs workarounds.
    Cross-module calls (guarded -> checks) use the check specs from DDOpsASI
    (mirroring fp_utils_specs); fma is from MathASI; both are discharged at VSU
-   link time.  dw_plus_fp and dw_plus_dw1 are intentionally Admitted (their math
-   proofs are out of scope); every other body is fully proved. *)
+   link time.  dw_plus_dw1 (the sloppy variant) is intentionally Admitted (it has
+   no math proof); every other body is fully proved. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -65,9 +65,29 @@ Qed.
 (*  Composite operations                                                     *)
 (* ======================================================================== *)
 
-(* Out of scope (kept open): the DWPlusFP body proof. *)
+(* The C body matches the DWPlusFP model line-for-line:
+     two_sum(&sh, x->s, y);   (sh.s,sh.t) = TwoSumF xh y
+     v = x->t + sh.t;         v = BPLUS xl sl
+     fast_2sum(s, sh.s, v);   (zh,zl) = Fast2Sum sh.s v
+   The inner two_sum / fast_2sum specs have empty preconditions, so the
+   forward_call cascade discharges no side conditions -- identical in shape
+   to body_dw_plus_dw2 above and body_dw_mult_fp9. *)
 Lemma body_dw_plus_fp: semax_body Vprog Gprog f_dw_plus_fp dw_plus_fp_spec.
-Proof. Admitted.
+Proof.
+  start_function.
+  (* two_sum(&sh, x->s, y) *)
+  forward.
+  forward_call (v_sh, fst xh, y).
+  (* v = x->t + sh.t *)
+  forward.  forward.  forward.
+  (* fast_2sum(s, sh.s, v) *)
+  forward.
+  forward_call (s, TwoSumF_sum (fst xh) y,
+                BPLUS (snd xh) (TwoSumF_err (fst xh) y)).
+  unfold f2val, DWPlusFP, TwoSumF, Fast2Sum,
+         TwoSumF_sum, TwoSumF_err, fst, snd.
+  entailer!.
+Qed.
 
 (* Out of scope (kept open): the sloppy DWPlusDW variant has no math proof. *)
 Lemma body_dw_plus_dw1: semax_body Vprog Gprog f_dw_plus_dw1 dw_plus_dw1_spec.

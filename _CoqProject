@@ -7,6 +7,7 @@ paper_proofs/F2Sum.v
 paper_proofs/DWPlus.v
 paper_proofs/DWTimesFP.v
 paper_proofs/DWTimesDW.v
+paper_proofs/DWDivFP.v
 
 common/common.v
 common/op_defs.v
@@ -32,47 +33,24 @@ accuracy_proofs/dw_opps/DWPlusDW_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusDW_acc.v
 accuracy_proofs/dw_opps/DWMulFP_acc.v
 accuracy_proofs/dw_opps/DWMulDW_acc.v
+accuracy_proofs/dw_opps/DWDivFP_acc.v
 accuracy_proofs/dw_opps/DWPlusFP_finite_acc.v
 accuracy_proofs/basic_blocks/TwoSum_acc_wip.v
 
-# verif_proofs/verif_objs/fp_utils.v
-# verif_proofs/verif_objs/two_sum.v
-# verif_proofs/verif_objs/two_sum_guarded.v
-# verif_proofs/verif_objs/fast_2sum.v
-# verif_proofs/verif_objs/fast_2sum_guarded.v
-# verif_proofs/verif_objs/fast_2mult.v
-# verif_proofs/verif_objs/fast_2mult_guarded.v
-# verif_proofs/verif_objs/dw_plus_dw.v
-# verif_proofs/verif_objs/dw_plus_dw_guarded.v
-# verif_proofs/verif_objs/dw_plus_fp.v
-# verif_proofs/verif_objs/dw_plus_fp_guarded.v
-# verif_proofs/verif_objs/dw_mult_fp.v
-# verif_proofs/verif_objs/dw_mult_fp_guarded.v
-# verif_proofs/verif_objs/dw_div_dw.v
-# verif_proofs/verif_objs/dd_ops.v
-# verif_proofs/float_verif_lemmas.v
-# verif_proofs/fp_utils_specs.v
-# verif_proofs/verif_fp_utils_common.v
-# verif_proofs/verif_fp_utils_short_circuit.v
-# verif_proofs/verif_fp_utils_isfinite_double.v
-# verif_proofs/verif_fp_utils_fast2_mult_check.v
-# verif_proofs/verif_fp_utils_fast2_mult_check2.v
-# verif_proofs/verif_fp_utils_fast2_sum_check.v
-# verif_proofs/verif_fp_utils_two_sum_check.v
-# verif_proofs/verif_fp_utils_dw_plus_dw_check.v
-# verif_proofs/verif_two_sum.v
-# verif_proofs/verif_fast_2sum.v
-# verif_proofs/verif_fast_2mult.v
-# verif_proofs/verif_fast_2mult_guarded.v
-# verif_proofs/verif_two_sum_guarded.v
-# verif_proofs/verif_fast_2sum_guarded.v
-# verif_proofs/verif_dw_plus_dw.v
-# verif_proofs/verif_dw_plus_dw_guarded.v
-# verif_proofs/verif_dw_plus_fp.v
-# verif_proofs/verif_dw_plus_fp_guarded.v
-# verif_proofs/verif_dw_mult_fp.v
-# verif_proofs/verif_dw_mult_fp_guarded.v
-# verif_proofs/verif_dw_div_dw.v
+verif_proofs/verif_objs/fp_utils.v
+verif_proofs/verif_objs/dd_ops.v
+verif_proofs/float_verif_lemmas.v
+verif_proofs/fp_utils_specs.v
+verif_proofs/verif_fp_utils_common.v
+verif_proofs/verif_fp_utils_short_circuit.v
+verif_proofs/verif_fp_utils_isfinite_double.v
+verif_proofs/verif_fp_utils_fast2_mult_check.v
+verif_proofs/verif_fp_utils_fast2_mult_check2.v
+verif_proofs/verif_fp_utils_fast2_sum_check.v
+verif_proofs/verif_fp_utils_two_sum_check.v
+verif_proofs/verif_fp_utils_dw_plus_dw_check.v
+verif_proofs/verif_fp_utils_dw_mult_dw_check.v
+verif_proofs/dd_float_reconcile.v
 verif_proofs/DDOpsASI.v
 verif_proofs/verif_dd_ops.v
 verif_proofs/vsu/VSU_tactics.v
