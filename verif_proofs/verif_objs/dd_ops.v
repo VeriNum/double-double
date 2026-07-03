@@ -86,6 +86,8 @@ Definition _db : ident := $"db".
 Definition _delta : ident := $"delta".
 Definition _dw_div_dw18 : ident := $"dw_div_dw18".
 Definition _dw_mult_dw12 : ident := $"dw_mult_dw12".
+Definition _dw_mult_dw12_guarded : ident := $"dw_mult_dw12_guarded".
+Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
 Definition _dw_mult_fp9 : ident := $"dw_mult_fp9".
 Definition _dw_mult_fp9_guarded : ident := $"dw_mult_fp9_guarded".
 Definition _dw_mult_fp_check : ident := $"dw_mult_fp_check".
@@ -698,6 +700,39 @@ Definition f_dw_mult_dw12 := {|
                (Etempvar _t'3 tdouble) :: (Etempvar _c3 tdouble) :: nil))))))))
 |}.
 
+Definition f_dw_mult_dw12_guarded := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) ::
+                (_y, (tptr (Tstruct _dword noattr))) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _dw_mult_dw_check (Tfunction
+                                ((tptr (Tstruct _dword noattr)) ::
+                                 (tptr (Tstruct _dword noattr)) :: nil) tint
+                                cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Scall None
+    (Evar _dw_mult_dw12 (Tfunction
+                          ((tptr (Tstruct _dword noattr)) ::
+                           (tptr (Tstruct _dword noattr)) ::
+                           (tptr (Tstruct _dword noattr)) :: nil) tvoid
+                          cc_default))
+    ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _x (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil)))
+|}.
+
 Definition f_dw_div_dw18 := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
@@ -1079,6 +1114,12 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
+ (_dw_mult_dw_check,
+   Gfun(External (EF_external "dw_mult_dw_check"
+                   (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
+      nil) tint cc_default)) ::
  (_two_sum_guarded, Gfun(Internal f_two_sum_guarded)) ::
  (_fast_2sum, Gfun(Internal f_fast_2sum)) ::
  (_fast_2sum_guarded, Gfun(Internal f_fast_2sum_guarded)) ::
@@ -1091,13 +1132,15 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_dw_mult_fp9, Gfun(Internal f_dw_mult_fp9)) ::
  (_dw_mult_fp9_guarded, Gfun(Internal f_dw_mult_fp9_guarded)) ::
  (_dw_mult_dw12, Gfun(Internal f_dw_mult_dw12)) ::
+ (_dw_mult_dw12_guarded, Gfun(Internal f_dw_mult_dw12_guarded)) ::
  (_dw_div_dw18, Gfun(Internal f_dw_div_dw18)) :: nil).
 
 Definition public_idents : list ident :=
-(_dw_div_dw18 :: _dw_mult_dw12 :: _dw_mult_fp9_guarded :: _dw_mult_fp9 ::
- _dw_plus_dw2_guarded :: _dw_plus_dw2 :: _dw_plus_fp_guarded ::
- _dw_plus_fp :: _fast_2mult_guarded :: _fast_2mult :: _fast_2sum_guarded ::
- _fast_2sum :: _two_sum_guarded :: _dw_mult_fp_check :: _dw_plus_fp_check ::
+(_dw_div_dw18 :: _dw_mult_dw12_guarded :: _dw_mult_dw12 ::
+ _dw_mult_fp9_guarded :: _dw_mult_fp9 :: _dw_plus_dw2_guarded ::
+ _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp :: _fast_2mult_guarded ::
+ _fast_2mult :: _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded ::
+ _dw_mult_dw_check :: _dw_mult_fp_check :: _dw_plus_fp_check ::
  _dw_plus_dw_check :: _fast2_mult_check :: _two_sum_check ::
  _fast2_sum_check :: _exit :: _two_sum :: _fma :: ___builtin_debug ::
  ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::

@@ -39,5 +39,6 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_dw2_guarded. }
   1:{ solve_SF_dd body_dw_mult_fp9_guarded. }
   1:{ solve_SF_dd body_dw_mult_dw12. }
+  1:{ solve_SF_dd body_dw_mult_dw12_guarded. }
   1:{ solve_SF_dd body_dw_div_dw18. }
 Qed.

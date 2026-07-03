@@ -29,5 +29,6 @@
 #include "dw_mult_fp_guarded.c"
 
 #include "dw_mult_dw.c"
+#include "dw_mult_dw_guarded.c"
 
 #include "dw_div_dw.c"

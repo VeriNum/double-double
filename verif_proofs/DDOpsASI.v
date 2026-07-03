@@ -18,6 +18,7 @@ Require Import DDModels common real_extras.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
@@ -241,6 +242,26 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
+Definition dw_mult_dw12_guarded_spec :=
+  DECLARE _dw_mult_dw12_guarded
+  WITH s: val, x: val, y: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       yh: ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP((relative_error_DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)
+           <= 8 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
 (* ======================================================================== *)
 (*  Imported check specs (mirror fp_utils_specs.v verbatim)                  *)
 (* ======================================================================== *)
@@ -327,6 +348,22 @@ Definition dw_mult_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
+Definition dw_mult_dw_check_spec :=
+  DECLARE _dw_mult_dw_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS ( x; y )
+    SEP( data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y ).
+
 (* ======================================================================== *)
 (*  libc external                                                            *)
 (* ======================================================================== *)
@@ -348,7 +385,8 @@ Definition exit_spec :=
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
     two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
-    dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec ].
+    dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
+    dw_mult_dw_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
@@ -356,9 +394,10 @@ Definition Ops_Internal : funspecs :=
     dw_plus_fp_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
-    dw_mult_dw12_spec; dw_div_dw18_spec ].
+    dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec ].
 
 (* Public API exported by the ops VSU: the six guarded wrappers. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
-    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec ].
+    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_mult_dw12_guarded_spec ].

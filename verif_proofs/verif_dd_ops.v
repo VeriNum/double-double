@@ -21,6 +21,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc_helpers.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 
@@ -372,6 +373,37 @@ forward_if Post_if.
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
     (@DWTimesFP_accuracy_from_cond _ Tdouble _ (fst xh) (snd xh) y Hfp H0)
+    as Hacc.
+  entailer!!.
+Qed.
+
+Lemma body_dw_mult_dw12_guarded :
+  semax_body Vprog Gprog f_dw_mult_dw12_guarded dw_mult_dw12_guarded_spec.
+Proof.
+start_function.
+forward_call (x, y, xh, yh).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  LOCAL (temp _st s; temp _x x; temp _y y)
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x;
+       data_at Tsh dword (f2val yh) y)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP
+    (DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+  forward_call (s, x, y, xh, yh).
+  assert (Hp5 : (5 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  pose proof
+    (@DWTimesDW_accuracy_from_cond _ Tdouble _
+        (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
     as Hacc.
   entailer!!.
 Qed.
