@@ -34,6 +34,7 @@ accuracy_proofs/dw_opps/DWPlusDW_acc.v
 accuracy_proofs/dw_opps/DWMulFP_acc.v
 accuracy_proofs/dw_opps/DWMulDW_acc.v
 accuracy_proofs/dw_opps/DWDivFP_acc.v
+accuracy_proofs/dw_opps/DWDivDW_acc.v
 accuracy_proofs/dw_opps/DWPlusFP_finite_acc.v
 accuracy_proofs/basic_blocks/TwoSum_acc_wip.v
 
