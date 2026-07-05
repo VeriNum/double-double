@@ -106,6 +106,24 @@ Lemma abst_fin_dy (RV UV Om : R) :
   32 <= Om -> RV <= 5/32*Om + 7 -> UV <= /16*Om -> RV + UV < Om.
 Proof. intros; lra. Qed.
 
+(* Closing Fast2Sum node: |th| and |tl| are each round_ub_emin bounds of the two
+   quotients (Q1 = |xh/y| <= Om/4, Q2 = |d/y| <= 5/32 Om + 7), so |th + tl| (and
+   the rounded sum, adding 1/2 ulp <= Om/16) stays below the overflow threshold. *)
+Lemma abst_fst_sum (S Q1 Q2 Om u E : R) :
+  0 <= u -> u <= /16 -> 0 <= E -> E <= 1 -> 32 <= Om ->
+  0 <= Q1 -> Q1 <= /4*Om -> 0 <= Q2 -> Q2 <= 5/32*Om + 7 ->
+  S <= (Q1 + Q1*u + /2*E) + (Q2 + Q2*u + /2*E) ->
+  S < Om.
+Proof. intros; nra. Qed.
+
+Lemma abst_fst_fin (S UV Q1 Q2 Om u E : R) :
+  0 <= u -> u <= /16 -> 0 <= E -> E <= 1 -> 32 <= Om ->
+  0 <= Q1 -> Q1 <= /4*Om -> 0 <= Q2 -> Q2 <= 5/32*Om + 7 ->
+  S <= (Q1 + Q1*u + /2*E) + (Q2 + Q2*u + /2*E) ->
+  UV <= /16*Om ->
+  S + UV < Om.
+Proof. intros; nra. Qed.
+
 (* Keep the paper's two-product folded; proofs expose it via DWTimesFP.TwoProdE. *)
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
@@ -945,8 +963,67 @@ have Ftl : is_finite (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
   eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
   apply (abst_fin_dy _ _ Omega);
     [ exact HΩ32 | exact Hdy_b | exact (half_ulp_le _ Hp4 Hdy_lt) ]. }
-admit.
-Admitted.
+(* ---- closing Fast2Sum: fst (DWDivFP3 xh xl y) = BPLUS th tl ---- *)
+have Hth_r : round radix2 fexp (Znearest choice) (FT2R xh / FT2R y) = FT2R (BDIV xh y)
+  by apply (BDIV_round_correct t xh y Hyne Fth).
+have Htl_r : round radix2 fexp (Znearest choice)
+               (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                    (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+           = FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                       (Fast2Mult_err (BDIV xh y) y)) xl) y)
+  by apply (BDIV_round_correct t _ y Hyne Ftl).
+have Hxhy4 : Rabs (FT2R xh / FT2R y) <= / 4 * Omega by (rewrite -H4Ω; exact Hqub).
+have Hthv : Rabs (FT2R (BDIV xh y))
+          <= Rabs (FT2R xh / FT2R y) + Rabs (FT2R xh / FT2R y) * bpow radix2 (- fprec t)
+             + / 2 * bpow radix2 emin
+  by (rewrite -Hth_r; apply round_ub_emin).
+have Htlv : Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                    (Fast2Mult_err (BDIV xh y) y)) xl) y))
+          <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                       (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+             + Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                         (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+               * bpow radix2 (- fprec t)
+             + / 2 * bpow radix2 emin
+  by (rewrite -Htl_r; apply round_ub_emin).
+have Hsum_le : Rabs (FT2R (BDIV xh y)
+                     + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                         (Fast2Mult_err (BDIV xh y) y)) xl) y))
+             <= (Rabs (FT2R xh / FT2R y) + Rabs (FT2R xh / FT2R y) * bpow radix2 (- fprec t)
+                 + / 2 * bpow radix2 emin)
+              + (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                    (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+                 + Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                     (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+                   * bpow radix2 (- fprec t)
+                 + / 2 * bpow radix2 emin).
+{ eapply Rle_trans; [ apply Rabs_triang |].
+  apply Rplus_le_compat; [ exact Hthv | exact Htlv ]. }
+have Hsum_lt : Rabs (FT2R (BDIV xh y)
+                     + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                         (Fast2Mult_err (BDIV xh y) y)) xl) y)) < Omega.
+{ apply (abst_fst_sum _ (Rabs (FT2R xh / FT2R y))
+           (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                              (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y))
+           Omega (bpow radix2 (- fprec t)) (bpow radix2 emin));
+    [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | exact He1 | exact HΩ32
+    | apply Rabs_pos | exact Hxhy4 | apply Rabs_pos | exact Hdy_b | exact Hsum_le ]. }
+have Hfstred : fst (DWDivFP3 xh xl y)
+             = BPLUS (BDIV xh y)
+                 (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                              (Fast2Mult_err (BDIV xh y) y)) xl) y)
+  by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
+rewrite Hfstred.
+apply no_overflow_sum_is_finite; [ exact Fth | exact Ftl |].
+eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+apply (abst_fst_fin _ _ (Rabs (FT2R xh / FT2R y))
+         (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                            (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y))
+         Omega (bpow radix2 (- fprec t)) (bpow radix2 emin));
+  [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | exact He1 | exact HΩ32
+  | apply Rabs_pos | exact Hxhy4 | apply Rabs_pos | exact Hdy_b
+  | exact Hsum_le | exact (half_ulp_le _ Hp4 Hsum_lt) ].
+Qed.
 
 (* Finiteness of snd (DWDivFP3): the closing Fast2Sum's snd needs the ulp
    ordering ulp(tl) <= ulp(th) (or th = 0), from the double-word relation of the
