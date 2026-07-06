@@ -96,6 +96,26 @@ Definition Fast2Mult_cond (a b : ftype t) : Prop :=
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).
 
+(* Fast2Mult_cond2 strengthens Fast2Mult_cond's finiteness clause from
+   is_finite (BMULT a b) to is_finite (BPLUS (BMULT a b) c): the ROUNDED
+   product fl(a*b) accumulated with a third addend c, i.e. fl(fl(a*b) + c),
+   must be finite (the underflow disjunct on the exact product a*b is
+   unchanged).
+
+   This is the precondition for an FMA-FREE multiply-then-add step
+   fl(fl(a*b) + c) — the shape CompCert lowers fma(a,b,c) to when no fused
+   instruction is emitted (Float.mul followed by Float.add; see
+   verif_fp_utils_fast2_mult_check2.v).  The runtime guard fast2_mult_check2
+   and its verification (fast2_mult_check2_spec) discharge exactly this cond.
+
+   NOTE (status): no accuracy proof currently consumes Fast2Mult_cond2.  The
+   present DW algorithms compute their error/accumulation terms with the fused
+   BFMA (via Fast2Mult_err) and derive finiteness from the plain
+   is_finite (BMULT a b) of Fast2Mult_cond (see Fast2Mult_acc.v and
+   DWMulDW_acc.v).  cond2 is retained as the ready-made precondition for a
+   future non-FMA product-then-add path; if that path is never added, cond2,
+   fast2_mult_check2_spec, and verif_fp_utils_fast2_mult_check2.v can be
+   dropped and un-wired from Checks_VSU / Gprog. *)
 Definition Fast2Mult_cond2 (a b c : ftype t) : Prop :=
   is_finite (BPLUS (BMULT a b) c) = true /\
   (FT2R a * FT2R b = 0 \/
