@@ -708,7 +708,7 @@ have Huf' : FT2R xh * FT2R yh <> 0 ->
   by (move => _; exact Hthresh).
 (* |cl1| <= u P and |ch| >= P - u P *)
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh yh)) <= /2 * ulp (FT2R xh * FT2R yh)
-  by (apply Fast2Mult_accuracy_norm; [exact Hfmul | exact Huf']).
+  by (apply Fast2Mult_accuracy_norm; exact Hfmul).
 have Hulpxhyh : ulp (FT2R xh * FT2R yh)
              <= Rabs (FT2R xh * FT2R yh) * bpow radix2 (1 - fprec t).
 { apply ulp_FLT_le. eapply Rle_trans; [| exact Hthresh]. apply bpow_le.
@@ -899,7 +899,7 @@ have Huf' : FT2R xh * FT2R yh <> 0 ->
   by (move => _; exact Hthresh).
 (* argument-magnitude chain (copied from aux_cl3_le_ch) *)
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh yh)) <= /2 * ulp (FT2R xh * FT2R yh)
-  by (apply Fast2Mult_accuracy_norm; [exact Hfmul | exact Huf']).
+  by (apply Fast2Mult_accuracy_norm; exact Hfmul).
 have Hulpxhyh : ulp (FT2R xh * FT2R yh)
              <= Rabs (FT2R xh * FT2R yh) * bpow radix2 (1 - fprec t).
 { apply ulp_FLT_le. eapply Rle_trans; [| exact Hthresh]. apply bpow_le.
@@ -1129,7 +1129,7 @@ have Huf' : FT2R xh * FT2R yh <> 0 ->
 have Hfcl1 : is_finite (Fast2Mult_err xh yh) = true.
 { destruct (Fast2Mult_finite_if_BMULT_finite xh yh Huf' Hfmul) as [_ H]. exact H. }
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh yh)) <= /2 * ulp (FT2R xh * FT2R yh).
-{ apply Fast2Mult_accuracy_norm; [exact Hfmul | exact Huf']. }
+{ apply Fast2Mult_accuracy_norm; exact Hfmul. }
 have Hxhy : Rabs (FT2R xh * FT2R yh) <= /2 * Omega
   by (eapply Rle_trans; [exact Hxhy4|]; lra).
 have Hxhy_lt : Rabs (FT2R xh * FT2R yh) < Omega by lra.

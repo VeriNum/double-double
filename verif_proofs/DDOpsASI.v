@@ -177,8 +177,22 @@ Definition fast_2sum_guarded_spec :=
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 
+(* Tier A guarded wrapper: accurate AND correct (error-free / double-word). *)
 Definition fast_2mult_guarded_spec :=
   DECLARE _fast_2mult_guarded
+  WITH st: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
+  POST [ tvoid ]
+    PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R
+         /\ (FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) = FT2R a * FT2R b)%R
+         /\ double_word_prop (Fast2Mult_mul a b) (Fast2Mult_err a b))
+    RETURN()
+    SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
+
+(* Tier B guarded wrapper: accuracy-only (bound), guarded by the acc check. *)
+Definition fast_2mult_acc_guarded_spec :=
+  DECLARE _fast_2mult_acc_guarded
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
@@ -306,6 +320,19 @@ Definition fast2_mult_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
+(* Tier-B "accurate-only" check: certifies the weaker Fast2Mult_cond_acc
+   (finiteness only).  Mirrors fp_utils_specs.fast2_mult_acc_check_spec. *)
+Definition fast2_mult_acc_check_spec :=
+  DECLARE _fast2_mult_acc_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> Fast2Mult_cond_acc x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
 Definition dw_plus_fp_check_spec :=
   DECLARE _dw_plus_fp_check
   WITH x : val,
@@ -385,6 +412,7 @@ Definition exit_spec :=
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
     two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
+    fast2_mult_acc_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
     dw_mult_dw_check_spec ].
 
@@ -393,11 +421,13 @@ Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+    fast_2mult_acc_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
     dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec ].
 
 (* Public API exported by the ops VSU: the six guarded wrappers. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+    fast_2mult_acc_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
     dw_mult_dw12_guarded_spec ].

@@ -83,6 +83,7 @@ Definition _dword : ident := $"dword".
 Definition _dwx : ident := $"dwx".
 Definition _dwy : ident := $"dwy".
 Definition _fabs : ident := $"fabs".
+Definition _fast2_mult_acc_check : ident := $"fast2_mult_acc_check".
 Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fast2_mult_check2 : ident := $"fast2_mult_check2".
 Definition _fast2_sum_check : ident := $"fast2_sum_check".
@@ -241,6 +242,21 @@ Definition f_fast2_mult_check := {|
                     (Sset _t'7 (Ecast (Etempvar _t'7 tint) tbool)))))
               (Sset _t'7 (Econst_int (Int.repr 0) tint)))
             (Sreturn (Some (Etempvar _t'7 tint)))))))))
+|}.
+
+Definition f_fast2_mult_acc_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, tdouble) :: (_y, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall (Some _t'1)
+    (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+    ((Ebinop Omul (Etempvar _x tdouble) (Etempvar _y tdouble) tdouble) ::
+     nil))
+  (Sreturn (Some (Etempvar _t'1 tint))))
 |}.
 
 Definition f_fast2_sum_check := {|
@@ -1421,6 +1437,7 @@ Definition global_definitions : list (ident * globdef fundef type) :=
      (tdouble :: nil) tdouble cc_default)) ::
  (_isfinite_double, Gfun(Internal f_isfinite_double)) ::
  (_fast2_mult_check, Gfun(Internal f_fast2_mult_check)) ::
+ (_fast2_mult_acc_check, Gfun(Internal f_fast2_mult_acc_check)) ::
  (_fast2_sum_check, Gfun(Internal f_fast2_sum_check)) ::
  (_two_sum_check, Gfun(Internal f_two_sum_check)) ::
  (_fast2_mult_check2, Gfun(Internal f_fast2_mult_check2)) ::
@@ -1432,10 +1449,11 @@ Definition global_definitions : list (ident * globdef fundef type) :=
 Definition public_idents : list ident :=
 (_dw_plus_fp_check :: _dw_mult_dw_check :: _dw_mult_fp_check ::
  _dw_plus_dw_check :: _fast2_mult_check2 :: _two_sum_check ::
- _fast2_sum_check :: _fast2_mult_check :: _isfinite_double :: _fabs ::
- _ldexp :: ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+ _fast2_sum_check :: _fast2_mult_acc_check :: _fast2_mult_check ::
+ _isfinite_double :: _fabs :: _ldexp :: ___builtin_debug ::
+ ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
+ ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
+ ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::

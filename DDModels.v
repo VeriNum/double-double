@@ -122,6 +122,22 @@ Definition Fast2Mult_cond2 (a b c : ftype t) : Prop :=
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).
 
+(* Fast2Mult_cond_acc is the "accurate-only" precondition: it drops the
+   underflow-safety conjunct of Fast2Mult_cond (the `a*b = 0 \/ threshold <=
+   |a*b|` disjunction) and keeps only overflow-safety (finiteness of the
+   rounded product).  It suffices for the accuracy bound
+   |Fast2Mult_err a b| <= 1/2 ulp(a*b) — which holds in every regime — but NOT
+   for the error-free / double-word properties (mul + err = a*b), which need
+   the underflow disjunct of the full Fast2Mult_cond.  See Fast2Mult_acc.v:
+   Fast2Mult_accuracy_from_cond_acc (this cond) vs Fast2Mult_correct_from_cond
+   (the full cond). *)
+Definition Fast2Mult_cond_acc (a b : ftype t) : Prop :=
+  is_finite (BMULT a b) = true.
+
+Lemma Fast2Mult_cond_acc_of_cond (a b : ftype t) :
+  Fast2Mult_cond a b -> Fast2Mult_cond_acc a b.
+Proof. intros [Hfin _]; exact Hfin. Qed.
+
 End Fast2MultCond.
 
 

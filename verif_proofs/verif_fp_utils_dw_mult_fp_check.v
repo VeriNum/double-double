@@ -372,12 +372,12 @@ Proof.
                                     assert (b17 = true) as Hb17_eq
                                       by (destruct b17; auto; simpl in H; rep_lia).
                                     forward.
-                                    unfold Post_t18; Exists b_ms; entailer!;
-                                      try (destruct b_ms; reflexivity);
-                                      try (intros Hout;
-                                           destruct (Hb17 eq_refl) as [Hb6t [Hfyt [Hbxht Hbyht]]];
-                                           repeat split; auto;
-                                           destruct b_ms; [reflexivity | simpl in Hout; discriminate]).
+                                    unfold Post_t18; Exists b_ms; entailer!.
+                                    split.
+                                    { intros Hout.
+                                      destruct (Hb17 eq_refl) as [Hb6t [Hfyt [Hbxht Hbyht]]].
+                                      repeat split; auto. }
+                                    { destruct b_ms; reflexivity. }
                               ----- forward.
                                     unfold Post_t18; Exists false; entailer!.
                               ----- unfold Post_t18; clear Post_t18.
@@ -425,33 +425,24 @@ Proof.
                                              is_finite (ftype_of_float
                                                (Float.mul (float_of_ftype (fst xh))
                                                           (float_of_ftype y))) = true).
-                                           { rewrite is_finite_Binary.
-                                             rewrite float_of_ftype_of_float.
-                                             rewrite Float_mul_rewrite.
-                                             rewrite !float_of_ftype_of_float.
-                                             rewrite <- is_finite_Binary.
-                                             exact Hbmul. }
+                                           { exact Hbmul. }
                                            pose proof (Float_cmp_Cle_mul
                                              (float_of_ftype (fst xh)) (float_of_ftype y)
                                              (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))
                                              (ftype_of_float thresh_val)
                                              Hfin_mul thresh_val_finite
                                              (eq_sym thresh_val_FT2R)) as Hcmp.
-                                           simpl in Hcmp.
-                                           rewrite !ftype_of_float_of_ftype in Hcmp.
-                                           rewrite !float_of_ftype_of_float in Hcmp.
-                                           unfold px, py in *.
-                                           (* Hclt uses (Float.mul (float_of_ftype (fst xh)) y);
-                                              y is definitionally float_of_ftype y for Tdouble. *)
+                                           rewrite ?ftype_of_float_of_ftype in Hcmp.
+                                           rewrite ?float_of_ftype_of_float in Hcmp.
                                            apply Rlt_le, Rlt_bool_to_Rlt,
                                                  no_underflow_real_from_round_mul.
                                            apply Rlt_bool_to_Rlt.
-                                           (* turn Hcmp equality into the Rlt_bool fact *)
-                                           unfold bool2val in Hcmp.
                                            destruct (Rlt_bool _ _) eqn:Hrb.
                                            { reflexivity. }
                                            { exfalso.
-                                             (* Hcmp: Vint zero = Vint (if cmp then one else zero) *)
-                                             rewrite Hclt in Hcmp.
+                                             match type of Hcmp with
+                                             | _ = bool2val ?c => assert (E : c = true) by exact Hclt
+                                             end.
+                                             rewrite E in Hcmp.
                                              discriminate Hcmp. }
 Qed.

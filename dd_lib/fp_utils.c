@@ -36,6 +36,16 @@ int fast2_mult_check(double x, double y) {
     return fin && ((zx || zy) || thresh < fabs(z)); 
 }
 
+int fast2_mult_acc_check(double x, double y) {
+    /* "Accurate-only" guard for Fast2Mult: it certifies just enough for the
+       accuracy bound |err| <= 1/2 ulp(x*y), which holds in every regime, so
+       it only tests overflow-safety (finiteness of the rounded product) and
+       omits fast2_mult_check's underflow zero/threshold test.  It does NOT
+       certify the error-free / double-word property (mul + err == x*y); use
+       fast2_mult_check for that.  Discharges DDModels.Fast2Mult_cond_acc. */
+    return isfinite_double(x * y);
+}
+
 int fast2_sum_check(double a, double b) {
     double s = a + b;
     int fin = isfinite_double(s);

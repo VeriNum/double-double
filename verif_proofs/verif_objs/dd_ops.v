@@ -100,9 +100,11 @@ Definition _dw_plus_fp_guarded : ident := $"dw_plus_fp_guarded".
 Definition _dword : ident := $"dword".
 Definition _e : ident := $"e".
 Definition _exit : ident := $"exit".
+Definition _fast2_mult_acc_check : ident := $"fast2_mult_acc_check".
 Definition _fast2_mult_check : ident := $"fast2_mult_check".
 Definition _fast2_sum_check : ident := $"fast2_sum_check".
 Definition _fast_2mult : ident := $"fast_2mult".
+Definition _fast_2mult_acc_guarded : ident := $"fast_2mult_acc_guarded".
 Definition _fast_2mult_guarded : ident := $"fast_2mult_guarded".
 Definition _fast_2sum : ident := $"fast_2sum".
 Definition _fast_2sum_guarded : ident := $"fast_2sum_guarded".
@@ -313,6 +315,32 @@ Definition f_fast_2mult_guarded := {|
     (Scall (Some _t'1)
       (Evar _fast2_mult_check (Tfunction (tdouble :: tdouble :: nil) tint
                                 cc_default))
+      ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Scall None
+    (Evar _fast_2mult (Tfunction
+                        ((tptr (Tstruct _dword noattr)) :: tdouble ::
+                         tdouble :: nil) tvoid cc_default))
+    ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil)))
+|}.
+
+Definition f_fast_2mult_acc_guarded := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) :: (_a, tdouble) ::
+                (_b, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _fast2_mult_acc_check (Tfunction (tdouble :: tdouble :: nil) tint
+                                    cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -1098,6 +1126,11 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
+ (_fast2_mult_acc_check,
+   Gfun(External (EF_external "fast2_mult_acc_check"
+                   (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
+                     cc_default)) (tdouble :: tdouble :: nil) tint
+     cc_default)) ::
  (_dw_plus_dw_check,
    Gfun(External (EF_external "dw_plus_dw_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
@@ -1125,6 +1158,7 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_fast_2sum_guarded, Gfun(Internal f_fast_2sum_guarded)) ::
  (_fast_2mult, Gfun(Internal f_fast_2mult)) ::
  (_fast_2mult_guarded, Gfun(Internal f_fast_2mult_guarded)) ::
+ (_fast_2mult_acc_guarded, Gfun(Internal f_fast_2mult_acc_guarded)) ::
  (_dw_plus_fp, Gfun(Internal f_dw_plus_fp)) ::
  (_dw_plus_fp_guarded, Gfun(Internal f_dw_plus_fp_guarded)) ::
  (_dw_plus_dw2, Gfun(Internal f_dw_plus_dw2)) ::
@@ -1138,10 +1172,11 @@ Definition global_definitions : list (ident * globdef fundef type) :=
 Definition public_idents : list ident :=
 (_dw_div_dw18 :: _dw_mult_dw12_guarded :: _dw_mult_dw12 ::
  _dw_mult_fp9_guarded :: _dw_mult_fp9 :: _dw_plus_dw2_guarded ::
- _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp :: _fast_2mult_guarded ::
- _fast_2mult :: _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded ::
- _dw_mult_dw_check :: _dw_mult_fp_check :: _dw_plus_fp_check ::
- _dw_plus_dw_check :: _fast2_mult_check :: _two_sum_check ::
+ _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp ::
+ _fast_2mult_acc_guarded :: _fast_2mult_guarded :: _fast_2mult ::
+ _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded :: _dw_mult_dw_check ::
+ _dw_mult_fp_check :: _dw_plus_fp_check :: _dw_plus_dw_check ::
+ _fast2_mult_acc_check :: _fast2_mult_check :: _two_sum_check ::
  _fast2_sum_check :: _exit :: _two_sum :: _fma :: ___builtin_debug ::
  ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
  ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::

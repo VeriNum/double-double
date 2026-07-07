@@ -18,6 +18,7 @@
 #include "fast_2sum_guarded.c"
 #include "fast_2mult.c"
 #include "fast_2mult_guarded.c"
+#include "fast_2mult_acc_guarded.c"
 
 #include "dw_plus_fp.c"
 #include "dw_plus_fp_guarded.c"

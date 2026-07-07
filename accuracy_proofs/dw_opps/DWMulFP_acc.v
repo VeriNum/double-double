@@ -646,7 +646,7 @@ have Huf' : FT2R xh * FT2R y <> 0 ->
 have Hfcl1 : is_finite (Fast2Mult_err xh y) = true.
 { destruct (Fast2Mult_finite_if_BMULT_finite xh y Huf' Hfmul) as [_ H]. exact H. }
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * ulp (FT2R xh * FT2R y).
-{ apply Fast2Mult_accuracy_norm; [exact Hfmul | exact Huf']. }
+{ apply Fast2Mult_accuracy_norm; exact Hfmul. }
 (* product real bound + low-product bound + cl1 in absolute terms *)
 have Hxhy : Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 { apply (aux_xhy_bnd xh y); [exact Hfmul | exact Hprod]. }
@@ -745,7 +745,7 @@ have Huf' : FT2R xh * FT2R y <> 0 ->
 have Hcl1_eq : FT2R (Fast2Mult_err xh y) = FT2R xh * FT2R y - FT2R (Fast2Mult_mul xh y)
   by (apply Fast2MultModel_correct; [exact Hfmul | exact Huf']).
 have Hcl1_b : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * ulp (FT2R xh * FT2R y)
-  by (apply Fast2Mult_accuracy_norm; [exact Hfmul | exact Huf']).
+  by (apply Fast2Mult_accuracy_norm; exact Hfmul).
 clear Huf'.
 have Hulp_xhy : ulp (FT2R xh * FT2R y) <= Rabs (FT2R xh * FT2R y) * bpow radix2 (1 - fprec t).
 { apply ulp_FLT_le. eapply Rle_trans; [|exact Hthresh].

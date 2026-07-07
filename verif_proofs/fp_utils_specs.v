@@ -45,6 +45,23 @@ Definition fast2_mult_check_spec :=
     SEP().
 
 
+(* Tier-B "accurate-only" check: certifies the weaker Fast2Mult_cond_acc
+   (finiteness only), which suffices for the accuracy bound but not for the
+   error-free / double-word property.  Mirrors fast2_mult_check_spec. *)
+Definition fast2_mult_acc_check_spec :=
+  DECLARE _fast2_mult_acc_check
+  WITH x : ftype Tdouble, y : ftype Tdouble
+  PRE [ tdouble, tdouble ]
+    PROP()
+    PARAMS ( Vfloat x; Vfloat y )
+    SEP()
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> Fast2Mult_cond_acc x y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP().
+
+
 Definition two_sum_check_spec :=
   DECLARE _two_sum_check
   WITH x : ftype Tdouble, y : ftype Tdouble

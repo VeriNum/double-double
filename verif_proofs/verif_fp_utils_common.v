@@ -82,13 +82,15 @@ Definition tbool (b : bool) : int :=
 Definition Checks_Imports : funspecs := [ fabs_spec; ldexp_spec ].
 
 Definition Checks_Internal : funspecs :=
-  [ isfinite_double_spec; fast2_mult_check_spec; fast2_sum_check_spec;
+  [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_acc_check_spec;
+    fast2_sum_check_spec;
     two_sum_check_spec; fast2_mult_check2_spec; dw_plus_dw_check_spec;
     dw_mult_fp_check_spec; dw_mult_dw_check_spec; dw_plus_fp_check_spec ].
 
 (* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
 Definition Checks_Exports : funspecs :=
   [ two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
+    fast2_mult_acc_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
     dw_mult_dw_check_spec ].
 

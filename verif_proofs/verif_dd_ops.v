@@ -289,7 +289,30 @@ forward_if Post_if.
   assert_PROP (Fast2Mult_cond a b) as HFC by entailer!.
   forward_call (st, a, b).
   entailer!!.
-  apply Fast2Mult_accuracy_from_safety, HFC.
+  pose proof (Fast2Mult_correct_from_cond a b HFC) as [Heq Hdw].
+  split; [ apply Fast2Mult_accuracy_from_safety, HFC | split; assumption ].
+Qed.
+
+Lemma body_fast_2mult_acc_guarded: semax_body Vprog Gprog f_fast_2mult_acc_guarded fast_2mult_acc_guarded_spec.
+Proof.
+start_function.
+forward_call (a,b).
+Intros vret_fin.
+set (Post_if :=
+  PROP (Fast2Mult_cond_acc a b)
+  LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
+  SEP (data_at_ Tsh dword st)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP (Fast2Mult_cond_acc a b) as HFC by entailer!.
+  forward_call (st, a, b).
+  entailer!!.
+  apply Fast2Mult_accuracy_from_cond_acc, HFC.
 Qed.
 
 Lemma body_dw_plus_fp_guarded :
