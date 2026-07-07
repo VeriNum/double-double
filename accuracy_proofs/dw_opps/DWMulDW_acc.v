@@ -1088,19 +1088,39 @@ all: try exact valid_fexp_inst.
 all: try apply aux_format_quarter_Omega.
 Qed.
 
+(* The weakened DWTimesDW_cond bounds the real product by /2*Omega; since
+   /2*Omega is representable (aux_format_half_Omega), the rounded product stays
+   <= /2*Omega.  Same structure as aux_factor_round_bnd, larger representable
+   bound. *)
+Lemma aux_round_half_bnd (a b : ftype t) :
+  is_finite (BMULT a b) = true ->
+  Rabs (FT2R a * FT2R b) <= /2 * Omega ->
+  Rabs (FT2R (BMULT a b)) <= /2 * Omega.
+Proof.
+move => Hfin Hp.
+rewrite -BMULT_round_correct; [| exact Hfin].
+apply abs_round_le_generic.
+all: try exact Hp.
+all: try apply valid_rnd_N.
+all: try exact valid_fexp_inst.
+all: try apply aux_format_half_Omega.
+Qed.
+
 (* MAIN: the closing Fast2Sum of DWTimesDW3 stays finite under the cond. *)
 Lemma DWTimesDW3_fst_finite (xh xl yh yl : ftype t) :
-  (3 <= fprec t)%Z ->
+  (4 <= fprec t)%Z ->
   DWTimesDW_cond xh xl yh yl ->
   is_finite (fst (DWTimesDW3 xh xl yh yl)) = true.
 Proof.
-intros Hp3 (Hfxh & Hfxl & Hfyh & Hfyl & Hdwx & Hdwy & Huf & Hxh4 & Hyh4).
-have Hxhy4 : Rabs (FT2R xh * FT2R yh) <= /4 * Omega
-  by (apply aux_factor_prod; [exact Hxh4 | exact Hyh4]).
-have Hfmul : is_finite (BMULT xh yh) = true
-  by (apply aux_factor_finite; [exact Hfxh | exact Hfyh | exact Hxhy4]).
-have Hprod : Rabs (FT2R (BMULT xh yh)) <= /4 * Omega
-  by (apply aux_factor_round_bnd; [exact Hfmul | exact Hxhy4]).
+intros Hp4 (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hxhy4).
+have Hp3 : (3 <= fprec t)%Z by lia.
+have Huf := proj2 Hf2m.
+have Hfmul : is_finite (BMULT xh yh) = true by exact (proj1 Hf2m).
+have [Hfxh Hfyh] := BMULT_finite_e t xh yh Hfmul.
+(* the cond now bounds the real product by /2*Omega; the rounded product then
+   stays <= /2*Omega (representable bound, RN monotone) *)
+have Hprod : Rabs (FT2R (BMULT xh yh)) <= /2 * Omega
+  by (apply aux_round_half_bnd; [exact Hfmul | exact Hxhy4]).
 have HΩ : 0 < Omega by apply bpow_gt_0.
 have HE0 : 0 <= bpow radix2 (femax t - fprec t) by apply bpow_ge_0.
 have HEq : bpow radix2 (femax t - fprec t) <= /4 * Omega.
@@ -1109,18 +1129,18 @@ have HEq : bpow radix2 (femax t - fprec t) <= /4 * Omega.
       by rewrite -bpow_plus; f_equal; lia.
     have -> : bpow radix2 2 = 4%R by reflexivity. lra. }
   apply bpow_le; pose proof fprec_lb t; lia. }
-(* tighter: bpow(femax-fprec) = u*Omega <= Omega/8 *)
+(* tighter: bpow(femax-fprec) = u*Omega <= Omega/16 (fprec >= 4) *)
 have Hbu : bpow radix2 (femax t - fprec t) = bpow radix2 (- fprec t) * Omega
   by (rewrite -bpow_plus; f_equal; lia).
-have Hu8 : bpow radix2 (- fprec t) <= /8.
-{ have -> : (/8 = bpow radix2 (-3))%R by (simpl; lra).
+have Hu16 : bpow radix2 (- fprec t) <= /16.
+{ have -> : (/16 = bpow radix2 (-4))%R by (simpl; lra).
   apply bpow_le; lia. }
-have HE8 : bpow radix2 (femax t - fprec t) <= /8 * Omega.
+have HE16 : bpow radix2 (femax t - fprec t) <= /16 * Omega.
 { rewrite Hbu. have := bpow_ge_0 radix2 (- fprec t). nra. }
-(* ch = BMULT xh yh : finite, bounded by Omega/4 *)
+(* ch = BMULT xh yh : finite, bounded by Omega/2 *)
 have Hfch : is_finite (Fast2Mult_mul xh yh) = true.
 { unfold Fast2Mult_mul, Fast2Mult, fst. exact Hfmul. }
-have Hch4 : Rabs (FT2R (Fast2Mult_mul xh yh)) <= /4 * Omega.
+have Hch4 : Rabs (FT2R (Fast2Mult_mul xh yh)) <= /2 * Omega.
 { unfold Fast2Mult_mul, Fast2Mult, fst. exact Hprod. }
 have Huf' : FT2R xh * FT2R yh <> 0 ->
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh).
@@ -1208,7 +1228,9 @@ change (is_finite (BPLUS (Fast2Mult_mul xh yh)
                            (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true).
 apply (no_overflow_sum_is_finite t _ _ Hfch Hfcl3).
 unfold Bplus_no_overflow.
-have H4 : 4 * bpow radix2 (femax t - fprec t) <= /2 * Omega by (rewrite Hbu; nra).
+(* fprec >= 4 gives 4*bpow(femax-fprec) = 4*2^-fprec*Omega <= /4*Omega, so with
+   ch <= /2*Omega the sum stays <= 3/4*Omega and the closing round is < Omega. *)
+have H4 : 4 * bpow radix2 (femax t - fprec t) <= /4 * Omega by (rewrite Hbu; nra).
 have Hsum : Rabs (FT2R (Fast2Mult_mul xh yh)
                   + FT2R (BPLUS (Fast2Mult_err xh yh)
                                 (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
@@ -1225,20 +1247,20 @@ Qed.
 (* Finiteness of the snd output from the cond, via the closing Fast2Sum
    ulp-ordering precondition (ch = 0 when xh*yh = 0, else aux_cl3_le_ch). *)
 Lemma DWTimesDW3_snd_finite (xh xl yh yl : ftype t) :
-  (3 <= fprec t)%Z ->
+  (4 <= fprec t)%Z ->
   DWTimesDW_cond xh xl yh yl ->
   is_finite (snd (DWTimesDW3 xh xl yh yl)) = true.
 Proof.
-move => Hp3 Hcond.
+move => Hp4 Hcond.
+have Hp3 : (3 <= fprec t)%Z by lia.
 have Hfp : is_finite (BPLUS (Fast2Mult_mul xh yh)
                             (BPLUS (Fast2Mult_err xh yh)
                                    (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true
-  by exact (DWTimesDW3_fst_finite xh xl yh yl Hp3 Hcond).
+  by exact (DWTimesDW3_fst_finite xh xl yh yl Hp4 Hcond).
 destruct (BPLUS_finite_e t _ _ Hfp) as [Hfch Hfcl3].
-move: Hcond => [Hfxh [Hfxl [Hfyh [Hfyl [Hdwx [Hdwy [Huf [Hxh4 Hyh4]]]]]]]].
-have Hfmul : is_finite (BMULT xh yh) = true
-  by (apply aux_factor_finite;
-      [ exact Hfxh | exact Hfyh | apply aux_factor_prod; [exact Hxh4 | exact Hyh4] ]).
+move: Hcond => [Hfxl [Hfyl [Hdwx [Hdwy [Hf2m Hxhy4]]]]].
+have Huf := proj2 Hf2m.
+have Hfmul : is_finite (BMULT xh yh) = true by exact (proj1 Hf2m).
 have Hord : ulp (FT2R (BPLUS (Fast2Mult_err xh yh)
                              (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
          <= ulp (FT2R (Fast2Mult_mul xh yh))
@@ -1485,10 +1507,12 @@ Corollary DWTimesDW_accuracy_from_cond :
 Proof.
 intros Hp5 Hcond.
 have Hp3 : (3 <= fprec t)%Z by lia.
+have Hp4 : (4 <= fprec t)%Z by lia.
 have Hfp : is_finite_p (DWTimesDW3 xh xl yh yl).
-{ split; [ exact (DWTimesDW3_fst_finite xh xl yh yl Hp3 Hcond)
-         | exact (DWTimesDW3_snd_finite xh xl yh yl Hp3 Hcond) ]. }
-move: Hcond => [Hfxh [Hfxl [Hfyh [Hfyl [Hdwx [Hdwy [Huf [Hxh4 Hyh4]]]]]]]].
+{ split; [ exact (DWTimesDW3_fst_finite xh xl yh yl Hp4 Hcond)
+         | exact (DWTimesDW3_snd_finite xh xl yh yl Hp4 Hcond) ]. }
+move: Hcond => [Hfxl [Hfyl [Hdwx [Hdwy [Hf2m Hxhy4]]]]].
+have Huf := proj2 Hf2m.
 exact (DWTimesDW_relerr_bound Hdwx Hdwy Hfp Hp5 Huf).
 Qed.
 

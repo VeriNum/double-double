@@ -474,13 +474,46 @@ apply Rabs_le; split.
   rewrite Hrg Hr in Hle. lra.
 Qed.
 
+(* From the real product bound |a*b| <= Omega/4 and finiteness of BMULT a b,
+   the rounded product |round(a*b)| <= Omega/4.  This is the fragment the new
+   DWTimesFP_cond leaves us to re-derive: the cond now supplies the real product
+   bound directly (formerly obtained from the two factor bounds via
+   sqrt_cond_facts). *)
+Lemma aux_round_prod_bnd (a b : ftype t) :
+  is_finite (BMULT a b) = true ->
+  Rabs (FT2R a * FT2R b) <= /2 * Omega ->
+  Rabs (FT2R (BMULT a b)) <= /2 * Omega.
+Proof.
+move => Hfin Hreal.
+have HΩ : 0 < Omega by apply bpow_gt_0.
+have Hfmt : generic_format radix2 fexp (/2 * Omega) by apply aux_format_half_Omega.
+have Hr : round radix2 fexp (Znearest choice) (FT2R a * FT2R b) = FT2R (BMULT a b)
+  by rewrite BMULT_round_correct.
+have HFhn : generic_format radix2 fexp (-(/2 * Omega)) by apply generic_format_opp.
+have Hb2 : - (/2 * Omega) <= FT2R a * FT2R b <= /2 * Omega
+  by (apply Rabs_le_inv; exact Hreal).
+apply Rabs_le; split.
+- have Hlo : round radix2 fexp (Znearest choice) (-(/2 * Omega))
+          <= round radix2 fexp (Znearest choice) (FT2R a * FT2R b).
+  { apply round_le; first [ apply FLT_exp_valid; apply fprec_gt_0 | apply valid_rnd_N | lra ]. }
+  have Hrgo : round radix2 fexp (Znearest choice) (-(/2 * Omega)) = -(/2 * Omega).
+  { apply round_generic; first [ apply valid_rnd_N | apply HFhn ]. }
+  rewrite Hrgo Hr in Hlo. lra.
+- have Hhi : round radix2 fexp (Znearest choice) (FT2R a * FT2R b)
+          <= round radix2 fexp (Znearest choice) (/2 * Omega).
+  { apply round_le; first [ apply FLT_exp_valid; apply fprec_gt_0 | apply valid_rnd_N | lra ]. }
+  have Hrgh : round radix2 fexp (Znearest choice) (/2 * Omega) = /2 * Omega.
+  { apply round_generic; first [ apply valid_rnd_N | apply Hfmt ]. }
+  rewrite Hrgh Hr in Hhi. lra.
+Qed.
+
 (* The low-word product |xl*y| is small: in the normal range the relative ulp
    bound gives |xl| <= 2^-p |xh| so |xl*y| <= 2^-p |xh*y|; in the subnormal
    range |xl| <= 1/2 bpow emin is itself tiny.  Either way |xl*y| <= Omega/4. *)
 Lemma aux_xly_bnd (xh xl y : ftype t) :
   double_word_prop xh xl ->
   Rabs (FT2R xh * FT2R y) <= /2 * Omega ->
-  Rabs (FT2R y) <= /4 * Omega ->
+  Rabs (FT2R y) <= Omega ->
   Rabs (FT2R xl * FT2R y) <= /2 * bpow radix2 (femax t - fprec t).
 Proof.
 move => Hdw Hxhy Hy.
@@ -511,9 +544,8 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs (FT2R xh)))
             | eapply Rlt_trans; [exact Hsub | apply bpow_lt; lia] ]. }
   have Hxl : Rabs (FT2R xl) <= /2 * bpow radix2 emin by rewrite -Hulpe; exact Hdwu.
   have HEs0 : 0 <= bpow radix2 emin by apply bpow_ge_0.
-  have HEsO : bpow radix2 emin * Omega <= 4 * bpow radix2 (femax t - fprec t).
-  { have -> : (4 = bpow radix2 2)%R by reflexivity.
-    rewrite -!bpow_plus. apply bpow_le.
+  have HEsO : bpow radix2 emin * Omega <= bpow radix2 (femax t - fprec t).
+  { rewrite -!bpow_plus. apply bpow_le.
     unfold common.emin, SpecFloat.emin. pose proof femax_lb t; pose proof fprec_lb t; lia. }
   nra.
 Qed.
@@ -622,9 +654,14 @@ Lemma DWTimesFP3_fst_finite (xh xl y : ftype t) :
   DWTimesFP_cond xh xl y ->
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
 Proof.
-intros (Hfxh & Hfxl & Hfy & Hdwp & Huf & Hxhs & Hys).
-destruct (sqrt_cond_facts xh y Hfxh Hfy Hxhs Hys)
-  as (Hxh4 & Hy4 & Hreal & Hfmul & Hprod).
+intros (Hfxl & Hdwp & Hf2m & Hreal).
+have Huf := proj2 Hf2m.
+have Hfmul : is_finite (BMULT xh y) = true by exact (proj1 Hf2m).
+have [Hfxh Hfy] := BMULT_finite_e t xh y Hfmul.
+have HyΩ : Rabs (FT2R y) <= Omega
+  by (apply Rlt_le; exact (is_finite_no_overflow t y Hfy)).
+have Hprod : Rabs (FT2R (BMULT xh y)) <= /2 * Omega
+  by (apply aux_round_prod_bnd; [exact Hfmul | exact Hreal]).
 have HΩ : 0 < Omega by apply bpow_gt_0.
 have HE0 : 0 <= bpow radix2 (femax t - fprec t) by apply bpow_ge_0.
 have HEq : bpow radix2 (femax t - fprec t) <= /4 * Omega.
@@ -633,10 +670,10 @@ have HEq : bpow radix2 (femax t - fprec t) <= /4 * Omega.
       by rewrite -bpow_plus; f_equal; lia.
     have -> : bpow radix2 2 = 4%R by reflexivity. lra. }
   apply bpow_le; pose proof fprec_lb t; lia. }
-(* ch = BMULT xh y : finite, bounded by Omega/4 *)
+(* ch = BMULT xh y : finite, bounded by Omega/2 *)
 have Hfch : is_finite (Fast2Mult_mul xh y) = true.
 { unfold Fast2Mult_mul, Fast2Mult, fst. exact Hfmul. }
-have Hch4 : Rabs (FT2R (Fast2Mult_mul xh y)) <= /4 * Omega.
+have Hch4 : Rabs (FT2R (Fast2Mult_mul xh y)) <= /2 * Omega.
 { unfold Fast2Mult_mul, Fast2Mult, fst. exact Hprod. }
 (* underflow side-condition shared by Fast2Mult lemmas *)
 have Huf' : FT2R xh * FT2R y <> 0 ->
@@ -648,11 +685,10 @@ have Hfcl1 : is_finite (Fast2Mult_err xh y) = true.
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * ulp (FT2R xh * FT2R y).
 { apply Fast2Mult_accuracy_norm; exact Hfmul. }
 (* product real bound + low-product bound + cl1 in absolute terms *)
-have Hxhy : Rabs (FT2R xh * FT2R y) <= /2 * Omega.
-{ apply (aux_xhy_bnd xh y); [exact Hfmul | exact Hprod]. }
+have Hxhy : Rabs (FT2R xh * FT2R y) <= /2 * Omega by exact Hreal.
 have Hxhy_lt : Rabs (FT2R xh * FT2R y) < Omega by lra.
 have Hxly : Rabs (FT2R xl * FT2R y) <= /2 * bpow radix2 (femax t - fprec t).
-{ apply (aux_xly_bnd xh xl y); [exact Hdwp | exact Hxhy | exact Hy4]. }
+{ apply (aux_xly_bnd xh xl y); [exact Hdwp | exact Hxhy | exact HyΩ]. }
 have Hcl1b : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * bpow radix2 (femax t - fprec t).
 { eapply Rle_trans; [exact Hcl1u|]. apply Rmult_le_compat_l; [lra|].
   apply aux_ulp_real; exact Hxhy_lt. }
@@ -666,19 +702,59 @@ have Hfcl3 : is_finite (BFMA xl y (Fast2Mult_err xh y)) = true.
 { apply no_overflow_fma_is_finite => //.
   eapply Rle_lt_trans; [apply aux_round_ub|].
   have Hu := aux_ulp_real _ Hv_lt. lra. }
-(* |cl3| <= Omega/2 *)
-have Hcl3b : Rabs (FT2R (BFMA xl y (Fast2Mult_err xh y))) <= /2 * Omega.
-{ rewrite -BFMA_round_correct.
-  - eapply Rle_trans; [apply aux_round_ub|].
-    have Hu := aux_ulp_real _ Hv_lt. lra.
-  - exact Hfcl3. }
+(* |cl3| <= bpow(femax-fprec): cl3 = round(v) with |v| <= bpow(femax-fprec),
+   and bpow(femax-fprec) is a representable power of 2, so rounding to nearest
+   cannot exceed it. *)
+have Huv := aux_ulp_real _ Hv_lt.
+have HfmtB : generic_format radix2 fexp (bpow radix2 (femax t - fprec t)).
+{ apply Generic_fmt.generic_format_bpow.
+  unfold SpecFloat.fexp, SpecFloat.emin.
+  apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia. }
+have HfmtBn : generic_format radix2 fexp (-(bpow radix2 (femax t - fprec t)))
+  by apply generic_format_opp.
+have Hcl3b : Rabs (FT2R (BFMA xl y (Fast2Mult_err xh y)))
+          <= bpow radix2 (femax t - fprec t).
+{ rewrite -BFMA_round_correct; [| exact Hfcl3].
+  set (v := FT2R xl * FT2R y + FT2R (Fast2Mult_err xh y)).
+  have Hvb : - (bpow radix2 (femax t - fprec t)) <= v <= bpow radix2 (femax t - fprec t)
+    by (apply Rabs_le_inv; exact Hv).
+  apply Rabs_le; split.
+  - have Hlo : round radix2 fexp (Znearest choice) (-(bpow radix2 (femax t - fprec t)))
+            <= round radix2 fexp (Znearest choice) v.
+    { apply round_le; first [ apply FLT_exp_valid; apply fprec_gt_0 | apply valid_rnd_N | lra ]. }
+    have Hrgo : round radix2 fexp (Znearest choice) (-(bpow radix2 (femax t - fprec t)))
+              = -(bpow radix2 (femax t - fprec t)).
+    { apply round_generic; first [ apply valid_rnd_N | apply HfmtBn ]. }
+    rewrite Hrgo in Hlo. apply Hlo.
+  - have Hhi : round radix2 fexp (Znearest choice) v
+            <= round radix2 fexp (Znearest choice) (bpow radix2 (femax t - fprec t)).
+    { apply round_le; first [ apply FLT_exp_valid; apply fprec_gt_0 | apply valid_rnd_N | lra ]. }
+    have Hrgh : round radix2 fexp (Znearest choice) (bpow radix2 (femax t - fprec t))
+              = bpow radix2 (femax t - fprec t).
+    { apply round_generic; first [ apply valid_rnd_N | apply HfmtB ]. }
+    rewrite Hrgh in Hhi. apply Hhi. }
+(* headroom: bpow(femax-fprec) <= /4 Omega (fprec >= 2), so
+   /2 Omega + 3/2 bpow(femax-fprec) <= 7/8 Omega < Omega *)
+have H4 : bpow radix2 (femax t - fprec t) <= /4 * Omega.
+{ have HB0 : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+  have HeqO : (Omega = bpow radix2 (fprec t) * bpow radix2 (femax t - fprec t))%R
+    by rewrite -bpow_plus; f_equal; lia.
+  have Hge : (bpow radix2 2 = 4)%R by reflexivity.
+  have HF4 : 4 <= bpow radix2 (fprec t)
+    by (rewrite -Hge; apply bpow_le; pose proof fprec_lb t; lia).
+  rewrite HeqO.
+  have Hstep : bpow radix2 (femax t - fprec t)
+             <= /4 * (4 * bpow radix2 (femax t - fprec t)) by lra.
+  eapply Rle_trans; [exact Hstep|].
+  apply Rmult_le_compat_l; [lra|].
+  apply Rmult_le_compat_r; [ apply bpow_ge_0 | exact HF4 ]. }
 (* final: fst (DWTimesFP3) = BPLUS ch cl3, no overflow *)
 change (is_finite (BPLUS (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y))) = true).
 apply (no_overflow_sum_is_finite t _ _ Hfch Hfcl3).
 unfold Bplus_no_overflow.
 eapply Rle_lt_trans; [apply aux_round_ub|].
 have Hsum : Rabs (FT2R (Fast2Mult_mul xh y) + FT2R (BFMA xl y (Fast2Mult_err xh y)))
-         <= /4 * Omega + /2 * Omega.
+         <= /2 * Omega + bpow radix2 (femax t - fprec t).
 { eapply Rle_trans; [apply Rabs_triang|]. lra. }
 have Hsum_lt : Rabs (FT2R (Fast2Mult_mul xh y) + FT2R (BFMA xl y (Fast2Mult_err xh y))) < Omega
   by lra.
@@ -818,9 +894,9 @@ have Hfp : is_finite (BPLUS (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y)
   by exact (DWTimesFP3_fst_finite xh xl y Hcond).
 destruct (BPLUS_finite_e t (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y)) Hfp)
   as [Hfch Hfcl3].
-move: Hcond => [Hfxh [Hfxl [Hfy [Hdwp [Huf [Hxhs Hys]]]]]].
-destruct (sqrt_cond_facts xh y Hfxh Hfy Hxhs Hys)
-  as (Hxh4 & Hy4 & Hreal & Hfmul & Hprod).
+move: Hcond => [Hfxl [Hdwp [Hf2m Hreal]]].
+have Huf := proj2 Hf2m.
+have Hfmul : is_finite (BMULT xh y) = true by exact (proj1 Hf2m).
 have Hord : ulp (FT2R (BFMA xl y (Fast2Mult_err xh y)))
          <= ulp (FT2R (Fast2Mult_mul xh y))
          \/ FT2R (Fast2Mult_mul xh y) = 0.
@@ -1105,7 +1181,8 @@ have Hfp : is_finite_p (DWTimesFP3 xh xl y).
 { split.
   - exact (DWTimesFP3_fst_finite xh xl y Hcond).
   - exact (DWTimesFP3_snd_finite xh xl y Hcond). }
-move: Hcond => [Hfxh [Hfxl [Hfy [Hdwp [Huf [Hxhs Hys]]]]]].
+move: Hcond => [Hfxl [Hdwp [Hf2m Hreal]]].
+have Huf := proj2 Hf2m.
 exact (DWTimesFP_relerr_bound Hdwp Hfp Hp3 Huf).
 Qed.
 

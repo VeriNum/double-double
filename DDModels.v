@@ -200,31 +200,26 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Precondition for DWTimesFP3 (Algorithm 9).  Component-only, mirroring the
-   shape of DWPlusFP_cond:
-     - finiteness of xh, xl, y;
-     - the double-word relation on (xh, xl);
-     - the underflow disjunction (needed for the Fast2Mult error term, not for
-       overflow);
-     - magnitude bounds on the components |xh|, |y|.
-   Because multiplication squares magnitudes (unlike the subadditive addition
-   case), the component threshold is at the *square-root* scale bpow(femax/2-1)
-   = 2^(femax/2-1), so |xh*y| <= 2^(femax-2) = Omega/4.  From this real-product
-   bound both is_finite (BMULT xh y) and |round(xh*y)| <= Omega/4 are DERIVED in
-   the accuracy proofs (via no_overflow_mult_is_finite and round monotonicity),
-   exactly as the addition case derives its intermediate finiteness from
-   |xh|,|y| <= Omega/4.  The Omega/4 product headroom is what keeps the closing
-   Fast2Sum finite. *)
+(* Precondition for DWTimesFP3 (Algorithm 9).  Minimal, non-redundant form:
+     - Fast2Mult_cond xh y : the leading product satisfies the leaf condition
+       (finiteness of BMULT xh y + the underflow disjunction) needed to make the
+       internal Fast2Mult error-free and obtain the relative accuracy bound.  Via
+       BMULT_finite_e this ALSO supplies is_finite xh and is_finite y, so those
+       are not listed separately;
+     - is_finite xl and the double-word relation on (xh, xl);
+     - the product-magnitude bound |xh*y| <= Omega/2 = 2^(femax-1).  This is the
+       overflow headroom that keeps the cross term and the closing Fast2Sum
+       finite (Fast2Mult_cond alone only gives |xh*y| < Omega, under which the
+       closing Fast2Sum can still overflow).  Omega/2 is the largest clean
+       power-of-two that is provably sufficient: at |xh*y| ~ Omega the closing
+       correction (a few ulp) tips RN(ch.s + c3) over Omega.  A caller may
+       establish it from the square-root-scale factor bounds |xh|,|y| <=
+       2^(femax/2-1) (aux_factor_prod gives the stronger |xh*y| <= Omega/4). *)
 Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
-  is_finite xh = true /\
   is_finite xl = true /\
-  is_finite y  = true /\
   double_word_prop xh xl /\
-  (FT2R xh * FT2R y = 0 \/
-   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
-   <= Rabs (FT2R xh * FT2R y)) /\
-  Rabs (FT2R xh) <= bpow Zaux.radix2 (femax t / 2 - 1) /\
-  Rabs (FT2R y)  <= bpow Zaux.radix2 (femax t / 2 - 1).
+  Fast2Mult_cond xh y /\
+  Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
 End DWTimesFPCond.
 
@@ -234,26 +229,22 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Precondition for DWTimesDW3 (Algorithm 12).  The double-word analog of
-   DWTimesFP_cond: it bundles the DWTimesFP_cond constraints on the high
-   product (xh, yh) together with the finiteness and double-word relation of
-   the second operand's parts (yh, yl), mirroring DWPlusDW_cond's high-part-only
-   magnitude bounds.  As in DWTimesFP_cond, the component bounds on |xh|, |yh|
-   are at the square-root scale bpow(femax/2-1), so |xh*yh| <= Omega/4; both
-   is_finite (BMULT xh yh) and |round(xh*yh)| <= Omega/4 are DERIVED from that,
-   leaving the closing Fast2Sum enough headroom to stay finite. *)
+(* Precondition for DWTimesDW3 (Algorithm 12).  Double-word analog of
+   DWTimesFP_cond, in the same minimal form:
+     - Fast2Mult_cond xh yh : leaf condition on the high product (also supplies
+       is_finite xh and is_finite yh via BMULT_finite_e, so those are not listed);
+     - is_finite xl, is_finite yl and the double-word relations on both pairs;
+     - the product-magnitude bound |xh*yh| <= Omega/2 = 2^(femax-1) for overflow
+       headroom (Omega/2 is the largest clean power-of-two that keeps the closing
+       Fast2Sum finite; established by a caller from |xh|,|yh| <= 2^(femax/2-1)
+       via aux_factor_prod, which gives the stronger |xh*yh| <= Omega/4). *)
 Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
-  is_finite xh = true /\
   is_finite xl = true /\
-  is_finite yh = true /\
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  (FT2R xh * FT2R yh = 0 \/
-   bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
-   <= Rabs (FT2R xh * FT2R yh)) /\
-  Rabs (FT2R xh) <= bpow Zaux.radix2 (femax t / 2 - 1) /\
-  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t / 2 - 1).
+  Fast2Mult_cond xh yh /\
+  Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
 End DWTimesDWCond.
 
