@@ -110,6 +110,38 @@ Proof.
   cbv; auto.
 Qed.
 
+(* Upper-bound mirror of no_underflow_real_from_round_mul: a STRICT rounded-product
+   bound transfers to the exact product.  |RN(x*y)| < 2^1023 forces |x*y| < 2^1023
+   = /2 * Omega.  Sound only for the strict inequality: 2^1023 is a representable
+   power of two and RN is monotone/idempotent on it, so |x*y| >= 2^1023 would give
+   |RN(x*y)| >= 2^1023.  Used to lift the C guard `fabs(x->s*y) < ldexp(1.0,1023)`
+   into the cond's product-magnitude bound Rabs (FT2R xh * FT2R y) <= /2 * Omega. *)
+Lemma no_overflow_real_from_round_mul :
+  forall (x y: ftype Tdouble),
+  Rabs ((round radix2 fexp ZnearestE) (FT2R x * FT2R y)) <
+    bpow Zaux.radix2 1023 ->
+  Rabs (FT2R x * FT2R y) <= /2 * bpow Zaux.radix2 (femax Tdouble).
+Proof.
+  intros x y H.
+  set (B := bpow Zaux.radix2 1023) in *.
+  set (rnd_mult := round radix2 fexp ZnearestE (FT2R x * FT2R y)) in *.
+  assert (HB : /2 * bpow Zaux.radix2 (femax Tdouble) = B).
+  { unfold B. change (femax Tdouble) with 1024%Z.
+    replace 1024%Z with (1 + 1023)%Z by lia.
+    rewrite bpow_plus. simpl. lra. }
+  rewrite HB.
+  destruct (Rle_dec (Rabs (FT2R x * FT2R y)) B) as [Hle | Hgt]; auto.
+  exfalso. apply Rnot_le_lt in Hgt.
+  apply Rlt_le in Hgt.
+  apply (round_le radix2 fexp (Znearest common.choice)) in Hgt.
+  rewrite round_NE_abs in Hgt; [ | apply FLT_exp_valid; cbv; auto].
+  replace (round radix2 fexp (Znearest common.choice) B) with B in Hgt.
+  2:{ rewrite round_generic; auto.
+      apply valid_rnd_N.
+      apply generic_format_bpow; cbv; exact finish_compute_le. }
+  unfold rnd_mult in H. unfold B in H, Hgt. lra.
+Qed.
+
 Lemma is_finite_Float_add_l : forall (a b : Floats.float),
   Binary.is_finite (fprec Tdouble) (femax Tdouble) (Float.add a b) = true ->
   Binary.is_finite (fprec Tdouble) (femax Tdouble) a = true.
@@ -326,6 +358,100 @@ Proof.
     simpl in H; try discriminate.
   - apply Req_le. apply Rcompare_Eq_inv in Hcmp. lra.
   - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp. lra.
+Qed.
+
+(* q_prod_val: IEEE-754 double for 2^1023 = Omega/2 = 2^(femax-1) in Tdouble, the
+   *product* magnitude bound used by DWTimesFP_cond / DWTimesDW_cond.  Same
+   construction as q_omega_val / q_sqrt_val but scaling 1.0 by 2^1023.  Used by
+   Float_cmp_Clt_bpow1023 to lift the C runtime check `fabs(z) < ldexp(1.0, 1023)`
+   into the abstract bound Rabs (FT2R z) < bpow radix2 1023 together with
+   is_finite z. *)
+Definition q_prod_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) 1023.
+
+Lemma q_prod_val_finite : is_finite (ftype_of_float q_prod_val) = true.
+Proof.
+  cbv [q_prod_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_prod_val_FT2R :
+  FT2R (ftype_of_float q_prod_val) = bpow Zaux.radix2 1023.
+Proof.
+  cbv [q_prod_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+(* Float.cmp Clt (fabs b) q_prod_val = true → is_finite b = true ∧
+   Rabs (FT2R b) < 2^1023.  Unlike the Cle_bpow* lemmas, finiteness is DERIVED
+   (not assumed): a strict `<` against the finite q_prod_val can only hold when b
+   is finite (a NaN abs compares unordered → false; +Inf → Gt → false).  This is
+   what makes the single prod_bnd check discharge both Fast2Mult's finiteness
+   requirement and the product-magnitude bound. *)
+Lemma Float_cmp_Clt_bpow1023 :
+  forall (b : ftype Tdouble),
+  Float.cmp Clt
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b))
+    q_prod_val = true ->
+  is_finite b = true /\ Rabs (FT2R b) < bpow Zaux.radix2 1023.
+Proof.
+  intros b H.
+  assert (Hfin : is_finite b = true).
+  { rewrite is_finite_Binary.
+    cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+    destruct (float_of_ftype b) eqn:E; simpl in H |- *; auto;
+      cbv [Binary.Babs Binary.Bsign] in H; simpl in H; try discriminate. }
+  split; [exact Hfin|].
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hfin. }
+  assert (Hfq : Binary.is_finite (fprec Tdouble) (femax Tdouble) q_prod_val = true).
+  { generalize q_prod_val_finite. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfb | exact Hfq].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  pose proof q_prod_val_FT2R as Hft2r.
+  assert (Hqval : Binary.B2R 53 1024 q_prod_val = bpow Zaux.radix2 1023).
+  { rewrite <- Hft2r, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  destruct (Rcompare (Rabs (FT2R b)) (Binary.B2R 53 1024 q_prod_val)) eqn:Hcmp;
+    simpl in H; try discriminate.
+  apply Rcompare_Lt_inv in Hcmp. lra.
+Qed.
+
+(* Packaging lemma for the guard: the single strict product check
+   `fabs(x->s * y) < ldexp(1.0, 1023)` establishes BOTH the Fast2Mult finiteness
+   requirement (is_finite (BMULT a b)) and the cond's product-magnitude bound
+   (Rabs (FT2R a * FT2R b) <= /2 * Omega).  Combines Float_cmp_Clt_bpow1023 (which
+   also derives z finite) with no_overflow_real_from_round_mul.  This is the
+   product-form replacement for sqrt_cond_facts (which derived the same two facts
+   from the old per-factor bounds). *)
+Lemma prod_bnd_facts :
+  forall (a b : ftype Tdouble),
+  Float.cmp Clt
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
+       (Float.mul (float_of_ftype a) (float_of_ftype b)))
+    q_prod_val = true ->
+  is_finite (BMULT a b) = true /\
+  Rabs (FT2R a * FT2R b) <= /2 * bpow Zaux.radix2 (femax Tdouble).
+Proof.
+  intros a b H.
+  assert (Hbm : ftype_of_float (Float.mul (float_of_ftype a) (float_of_ftype b))
+                = BMULT a b).
+  { reflexivity. }
+  destruct (Float_cmp_Clt_bpow1023 (BMULT a b)) as [Hfin Hlt].
+  { rewrite <- Hbm. rewrite float_of_ftype_of_float. exact H. }
+  split; [exact Hfin|].
+  rewrite <- (BMULT_round_correct Tdouble a b Hfin) in Hlt.
+  apply no_overflow_real_from_round_mul; exact Hlt.
 Qed.
 
 (* Float.cmp Ceq (Float.add a b) a = true → FT2R a = round(FT2R a + FT2R b),
