@@ -4,6 +4,7 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 
 (* Local-matching helpers (copied from verif_fp_utils_dw_mult_fp_check): a stored
    comparison temp is `Vint (Int.repr (Z.b2z c))`, while the forward_if invariant
@@ -458,8 +459,19 @@ Proof.
                                                          bpow Zaux.radix2 (femax Tdouble / 2 - 1)).
                                                { apply Float_cmp_Cle_bpow511; [exact Hfyh|].
                                                  unfold byh in Hbyht; exact Hbyht. }
-                                               unfold DDModels.DWTimesDW_cond.
+                                               (* BMULT (fst xh) (fst yh) is finite from the
+                                                  factor bounds (no overflow); this is the new
+                                                  finiteness half of Fast2Mult_cond (fst xh) (fst yh). *)
+                                               destruct (sqrt_cond_facts (fst xh) (fst yh)
+                                                           Hfxh Hfyh Hxhb Hyhb)
+                                                 as (_ & _ & _ & Hbmul_fin & _).
+                                               unfold DDModels.DWTimesDW_cond, DDModels.Fast2Mult_cond.
                                                repeat (split; try assumption).
+                                               (* the product bound |xh*yh| <= Omega/4 is the new
+                                                  final conjunct; derive it from the factor bounds. *)
+                                               2:{ eapply Rle_trans;
+                                                     [ apply aux_factor_prod; [exact Hxhb | exact Hyhb] | ].
+                                                   apply Rmult_le_compat_r; [ apply bpow_ge_0 | lra ]. }
                                                (* remaining goal: the zero-or-above-threshold disjunction *)
                                                destruct (Hb_ms Hbmst) as [Hpx | [Hpy | Hclt]].
                                                ------ (*px : x->s = 0 *)

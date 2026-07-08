@@ -5,8 +5,8 @@
    check functions) into a Verified Software Unit.  Imports fabs / ldexp (libm);
    exports the seven checks consumed by the ops VSU.  dw_mult_dw_check is proven
    in verif_fp_utils_dw_mult_dw_check; dw_plus_fp_check in
-   verif_fp_utils_dw_plus_fp_check.  One check body (dw_mult_fp_check) has no
-   proof in the repo, so its SF obligation is kept open (Admitted). *)
+   verif_fp_utils_dw_plus_fp_check; dw_mult_fp_check in
+   verif_fp_utils_dw_mult_fp_check. *)
 
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
@@ -27,12 +27,8 @@ Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_check2.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_mult_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_check.
+Require Import DD.verif_proofs.verif_fp_utils_dw_mult_fp_check.
 Require Import DD.verif_proofs.vsu.VSU_tactics.
-
-(* Kept-open check body (no proof exists in the repo). *)
-Lemma body_dw_mult_fp_check :
-  semax_body Vprog Gprog f_dw_mult_fp_check dw_mult_fp_check_spec.
-Proof. Admitted.
 
 Definition ChecksVSU: @VSU NullExtension.Espec
         nil Checks_Imports ltac:(QPprog prog) Checks_Exports emp.

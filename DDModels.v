@@ -273,7 +273,14 @@ Definition DWDivFP_cond (xh xl y : ftype t) : Prop :=
   double_word_prop xh xl /\
   bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh / FT2R y) /\
   Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
-  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2).
+  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
+  (* Product-node underflow bound: |xh| bounded below so that the Fast2Mult
+     product th*y ~ xh stays above the TwoProd-exactness threshold emin+2p-1.
+     Unlike the quotient bound, this reaches |xh| itself (a normal quotient can
+     coexist with a subnormal product when y is tiny), and it is a genuine
+     caller-checkable input condition.  The extra binade over emin+2p-1 absorbs
+     the (1-u) factor in |th*y| >= |xh|(1-u) from thy_residual. *)
+  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 
 End DWDivFPCond.
 

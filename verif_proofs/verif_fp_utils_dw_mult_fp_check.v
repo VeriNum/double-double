@@ -4,6 +4,7 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 
 (* Discharge the residual `Vint (if b then Int.one else Int.zero) =
    Vint (Int.repr (Z.b2z c))` LOCAL-matching goals that entailer! spins off
@@ -398,8 +399,19 @@ Proof.
                                               bpow Zaux.radix2 (femax Tdouble / 2 - 1)).
                                     { apply Float_cmp_Cle_bpow511; [exact Hfy|].
                                       unfold byh in Hbyht; exact Hbyht. }
-                                    unfold DDModels.DWTimesFP_cond.
+                                    (* BMULT (fst xh) y is finite from the factor bounds
+                                       (no overflow); the finiteness half of the new
+                                       Fast2Mult_cond (fst xh) y conjunct. *)
+                                    destruct (sqrt_cond_facts (fst xh) y
+                                                Hfxh Hfy Hxhb Hyb)
+                                      as (_ & _ & _ & Hbmul_fin & _).
+                                    unfold DDModels.DWTimesFP_cond, DDModels.Fast2Mult_cond.
                                     repeat (split; try assumption).
+                                    (* the product bound |xh*y| <= Omega/2 is the new
+                                       final conjunct; derive it from the factor bounds. *)
+                                    2:{ eapply Rle_trans;
+                                          [ apply aux_factor_prod; [exact Hxhb | exact Hyb] | ].
+                                        apply Rmult_le_compat_r; [ apply bpow_ge_0 | lra ]. }
                                     (* remaining goal: the disjunction *)
                                     destruct (Hb_ms Hbmst) as [Hpx | [Hpy | Hclt]].
                                     ++++++ (* px : xh = 0 *)
