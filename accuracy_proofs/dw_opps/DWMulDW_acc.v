@@ -1276,6 +1276,121 @@ apply (is_finite_FastSum_ulp (Fast2Mult_mul xh yh)
                 (BFMA xl yh (BFMA xh yl (BMULT xl yl))))); [exact Hord | exact Hfp].
 Qed.
 
+(* The output pair of DWTimesDW3 (Algorithm 12) is itself a double word.  The
+   closing step is Fast2Sum ch cl3 (ch = Fast2Mult_mul xh yh,
+   cl3 = BPLUS cl1 (BFMA xl yh (BFMA xh yl (BMULT xl yl)))), so the double-word
+   property reduces to Fast2Sum_is_DW.  Its two obligations both hold under
+   DWTimesDW_cond:
+     - is_finite (BPLUS ch cl3)   <- DWTimesDW3_fst_finite;
+     - |cl3| <= |ch|              <- aux_cl3_le_ch on the normal leg; on the
+       cond's underflow leg (xh*yh = 0) ch = 0 and every cross-product term of
+       cl3 vanishes (via the double_word relations), so cl3 = 0 and the ordering
+       is 0 <= 0. *)
+(* We first prove it from the *basic* precondition — the two Fast2Sum
+   obligations on the closing arguments (finiteness of the sum and the
+   magnitude ordering |cl3| <= |ch|) — and then show the operation cond
+   supplies exactly those two obligations. *)
+
+(* (1) result from the basic precondition (the closing Fast2Sum's own
+   requirements): this is Fast2Sum_is_DW at the DWTimesDW3 closing site. *)
+Lemma DWTimesDW3_double_word_from_pre (xh xl yh yl : ftype t) :
+  is_finite (BPLUS (Fast2Mult_mul xh yh)
+                   (BPLUS (Fast2Mult_err xh yh)
+                          (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true ->
+  Rabs (FT2R (BPLUS (Fast2Mult_err xh yh)
+                    (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
+    <= Rabs (FT2R (Fast2Mult_mul xh yh)) ->
+  double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
+Proof.
+move => Hfp Hord.
+exact (Fast2Sum_is_DW (Fast2Mult_mul xh yh)
+         (BPLUS (Fast2Mult_err xh yh)
+                (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) Hfp Hord).
+Qed.
+
+(* (2) the operation cond supplies the basic precondition:
+     - finiteness              <- DWTimesDW3_fst_finite;
+     - the ordering |cl3|<=|ch| <- aux_cl3_le_ch on the normal leg; on the
+       cond's underflow leg (xh*yh = 0) ch = 0 and every cross-product term of
+       cl3 vanishes (via the double_word relations), so cl3 = 0. *)
+Lemma DWTimesDW3_double_word_pre_of_cond (xh xl yh yl : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWTimesDW_cond xh xl yh yl ->
+  is_finite (BPLUS (Fast2Mult_mul xh yh)
+                   (BPLUS (Fast2Mult_err xh yh)
+                          (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true
+  /\ Rabs (FT2R (BPLUS (Fast2Mult_err xh yh)
+                       (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
+       <= Rabs (FT2R (Fast2Mult_mul xh yh)).
+Proof.
+move => Hp4 Hcond.
+have Hp3 : (3 <= fprec t)%Z by lia.
+have Hfp : is_finite (BPLUS (Fast2Mult_mul xh yh)
+                            (BPLUS (Fast2Mult_err xh yh)
+                                   (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true
+  by exact (DWTimesDW3_fst_finite xh xl yh yl Hp4 Hcond).
+destruct (BPLUS_finite_e t _ _ Hfp) as [Hfch Hfcl3].
+move: Hcond => [Hfxl [Hfyl [Hdwx [Hdwy [Hf2m Hxhy4]]]]].
+have Huf := proj2 Hf2m.
+have Hfmul : is_finite (BMULT xh yh) = true by exact (proj1 Hf2m).
+split; [ exact Hfp | ].
+destruct Huf as [Hxy0 | Hthresh].
+- (* underflow leg: ch = 0 and cl3 = 0 *)
+  have Hch0 : FT2R (Fast2Mult_mul xh yh) = 0.
+  { unfold Fast2Mult_mul, Fast2Mult, fst.
+    rewrite -BMULT_round_correct // Hxy0 round_0 //. }
+  have Huf' : FT2R xh * FT2R yh <> 0 ->
+    bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh)
+    by (move => Hne; exfalso; exact (Hne Hxy0)).
+  have Herr0 : FT2R (Fast2Mult_err xh yh) = 0.
+  { have Heq := Fast2MultModel_correct xh yh Hfmul Huf'.
+    rewrite Heq Hxy0 Hch0; ring. }
+  (* all three cross products vanish in the underflow leg *)
+  have Hzeros : FT2R xl * FT2R yl = 0 /\ FT2R xh * FT2R yl = 0
+             /\ FT2R xl * FT2R yh = 0.
+  { destruct (Rmult_integral _ _ Hxy0) as [Hxh0 | Hyh0].
+    - have Hxl0 : FT2R xl = 0 by exact (double_word_0 xh xl Hdwx Hxh0).
+      repeat split; rewrite ?Hxl0 ?Hxh0; ring.
+    - have Hyl0 : FT2R yl = 0 by exact (double_word_0 yh yl Hdwy Hyh0).
+      repeat split; rewrite ?Hyl0 ?Hyh0; ring. }
+  destruct Hzeros as [Hxlyl0 [Hxhyl0 Hxlyh0]].
+  (* finiteness of the nested product/accumulation nodes *)
+  destruct (BPLUS_finite_e t (Fast2Mult_err xh yh)
+              (BFMA xl yh (BFMA xh yl (BMULT xl yl))) Hfcl3) as [Hferr Hfcl2].
+  destruct (BFMA_finite_e t xl yh (BFMA xh yl (BMULT xl yl)) Hfcl2)
+    as [_ [_ Hftl1]].
+  destruct (BFMA_finite_e t xh yl (BMULT xl yl) Hftl1) as [_ [_ Hftl0]].
+  have Htl0_0 : FT2R (BMULT xl yl) = 0
+    by (rewrite -(BMULT_round_correct t xl yl Hftl0) Hxlyl0 round_0 //).
+  have Htl1_0 : FT2R (BFMA xh yl (BMULT xl yl)) = 0
+    by (rewrite -(BFMA_round_correct t xh yl (BMULT xl yl) Hftl1)
+                Hxhyl0 Htl0_0 Rplus_0_r round_0 //).
+  have Hcl2_0 : FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl))) = 0
+    by (rewrite -(BFMA_round_correct t xl yh (BFMA xh yl (BMULT xl yl)) Hfcl2)
+                Hxlyh0 Htl1_0 Rplus_0_r round_0 //).
+  have Hcl3_0 : FT2R (BPLUS (Fast2Mult_err xh yh)
+                           (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) = 0
+    by (rewrite -(BPLUS_round_correct t (Fast2Mult_err xh yh)
+                    (BFMA xl yh (BFMA xh yl (BMULT xl yl))) Hfcl3)
+                Herr0 Hcl2_0 Rplus_0_r round_0 //).
+  rewrite Hch0 Hcl3_0 Rabs_R0; apply Rle_refl.
+- (* normal leg: the closing-Fast2Sum ordering already proven for accuracy *)
+  apply aux_cl3_le_ch;
+    [ exact Hp3 | exact Hdwx | exact Hdwy | exact Hfmul | exact Hfcl3
+    | exact Hthresh ].
+Qed.
+
+(* (3) cond-level corollary used by the VST guarded spec. *)
+Lemma DWTimesDW3_double_word (xh xl yh yl : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWTimesDW_cond xh xl yh yl ->
+  double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
+Proof.
+move => Hp4 Hcond.
+have [Hfp Hord] := DWTimesDW3_double_word_pre_of_cond xh xl yh yl Hp4 Hcond.
+exact (DWTimesDW3_double_word_from_pre xh xl yh yl Hfp Hord).
+Qed.
+
 End DWTimesDW_Finite.
 
 
