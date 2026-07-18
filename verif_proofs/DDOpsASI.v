@@ -251,7 +251,9 @@ Definition dw_mult_fp9_guarded_spec :=
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
     PROP((relative_error_DWTimesFP (fst xh) (snd xh) y
-           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R
+         /\ double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
+                             (snd (DWTimesFP3 (fst xh) (snd xh) y)))
     RETURN()
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
@@ -269,7 +271,10 @@ Definition dw_mult_dw12_guarded_spec :=
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
     PROP((relative_error_DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)
-           <= 8 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+           <= 8 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R
+         /\ double_word_prop
+              (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
+              (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;

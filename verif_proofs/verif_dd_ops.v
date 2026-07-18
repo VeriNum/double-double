@@ -397,6 +397,9 @@ forward_if Post_if.
   pose proof
     (@DWTimesFP_accuracy_from_cond _ Tdouble _ (fst xh) (snd xh) y Hfp H0)
     as Hacc.
+  assert (Hdw : double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
+                                 (snd (DWTimesFP3 (fst xh) (snd xh) y)))
+    by exact (@DWTimesFP3_double_word _ Tdouble _ (fst xh) (snd xh) y H0).
   entailer!!.
 Qed.
 
@@ -428,6 +431,13 @@ forward_if Post_if.
     (@DWTimesDW_accuracy_from_cond _ Tdouble _
         (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
     as Hacc.
+  assert (Hp4 : (4 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  assert (Hdw : double_word_prop
+                  (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
+                  (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
+    by exact (@DWTimesDW3_double_word _ Tdouble _
+                (fst xh) (snd xh) (fst yh) (snd yh) Hp4 HFC).
   entailer!!.
 Qed.
 
