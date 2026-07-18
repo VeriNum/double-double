@@ -552,6 +552,37 @@ Qed.
 
 End BridgeDWDivFP.
 
+Section DWDivFP3_DoubleWord.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(* The result of DWDivFP3 is a double word.  Pure structural consequence of the
+   closing Fast2Sum (Fast2Sum_is_DW): it needs ONLY (a) finiteness of the sum
+   node BPLUS th tl and (b) the magnitude ordering |tl| <= |th|.  No FLX/FLT
+   bridge, no strong-underflow node discipline, no accuracy bound. *)
+Lemma DWDivFP3_is_DW (xh xl y : ftype t) :
+  is_finite (BPLUS (BDIV xh y)
+              (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                           (Fast2Mult_err (BDIV xh y) y)) xl) y)) = true ->
+  Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                          (Fast2Mult_err (BDIV xh y) y)) xl) y))
+    <= Rabs (FT2R (BDIV xh y)) ->
+  double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
+Proof.
+move => Hfin Hord.
+have Heqr : DWDivFP3 xh xl y
+          = Fast2Sum (BDIV xh y)
+              (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                           (Fast2Mult_err (BDIV xh y) y)) xl) y)
+  by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
+rewrite Heqr.
+have HDW := Fast2Sum_is_DW (BDIV xh y)
+             (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                          (Fast2Mult_err (BDIV xh y) y)) xl) y) Hfin Hord.
+by move: HDW; rewrite /double_word /double_word_prop /Fast2Sum_sum /Fast2Sum_err.
+Qed.
+
+End DWDivFP3_DoubleWord.
+
 Section FiniteAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -878,9 +909,11 @@ Lemma DWDivFP3_cascade (xh xl y : ftype t) :
   is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) = true /\
   Rabs (FT2R (BDIV xh y)) <= / 2 * Omega /\
   Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) <= / 2 * Omega /\
-  Rabs (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) < Omega.
+  Rabs (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) < Omega
+  /\ Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                       (Fast2Mult_err (BDIV xh y) y)) xl)) <= Rabs (FT2R xh).
 Proof.
-intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & _).
+intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & Hxhlb).
 (* ---- constants + nonneg facts ---- *)
 have HΩ : 0 < Omega by apply bpow_gt_0.
 have HΩ0 : 0 <= Omega by apply bpow_ge_0.
@@ -1173,6 +1206,20 @@ have Hd_b : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                  (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y))
                   + FT2R xl)) ].
   - apply Req_le; ring. }
+have Hd_le_xh : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                  (Fast2Mult_err (BDIV xh y) y)) xl)) <= Rabs (FT2R xh).
+{ have Hemin_le : bpow radix2 emin
+      <= Rabs (FT2R xh) * (bpow radix2 (- fprec t) * bpow radix2 (- fprec t)).
+  { have -> : bpow radix2 emin
+            = bpow radix2 (emin + 2 * fprec t)
+              * (bpow radix2 (- fprec t) * bpow radix2 (- fprec t))
+      by rewrite -!bpow_plus; f_equal; lia.
+    apply Rmult_le_compat_r;
+      [ apply Rmult_le_pos; apply bpow_ge_0
+      | change (@common.emin t) with (SpecFloat.emin (fprec t) (femax t)); exact Hxhlb ]. }
+  have Huu : bpow radix2 (- fprec t) * bpow radix2 (- fprec t)
+             <= / 16 * bpow radix2 (- fprec t) by nra.
+  eapply Rle_trans; [ exact Hd_b |]. nra. }
 (* ---- |d/y| bound (residual scaling) ---- *)
 have Hxhq : Rabs (FT2R xh) <= / 4 * Omega * Rabs (FT2R y).
 { have Heq : Rabs (FT2R xh) = Rabs (FT2R xh / FT2R y) * Rabs (FT2R y)
@@ -1271,7 +1318,8 @@ have Htlb : Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (F
 { eapply Rle_trans; [ exact Htlv |].
   apply (abst_tl_half (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)) (bpow radix2 (- fprec t)) (bpow radix2 emin) Omega);
     [ apply Rabs_pos | exact Hdy_b | apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | exact He1 | exact HΩ32 ]. }
-split; [ exact Fth | split; [ exact Ftl | split; [ exact Hfp | split; [ exact Hthb | split; [ exact Htlb | exact Hsum_lt ]]]]].
+split; [ exact Fth | split; [ exact Ftl | split; [ exact Hfp | split; [ exact Hthb
+  | split; [ exact Htlb | split; [ exact Hsum_lt | exact Hd_le_xh ]]]]]].
 Qed.
 
 Lemma DWDivFP3_fst_finite (xh xl y : ftype t) :
@@ -1298,7 +1346,7 @@ Lemma DWDivFP3_snd_finite (xh xl y : ftype t) :
   is_finite (snd (DWDivFP3 xh xl y)) = true.
 Proof.
 intros Hp4 COND.
-destruct (DWDivFP3_cascade xh xl y Hp4 COND) as (Fth & Ftl & Hfp & Hthb & Htlb & Hsum_lt).
+destruct (DWDivFP3_cascade xh xl y Hp4 COND) as (Fth & Ftl & Hfp & Hthb & Htlb & Hsum_lt & _).
 have HΩ32 : 32 <= Omega.
 { have -> : (32 = bpow radix2 5)%R by (simpl; lra).
   apply bpow_le; pose proof (fprec_lt_femax t); lia. }
@@ -1349,6 +1397,44 @@ apply (abst_snd _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMIN
             (/ 2 * ulp (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y) - FT2R (BMINUS (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) (BDIV xh y)))) Omega);
   [ exact HΩ32 | exact HU1 | exact (half_ulp_le _ Hp4 Hd_lt)
   | exact (half_ulp_le _ Hp4 Htlz_lt) | exact Htlz ].
+Qed.
+
+(* DWDivFP_cond proves the ordering |tl| <= |th|: |d| <= |xh| (cascade) lifts
+   through division by the fixed y (round monotone, |RN z| = RN|z|).  Uniform --
+   no normal/underflow split, no per-node underflow hypotheses. *)
+Lemma DWDivFP3_ordering (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_cond xh xl y ->
+  Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                          (Fast2Mult_err (BDIV xh y) y)) xl) y))
+    <= Rabs (FT2R (BDIV xh y)).
+Proof.
+intros Hp4 COND.
+destruct (DWDivFP3_cascade xh xl y Hp4 COND)
+  as (Fth & Ftl & _ & _ & _ & _ & Hd_le_xh).
+have Hyne : FT2R y <> 0.
+{ move: COND => [_ [_ [_ [_ [Hquot _]]]]].
+  intro H0. have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
+set d := BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+               (Fast2Mult_err (BDIV xh y) y)) xl.
+rewrite -(BDIV_round_correct t xh y Hyne Fth) -(BDIV_round_correct t d y Hyne Ftl).
+rewrite -!round_NE_abs.
+apply round_le; [ apply FLT.FLT_exp_valid, fprec_gt_0 | apply valid_rnd_N |].
+rewrite !Rabs_mult.
+apply Rmult_le_compat_r; [ apply Rabs_pos | exact Hd_le_xh ].
+Qed.
+
+(* Both simplified conditions discharged from the cond -> result is a DW. *)
+Corollary DWDivFP3_is_DW_from_cond (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_cond xh xl y ->
+  double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
+Proof.
+intros Hp4 COND.
+apply DWDivFP3_is_DW.
+- exact (proj1 (proj2 (proj2 (DWDivFP3_cascade xh xl y Hp4 COND)))).
+- exact (DWDivFP3_ordering xh xl y Hp4 COND).
 Qed.
 
 (* The intermediate normal-range (strong-underflow) facts consumed by the
