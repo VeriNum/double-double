@@ -22,6 +22,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc_helpers.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 
@@ -208,6 +209,46 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
     destruct (Fast2Sum _ _)     as [eh el]; cbn [fst snd].
     destruct (DWTimesFP3 _ _ _) as [dh dl]; cbn [fst snd].
     destruct (DWPlusFP _ _ _)   as [mh ml]; cbn [fst snd].
+    reflexivity. }
+entailer!!.
+Qed.
+
+
+(* body_dw_div_fp15: the callees (fast_2mult, fast_2sum) are precondition-free,
+   so the forward cascade needs no cond discharge.  The C directly performs the
+   subtractions/additions of Algorithm 15, so -- unlike body_dw_div_dw18, whose
+   arithmetic is hidden inside dw_mult_fp9 / dw_plus_fp / dw_mult_dw12 -- the
+   stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
+   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert-float
+   composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
+   data_at values become syntactically identical for the closing entailer. *)
+Lemma body_dw_div_fp15: semax_body Vprog Gprog f_dw_div_fp15 dw_div_fp15_spec.
+Proof.
+start_function.
+forward.            (* t'5 = x->s *)
+forward.            (* th  = t'5 / y *)
+(* fast_2mult(&p, th, y): witness (v_p, th, y) *)
+match goal with |- context [temp _th (Vfloat ?T)] =>
+  forward_call (v_p, T, y) end.
+forward.            (* t'3 = x->s *)
+forward.            (* t'4 = p.s  *)
+forward.            (* dh  = t'3 - t'4 *)
+forward.            (* t'2 = p.t  *)
+forward.            (* dt  = dh - t'2 *)
+forward.            (* t'1 = x->t *)
+forward.            (* d   = dt + t'1 *)
+forward.            (* tl  = d / y *)
+(* fast_2sum(z, th, tl): witness (s, th, tl) *)
+match goal with |- context [temp _th (Vfloat ?TH)] =>
+ match goal with |- context [temp _tl (Vfloat ?TL)] =>
+   forward_call (s, TH, TL) end end.
+(* Rewrite the postcondition's DWDivFP3 into the produced composition. *)
+match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
+  replace (DWDivFP3 (fst xh) (snd xh) y) with PROD end.
+2:{ unfold DWDivFP3.
+    rewrite ?BDIV_Td, ?BMINUS_Td, ?BPLUS_Td.
+    destruct (Fast2Mult _ _) as [pih pil]; cbn [fst snd].
+    destruct (Fast2Sum _ _) as [zh zl]; cbn [fst snd].
     reflexivity. }
 entailer!!.
 Qed.
@@ -441,4 +482,36 @@ forward_if Post_if.
   entailer!!.
 Qed.
 
+(* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
+   call the check, exit on failure, otherwise recover DWDivFP_cond and call the
+   unguarded op.  The exported accuracy postcondition is the regime-independent
+   combined bound (relative_errorDWDivFP3_from_cond_combined), which the cond
+   discharges unconditionally -- see dw_div_fp15_guarded_spec. *)
+Lemma body_dw_div_fp15_guarded :
+  semax_body Vprog Gprog f_dw_div_fp15_guarded dw_div_fp15_guarded_spec.
+Proof.
+start_function.
+forward_call (x, xh, y).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWDivFP_cond (fst xh) (snd xh) y)
+  LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP (DWDivFP_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  forward_call (s, x, xh, y).
+  assert (Hp4 : (4 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  pose proof
+    (relative_errorDWDivFP3_from_cond_combined (fst xh) (snd xh) y Hp4 HFC)
+    as Hacc.
+  entailer!!.
+Qed.
 

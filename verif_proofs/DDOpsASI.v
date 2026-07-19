@@ -19,6 +19,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
@@ -152,6 +153,21 @@ Definition dw_div_dw18_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
+Definition dw_div_fp15_spec :=
+  DECLARE _dw_div_fp15
+  WITH s: val, x : val,
+      xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
+  PRE [tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+          data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP()
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
 
 (* ======================================================================== *)
 (*  Guarded wrappers (exported public API)                                   *)
@@ -281,6 +297,35 @@ Definition dw_mult_dw12_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
+(* DWDivFP (Algorithm 15) guarded wrapper.  Unlike the plus/mult wrappers, the
+   quotient's accuracy cannot be a clean relative 3u^2 bound: the closing
+   division d/y can be subnormal (0 for exact division), so the underflow regime
+   contributes one 2^emin absolute term.  The exported bound is therefore the
+   regime-independent combined bound proven as
+   relative_errorDWDivFP3_from_cond_combined:
+     |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
+   which holds unconditionally once the runtime check discharges DWDivFP_cond. *)
+Definition dw_div_fp15_guarded_spec :=
+  DECLARE _dw_div_fp15_guarded
+  WITH s: val, x: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP((Rabs (FT2R (fst (DWDivFP3 (fst xh) (snd xh) y))
+                + FT2R (snd (DWDivFP3 (fst xh) (snd xh) y))
+                - (FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
+          <= 3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2
+               * Rabs ((FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
+             + bpow Zaux.radix2 (@common.emin Tdouble))%R)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
 (* ======================================================================== *)
 (*  Imported check specs (mirror fp_utils_specs.v verbatim)                  *)
 (* ======================================================================== *)
@@ -396,6 +441,19 @@ Definition dw_mult_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
+Definition dw_div_fp_check_spec :=
+  DECLARE _dw_div_fp_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWDivFP_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x ).
+
 (* ======================================================================== *)
 (*  libc external                                                            *)
 (* ======================================================================== *)
@@ -419,7 +477,7 @@ Definition Ops_Imports : funspecs :=
     two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
     fast2_mult_acc_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
-    dw_mult_dw_check_spec ].
+    dw_mult_dw_check_spec; dw_div_fp_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
@@ -428,11 +486,12 @@ Definition Ops_Internal : funspecs :=
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
-    dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec ].
+    dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec;
+    dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
 
-(* Public API exported by the ops VSU: the six guarded wrappers. *)
+(* Public API exported by the ops VSU: the seven guarded wrappers. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
     dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
-    dw_mult_dw12_guarded_spec ].
+    dw_mult_dw12_guarded_spec; dw_div_fp15_guarded_spec ].

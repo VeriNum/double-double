@@ -1713,3 +1713,64 @@ rewrite Rplus_comm. apply Rplus_le_compat; [ exact Hpabs | exact Hdiff ].
 Qed.
 
 End CondAccuracyDWDivFP_underflow.
+
+(* Layer-2, COMBINED: the regime-independent bound under DWDivFP_cond alone.  The
+   split point |d/y| vs 2^(emin+fprec-1) is decidable, so a case-split feeds the
+   normal leg (relative_errorDWDivFP3_from_cond, whose extra Hdyn is exactly the
+   >= side) or the underflow leg (relative_errorDWDivFP3_from_cond_underflow, the
+   < side).  Both legs deliver the same absolute bound |zh+zl - X/y| <=
+   3u^2|X/y| + 2^emin (the normal leg's clean 3u^2 relative bound is scaled to
+   absolute and weakened by the non-negative 2^emin term), so DWDivFP3 carries it
+   in EVERY regime from just Hp4 and the cond.  This is the fact the guarded
+   wrapper's funspec exports: the runtime check discharges DWDivFP_cond, and this
+   theorem turns it into the unconditional accuracy postcondition. *)
+Section CondAccuracyDWDivFP_combined.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation emin := (@common.emin t).
+Notation u := (bpow radix2 (- fprec t)).
+
+Variables (xh xl y : ftype t).
+
+Hypothesis Hp4 : (4 <= fprec t)%Z.
+Hypothesis COND : DWDivFP_cond xh xl y.
+
+Theorem relative_errorDWDivFP3_from_cond_combined :
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
+Proof.
+destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
+            (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                       (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)))
+  as [Hdyn | Huf].
+- (* normal leg: scale the 3u^2 relative bound to absolute, then weaken by 2^emin *)
+  move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
+  have Hyne : FT2R y <> 0.
+  { intro H0.
+    have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+    move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
+  have Hxhne : FT2R xh <> 0.
+  { intro Hx0. move: Hquot; rewrite Hx0 /Rdiv Rmult_0_l Rabs_R0 => Hc.
+    have := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1). lra. }
+  have Hsne : FT2R xh + FT2R xl <> 0.
+  { intro Hs0. apply Hxhne. move: Hdwp; rewrite /double_word_prop Hs0.
+    rewrite /rounded round_0 //. }
+  have HDne : (FT2R xh + FT2R xl) / FT2R y <> 0.
+  { apply Rmult_integral_contrapositive_currified;
+      [ exact Hsne | apply Rinv_neq_0_compat; exact Hyne ]. }
+  pose proof (relative_errorDWDivFP3_from_cond xh xl y Hp4 COND Hdyn) as Hrel.
+  unfold relative_error_DWDivFP in Hrel.
+  set (E := FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+            - (FT2R xh + FT2R xl) / FT2R y) in *.
+  set (D := (FT2R xh + FT2R xl) / FT2R y) in *.
+  have Habs : Rabs E = Rabs (E / D) * Rabs D
+    by (rewrite -Rabs_mult; f_equal; field; exact HDne).
+  rewrite Habs.
+  eapply Rle_trans; [ apply Rmult_le_compat_r; [ apply Rabs_pos | exact Hrel ] | ].
+  have Hb := bpow_ge_0 radix2 emin. lra.
+- (* underflow leg: direct *)
+  exact (relative_errorDWDivFP3_from_cond_underflow xh xl y Hp4 COND Huf).
+Qed.
+
+End CondAccuracyDWDivFP_combined.

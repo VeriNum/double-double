@@ -1,6 +1,9 @@
 
-(* verif_float_lemmas.v: helpers lemmas for compcert floats*)
-(* Copyright 2023-2026 Ariel Kellison *)
+(* float_verif_lemmas.v: Helper lemmas connecting CompCert floating-point
+   operations and comparisons with VCFloat/Flocq real-number semantics.
+   Includes finite-value, rounding-bound, and concrete IEEE-754 threshold
+   results used by the VST verification proofs. *)
+   (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import VST.floyd.proofauto.
@@ -555,4 +558,239 @@ Proof.
   try assert (Gt = Lt) by (apply H0; apply H2; auto); try discriminate;
   try assert (false = true) by (apply H1; apply H; auto); try discriminate.
   rewrite Binary.is_finite_Babs; auto.
-Qed.   
+Qed.
+
+(* ==================================================================== *)
+(*  Division-check helpers (dw_div_fp_check / DWDivFP_cond)             *)
+(* ==================================================================== *)
+
+(* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
+   a format value bpow k, so:
+     - a STRICT rounded bound below bpow k forces the exact value <= bpow k, and
+     - a STRICT rounded bound above bpow k forces the exact value > bpow k.
+   These are the division-check analogs of no_overflow/underflow_real_from_round_mul,
+   stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
+   BDIV_round_correct in body_dw_div_fp_check). *)
+Lemma round_abs_le_bpow (r : R) (k : Z) :
+  generic_format radix2 fexp (bpow Zaux.radix2 k) ->
+  Rabs (round radix2 fexp ZnearestE r) < bpow Zaux.radix2 k ->
+  Rabs r <= bpow Zaux.radix2 k.
+Proof.
+  intros Hfmt H.
+  destruct (Rle_dec (Rabs r) (bpow Zaux.radix2 k)) as [Hle | Hgt]; auto.
+  exfalso. apply Rnot_le_lt in Hgt. apply Rlt_le in Hgt.
+  apply (round_le radix2 fexp (Znearest common.choice)) in Hgt.
+  rewrite round_NE_abs in Hgt; [ | apply FLT_exp_valid; cbv; auto].
+  replace (round radix2 fexp (Znearest common.choice) (bpow Zaux.radix2 k))
+    with (bpow Zaux.radix2 k) in Hgt.
+  2:{ rewrite round_generic; auto. apply valid_rnd_N. }
+  lra.
+Qed.
+
+Lemma round_abs_gt_bpow (r : R) (k : Z) :
+  generic_format radix2 fexp (bpow Zaux.radix2 k) ->
+  bpow Zaux.radix2 k < Rabs (round radix2 fexp ZnearestE r) ->
+  bpow Zaux.radix2 k < Rabs r.
+Proof.
+  intros Hfmt H.
+  destruct (Rlt_dec (bpow Zaux.radix2 k) (Rabs r)) as [Hlt | Hle]; auto.
+  exfalso. apply Rnot_lt_le in Hle.
+  apply (round_le radix2 fexp (Znearest common.choice)) in Hle.
+  rewrite round_NE_abs in Hle; [ | apply FLT_exp_valid; cbv; auto].
+  replace (round radix2 fexp (Znearest common.choice) (bpow Zaux.radix2 k))
+    with (bpow Zaux.radix2 k) in Hle.
+  2:{ rewrite round_generic; auto. apply valid_rnd_N. }
+  lra.
+Qed.
+
+(* is_finite (BDIV a b) with b finite forces the divisor's real value nonzero:
+   a finite b with FT2R b = 0 is the zero float, and a/0 = +/-Inf (or NaN) is
+   not finite.  Lets the quotient checks invoke BDIV_round_correct. *)
+Lemma BDIV_denom_ne0 : forall (a b : ftype Tdouble),
+  is_finite b = true ->
+  is_finite (BDIV a b) = true ->
+  FT2R b <> 0%R.
+Proof.
+  intros a b Hb Hfin Hb0.
+  rewrite <- B2R_float_of_ftype in Hb0.
+  rewrite is_finite_Binary in Hb, Hfin.
+  unfold BDIV, BINOP in Hfin.
+  rewrite float_of_ftype_of_float in Hfin.
+  destruct (float_of_ftype b) eqn:E; simpl in Hb; try discriminate.
+  - (* B754_zero: a / 0 is Inf/NaN, not finite -> Hfin false *)
+    destruct (float_of_ftype a); simpl in Hfin; try discriminate.
+  - (* B754_finite: B2R is a nonzero F2R, contradicting Hb0 *)
+    revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
+Qed.
+
+(* BDIV-level packaging of the rounded->exact transfer: from a magnitude bound on
+   the FLOAT quotient FT2R (BDIV a b) (with b's real value nonzero and BDIV finite)
+   to the corresponding bound on the EXACT real quotient FT2R a / FT2R b.  Combines
+   BDIV_round_correct (FT2R (BDIV a b) = RN(FT2R a / FT2R b)) with round_abs_*_bpow,
+   exactly as prod_bnd_facts does for multiplication. *)
+Lemma BDIV_abs_le_bpow : forall (a b : ftype Tdouble) (k : Z),
+  FT2R b <> 0%R -> is_finite (BDIV a b) = true ->
+  generic_format radix2 fexp (bpow Zaux.radix2 k) ->
+  Rabs (FT2R (BDIV a b)) < bpow Zaux.radix2 k ->
+  Rabs (FT2R a / FT2R b) <= bpow Zaux.radix2 k.
+Proof.
+  intros a b k Hne Hfin Hfmt H.
+  rewrite <- (BDIV_round_correct Tdouble a b Hne Hfin) in H.
+  apply round_abs_le_bpow; assumption.
+Qed.
+
+Lemma BDIV_abs_gt_bpow : forall (a b : ftype Tdouble) (k : Z),
+  FT2R b <> 0%R -> is_finite (BDIV a b) = true ->
+  generic_format radix2 fexp (bpow Zaux.radix2 k) ->
+  bpow Zaux.radix2 k < Rabs (FT2R (BDIV a b)) ->
+  bpow Zaux.radix2 k < Rabs (FT2R a / FT2R b).
+Proof.
+  intros a b k Hne Hfin Hfmt H.
+  rewrite <- (BDIV_round_correct Tdouble a b Hne Hfin) in H.
+  apply round_abs_gt_bpow; assumption.
+Qed.
+
+(* q_lo968_val: IEEE-754 double for 2^(-968) = 2^(emin + 2p), the DWDivFP_cond
+   product-node lower bound; and q_lo969_val for 2^(-969) = 2^(emin + 2p - 1),
+   the quotient lower bound.  Same Bldexp-of-1.0 construction as q_omega_val. *)
+Definition q_lo968_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) (-968).
+
+Definition q_lo969_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) (-969).
+
+Lemma q_lo968_val_finite : is_finite (ftype_of_float q_lo968_val) = true.
+Proof.
+  cbv [q_lo968_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_lo969_val_finite : is_finite (ftype_of_float q_lo969_val) = true.
+Proof.
+  cbv [q_lo969_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_lo968_val_FT2R :
+  FT2R (ftype_of_float q_lo968_val) = bpow Zaux.radix2 (-968).
+Proof.
+  cbv [q_lo968_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+Lemma q_lo969_val_FT2R :
+  FT2R (ftype_of_float q_lo969_val) = bpow Zaux.radix2 (-969).
+Proof.
+  cbv [q_lo969_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+(* Generic magnitude comparisons against a concrete finite float constant v
+   whose real value is C.  Cle_lo / Clt_lo lift `v (<=|<) fabs b` into the
+   corresponding real lower bound on |FT2R b|; Clt_hi lifts `fabs b < v` into
+   finiteness of b AND the strict upper bound |FT2R b| < C (deriving finiteness
+   the same way as Float_cmp_Clt_bpow1023). *)
+Lemma Float_cmp_Cle_lo :
+  forall (v : Floats.float) (b : ftype Tdouble) (C : R),
+  is_finite b = true ->
+  is_finite (ftype_of_float v) = true ->
+  FT2R (ftype_of_float v) = C ->
+  Float.cmp Cle v
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true ->
+  C <= Rabs (FT2R b).
+Proof.
+  intros v b C Hb Hv HC H.
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hb. }
+  assert (Hfv : Binary.is_finite 53 1024 v = true).
+  { generalize Hv. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfv | exact Hfb].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  assert (Hvr : Binary.B2R 53 1024 v = C).
+  { rewrite <- HC, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  rewrite Hvr in H.
+  destruct (Rcompare C (Rabs (FT2R b))) eqn:Hcmp; simpl in H; try discriminate.
+  - apply Req_le. apply Rcompare_Eq_inv in Hcmp; lra.
+  - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp; lra.
+Qed.
+
+Lemma Float_cmp_Clt_lo :
+  forall (v : Floats.float) (b : ftype Tdouble) (C : R),
+  is_finite b = true ->
+  is_finite (ftype_of_float v) = true ->
+  FT2R (ftype_of_float v) = C ->
+  Float.cmp Clt v
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true ->
+  C < Rabs (FT2R b).
+Proof.
+  intros v b C Hb Hv HC H.
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hb. }
+  assert (Hfv : Binary.is_finite 53 1024 v = true).
+  { generalize Hv. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfv | exact Hfb].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  assert (Hvr : Binary.B2R 53 1024 v = C).
+  { rewrite <- HC, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  rewrite Hvr in H.
+  destruct (Rcompare C (Rabs (FT2R b))) eqn:Hcmp; simpl in H; try discriminate.
+  apply Rcompare_Lt_inv in Hcmp; exact Hcmp.
+Qed.
+
+(* Strict upper quotient bound against q_omega_val (2^1022 = Omega/4): the
+   Clt-bpow1022 analog of Float_cmp_Clt_bpow1023, deriving finiteness of the
+   (rounded) quotient AND the strict magnitude bound.  Specialized (not generic
+   in v) because the finiteness derivation needs q_omega_val concrete so that
+   Bcompare against an infinity/NaN left operand reduces. *)
+Lemma Float_cmp_Clt_bpow1022 :
+  forall (b : ftype Tdouble),
+  Float.cmp Clt
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b))
+    q_omega_val = true ->
+  is_finite b = true /\ Rabs (FT2R b) < bpow Zaux.radix2 1022.
+Proof.
+  intros b H.
+  assert (Hfin : is_finite b = true).
+  { rewrite is_finite_Binary.
+    cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+    destruct (float_of_ftype b) eqn:E; simpl in H |- *; auto;
+      cbv [Binary.Babs Binary.Bsign] in H; simpl in H; try discriminate. }
+  split; [exact Hfin|].
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hfin. }
+  assert (Hfq : Binary.is_finite (fprec Tdouble) (femax Tdouble) q_omega_val = true).
+  { generalize q_omega_val_finite. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfb | exact Hfq].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  pose proof q_omega_val_FT2R as Hft2r.
+  assert (Hqval : Binary.B2R 53 1024 q_omega_val = bpow Zaux.radix2 1022).
+  { rewrite <- Hft2r, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  destruct (Rcompare (Rabs (FT2R b)) (Binary.B2R 53 1024 q_omega_val)) eqn:Hcmp;
+    simpl in H; try discriminate.
+  apply Rcompare_Lt_inv in Hcmp. lra.
+Qed.

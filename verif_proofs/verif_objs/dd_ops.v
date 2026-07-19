@@ -81,10 +81,16 @@ Definition _c : ident := $"c".
 Definition _c2 : ident := $"c2".
 Definition _c3 : ident := $"c3".
 Definition _ch : ident := $"ch".
+Definition _d : ident := $"d".
 Definition _da : ident := $"da".
 Definition _db : ident := $"db".
 Definition _delta : ident := $"delta".
+Definition _dh : ident := $"dh".
+Definition _dt : ident := $"dt".
 Definition _dw_div_dw18 : ident := $"dw_div_dw18".
+Definition _dw_div_fp15 : ident := $"dw_div_fp15".
+Definition _dw_div_fp15_guarded : ident := $"dw_div_fp15_guarded".
+Definition _dw_div_fp_check : ident := $"dw_div_fp_check".
 Definition _dw_mult_dw12 : ident := $"dw_mult_dw12".
 Definition _dw_mult_dw12_guarded : ident := $"dw_mult_dw12_guarded".
 Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
@@ -111,6 +117,7 @@ Definition _fast_2sum_guarded : ident := $"fast_2sum_guarded".
 Definition _fma : ident := $"fma".
 Definition _m : ident := $"m".
 Definition _main : ident := $"main".
+Definition _p : ident := $"p".
 Definition _rh : ident := $"rh".
 Definition _rl : ident := $"rl".
 Definition _s : ident := $"s".
@@ -120,6 +127,7 @@ Definition _t : ident := $"t".
 Definition _t0 : ident := $"t0".
 Definition _t1 : ident := $"t1".
 Definition _th : ident := $"th".
+Definition _tl : ident := $"tl".
 Definition _two_sum : ident := $"two_sum".
 Definition _two_sum_check : ident := $"two_sum_check".
 Definition _two_sum_guarded : ident := $"two_sum_guarded".
@@ -851,6 +859,102 @@ Definition f_dw_div_dw18 := {|
                  (tptr (Tstruct _dword noattr))) :: nil))))))))
 |}.
 
+Definition f_dw_div_fp15 := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_z, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) :: (_y, tdouble) :: nil);
+  fn_vars := ((_p, (Tstruct _dword noattr)) :: nil);
+  fn_temps := ((_th, tdouble) :: (_dh, tdouble) :: (_dt, tdouble) ::
+               (_d, tdouble) :: (_tl, tdouble) :: (_t'5, tdouble) ::
+               (_t'4, tdouble) :: (_t'3, tdouble) :: (_t'2, tdouble) ::
+               (_t'1, tdouble) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Sset _t'5
+      (Efield
+        (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+          (Tstruct _dword noattr)) _s tdouble))
+    (Sset _th
+      (Ebinop Odiv (Etempvar _t'5 tdouble) (Etempvar _y tdouble) tdouble)))
+  (Ssequence
+    (Scall None
+      (Evar _fast_2mult (Tfunction
+                          ((tptr (Tstruct _dword noattr)) :: tdouble ::
+                           tdouble :: nil) tvoid cc_default))
+      ((Eaddrof (Evar _p (Tstruct _dword noattr))
+         (tptr (Tstruct _dword noattr))) :: (Etempvar _th tdouble) ::
+       (Etempvar _y tdouble) :: nil))
+    (Ssequence
+      (Ssequence
+        (Sset _t'3
+          (Efield
+            (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+              (Tstruct _dword noattr)) _s tdouble))
+        (Ssequence
+          (Sset _t'4 (Efield (Evar _p (Tstruct _dword noattr)) _s tdouble))
+          (Sset _dh
+            (Ebinop Osub (Etempvar _t'3 tdouble) (Etempvar _t'4 tdouble)
+              tdouble))))
+      (Ssequence
+        (Ssequence
+          (Sset _t'2 (Efield (Evar _p (Tstruct _dword noattr)) _t tdouble))
+          (Sset _dt
+            (Ebinop Osub (Etempvar _dh tdouble) (Etempvar _t'2 tdouble)
+              tdouble)))
+        (Ssequence
+          (Ssequence
+            (Sset _t'1
+              (Efield
+                (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                  (Tstruct _dword noattr)) _t tdouble))
+            (Sset _d
+              (Ebinop Oadd (Etempvar _dt tdouble) (Etempvar _t'1 tdouble)
+                tdouble)))
+          (Ssequence
+            (Sset _tl
+              (Ebinop Odiv (Etempvar _d tdouble) (Etempvar _y tdouble)
+                tdouble))
+            (Scall None
+              (Evar _fast_2sum (Tfunction
+                                 ((tptr (Tstruct _dword noattr)) ::
+                                  tdouble :: tdouble :: nil) tvoid
+                                 cc_default))
+              ((Etempvar _z (tptr (Tstruct _dword noattr))) ::
+               (Etempvar _th tdouble) :: (Etempvar _tl tdouble) :: nil))))))))
+|}.
+
+Definition f_dw_div_fp15_guarded := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_z, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) :: (_y, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _dw_div_fp_check (Tfunction
+                               ((tptr (Tstruct _dword noattr)) :: tdouble ::
+                                nil) tint cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y tdouble) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Scall None
+    (Evar _dw_div_fp15 (Tfunction
+                         ((tptr (Tstruct _dword noattr)) ::
+                          (tptr (Tstruct _dword noattr)) :: tdouble :: nil)
+                         tvoid cc_default))
+    ((Etempvar _z (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _x (tptr (Tstruct _dword noattr))) :: (Etempvar _y tdouble) ::
+     nil)))
+|}.
+
 Definition composites : list composite_definition :=
 (Composite _dword Struct
    (Member_plain _s tdouble :: Member_plain _t tdouble :: nil)
@@ -1142,6 +1246,11 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
+ (_dw_div_fp_check,
+   Gfun(External (EF_external "dw_div_fp_check"
+                   (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
  (_dw_mult_fp_check,
    Gfun(External (EF_external "dw_mult_fp_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
@@ -1167,15 +1276,18 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_dw_mult_fp9_guarded, Gfun(Internal f_dw_mult_fp9_guarded)) ::
  (_dw_mult_dw12, Gfun(Internal f_dw_mult_dw12)) ::
  (_dw_mult_dw12_guarded, Gfun(Internal f_dw_mult_dw12_guarded)) ::
- (_dw_div_dw18, Gfun(Internal f_dw_div_dw18)) :: nil).
+ (_dw_div_dw18, Gfun(Internal f_dw_div_dw18)) ::
+ (_dw_div_fp15, Gfun(Internal f_dw_div_fp15)) ::
+ (_dw_div_fp15_guarded, Gfun(Internal f_dw_div_fp15_guarded)) :: nil).
 
 Definition public_idents : list ident :=
-(_dw_div_dw18 :: _dw_mult_dw12_guarded :: _dw_mult_dw12 ::
- _dw_mult_fp9_guarded :: _dw_mult_fp9 :: _dw_plus_dw2_guarded ::
- _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp ::
- _fast_2mult_acc_guarded :: _fast_2mult_guarded :: _fast_2mult ::
- _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded :: _dw_mult_dw_check ::
- _dw_mult_fp_check :: _dw_plus_fp_check :: _dw_plus_dw_check ::
+(_dw_div_fp15_guarded :: _dw_div_fp15 :: _dw_div_dw18 ::
+ _dw_mult_dw12_guarded :: _dw_mult_dw12 :: _dw_mult_fp9_guarded ::
+ _dw_mult_fp9 :: _dw_plus_dw2_guarded :: _dw_plus_dw2 ::
+ _dw_plus_fp_guarded :: _dw_plus_fp :: _fast_2mult_acc_guarded ::
+ _fast_2mult_guarded :: _fast_2mult :: _fast_2sum_guarded :: _fast_2sum ::
+ _two_sum_guarded :: _dw_mult_dw_check :: _dw_mult_fp_check ::
+ _dw_div_fp_check :: _dw_plus_fp_check :: _dw_plus_dw_check ::
  _fast2_mult_acc_check :: _fast2_mult_check :: _two_sum_check ::
  _fast2_sum_check :: _exit :: _two_sum :: _fma :: ___builtin_debug ::
  ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::

@@ -149,6 +149,22 @@ Definition dw_plus_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
+Definition dw_div_fp_check_spec :=
+  DECLARE _dw_div_fp_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP()
+    PARAMS ( x; Vfloat y )
+    SEP( data_at Tsh dword (f2val xh) x )
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWDivFP_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP( data_at Tsh dword (f2val xh) x ).
+
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check
   WITH x : val,

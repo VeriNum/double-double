@@ -187,6 +187,49 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && prod_bnd && mult_safe;
 }
 
+int dw_div_fp_check(struct dword *x, double y) {
+    /* Verifies DWDivFP_cond (DDModels.v): xh, xl, y finite; (x->s, x->t) a
+       double-word; |x->s| within the window [2^(emin+2p), Omega/4]; and the
+       quotient |x->s / y| within the window [2^(emin+2p-1), Omega/4].
+
+       The two quotient bounds are tested on the ROUNDED quotient q = RN(x->s / y);
+       the rounded->exact transfer is the division analog of dw_mult_fp_check's
+       product-magnitude argument, proven one-directional in Coq
+       (no_overflow_real_from_round_div / no_underflow_real_from_round_div).  As
+       with prod_bnd there, the STRICT `<` on q's upper bound does double duty: it
+       establishes the cond's real-quotient upper bound |x->s/y| <= Omega/4 AND
+       forces q finite (a NaN abs compares unordered -> false; +Inf -> false),
+       which in turn forces the divisor y != 0 in R.  The lower bound q_qlo < |q|
+       is likewise strict, giving 2^(emin+2p-1) <= |x->s/y| (and again y != 0).
+
+       The |x->s| window is a pair of direct comparisons on x->s (no rounding),
+       exactly like dw_plus_fp_check's xh_bnd; the extra lower bound is the
+       product-node underflow guard 2^(emin+2p) <= |x->s| from DWDivFP_cond.
+
+       The DW prop alone does not pin down finiteness of x->t in R (FT2R sends
+       NaN/Inf to 0), so fin_xl is asserted, even though x->s + x->t == x->s
+       implies it under IEEE comparison semantics. */
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y  = isfinite_double(y);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+
+    double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
+    double q_plo   = ldexp(1.0, -968);   /* 2^(emin+2*p)   product-node lower bound */
+    double q_qlo   = ldexp(1.0, -969);   /* 2^(emin+2*p-1) quotient lower bound */
+
+    /* |x->s| window: 2^(emin+2p) <= |x->s| <= Omega/4 */
+    int xh_hi = fabs(x->s) <= q_omega;
+    int xh_lo = q_plo <= fabs(x->s);
+
+    /* quotient window on the rounded quotient q = RN(x->s / y) */
+    double q = x->s / y;
+    int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y| <= Omega/4; also forces q finite */
+    int qt_lo = q_qlo < fabs(q);     /* STRICT: 2^(emin+2p-1) <= |x->s/y|; forces y != 0 */
+
+    return dwx && fin_y && xh_hi && xh_lo && qt_hi && qt_lo;
+}
+
 int dw_plus_fp_check(struct dword *x, double y) {
     /* Verifies DWPlusFP_cond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
