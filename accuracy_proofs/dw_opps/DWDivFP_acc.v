@@ -1774,3 +1774,125 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
 Qed.
 
 End CondAccuracyDWDivFP_combined.
+
+(* Regime-independent pure relative bound.  The combined theorem above pays
+   one absolute underflow [2^emin] error.  [DWDivFP_cond] keeps the leading
+   quotient at least [2^(emin+2p-1)], while the double-word relation gives
+   |xl| <= u|xh|.  Hence the exact quotient is at least
+   (1-u)2^(emin+2p-1), and, for p >= 4, the absolute error is bounded by
+   3u^2 times the exact quotient. *)
+Section CondAccuracyDWDivFP_pure_relative.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation emin := (@common.emin t).
+Notation u := (bpow radix2 (- fprec t)).
+
+Variables (xh xl y : ftype t).
+
+Hypothesis Hp4 : (4 <= fprec t)%Z.
+Hypothesis COND : DWDivFP_cond xh xl y.
+
+Theorem DWDivFP3_accuracy :
+  relative_error_DWDivFP xh xl y <= 6 * u ^ 2.
+Proof.
+move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
+have Hyne : FT2R y <> 0.
+{ intro H0.
+  have Hp := bpow_gt_0 radix2
+    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
+have Hxhne : FT2R xh <> 0.
+{ intro H0.
+  have Hp := bpow_gt_0 radix2
+    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  move: Hquot; rewrite H0 /Rdiv Rmult_0_l Rabs_R0 => Hc. lra. }
+have Hxl : Rabs (FT2R xl) <= u * Rabs (FT2R xh)
+  by exact (DWMulFP_acc.aux_dwu_rel xh xl Hdwp).
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu16 : u <= /16.
+{ have Hpow : u <= bpow radix2 (-4) by (apply bpow_le; lia).
+  have He : bpow radix2 (-4) = /16 by reflexivity.
+  rewrite He in Hpow. exact Hpow. }
+have Hsum : (1 - u) * Rabs (FT2R xh)
+              <= Rabs (FT2R xh + FT2R xl).
+{ have Ht := Rabs_triang_inv (FT2R xh) (- FT2R xl).
+  rewrite Rabs_Ropp in Ht.
+  have He : (FT2R xh - - FT2R xl = FT2R xh + FT2R xl)%R by ring.
+  rewrite He in Ht.
+  eapply Rle_trans; [| exact Ht].
+  have Hexp : ((1 - u) * Rabs (FT2R xh)
+             = Rabs (FT2R xh) - u * Rabs (FT2R xh))%R by ring.
+  rewrite Hexp. apply Rplus_le_compat_l, Ropp_le_contravar. exact Hxl. }
+have Hyabs : 0 < Rabs (FT2R y) by (apply Rabs_pos_lt; exact Hyne).
+have HQscale : (1 - u) * Rabs (FT2R xh / FT2R y)
+                 <= Rabs ((FT2R xh + FT2R xl) / FT2R y).
+{ rewrite /Rdiv !Rabs_mult !Rabs_inv.
+  rewrite -Rmult_assoc.
+  apply Rmult_le_compat_r; [apply Rlt_le, Rinv_0_lt_compat; exact Hyabs|].
+  exact Hsum. }
+have HQL : (1 - u) *
+              bpow radix2
+                (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+             <= Rabs ((FT2R xh + FT2R xl) / FT2R y).
+{ eapply Rle_trans; [| exact HQscale].
+  apply Rmult_le_compat_l; [lra| exact Hquot]. }
+have Hpow :
+    u ^ 2 * bpow radix2 (emin + 2 * fprec t - 1)
+      = /2 * bpow radix2 emin.
+{ unfold u.
+  rewrite /= Rmult_1_r.
+  change (bpow radix2 (- fprec t) * bpow radix2 (- fprec t) *
+            bpow radix2 (emin + 2 * fprec t - 1) =
+          /2 * bpow radix2 emin).
+  rewrite -bpow_plus -bpow_plus.
+  replace (- fprec t + - fprec t + (emin + 2 * fprec t - 1))%Z
+    with (emin + -1)%Z by lia.
+  rewrite bpow_plus.
+  have He : bpow radix2 (-1) = /2 by (simpl; lra).
+  rewrite He. ring. }
+have Hfloor : bpow radix2 emin
+                <= 3 * u ^ 2 *
+                     Rabs ((FT2R xh + FT2R xl) / FT2R y).
+{ have Hcoef : 2 <= 3 * (1 - u) by lra.
+  have HQL' := HQL.
+  unfold common.emin in HQL'.
+  have Hu2 : 0 <= u ^ 2 by apply pow2_ge_0.
+  have Hstep :
+      3 * u ^ 2 * ((1 - u) *
+        bpow radix2 (emin + 2 * fprec t - 1))
+      <= 3 * u ^ 2 *
+        Rabs ((FT2R xh + FT2R xl) / FT2R y).
+  { apply Rmult_le_compat_l; [nra| exact HQL']. }
+  have Hb := bpow_gt_0 radix2 emin.
+  have HB := bpow_ge_0 radix2 (emin + 2 * fprec t - 1).
+  have Habsorb : bpow radix2 emin <=
+      3 * u ^ 2 * ((1 - u) *
+        bpow radix2 (emin + 2 * fprec t - 1)) by nra.
+  exact (Rle_trans _ _ _ Habsorb Hstep). }
+have Habs := relative_errorDWDivFP3_from_cond_combined
+  (NANS:=NANS) (STD:=STD) xh xl y Hp4 COND.
+set (E := FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+           - (FT2R xh + FT2R xl) / FT2R y) in *.
+set (Q := (FT2R xh + FT2R xl) / FT2R y) in *.
+have HQpos : 0 < Rabs Q.
+{ apply Rlt_le_trans with
+    ((1 - u) * bpow radix2
+      (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)).
+  - have Hb := bpow_gt_0 radix2
+      (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+    nra.
+  - exact HQL. }
+have Herr : Rabs E <= 6 * u ^ 2 * Rabs Q.
+{ eapply Rle_trans; [exact Habs|].
+  eapply Rle_trans;
+    [apply Rplus_le_compat_l; exact Hfloor|].
+  ring_simplify. lra. }
+unfold relative_error_DWDivFP.
+fold E Q.
+rewrite /Rdiv Rabs_mult Rabs_inv.
+apply (Rmult_le_reg_r (Rabs Q)); [exact HQpos|].
+rewrite Rmult_assoc Rinv_l; [rewrite Rmult_1_r; exact Herr|].
+apply Rgt_not_eq; exact HQpos.
+Qed.
+
+End CondAccuracyDWDivFP_pure_relative.
