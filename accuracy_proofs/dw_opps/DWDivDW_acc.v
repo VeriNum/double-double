@@ -1,8 +1,13 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Accuracy proof for double-word divided by a double-word number
-    (Algorithm 18, DWDivDW3).  LAYER-1 SKELETON.
+(** Accuracy and representation results for [DWDivDW3], the implementation
+    model of Algorithm 18 for dividing one double-word number by another.
+
+    A double-word value is represented by a pair [(xh,xl)] whose sum denotes
+    the represented real number.  [DWDivDW3] first constructs an approximation
+    [(mh,ml)] to the reciprocal of the divisor [(yh,yl)], then multiplies the
+    dividend [(xh,xl)] by that approximation.
 
     DWDivDW3 is *compositional* (see DDModels.v): a reciprocal-bootstrap
     prologue
@@ -13,39 +18,51 @@
         (mh,ml) := DWPlusFP  dh dl th ;
         (zh,zl) := DWTimesDW3 xh xl mh ml
 
-    whose closing block is exactly the DW*DW multiply whose bridge/accuracy
-    live in DWMulDW_acc.v.  The paper's FLX model (paper_proofs/DWDivDW.v) has
-    the identical shape and its tight relative-error bound is
+    The closing block is the double-word multiplication analyzed in
+    [DWMulDW_acc.v].  This file connects three views of the algorithm:
+
+      - [DDModels.DWDivDW3], the finite-precision runtime model used by the
+        verification of [dw_div_dw18];
+      - [DWDivDW.DWDivDW3], the idealized FLX model analyzed in the paper;
+      - the relative-error statement for the real value represented by the
+        pair returned by the runtime model.
+
+    FLT below means the runtime floating-point model, including its bounded
+    exponent range.  FLX means the paper's idealized model with the same
+    precision but an unbounded exponent range.  A bridge theorem proves that
+    the two models agree when the relevant operations do not underflow.
+
+    The paper's tight relative-error bound is
     DWDivDW.DWDDW3_correct : Rabs ((zh+zl - (x/y))/(x/y)) <= 98/10*u^2
     (requires 14 <= p, both operands double_word, yh <> 0).
 
-    This file mirrors the two-layer structure of DWDivFP_acc.v / DWMulDW_acc.v:
-      - Section CorrectDWDivDW : extract per-node finiteness from
-        FIN : is_finite_p (DWDivDW3 xh xl yh yl).
-      - Section BridgeDWDivDW : the FLX->FLT bridge DWDivDW3_FLX_FLT, obtained
-        by *composing* the prologue leaf bridges with the already-proven
-        sub-block bridges (DWMulDW_acc.DWTimesDW3_FLX_FLT for the closing
-        multiply, plus the DWTimesFP3 / DWPlusFP bridges), under a strong-
-        underflow discipline placing every rounded node in the normal range.
-      - Section FiniteAccuracyDWDivDW : the Layer-1 relative-error theorem
-        (<= 98/10*u^2) obtained from DWDDW3_correct via the bridge.
+    Main results:
 
-    LAYER-1 status: the substantive obligations are [admit]ed with a one-line
-    comment naming the paper lemma / sub-block bridge that discharges them in
-    the Layer-2 pass.  Deferred: (a) the mechanical per-node finiteness
-    decomposition; (b) the compositional bridge and its prologue leaves;
-    (c) instantiating DWDDW3_correct -- this additionally requires discharging
-    the paper's abstract two-product hypotheses (Fast2Mult_correct, TwoProdE),
-    which the (un-refactored) paper_proofs/DWDivDW.v still carries. *)
+      - [FIN_mul], [FIN_mh], [FIN_ml], and [FIN_th] recover useful finiteness
+        facts about intermediate computations from finiteness of the result.
+      - [DWTimesDW3_double_word] proves that the multiplication subroutine
+        returns a valid double-word under finiteness and normal-range
+        assumptions.
+      - [DWDivDW3_double_word] applies that representation result to the final
+        multiplication performed by division.
+      - [DWDivDW3_FLX_FLT] identifies the runtime result with the paper's FLX
+        result under explicit no-underflow assumptions.
+      - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
+        runtime model, giving relative error at most [(98/10) * u^2].
+
+    Proof status: [DWDivDW3_FLX_FLT] is currently admitted.  Consequently,
+    [relative_errorDWDivDW3_correct], although terminated by [Qed], depends
+    transitively on an admitted result. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import DWTimesFP DWTimesDW DWDivFP DDModels DWord_defs
                Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
-(* NOTE: paper_proofs/DWDivDW.v (which holds the target bound DWDDW3_correct)
-   is intentionally NOT required here.  That file was never compiled and needs
-   proof repair (see the LAYER-2 note on relative_errorDWDivDW3_correct below);
-   the Layer-1 skeleton is deliberately decoupled from it so it builds green. *)
+(* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
+   bound DWDivDW.DWDDW3_correct is available and instantiated below.  DWDivDW.v
+   sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
+   into this file's proofs by re-asserting transparency after the Require. *)
+Require Import DWDivDW.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc DWPlusFP_acc DWMulDW_acc
                DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
@@ -61,7 +78,9 @@ Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
 (* ============================================================
-   Section 1: extract per-operation finiteness from
+   Finiteness of intermediate operations
+
+   Extract per-operation finiteness from
    FIN : is_finite_p (DWDivDW3 xh xl yh yl).
 
    Runtime shape (DDModels.DWDivDW3):
@@ -96,40 +115,152 @@ Section CorrectDWDivDW.
      are finite by a BPLUS/BFMA/BMULT finite-elimination pass on FIN, exactly
      as in DWMulDW_acc.v's [prove_finite]. *)
 
+  (** If the complete division returns finite components, then its final
+      double-word multiplication also returns finite components.  This fact
+      lets multiplication lemmas be applied directly to the final stage of
+      [DWDivDW3]. *)
+  Fact FIN_mul : is_finite_p (DWTimesDW3 xh xl mh ml).
+  Proof. exact FIN. Qed.
+
+  (** The high component of the reconstructed reciprocal is finite whenever
+      the complete division result is finite. *)
+  Fact FIN_mh : is_finite mh = true.
+  Proof. exact (DWMulDW_acc.FINyh xh xl mh ml FIN_mul). Qed.
+
+  (** The low component of the reconstructed reciprocal is finite whenever
+      the complete division result is finite. *)
+  Fact FIN_ml : is_finite ml = true.
+  Proof. exact (DWMulDW_acc.FINyl xh xl mh ml FIN_mul). Qed.
+
+  (** The initial rounded reciprocal [1/yh] is finite whenever the complete
+      division result is finite.  This is useful when reasoning backward from
+      the final result to the reciprocal-construction steps. *)
   Fact FIN_th : is_finite th = true.
   Proof.
-    (* LAYER-2: unfold DWDivDW3 through DWTimesDW3, then repeated
-       BPLUS_finite_e / BFMA_finite_e / BMULT_finite_e; th appears in every
-       leaf via mh, ml.  Mechanical (cf. DWMulDW_acc.v:123). *)
-  Admitted.
-
-  Fact FIN_mul : is_finite_p (DWTimesDW3 xh xl mh ml).
-  Proof.
-    (* LAYER-2: fst/snd of DWDivDW3 are exactly fst/snd of this DWTimesDW3;
-       split FIN and re-pair. *)
-  Admitted.
-
-  Fact FIN_mh : is_finite mh = true.
-  Proof.
-    (* LAYER-2: mh is the high operand of the closing DWTimesDW3; extract via
-       DWMulDW_acc.CorrectDWMulDW.FINyh applied at (xh,xl,mh,ml). *)
-  Admitted.
-
-  Fact FIN_ml : is_finite ml = true.
-  Proof.
-    (* LAYER-2: as FIN_mh via CorrectDWMulDW.FINyl. *)
-  Admitted.
+    have Hmh := FIN_mh.
+    change (is_finite (BPLUS (BPLUS dh th) (BPLUS dl (snd (TwoSumF dh th)))) = true)
+      in Hmh.
+    destruct (BPLUS_finite_e t _ _ Hmh) as [Hsh _].
+    destruct (BPLUS_finite_e t _ _ Hsh) as [_ Hth].
+    exact Hth.
+  Qed.
 
 End CorrectDWDivDW.
 
 (* ============================================================
-   Section 2: FLX -> FLT bridge for DWDivDW3.
+   Double-word representation of the multiplication result
+
+   The closing operation of DWTimesDW3 is Fast2Sum ch cl3, with high product
+   ch = BMULT xh yh and correction cl3 = BPLUS (Fast2Mult_err xh yh)
+   (BFMA xl yh (BFMA xh yl (BMULT xl yl))).  A Fast2Sum output is a double-word
+   once (a) the high sum BPLUS ch cl3 is finite and (b) the operands are ordered
+   |cl3| <= |ch| (Fast2Sum_is_DW).  The ordering is DWMulDW_acc.aux_cl3_le_ch.
+
+   NOTE (contrast with DWPlusFP_double_word, which is unconditional): the
+   ordering here needs the product to be in the NORMAL range,
+   bpow(emin+2p-1) <= |xh*yh| -- in deep underflow the correction is not forced
+   below the (subnormal) high product, so a Fast2Sum-of-a-multiply result is
+   NOT unconditionally a double-word.  This normal-range fact is exactly what
+   DWDivDW_cond's quotient bound supplies for the closing multiply.
+   ============================================================ *)
+(** [DWTimesDW3] returns a nonoverlapping double-word representation provided
+    both operands satisfy [double_word_prop], the computed result is finite,
+    and the leading product is large enough to avoid deep underflow.
+
+    The normal-range assumption ensures that the correction supplied to the
+    final [Fast2Sum] is no larger than its leading component.  This lemma is
+    used below for the final multiplication in [DWDivDW3].  The premise uses
+    the Prop-valued [double_word_prop], while the conclusion uses the
+    Type-valued [double_word]; both express the same nonoverlap equation. *)
+Lemma DWTimesDW3_double_word {NANS: Nans} {t : type} {STD: is_standard t}
+      (xh xl yh yl : ftype t) :
+  (3 <= fprec t)%Z ->
+  double_word_prop xh xl ->
+  double_word_prop yh yl ->
+  bpow radix2 (@common.emin t + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh) ->
+  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
+Proof.
+intros Hp3 DWx DWy Hnorm FIN.
+have Hch  := DWMulDW_acc.FINmul  xh xl yh yl FIN.
+have Hcl3 := DWMulDW_acc.FINcl3  xh xl yh yl FIN.
+have Hle  := DWMulDW_acc.aux_cl3_le_ch xh xl yh yl Hp3 DWx DWy Hch Hcl3 Hnorm.
+change (double_word
+          (Fast2Sum_sum (BMULT xh yh)
+             (BPLUS (Fast2Mult_err xh yh)
+                    (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
+          (Fast2Sum_err (BMULT xh yh)
+             (BPLUS (Fast2Mult_err xh yh)
+                    (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))).
+apply Fast2Sum_is_DW; [ exact (proj1 FIN) | exact Hle ].
+Qed.
+
+(* ============================================================
+   Double-word representation of the division result
+
+   fst/snd (DWDivDW3 xh xl yh yl) are, by definition, fst/snd of the closing
+   DWTimesDW3 xh xl mh ml (where (mh,ml) is the refined reciprocal), so result-DW
+   reduces directly to DWTimesDW3_double_word at (xh, xl, mh, ml).
+
+   Its three obligations are the honest remaining content:
+     - double_word_prop xh xl : the dividend is a DW (a cond field);
+     - double_word_prop mh ml : the refined reciprocal (mh,ml) = DWPlusFP dh dl th
+       is a DW.  DWPlusFP's result is a DW unconditionally (DWPlusFP_double_word),
+       given its DW input (dh,dl) = DWTimesFP3 eh el th -- so this unfolds to the
+       reciprocal-reconstruction DW cascade (DWTimesFP3 -> Fast2Sum(rh,rl)), each
+       level a multiply-Fast2Sum needing its own normal-range, as in
+       DWTimesDW3_double_word;
+     - the closing-multiply normal range bpow(emin+2p-1) <= |xh*mh| (mh ~ 1/yh,
+       so this is the quotient normal-range that DWDivDW_cond's bound (ii)
+       supplies once the reciprocal error mh - 1/yh is controlled).
+   Both DW-ness and the normal range are taken here as explicit hypotheses, the
+   same "split-line" discipline the DWDivFP development uses for UF_tl.
+   ============================================================ *)
+Section ResultDWDivDW.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Variables (xh xl yh yl : ftype t).
+
+Notation th  := (BDIV (Zconst t 1) yh).
+Notation eh  := (fst (Fast2Sum (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)))).
+Notation el  := (snd (Fast2Sum (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)))).
+Notation dh  := (fst (DWTimesFP3 eh el th)).
+Notation dl  := (snd (DWTimesFP3 eh el th)).
+Notation mh  := (fst (DWPlusFP dh dl th)).
+Notation ml  := (snd (DWPlusFP dh dl th)).
+
+Hypothesis Hp3   : (3 <= fprec t)%Z.
+Hypothesis FIN   : is_finite_p (DWDivDW3 xh xl yh yl).
+Hypothesis DWx   : double_word_prop xh xl.
+Hypothesis DWm   : double_word_prop mh ml.
+Hypothesis Hnorm : bpow radix2 (@common.emin t + 2 * fprec t - 1)
+                   <= Rabs (FT2R xh * FT2R mh).
+
+(** The two components returned by [DWDivDW3] form a valid double-word.
+
+    Besides finiteness and a double-word dividend, the theorem assumes that
+    the reconstructed reciprocal [(mh,ml)] satisfies [double_word_prop] and
+    that the final product [xh*mh] avoids deep underflow.  Separate range
+    analysis can establish these assumptions from a public precondition for
+    the division operation. *)
+Lemma DWDivDW3_double_word :
+  double_word (fst (DWDivDW3 xh xl yh yl)) (snd (DWDivDW3 xh xl yh yl)).
+Proof.
+have FINmul : is_finite_p (DWTimesDW3 xh xl mh ml) by exact FIN.
+exact (DWTimesDW3_double_word xh xl mh ml Hp3 DWx DWm Hnorm FINmul).
+Qed.
+
+End ResultDWDivDW.
+
+(* ============================================================
+   Agreement between the FLX paper model and the FLT runtime model
 
    Collapses the FLT runtime model DDModels.DWDivDW3 onto the paper's
-   real-valued FLX model, node by node, under a strong-underflow discipline:
-   every rounded node carries a lower bound placing it in the normal range so
-   round_FLT agrees with round_FLX (round_FLT_FLX), and the closing DW*DW
-   multiply is discharged by DWMulDW_acc.DWTimesDW3_FLX_FLT.
+   real-valued FLX model, node by node, under no-underflow assumptions: the
+   relevant rounded prologue nodes carry lower bounds placing them in the
+   normal range, so round_FLT agrees with round_FLX (round_FLT_FLX).  The
+   intended completed proof also composes bridges for the two reciprocal
+   refinement sub-blocks and the closing double-word multiplication.
 
    The paper's FLX reciprocal prologue (paper_proofs/DWDivDW.v:1937-1949):
      th_r := rnd_p (/ yh)
@@ -163,21 +294,28 @@ Notation dl  := (snd (DWTimesFP3 eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
-(* per-node normal-range hypotheses (strong-underflow discipline).  One family
-   for each prologue node; the closing DWTimesDW3 delegates to the underflow
-   family of DWMulDW_acc.DWTimesDW3_FLX_FLT (Nprod, N0..N3) at (xh,xl,mh,ml). *)
+(* Normal-range hypotheses for the reciprocal, low-product, and error-sum
+   nodes represented explicitly by the current theorem signature. *)
 Hypothesis UF_th   : bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Hypothesis UF_rl   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R yl * FT2R th).
 Hypothesis UF_eh   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R rh + FT2R rl).
-(* the DWTimesFP3 / DWPlusFP sub-blocks and the closing DWTimesDW3 carry their
-   own per-node families, delegated to their respective bridges. *)
+(* A completed compositional proof may require further hypotheses for the
+   DWTimesFP3 and DWPlusFP sub-blocks and the closing DWTimesDW3.  Those
+   hypotheses are not yet represented in this admitted theorem's interface. *)
 
-(* The FLX->FLT bridge.  RHS is the paper's FLX DWTimesDW12 evaluated at the
-   FLX-reconstructed reciprocal prologue (mh_r, ml_r), written with exported
-   operators so it matches the inlined Let in DWDDW3_correct up to conversion. *)
+(** The finite-precision runtime computation [DDModels.DWDivDW3] denotes the
+    same real pair as the paper's FLX computation.
+
+    The lower-bound hypotheses exclude underflow at the reciprocal,
+    low-product, and error-sum nodes, allowing FLT rounding to be replaced by
+    FLX rounding.  This equality is the link used by
+    [relative_errorDWDivDW3_correct] to reuse the paper-level error bound.
+
+    This result is currently admitted; its final interface may need additional
+    no-underflow hypotheses for the composed sub-blocks. *)
 Lemma DWDivDW3_FLX_FLT :
   F2Rp (DWDivDW3 xh xl yh yl)
-    = (let th_r := rnd_p (1 / FT2R yh) in
+    = (let th_r := rnd_p (/ FT2R yh) in
        let rh_r := (1 - FT2R yh * th_r)%R in
        let rl_r := (- rnd_p (FT2R yl * th_r))%R in
        let eh_r := rnd_p (rh_r + rl_r) in
@@ -199,7 +337,7 @@ Admitted.
 End BridgeDWDivDW.
 
 (* ============================================================
-   Section 3: Layer-1 relative-error theorem for DWDivDW3.
+   Relative-error bound for DWDivDW3
    Mirrors DWDivFP_acc.v:274-321 (relative_errorDWDivFP3_correct): instantiate
    the paper's tight bound DWDivDW.DWDDW3_correct (98/10*u^2), rewrite the FLX
    model via the bridge, and read off the numeric bound.
@@ -219,54 +357,52 @@ Hypothesis DWy  : double_word yh yl.
 Hypothesis FIN  : is_finite_p (DWDivDW3 xh xl yh yl).
 Hypothesis Hp14 : (14 <= fprec t)%Z.
 Hypothesis Hyhne : FT2R yh <> 0.
-(* the strong-underflow families for every rounded node, as consumed by
-   DWDivDW3_FLX_FLT (prologue) and by the sub-block/closing bridges. *)
+(* No-underflow assumptions currently exposed by [DWDivDW3_FLX_FLT]. *)
+Hypothesis UF_th : bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
+Hypothesis UF_rl : bpow radix2 (emin + fprec t - 1)
+                   <= Rabs (FT2R yl * FT2R (BDIV (Zconst t 1) yh)).
+Hypothesis UF_eh : bpow radix2 (emin + fprec t - 1)
+                   <= Rabs (FT2R (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))
+                            + FT2R (BOPP (BMULT yl (BDIV (Zconst t 1) yh)))).
 
+(** Absolute relative error of the real number [zh+zl] returned by the
+    algorithm, measured against the exact quotient
+    [(xh+xl)/(yh+yl)]. *)
 Definition relative_error_DWDivDW :=
   Rabs ((zh + zl - (FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))
         / ((FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))).
 
+(** Under the double-word, finiteness, precision, nonzero-divisor, and
+    no-underflow assumptions above, [DWDivDW3] computes the quotient with
+    relative error at most [9.8*u^2], where [u = 2^(-p)].
+
+    The proof transfers [DWDivDW.DWDDW3_correct] from the paper's FLX model to
+    the runtime FLT model through [DWDivDW3_FLX_FLT].  It therefore currently
+    depends on the admitted bridge theorem. *)
 Theorem relative_errorDWDivDW3_correct :
   relative_error_DWDivDW <= 98/10 * u ^ 2.
 Proof.
-  (* LAYER-2:
-       have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
-         by apply (dw_word_DWdouble xh xl yh); exact DWx.
-       have HDWy : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
-         by apply (dw_word_DWdouble yh yl yh); exact DWy.
-       pose proof (@DWDivDW.DWDDW3_correct (fprec t) (fprec_gt_one t) choice
-                     eq_refl F2Mult_disch TwoProdE_disch
-                     (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
-                     HDWx HDWy Hp14 Hyhne) as Hpaper.
-       rewrite (DWDivDW3_FLX_FLT xh xl yh yl FIN Hp14 Hyhne ...) in Hpaper.
-       rewrite /F2Rp/= in Hpaper.
-       unfold relative_error_DWDivDW, zh, zl.
-       (* then the 98/10*u^2 = 98/10*(bpow*bpow) numeric collapse, cf.
-          DWDivFP_acc.v:317. *)
-     The instantiation additionally requires discharging the paper's abstract
-     two-product hypotheses Fast2Mult_correct / TwoProdE (F2Mult_disch,
-     TwoProdE_disch); TwoProdE is DWTimesFP.TwoProdE, Fast2Mult_correct is the
-     FLX Dekker exactness of the concrete two-product.
-
-     PREREQUISITE (blocks this whole path): paper_proofs/DWDivDW.v must first be
-     compiled -- it was never built and is absent from _CoqProject.  Findings
-     from the Layer-1 pass:
-       * DWDivDW.v line 14 imports the stale paper_proofs/DWTimesDW_original.v.
-         DWTimesDW_original.v does not compile: each of its 3 sections (Algo10/
-         11/12) is MISSING [Notation TwoProd := (TwoProd p choice)] beside its
-         [Notation Fast2Mult := (Fast2Mult p choice)], and after adding those a
-         further proof-rot surfaces ([rewrite TwoProdE] "LHS does not match").
-       * The maintained paper_proofs/DWTimesDW.v already provides ALL symbols
-         DWDivDW.v needs (DWTimesDW12, DWTimesDW12_correct, DWTimesDW12_Asym_l/r,
-         DWTimesDW12Sy) and its DWTimesDW12_correct no longer carries the
-         abstract two-product hypotheses.  Repointing DWDivDW.v's import to
-         DWTimesDW builds further but then fails inside DWDivDW.v's own proofs
-         with an arg-order mismatch (a lemma is applied with ZNE where a Z is
-         expected), because those proofs are coupled to _original's API.
-     So Layer-2 begins by choosing one of: (a) repair DWTimesDW_original.v's
-     proof rot, or (b) repoint to DWTimesDW.v and fix DWDivDW.v's arg-order
-     mismatches; then add paper_proofs/DWDivDW.v to _CoqProject and re-require it
-     here. *)
-Admitted.
+(* Instantiate the paper's tight FLX bound directly.  Its abstract
+   two-product hypotheses reduce to concrete lemmas: the round-to-nearest-even
+   [choice] equation is [eq_refl], and [TwoProd = Fast2Mult] is
+   DWTimesFP.TwoProdE.  The FLX->FLT reconciliation is the compositional bridge
+   DWDivDW3_FLX_FLT. *)
+have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
+  by apply (dw_word_DWdouble xh xl yh); exact DWx.
+have HDWy : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
+  by apply (dw_word_DWdouble yh yl yh); exact DWy.
+pose proof (@DWDivDW.DWDDW3_correct (fprec t) (fprec_gt_one t) choice eq_refl
+              (DWTimesFP.TwoProdE (fprec t) choice)
+              (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
+              HDWx HDWy Hp14 Hyhne) as Hpaper.
+cbv beta in Hpaper.
+pose proof (DWDivDW3_FLX_FLT xh xl yh yl FIN Hp14 Hyhne UF_th UF_rl UF_eh) as Hbr.
+cbv zeta in Hbr.
+rewrite -Hbr in Hpaper.
+rewrite /F2Rp in Hpaper.
+cbv beta iota in Hpaper.
+unfold relative_error_DWDivDW, zh, zl.
+exact Hpaper.
+Qed.
 
 End FiniteAccuracyDWDivDW.

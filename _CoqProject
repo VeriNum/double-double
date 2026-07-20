@@ -8,6 +8,7 @@ paper_proofs/DWPlus.v
 paper_proofs/DWTimesFP.v
 paper_proofs/DWTimesDW.v
 paper_proofs/DWDivFP.v
+paper_proofs/DWDivDW.v
 
 common/common.v
 common/op_defs.v

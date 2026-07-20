@@ -11,7 +11,7 @@ Require Import DWPlus.
 Require Import DWTimesFP.
 
 (* use the bounds of original paper *)
-Require Import DWTimesDW_original.
+Require Import DWTimesDW.
 Require Import F2Sum.
 
 
@@ -56,6 +56,7 @@ Definition TwoSum x y := (rnd_p (x + y), TwoSum_err p choice  x y).
 Notation Fast2Sum := (Fast2Sum  p choice).
 (* (a b :R) := (rnd_p (a +b), F2S_err a b). *)
 Notation Fast2Mult := (Fast2Mult p choice).
+Notation TwoProd := (TwoProd p choice).
 Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
 Notation F2P_error a b  :=  (snd (Fast2Mult a b)).
 
@@ -69,6 +70,23 @@ Notation F2P_errorE := (F2P_errorE Fast2Mult_correct).
 Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 Notation DWTimesFP := (DWTimesFP p choice).
+
+(* The maintained DWTimesDW.v no longer marks these [simpl never]; this file's
+   Algo17 proofs are written assuming the DW* operators stay folded (they
+   destruct them with [case H: DWTimesDW12 ...] and fold via equations), so
+   restore that discipline to keep [rewrite /=] from unfolding them.
+   [simpl never] only blocks [simpl]/[cbn]; the [case] tactic computes a
+   weak-head normal form and would still reduce the (now transparent) concrete
+   [DWTimesDW12] to a pair constructor, expanding [zh]/[zl] and breaking the
+   equation-based destructs.  Making it [Opaque] blocks that reduction so
+   [case H: DWTimesDW12 ... => [zh zl]] keeps [zh]/[zl] abstract.  The two
+   degenerate [xh+xl=0] subcases (in [DWDDW3_correct_aux] and [DWDDW3_correct])
+   that previously relied on the pair reducing now destruct the pair explicitly
+   before rewriting; [DWDDW3_correct]'s [xh=0] branch re-enables transparency
+   locally for its [rewrite /DWTimesDW12]. *)
+Arguments DWTimesDW.DWTimesDW12 : simpl never.
+Arguments DWTimesFP.DWTimesFP9 : simpl never.
+Opaque DWTimesDW.DWTimesDW12.
 
 Lemma dw_u xh xl (DWx: double_word  xh xl):   Rabs xl <= u * Rabs xh.
 Proof.
@@ -115,7 +133,7 @@ Proof.
   move=> th yyh yyl.
   pose zh := fst (DWTimesFP yyh  yyl th).
   pose zl := snd (DWTimesFP yyh yyl th).
-  by rewrite  (DWTimesFP_Asym_r ZNE  TwoProdE yyh yyl th ).
+  by rewrite  (DWTimesFP_Asym_r p ZNE yyh yyl th ).
 Qed.
 
 Fact DTas_l: forall th yyh yyl,  fst (DWTimesFP (-yyh) (-yyl) th)= - fst (DWTimesFP yyh yyl th ).
@@ -123,7 +141,7 @@ Proof.
 move=> th yyh yyl.
 pose zh := fst (DWTimesFP yyh  yyl th).
 pose zl := snd (DWTimesFP yyh yyl th).
-by rewrite (DWTimesFP_Asym_l ZNE  TwoProdE yyh yyl th ).
+by rewrite (DWTimesFP_Asym_l p ZNE yyh yyl th ).
 Qed.
 
 Fact DTf0 a b: DWTimesFP a b 0 = (0 ,0).
@@ -182,7 +200,7 @@ Fact h44a  (Hp4: (4<= p)%Z): Rabs eta <= 3 / 2 * (u * u) + 4 * (u * (u * u)).
 Proof.
 have yn0:= (dw_n0 DWy yhn0).
 have Fth : format th by apply:generic_format_round.
-move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct TwoProdE DWy Fth).
+move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct DWy Fth).
 case H: (DWTimesFP yh yl th)=>[rh rl].
 by rewrite /= -/th -/u Rmult_1_r; case.
 Qed.
@@ -190,7 +208,7 @@ Qed.
 Fact DWr (Hp4: (4<= p)%Z): double_word rh rl.
 Proof.
 have Fth : format th by apply:generic_format_round.
-move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct TwoProdE DWy Fth).
+move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct DWy Fth).
 case H: (DWTimesFP yh yl th)=>[rh rl].
 by rewrite /= -/th -/u Rmult_1_r; case.
 Qed.
@@ -334,13 +352,13 @@ wlog yhpos :  yh yl yhn0  DWy / 0 < yh.
 case:   xhpos => xhpos; last first.
   have:(rnd_p (xh / yh)) =0 by rewrite  -xhpos /Rdiv Rmult_0_l round_0.
   rewrite /DWTimesFP /= -xhpos => ->.
-  rewrite TwoProdE /= !(Rmult_0_r, round_0, Rplus_0_r, Rplus_0_l, Rminus_0_r).
+  rewrite /= !(Rmult_0_r, round_0, Rplus_0_r, Rplus_0_l, Rminus_0_r).
   apply:generic_format_0.
 set x := xh + xl.
 set y := yh + yl.
 move=>th.
 have Fth: format th by rewrite /th; apply:generic_format_round.
-move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct TwoProdE DWy Fth).
+move :(DWTimesFP_correct ZNE Hp4 Fast2Mult_correct DWy Fth).
 
 (* h44 *)
 have := (h44 yhn0 DWx DWy).
@@ -513,7 +531,7 @@ rewrite /th; have ->: xh / - yh = - (xh / yh) by field.
   
   have->: DWTimesFP (- yh) (- yl) (- th) =  DWTimesFP yh yl th.
   
-    by rewrite (DWTimesFP_Asym_l ZNE TwoProdE) (DWTimesFP_Asym_r ZNE TwoProdE) /pair_opp !Ropp_involutive.
+    by rewrite (DWTimesFP_Asym_l p ZNE) (DWTimesFP_Asym_r p ZNE) /pair_opp !Ropp_involutive.
     rewrite (surjective_pairing (DWTimesFP _ _ _)).
     set rh := fst _.  set rl := snd _.        
     set f:= _ / (-yh).
@@ -533,7 +551,7 @@ set th := rnd_p (xh/yh).
 have ->: rnd_p (-xh /  yh)  = - th.
   have ->: -xh /  yh = - (xh /yh) by field.
   by rewrite ZNE round_NE_opp -ZNE /th.
-rewrite (DWTimesFP_Asym_r  ZNE TwoProdE).
+rewrite (DWTimesFP_Asym_r  p ZNE).
 rewrite (surjective_pairing (DWTimesFP _ _ _)).
 set rh := fst _.  
 set rl := snd _.   
@@ -694,7 +712,7 @@ have ylub: Rabs yl <= u* yh.
 have DWr: (double_word  rh rl).
   have Fth: format th by rewrite /th; apply:generic_format_round.
   have Hp4: (4 <= p)%Z by lia.
-  move:(DWTimesFP_DWres ZNE Hp4 Fast2Mult_correct TwoProdE DWy Fth).
+  move:(DWTimesFP_DWres ZNE Hp4 Fast2Mult_correct DWy Fth).
   case h:  (DWTimesFP yh yl th)=>[rh0 rl0].
   have: (rh0, rl0) = (rh, rl) by rewrite -rhlE -h.
   by case => -> ->.
@@ -709,7 +727,7 @@ have rlub: Rabs rl <= u* rh.
     rewrite Rabs_pos_eq; last first.
       have Hp4: (4 <= p)%Z by lia.
       have Fth: format th by rewrite /th; apply:generic_format_round.
-      apply:(DWTimesFP_zhpos ZNE Hp4 Fast2Mult_correct TwoProdE DWy Fth); try lra.
+      apply:(DWTimesFP_zhpos ZNE Hp4 Fast2Mult_correct DWy Fth); try lra.
         rewrite /th.
         suff: rnd_p 0 <= rnd_p (xh / yh).
           case; rewrite round_0 //.
@@ -1211,7 +1229,7 @@ have rn_sym:= (rnd_p_sym p _ (choiceP ZNE)).
 have h57 : th * (2 - y * th) - /y = -y * (th - /y) ^2 by field.
 
 have ylu: Rabs yl <= u.
-  rewrite /u; apply/(double_lpart_u ZNE _ DWy); try lia; lra.
+  rewrite /u; apply/(double_lpart_u Hp1 DWy); try lia; lra.
 have ryhth: Rabs (yl * th) <= u.
   rewrite Rabs_mult (Rabs_pos_eq th); last lra.
   nra.
@@ -1328,13 +1346,13 @@ have eE: e = rh + rl by rewrite /e ehlE; ring.
 have eu: Rabs e <= 2*u by rewrite eE; apply:(Rle_trans _ _  _  (Rabs_triang _ _)); lra.
 pose omega1 :=   (dh + dl - e*th)/(e*th).
 have dh0: e = 0 -> dh = 0.
-  move=> e0; rewrite /e /= -eE e0 /DWTimesFP9 TwoProdE /FMA /= 
+  move=> e0; rewrite /e /= -eE e0 /DWTimesFP9 /FMA /= 
     !(round_0, Rmult_0_l,Rplus_0_l, Rminus_0_r, Rminus_0_l) 
     ZNE round_NE_opp -ZNE (round_generic _ _ _ rh) //.
   have->: rl - - rh = 0 by lra. 
   by rewrite !(round_0, Rmult_0_l).
 have  dl0:  e = 0 ->  dl = 0.
-  move=> e0;rewrite /e /= -eE e0 /DWTimesFP9 TwoProdE /FMA /= 
+  move=> e0;rewrite /e /= -eE e0 /DWTimesFP9 /FMA /= 
    !(round_0, Rmult_0_l,Rplus_0_l, Rminus_0_r, Ropp_0, Rminus_0_l).
    rewrite (round_generic _ _ _  (-rh)); last by apply/generic_format_opp.
   have->: rl - - rh = 0 by lra. 
@@ -1345,7 +1363,7 @@ have o1_0 : e = 0 -> omega1 = 0.
   by rewrite /Rdiv Rmult_0_l.
 have h59a : dh + dl = e*th * (1 + omega1).
   case:(Req_dec e 0)=> e0.
-    rewrite dh0 //  /e /= -eE e0 /DWTimesFP9 TwoProdE /FMA /= 
+    rewrite dh0 //  /e /= -eE e0 /DWTimesFP9 /FMA /= 
     !(round_0, Rmult_0_l,Rplus_0_l, Rminus_0_r, Rminus_0_l, Ropp_0).
     rewrite ZNE round_NE_opp -ZNE (round_generic _ _ _ rh) //.
     have->: rl - - rh = 0 by lra. 
@@ -1362,7 +1380,7 @@ have h59: Rabs omega1 <= 2* u^2.
     by apply: F2Sum_correct_DW.
 have Fth: format th by apply: generic_format_round.
 
-move: (@DWTimesFP9_correct _ _ ZNE Hp3 TwoProdE eh el th DWe Fth).
+move: (@DWTimesFP9_correct _ _ ZNE Hp3 eh el th DWe Fth).
  case H:  DWTimesFP9 => [zh zl].
 case.
 by rewrite fstE sndE /e.
@@ -1373,7 +1391,7 @@ have Fth: format th by apply:generic_format_round.
 
 have DWd : double_word dh dl.
 
-move : (DWTimesFP9_correct ZNE Hp3 TwoProdE DWe Fth).
+move : (DWTimesFP9_correct ZNE Hp3 DWe Fth).
 case H: (DWTimesFP9 p choice eh el th) => [zh zl].
 by case.
 
@@ -1581,16 +1599,12 @@ have h63a: z <= y^2 * (u ^ 2 * (/ 2 + / (y * (y - u))) ^ 2).
 have F1: format 1 by change (format (pow 0));
      apply:generic_format_bpow; rewrite /fexp; lia.
 case:(Req_dec (xh + xl) 0) => x0.
-  rewrite /DWDivDW3.
-  case H:  DWTimesDW12 => [zh zl].
-    move:(H); rewrite / DWTimesDW12 TwoProdE.
+  rewrite /DWDivDW3; case: (DWTimesDW12 p choice xh xl mh ml) => zh zl.
     case:(DWx)=>[[Fxh Fxl] xE].
     have xh0: xh = 0 by rewrite xE x0 round_0.
     have xl0: xl = 0 by lra.
-    rewrite /Fast2Mult xh0 xl0 !(Rmult_0_l, round_0, Rminus_0_r, Rplus_0_l, round_round) // Fast2Sum0f; 
-      try apply:generic_format_round; try apply:generic_format_0.
-    case => <- <-.
-    rewrite  /Rdiv !(Rplus_0_r, Rmult_0_l,  Rminus_0_r) Rabs_R0.
+    have hxy: (xh + xl) = 0 by rewrite xh0 xl0; ring.
+    rewrite /Rdiv hxy !Rmult_0_l Rinv_0 Rmult_0_r Rabs_R0.
       clear -upos; nra.
 case:(Rle_lt_dec 1 y) => hy1; last first.
   have yl0 : yl  < 0 .
@@ -1598,7 +1612,7 @@ case:(Rle_lt_dec 1 y) => hy1; last first.
      move/haux1; lra.
   have yhE: yh = 1.
     by case: yb; case=>//; move/haux2; lra.
-  rewrite /DWDivDW3; case H:  DWTimesDW12 => [zh zl].
+  rewrite /DWDivDW3; case H:  (DWTimesDW12 p choice xh xl mh ml) => [zh zl].
   have  ryl1 :   rnd_p (- yl + 1) = 1.
     have : 1 <= -yl + 1  by lra.
     move/(round_le two fexp (Znearest choice)).
@@ -1666,8 +1680,8 @@ case:(Rle_lt_dec 1 y) => hy1; last first.
     have->: rnd_p (-yl) = -yl by rewrite round_generic //; apply:generic_format_opp.
     rewrite Rabs_Ropp (Rabs_pos_eq 1);  lra.
   have Hp4: (4 <= p)%Z by lia.
-  move:( DWTimesDW12_correct ZNE Hp4 TwoProdE DWx DWm).
-  case HH: DWTimesDW12 => [zzh zzl].
+  move:( DWTimesDW12_correct Hp1 (choiceP ZNE) (ltac:(lia)) DWx DWm).
+  case HH: (DWTimesDW12 p choice xh xl mh ml) => [zzh zzl].
   set m:= mh + ml.
   rewrite /=.
   move=> h h'.
@@ -1816,13 +1830,13 @@ have h64: Rabs (x * (mh + ml) - x / y) <=  Rabs x / y * phi_u.
   rewrite /Rdiv Rmult_assoc; apply:Rmult_le_compat_l; first by apply:Rabs_pos.
   rewrite /Rdiv Rmult_comm in  h63f.
   clear -upos u2pos h63f ; nra.
-  rewrite / DWDivDW3; 
-  case H: DWTimesDW12 => [zh zl].
+  rewrite / DWDivDW3;
+  case H: (DWTimesDW12 p choice xh xl mh ml) => [zh zl].
 
   have Hp4: (4 <= p)%Z by lia.
-  move:( DWTimesDW12_correct ZNE Hp4 TwoProdE DWx DWm).
+  move:( DWTimesDW12_correct Hp1 (choiceP ZNE) (ltac:(lia)) DWx DWm).
 move: (H).
-  case HH: DWTimesDW12 => [zzh zzl].
+  case HH: (DWTimesDW12 p choice xh xl mh ml) => [zzh zzl].
   set m:= mh + ml.
   rewrite /=.
 case => -> ->.
@@ -1950,7 +1964,7 @@ Let  DWDivDW3 xh xl yh yl := (DWTimesDW12 p choice  xh xl (mh yh yl)  (ml yh yl)
 
 Fact  DWDivDW3_Asym_l (xh xl yh yl :R):  
   (DWDivDW3  (-xh) (-xl)  yh yl) =  pair_opp (DWDivDW3  xh xl    yh yl).
-Proof. by rewrite /DWDivDW3 DWTimesDW12_Asym_l. 
+Proof. by rewrite /DWDivDW3 (DWTimesDW12_Asym_l p choice (choiceP ZNE)).
 Qed.
 
 Fact mh_Asym yh yl (yhn0: yh <> 0): mh (-yh) (-yl) = -(mh yh yl).
@@ -1972,7 +1986,7 @@ Proof.
   set dl := DWTimesFP9 _ _ _ _ _.
   
    case H: DWTimesFP9 => [zh zl].
-      by rewrite /dl (@DWTimesFP9_Asym_r _ _  ZNE TwoProdE  (eh (yh) yl) (el yh yl) ( (th yh))) H.
+      by rewrite /dl (@DWTimesFP9_Asym_r _ _  ZNE  (eh (yh) yl) (el yh yl) ( (th yh))) H.
    
     have dlE : dl (-yh) (-yl) = -dl (yh) yl.
   rewrite ehE elE thE.
@@ -1980,7 +1994,7 @@ Proof.
   set dl := DWTimesFP9 _ _ _ _ _.
   
    case H: DWTimesFP9 => [zh zl].
-     by rewrite /dl (@DWTimesFP9_Asym_r _ _  ZNE TwoProdE  (eh (yh) yl) (el yh yl) ( (th yh)) ) H.
+     by rewrite /dl (@DWTimesFP9_Asym_r _ _  ZNE  (eh (yh) yl) (el yh yl) ( (th yh)) ) H.
    rewrite dhE dlE thE.
    
   
@@ -2029,9 +2043,9 @@ Proof.
     rewrite dhE dlE thE.
     set f := fst _; case H: DWPlusFP => [zh zl].
     rewrite /f.  
-rewrite DWPlusFPS // ?fstE 2?sndE; 
+rewrite DWPlusFPS // ?fstE 2?sndE;
   try (rewrite /DWTimesFP9 TwoProdE; apply:generic_format_round);
-  last apply: generic_format_round.
+  try apply: generic_format_round.
 by move:H; rewrite /DWPlusFP; case => <- <-.
 Qed.
 
@@ -2073,10 +2087,10 @@ Fact  DWDivDW3_Asym_r (xh xl yh yl :R)  (yhn0: yh <> 0):
 Proof.
   (* case H: (DWDivDW3  xh )=> [zh zl]. *)
   rewrite /DWDivDW3  ml_Asym // mh_Asym //.
-  by apply:DWTimesDW12_Asym_r.
+  by apply: (DWTimesDW12_Asym_r p choice (choiceP ZNE)).
 Qed.
 
-Fact DWDivDW3Sy (xh xl yh yl :R) e (yhn0: yh <> 0) (Hp4 : (4 <= p)%Z):
+Fact DWDivDW3Sy (xh xl yh yl :R) e (yhn0: yh <> 0) (Hp5 : (5 <= p)%Z):
   (DWDivDW3  xh xl (yh * pow e)  (yl * pow e)) =  map_pair (fun x => x * pow (-e))
       (DWDivDW3   xh xl  yh yl).
 Proof.
@@ -2085,7 +2099,7 @@ Proof.
 
 
   case:(@mhlS  yh yl e)=>//; try lia; move => -> ->.
-  by rewrite  DWTimesDW12Sy.
+  by rewrite  (DWTimesDW12Sy choice Hp5).
 Qed.
 
 
@@ -2108,8 +2122,11 @@ case:(Req_dec xh 0)=> [xh0 |xhn0].
   suff ->:  DWDivDW3 xh xl yh yl = (0 ,0).
     rewrite /= xl0 xh0 /Rdiv !(Rplus_0_r, Rmult_0_l, Rminus_0_r)  Rabs_R0.
     nra.
-  rewrite /DWDivDW3   /DWTimesDW12 /= TwoProdE /= xh0 xl0
-             !(Rmult_0_l , round_0, Rplus_0_l, Rminus_0_r)Fast2Sumf0 //; apply: generic_format_0.
+  Transparent DWTimesDW.DWTimesDW12.
+  rewrite /DWDivDW3 xh0 xl0 /DWTimesDW12 TwoProdE Fast2Mult0f
+     !(Rmult_0_l , round_0, Rplus_0_l, Rplus_0_r, Rminus_0_r) Fast2Sumf0 //;
+     apply: generic_format_0.
+  Opaque DWTimesDW.DWTimesDW12.
 have xn0 := (dw_n0 DWx xhn0).
 wlog ypos : yh  yl DWy yhn0 / 0 < yh.
   move=> Hwlog.
@@ -2137,8 +2154,8 @@ wlog hy: yh yl  DWy ypos / 1 <= yh <= 2-2*u.
   rewrite /=.
   case H:(DWDivDW3 xh xl yh yl) =>[zh zl].
     have yhn0 : yh <> 0 by lra.
-  have Hp4: (4 <= p)%Z by lia.
-  move:(@DWDivDW3Sy xh xl yh yl eyh yhn0 Hp4).
+  have Hp5: (5 <= p)%Z by lia.
+  move:(@DWDivDW3Sy xh xl yh yl eyh yhn0 Hp5).
 
   
   case H':DWDivDW3 =>[zzh zzl]. 
