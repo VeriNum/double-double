@@ -24,6 +24,12 @@ Proof. reflexivity. Qed.
 Lemma BMULT_Td : forall x y : ftype Tdouble, BMULT x y = Float.mul x y.
 Proof. reflexivity. Qed.
 
+Lemma BPLUS_Td : forall x y : ftype Tdouble, BPLUS x y = Float.add x y.
+Proof. reflexivity. Qed.
+
+Lemma BMINUS_Td : forall x y : ftype Tdouble, BMINUS x y = Float.sub x y.
+Proof. reflexivity. Qed.
+
 Lemma BOPP_Td  : forall x : ftype Tdouble,   BOPP  x   = Float.neg x.
 Proof. reflexivity. Qed.
 

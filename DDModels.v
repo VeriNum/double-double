@@ -284,6 +284,35 @@ Definition DWDivFP_cond (xh xl y : ftype t) : Prop :=
 
 End DWDivFPCond.
 
+Section DWDivDWCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
+
+(** Guard condition for reciprocal-bootstrap double-word division.
+
+    The two lower bounds serve different purposes: [1/yh] keeps the reciprocal
+    construction in range, while [xh/yh] keeps the final multiplication in
+    range.  Residual quantities such as [yl*th] and [rh+rl] are deliberately
+    not lower-bounded because they may legitimately be zero; those nodes form
+    the later normal/denormal case split. *)
+Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite yh = true /\
+  is_finite yl = true /\
+  double_word_prop xh xl /\
+  double_word_prop yh yl /\
+  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (1 / FT2R yh) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t - 1)
+    <= Rabs (FT2R xh / FT2R yh) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
+  Rabs (FT2R xh) <= bpow Zaux.radix2 (femax t - 2) /\
+  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - 2) /\
+  Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
+
+End DWDivDWCond.
+
 
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
