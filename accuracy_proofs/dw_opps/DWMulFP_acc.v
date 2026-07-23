@@ -5,7 +5,7 @@
 plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics common.
+Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
@@ -28,55 +28,6 @@ Arguments DWTimesFP.TwoProd : simpl never.
 Lemma let_pair_eta {A B C} (p : A*B) (k : A -> B -> C) :
   (let '(a,b) := p in k a b) = k (fst p) (snd p).
 Proof. destruct p; reflexivity. Qed.
-
-(* No-overflow of an FMA implies finiteness (the converse of
-   is_finite_fma_no_overflow), mirroring no_overflow_sum_is_finite for BPLUS.
-   Same statement/proof as LAProof.accuracy_proofs.float_acc_lems
-   .is_finite_fma_no_overflow'; kept local since LAProof is not a dependency. *)
-Lemma no_overflow_fma_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
-  forall (a b c : ftype t),
-  is_finite a = true -> is_finite b = true -> is_finite c = true ->
-  Rabs (rounded t (FT2R a * FT2R b + FT2R c)) < bpow Zaux.radix2 (femax t) ->
-  is_finite (BFMA a b c) = true.
-Proof.
-  intros a b c Ha Hb Hc Hov.
-  rewrite !is_finite_Binary in Ha, Hb, Hc.
-  rewrite is_finite_Binary /BFMA float_of_ftype_of_float.
-  pose proof (Binary.Bfma_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan (fprec t) (femax t) (fprec_gt_one t))
-    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b) (float_of_ftype c)
-    Ha Hb Hc) as H.
-  cbv zeta in H.
-  rewrite !B2R_float_of_ftype in H.
-  unfold rounded in Hov.
-  apply Rlt_bool_true in Hov.
-  rewrite Hov in H.
-  destruct H as (_ & HF & _).
-  exact HF.
-Qed.
-
-(* Analog of no_overflow_fma_is_finite for BMULT: a real product whose rounded
-   value stays below the overflow threshold yields a finite BMULT. *)
-Lemma no_overflow_mult_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
-  forall (a b : ftype t),
-  is_finite a = true -> is_finite b = true ->
-  Rabs (rounded t (FT2R a * FT2R b)) < bpow Zaux.radix2 (femax t) ->
-  is_finite (BMULT a b) = true.
-Proof.
-  intros a b Ha Hb Hov.
-  rewrite !is_finite_Binary in Ha, Hb.
-  rewrite is_finite_Binary /BMULT/BINOP float_of_ftype_of_float.
-  pose proof (Binary.Bmult_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan (fprec t) (femax t) (fprec_gt_one t))
-    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b)) as H.
-  cbv zeta in H.
-  rewrite !B2R_float_of_ftype in H.
-  unfold rounded in Hov.
-  apply Rlt_bool_true in Hov.
-  rewrite Hov in H.
-  destruct H as (_ & HF & _).
-  rewrite HF Ha Hb //.
-Qed.
 
 Section CorrectDWMulFP.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -427,19 +378,6 @@ rewrite Hb Rabs_Ropp Hu.
 apply Ulp.error_le_half_ulp_round; FLT_basics.
 Qed.
 
-(* |bpow(femax-1)| = /2 Omega, a power of 2, is in format. *)
-Lemma aux_format_half_Omega : generic_format radix2 fexp (/2 * Omega).
-Proof.
-have -> : (/2 * Omega = bpow radix2 (femax t - 1))%R.
-{ have -> : Omega = (bpow radix2 (femax t - 1) * bpow radix2 1)%R
-    by rewrite -bpow_plus; f_equal; lia.
-  have -> : bpow radix2 1 = 2%R by reflexivity.
-  lra. }
-apply Generic_fmt.generic_format_bpow.
-unfold SpecFloat.fexp, SpecFloat.emin.
-apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
-Qed.
-
 (* Product bound: from the rounded-product bound |round(xh*y)| <= Omega/4 in
    the cond, the real product is bounded by Omega/2. *)
 Lemma aux_xhy_bnd (a b : ftype t) :
@@ -451,7 +389,7 @@ move => Hfin Hb.
 have HΩ : 0 < Omega by apply bpow_gt_0.
 have Hr : round radix2 fexp (Znearest choice) (FT2R a * FT2R b) = FT2R (BMULT a b)
   by rewrite BMULT_round_correct.
-have HFh  : generic_format radix2 fexp (/2 * Omega) by apply aux_format_half_Omega.
+have HFh  : generic_format radix2 fexp (/2 * Omega) by apply generic_format_half_Omega.
 have HFhn : generic_format radix2 fexp (-(/2 * Omega)) by apply generic_format_opp.
 have Hb2 : - (/4 * Omega) <= FT2R (BMULT a b) <= /4 * Omega
   by apply Rabs_le_inv; exact Hb.
@@ -486,7 +424,7 @@ Lemma aux_round_prod_bnd (a b : ftype t) :
 Proof.
 move => Hfin Hreal.
 have HΩ : 0 < Omega by apply bpow_gt_0.
-have Hfmt : generic_format radix2 fexp (/2 * Omega) by apply aux_format_half_Omega.
+have Hfmt : generic_format radix2 fexp (/2 * Omega) by apply generic_format_half_Omega.
 have Hr : round radix2 fexp (Znearest choice) (FT2R a * FT2R b) = FT2R (BMULT a b)
   by rewrite BMULT_round_correct.
 have HFhn : generic_format radix2 fexp (-(/2 * Omega)) by apply generic_format_opp.
@@ -550,36 +488,6 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs (FT2R xh)))
   nra.
 Qed.
 
-(* A rounded value is at most |v| + 1/2 ulp(v) in magnitude. *)
-Lemma aux_round_ub (v : R) :
-  Rabs (round radix2 fexp (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) v)
-    <= Rabs v + /2 * ulp v.
-Proof.
-have He := @Ulp.error_le_half_ulp radix2 fexp valid_fexp_inst choice v.
-have Hb : Rabs (round radix2 fexp (Znearest choice) v) <= Rabs v + /2 * ulp v.
-{ replace (round radix2 fexp (Znearest choice) v)
-     with ((round radix2 fexp (Znearest choice) v - v) + v) at 1 by ring.
-  eapply Rle_trans; [apply Rabs_triang|].
-  rewrite Rplus_comm. apply Rplus_le_compat_l. exact He. }
-exact Hb.
-Qed.
-
-(* ulp of any real below the overflow threshold is at most bpow(femax-fprec). *)
-Lemma aux_ulp_real (v : R) :
-  Rabs v < Omega -> ulp v <= bpow radix2 (femax t - fprec t).
-Proof.
-move => Hlt. destruct (Req_dec v 0) as [Hv0 | Hv0].
-- rewrite Hv0.
-  change (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 0) with
-    (Ulp.ulp radix2 (FLT.FLT_exp (3 - femax t - fprec t) (fprec t)) 0).
-  rewrite FLT.ulp_FLT_0. apply bpow_le. pose proof femax_lb t; pose proof fprec_lb t; lia.
-- rewrite (Ulp.ulp_neq_0 radix2 fexp _ Hv0). apply bpow_le.
-  have Hmag : (mag radix2 v <= femax t)%Z
-    by apply (mag_le_bpow radix2 v (femax t) Hv0 Hlt).
-  unfold cexp, SpecFloat.fexp, SpecFloat.emin.
-  apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
-Qed.
-
 (* From the square-root-scale component bounds |a|,|b| <= bpow(femax/2-1) the
    proof bodies' legacy facts are DERIVED: |a|,|b| <= Omega/4, the real product
    |a*b| <= Omega/4, is_finite (BMULT a b), and |round(a*b)| <= Omega/4.  This
@@ -624,8 +532,8 @@ have HEq : bpow radix2 (femax t - fprec t) <= /4 * Omega
   by (rewrite Hq4; apply bpow_le; pose proof fprec_lb t; lia).
 have Hfin : is_finite (BMULT a b) = true.
 { apply no_overflow_mult_is_finite => //.
-  eapply Rle_lt_trans; [apply aux_round_ub|].
-  have Hu := aux_ulp_real _ Hreal_lt. lra. }
+  eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
+  have Hu := ulp_below_overflow _ Hreal_lt. lra. }
 (* rounded product bound |round(a*b)| <= Omega/4 *)
 have Hpb : Rabs (FT2R (BMULT a b)) <= /4 * Omega.
 { have Hr : round radix2 fexp (Znearest choice) (FT2R a * FT2R b) = FT2R (BMULT a b)
@@ -691,7 +599,7 @@ have Hxly : Rabs (FT2R xl * FT2R y) <= /2 * bpow radix2 (femax t - fprec t).
 { apply (aux_xly_bnd xh xl y); [exact Hdwp | exact Hxhy | exact HyΩ]. }
 have Hcl1b : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * bpow radix2 (femax t - fprec t).
 { eapply Rle_trans; [exact Hcl1u|]. apply Rmult_le_compat_l; [lra|].
-  apply aux_ulp_real; exact Hxhy_lt. }
+  apply ulp_below_overflow; exact Hxhy_lt. }
 (* v := xl*y + cl1, small *)
 have Hv : Rabs (FT2R xl * FT2R y + FT2R (Fast2Mult_err xh y))
        <= bpow radix2 (femax t - fprec t).
@@ -700,12 +608,12 @@ have Hv_lt : Rabs (FT2R xl * FT2R y + FT2R (Fast2Mult_err xh y)) < Omega by lra.
 (* cl3 = BFMA xl y cl1 : finite *)
 have Hfcl3 : is_finite (BFMA xl y (Fast2Mult_err xh y)) = true.
 { apply no_overflow_fma_is_finite => //.
-  eapply Rle_lt_trans; [apply aux_round_ub|].
-  have Hu := aux_ulp_real _ Hv_lt. lra. }
+  eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
+  have Hu := ulp_below_overflow _ Hv_lt. lra. }
 (* |cl3| <= bpow(femax-fprec): cl3 = round(v) with |v| <= bpow(femax-fprec),
    and bpow(femax-fprec) is a representable power of 2, so rounding to nearest
    cannot exceed it. *)
-have Huv := aux_ulp_real _ Hv_lt.
+have Huv := ulp_below_overflow _ Hv_lt.
 have HfmtB : generic_format radix2 fexp (bpow radix2 (femax t - fprec t)).
 { apply Generic_fmt.generic_format_bpow.
   unfold SpecFloat.fexp, SpecFloat.emin.
@@ -752,27 +660,13 @@ have H4 : bpow radix2 (femax t - fprec t) <= /4 * Omega.
 change (is_finite (BPLUS (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y))) = true).
 apply (no_overflow_sum_is_finite t _ _ Hfch Hfcl3).
 unfold Bplus_no_overflow.
-eapply Rle_lt_trans; [apply aux_round_ub|].
+eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
 have Hsum : Rabs (FT2R (Fast2Mult_mul xh y) + FT2R (BFMA xl y (Fast2Mult_err xh y)))
          <= /2 * Omega + bpow radix2 (femax t - fprec t).
 { eapply Rle_trans; [apply Rabs_triang|]. lra. }
 have Hsum_lt : Rabs (FT2R (Fast2Mult_mul xh y) + FT2R (BFMA xl y (Fast2Mult_err xh y))) < Omega
   by lra.
-have Hu := aux_ulp_real _ Hsum_lt. lra.
-Qed.
-
-(* A format value below the smallest subnormal bpow(emin) must be 0. *)
-Lemma aux_format_small_0 (x : R) :
-  generic_format radix2 fexp x -> Rabs x < bpow radix2 emin -> x = 0.
-Proof.
-move => Hf Hlt. destruct (Req_dec x 0) as [Hx0 | Hx0]; [exact Hx0|].
-exfalso.
-have Hule : ulp x <= Rabs x.
-{ apply Ulp.ulp_le_abs; first [ exact Hx0 | exact Hf ]. }
-have Hge : bpow radix2 emin <= ulp x.
-{ rewrite (Ulp.ulp_neq_0 radix2 fexp _ Hx0). apply bpow_le.
-  unfold cexp, SpecFloat.fexp, SpecFloat.emin. apply Z.le_max_r. }
-lra.
+have Hu := ulp_below_overflow _ Hsum_lt. lra.
 Qed.
 
 (* Relative double-word bound: |xl| <= 2^-p |xh| (the low word is at most an
@@ -794,7 +688,7 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs (FT2R a))) as [Hn 
   { apply ulp_FLT_small;
       first [ apply fprec_gt_0 | eapply Rlt_trans; [exact Hs | apply bpow_lt; lia] ]. }
   have Hb0 : FT2R b = 0.
-  { apply aux_format_small_0; [apply generic_format_FLT_FT2R|].
+  { apply (generic_format_below_emin_eq_zero (t:=t)); [apply generic_format_FLT_FT2R|].
     rewrite Hulpe in Hdwu. have HE := bpow_gt_0 radix2 emin.
     eapply Rle_lt_trans; [exact Hdwu|]. lra. }
   rewrite Hb0 Rabs_R0.

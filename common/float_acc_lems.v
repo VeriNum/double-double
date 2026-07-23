@@ -195,6 +195,31 @@ destruct
  try discriminate.
 Qed.
 
+(** No overflow and finite operands imply that the FMA result is finite. *)
+Lemma no_overflow_fma_is_finite {NAN: Nans} {STD: is_standard t} :
+  forall (a b c : ftype t),
+  is_finite a = true -> is_finite b = true -> is_finite c = true ->
+  Rabs (rounded t (FT2R a * FT2R b + FT2R c)) <
+    bpow Zaux.radix2 (femax t) ->
+  is_finite (BFMA a b c) = true.
+Proof.
+  intros a b c Ha Hb Hc Hov.
+  rewrite !is_finite_Binary in Ha, Hb, Hc.
+  rewrite is_finite_Binary /BFMA float_of_ftype_of_float.
+  pose proof (Binary.Bfma_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t)
+    (fma_nan (fprec t) (femax t) (fprec_gt_one t))
+    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b)
+    (float_of_ftype c) Ha Hb Hc) as H.
+  cbv zeta in H.
+  rewrite !B2R_float_of_ftype in H.
+  unfold rounded in Hov.
+  apply Rlt_bool_true in Hov.
+  rewrite Hov in H.
+  destruct H as (_ & HF & _).
+  exact HF.
+Qed.
+
 (** Finite FMA implies operands are finite *)
 Lemma BFMA_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a b c: ftype t)
@@ -319,6 +344,29 @@ fold xb yb in HFINb.
   rewrite is_finite_Binary float_of_ftype_of_float in HFINb.
 destruct ((Binary.Bmult _ _ _ _ _ _ xb yb));
 simpl;  try discriminate. 
+Qed.
+
+(** No overflow and finite operands imply that multiplication is finite. *)
+Lemma no_overflow_mult_is_finite {NAN: Nans} {STD: is_standard t} :
+  forall (a b : ftype t),
+  is_finite a = true -> is_finite b = true ->
+  Rabs (rounded t (FT2R a * FT2R b)) < bpow Zaux.radix2 (femax t) ->
+  is_finite (BMULT a b) = true.
+Proof.
+  intros a b Ha Hb Hov.
+  rewrite !is_finite_Binary in Ha, Hb.
+  rewrite is_finite_Binary /BMULT/BINOP float_of_ftype_of_float.
+  pose proof (Binary.Bmult_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t)
+    (mult_nan (fprec t) (femax t) (fprec_gt_one t))
+    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b)) as H.
+  cbv zeta in H.
+  rewrite !B2R_float_of_ftype in H.
+  unfold rounded in Hov.
+  apply Rlt_bool_true in Hov.
+  rewrite Hov in H.
+  destruct H as (_ & HF & _).
+  rewrite HF Ha Hb //.
 Qed.
 
 Lemma BMULT_accurate' {NAN: Nans} {STD: is_standard t} : 

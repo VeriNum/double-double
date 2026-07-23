@@ -10,7 +10,7 @@
     Layer-2 corollary discharging finiteness/underflow from DWDivFP_cond. *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics common.
+Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc.
 From Flocq Require Import Pff2Flocq Core.
@@ -855,8 +855,8 @@ have HΩ : 0 < Omega by apply bpow_gt_0.
 have Hlt : Rabs (FT2R xh / FT2R y) < Omega.
 { eapply Rle_lt_trans; [exact Hq|]. apply bpow_lt; pose proof femax_lb t; lia. }
 apply (no_overflow_div_is_finite t xh y Hfxh Hyne).
-eapply Rle_lt_trans; [apply DWMulFP_acc.aux_round_ub|].
-have Hu := DWMulFP_acc.aux_ulp_real _ Hlt.
+eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
+have Hu := ulp_below_overflow _ Hlt.
 have H4 := aux_quarter_Omega.
 have Hhalf : bpow radix2 (femax t - fprec t) <= /2 * Omega.
 { have -> : (/2 * Omega = bpow radix2 (femax t - 1))%R.
@@ -887,7 +887,7 @@ Lemma half_ulp_le (v : R) :
   (4 <= fprec t)%Z -> Rabs v < Omega -> / 2 * ulp v <= / 16 * Omega.
 Proof.
 move => Hp4 Hv.
-have Hu := DWMulFP_acc.aux_ulp_real v Hv.
+have Hu := ulp_below_overflow v Hv.
 have Hufe : bpow radix2 (femax t - fprec t) <= / 16 * Omega.
 { have -> : (/ 16 * Omega = bpow radix2 (femax t - 4))%R.
   { have -> : Omega = (bpow radix2 (femax t - 4) * bpow radix2 4)%R
@@ -972,7 +972,7 @@ have Hthy_lt : Rabs (FT2R (BDIV xh y) * FT2R y) < Omega.
 (* ---- pih ---- *)
 have Fpih : is_finite (BMULT (BDIV xh y) y) = true.
 { apply no_overflow_mult_is_finite; [ exact Fth | exact Hfy |].
-  eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin _ _ _ (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 1 1 0);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
@@ -1027,7 +1027,7 @@ have Hpe_b : Rabs (FT2R (BDIV xh y) * FT2R y + FT2R (BOPP (BMULT (BDIV xh y) y))
   rewrite Hs. exact Hpiherr. }
 have Fpil : is_finite (BFMA (BDIV xh y) y (BOPP (BMULT (BDIV xh y) y))) = true.
 { apply no_overflow_fma_is_finite; [ exact Fth | exact Hfy | exact FBpih |].
-  eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin _ _ _ (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 0 2 1);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
@@ -1082,7 +1082,7 @@ have Hxhpih_lt : Rabs (FT2R xh - FT2R (BMULT (BDIV xh y) y)) < Omega.
     | (eapply Rle_trans; [ exact Hxhpih_b |]; apply Req_le; ring) ]. }
 have Fdh : is_finite (BMINUS xh (BMULT (BDIV xh y) y)) = true.
 { apply no_overflow_minus_is_finite; [ exact Hfxh | exact Fpih |].
-  red. eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  red. eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin _ _ _ (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 0 3 1);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
@@ -1124,7 +1124,7 @@ have Hdtarg_lt : Rabs (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
 have Fdt : is_finite (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                              (Fast2Mult_err (BDIV xh y) y)) = true.
 { apply no_overflow_minus_is_finite; [ exact Fdh | exact Fpil' |].
-  red. eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  red. eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin _ _ _ (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 0 7 4);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
@@ -1178,7 +1178,7 @@ have Hdarg_lt : Rabs (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 have Fd : is_finite (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                    (Fast2Mult_err (BDIV xh y) y)) xl) = true.
 { apply no_overflow_sum_is_finite; [ exact Fdt | exact Hfxl |].
-  red. eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  red. eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin _ _ _ (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 0 9 6);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
@@ -1250,7 +1250,7 @@ have Hdy_lt : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 have Ftl : is_finite (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                           (Fast2Mult_err (BDIV xh y) y)) xl) y) = true.
 { apply (no_overflow_div_is_finite t _ y Fd Hyne).
-  eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin_dy _ _ Omega);
     [ exact HΩ32 | exact Hdy_b | exact (half_ulp_le _ Hp4 Hdy_lt) ]. }
 (* ---- closing Fast2Sum: fst (DWDivFP3 xh xl y) = BPLUS th tl ---- *)
@@ -1301,7 +1301,7 @@ have Hsum_lt : Rabs (FT2R (BDIV xh y)
 have Hfp : is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) = true.
 {
 apply no_overflow_sum_is_finite; [ exact Fth | exact Ftl |].
-eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
 apply (abst_fst_fin _ _ (Rabs (FT2R xh / FT2R y))
          (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                             (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y))
@@ -1370,7 +1370,7 @@ have Hd_lt : Rabs (FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMUL
   eapply Rle_trans; [ exact Herr |]. apply Rplus_le_compat; [ exact HU1 | exact Htlb ]. }
 have Fz : is_finite (BMINUS (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) (BDIV xh y)) = true.
 { apply no_overflow_minus_is_finite; [ exact Hfp | exact Fth |].
-  red. eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+  red. eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_z _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))) (/ 2 * ulp (FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) - FT2R (BDIV xh y))) (Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))) Omega);
     [ exact HΩ32 | exact HU1 | exact Htlb | exact (half_ulp_le _ Hp4 Hd_lt) | exact Herr ]. }
 have Hz_r : round radix2 fexp (Znearest choice) (FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) - FT2R (BDIV xh y)) = FT2R (BMINUS (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) (BDIV xh y))
@@ -1392,7 +1392,7 @@ have Htlz_lt : Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
   eapply Rle_trans; [ exact Htlz |].
   apply Rplus_le_compat; [ exact HU1 | exact (half_ulp_le _ Hp4 Hd_lt) ]. }
 apply no_overflow_minus_is_finite; [ exact Ftl | exact Fz |].
-red. eapply Rle_lt_trans; [ apply DWMulFP_acc.aux_round_ub |].
+red. eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
 apply (abst_snd _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))) (/ 2 * ulp (FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) - FT2R (BDIV xh y)))
             (/ 2 * ulp (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y) - FT2R (BMINUS (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) (BDIV xh y)))) Omega);
   [ exact HΩ32 | exact HU1 | exact (half_ulp_le _ Hp4 Hd_lt)

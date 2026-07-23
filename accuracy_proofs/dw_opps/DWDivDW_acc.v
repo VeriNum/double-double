@@ -55,7 +55,7 @@
     must be reconciled with the FLX model. *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics common.
+Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DWDivFP DDModels DWord_defs
                Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 (* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
@@ -65,6 +65,7 @@ Require Import DWTimesFP DWTimesDW DWDivFP DDModels DWord_defs
 Require Import DWDivDW.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc DWPlusFP_acc DWMulDW_acc
                DWDivFP_acc DWPlusDW_acc_helpers DW_acc_lemmas.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_div_helpers.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error.
 
@@ -72,6 +73,50 @@ Require Import mathcomp.ssreflect.ssreflect.
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Bullet Behavior "Strict Subproofs".
+Lemma no_overflow_fma_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
+  forall (a b c : ftype t),
+  is_finite a = true -> is_finite b = true -> is_finite c = true ->
+  Rabs (rounded t (FT2R a * FT2R b + FT2R c)) < bpow Zaux.radix2 (femax t) ->
+  is_finite (BFMA a b c) = true.
+Proof.
+  intros a b c Ha Hb Hc Hov.
+  rewrite !is_finite_Binary in Ha, Hb, Hc.
+  rewrite is_finite_Binary /BFMA float_of_ftype_of_float.
+  pose proof (Binary.Bfma_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan (fprec t) (femax t) (fprec_gt_one t))
+    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b) (float_of_ftype c)
+    Ha Hb Hc) as H.
+  cbv zeta in H.
+  rewrite !B2R_float_of_ftype in H.
+  unfold rounded in Hov.
+  apply Rlt_bool_true in Hov.
+  rewrite Hov in H.
+  destruct H as (_ & HF & _).
+  exact HF.
+Qed.
+
+(* Analog of no_overflow_fma_is_finite for BMULT: a real product whose rounded
+   value stays below the overflow threshold yields a finite BMULT. *)
+Lemma no_overflow_mult_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
+  forall (a b : ftype t),
+  is_finite a = true -> is_finite b = true ->
+  Rabs (rounded t (FT2R a * FT2R b)) < bpow Zaux.radix2 (femax t) ->
+  is_finite (BMULT a b) = true.
+Proof.
+  intros a b Ha Hb Hov.
+  rewrite !is_finite_Binary in Ha, Hb.
+  rewrite is_finite_Binary /BMULT/BINOP float_of_ftype_of_float.
+  pose proof (Binary.Bmult_correct (fprec t) (femax t)
+    (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan (fprec t) (femax t) (fprec_gt_one t))
+    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b)) as H.
+  cbv zeta in H.
+  rewrite !B2R_float_of_ftype in H.
+  unfold rounded in Hov.
+  apply Rlt_bool_true in Hov.
+  rewrite Hov in H.
+  destruct H as (_ & HF & _).
+  rewrite HF Ha Hb //.
+Qed.
 
 (* Keep the paper's two-product folded; proofs expose it via DWTimesFP.TwoProdE. *)
 Opaque DWTimesFP.TwoProd.
@@ -308,7 +353,7 @@ have Hrnd : Rabs (rounded t (FT2R a * FT2R b)) <= bpow radix2 k.
 { unfold rounded. apply abs_round_le_generic;
     first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
 have Fmul : is_finite (BMULT a b) = true.
-{ apply DWMulFP_acc.no_overflow_mult_is_finite; [exact Fa | exact Fb |].
+{ apply no_overflow_mult_is_finite; [exact Fa | exact Fb |].
   eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
 split; [exact Fmul |].
 rewrite -(BMULT_round_correct t a b Fmul). exact Hrnd.
@@ -332,7 +377,7 @@ have Hrnd : Rabs (rounded t (FT2R a * FT2R b + FT2R c)) <= bpow radix2 k.
 { unfold rounded. apply abs_round_le_generic;
     first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
 have Ffma : is_finite (BFMA a b c) = true.
-{ apply DWMulFP_acc.no_overflow_fma_is_finite;
+{ apply no_overflow_fma_is_finite;
     [exact Fa | exact Fb | exact Fc |].
   eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
 split; [exact Ffma |].
@@ -347,7 +392,7 @@ Proof.
 have He := error_le_half_ulp radix2
   (SpecFloat.fexp (fprec t) (femax t)) choice v.
 specialize (He valid_fexp_inst).
-have Hu := DWMulDW_acc.aux_ulp_rel_emin (t:=t) v.
+have Hu := ulp_le_relative_plus_emin (t:=t) v.
 eapply Rle_trans; [exact He |]. nra.
 Qed.
 
@@ -1242,7 +1287,7 @@ have Hu1 : bpow radix2 (- fprec t) <= 1.
   apply bpow_le; pose proof (fprec_lb t); lia. }
 have Hoppfin : is_finite (BOPP yh) = true
   by exact (proj2 (BOPP_is_finite t yh) Hfyh).
-apply DWMulFP_acc.no_overflow_fma_is_finite;
+apply no_overflow_fma_is_finite;
   [exact Hoppfin | exact Fth | exact Honefin |].
 have Hopp : (- FT2R yh = FT2R (BOPP yh))%R :=
   @BOPP_binary t NANS STD yh (or_intror Hfyh).
@@ -1256,8 +1301,8 @@ have HO : 8 <= bpow radix2 (femax t).
 { have -> : (8:R) = bpow radix2 3 by reflexivity.
   apply bpow_le; exact (femax_lb t). }
 have Hvlt : Rabs v < bpow radix2 (femax t) by lra.
-eapply Rle_lt_trans; [apply DWMulFP_acc.aux_round_ub |].
-have Hulp := DWMulFP_acc.aux_ulp_real v Hvlt.
+eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp |].
+have Hulp := ulp_below_overflow v Hvlt.
 have Hquarter : bpow radix2 (femax t - fprec t)
                 <= /4 * bpow radix2 (femax t).
 { have -> : (/4 * bpow radix2 (femax t))%R =
@@ -1316,13 +1361,13 @@ have Hprod : Rabs (FT2R yl * FT2R th)
   - apply Rmult_le_compat_r; [apply Rabs_pos | exact Hyl].
   - rewrite Rmult_assoc Hswap.
     apply Rmult_le_compat_l; [exact Hu0 | exact Hthy]. }
-apply DWMulFP_acc.no_overflow_mult_is_finite; [exact Hfyl | exact Fth |].
+apply no_overflow_mult_is_finite; [exact Hfyl | exact Fth |].
 have HO : 8 <= bpow radix2 (femax t).
 { have -> : (8:R) = bpow radix2 3 by reflexivity.
   apply bpow_le; exact (femax_lb t). }
 have Hvlt : Rabs (FT2R yl * FT2R th) < bpow radix2 (femax t) by nra.
-eapply Rle_lt_trans; [apply DWMulFP_acc.aux_round_ub |].
-have Hulp := DWMulFP_acc.aux_ulp_real (FT2R yl * FT2R th) Hvlt.
+eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp |].
+have Hulp := ulp_below_overflow (FT2R yl * FT2R th) Hvlt.
 have Hquarter : bpow radix2 (femax t - fprec t)
                 <= /4 * bpow radix2 (femax t).
 { rewrite -(@DWDivFP_acc.aux_quarter_Omega t).
@@ -1632,7 +1677,7 @@ have Fcl1 : is_finite cl1 = true by exact (proj2 Ffast).
 have Hprodlt : Rabs (FT2R eh * FT2R th) < bpow radix2 (femax t).
 { eapply Rle_lt_trans; [exact Hch_in | apply bpow_lt; lia]. }
 have Hcl1u := Fast2Mult_acc.Fast2Mult_accuracy_norm eh th Fch.
-have Hulp := DWMulFP_acc.aux_ulp_real (FT2R eh * FT2R th) Hprodlt.
+have Hulp := ulp_below_overflow (FT2R eh * FT2R th) Hprodlt.
 have Hcl1 : Rabs (FT2R cl1) <= bpow radix2 (femax t - fprec t - 1).
 { eapply Rle_trans; [exact Hcl1u |].
   eapply Rle_trans; [apply Rmult_le_compat_l; [lra | exact Hulp] |].
@@ -1799,7 +1844,7 @@ have Fsl : is_finite sl = true by exact (proj2 Fts).
 have Hsl_u := TwoSum_acc.TwoSum_accuracy dh th Fts.
 have Hsumlt : Rabs (FT2R dh + FT2R th) < bpow radix2 (femax t).
 { eapply Rle_lt_trans; [exact Hsum_in | apply bpow_lt; lia]. }
-have Hulp := DWMulFP_acc.aux_ulp_real (FT2R dh + FT2R th) Hsumlt.
+have Hulp := ulp_below_overflow (FT2R dh + FT2R th) Hsumlt.
 have Hsl : Rabs (FT2R sl) <= bpow radix2 (femax t - fprec t - 1).
 { eapply Rle_trans; [exact Hsl_u |].
   eapply Rle_trans; [apply Rmult_le_compat_l; [lra | exact Hulp] |].
@@ -2061,7 +2106,7 @@ have Hch : Rabs (FT2R ch) <= 6*u*T.
   - rewrite Rabs_mult. fold T. nra.
   - nra. }
 have Hcl1u := Fast2Mult_acc.Fast2Mult_accuracy_norm eh th Fch.
-have Hulp := DWMulDW_acc.aux_ulp_rel_emin (t:=t) (FT2R eh * FT2R th).
+have Hulp := ulp_le_relative_plus_emin (t:=t) (FT2R eh * FT2R th).
 fold u eta in Hulp.
 have Hcl1 : Rabs (FT2R cl1) <= u*T.
 { have Hprod : Rabs (FT2R eh * FT2R th) <= 5*u*T.
@@ -2174,7 +2219,7 @@ have Hsh_lo : (1 - 26*u)*T <= Rabs (FT2R sh).
   rewrite (Rabs_minus_sym (FT2R th) (FT2R sh)) in Hrev.
   fold T in Hrev. nra. }
 have Hslu := TwoSum_acc.TwoSum_accuracy dh th Fts.
-have Hulparg := DWMulDW_acc.aux_ulp_rel_emin (t:=t) (FT2R dh + FT2R th).
+have Hulparg := ulp_le_relative_plus_emin (t:=t) (FT2R dh + FT2R th).
 fold u eta in Hulparg.
 have Hsl : Rabs (FT2R sl) <= 3*u*T.
 { have Huarg : u*Rabs (FT2R dh + FT2R th) <= u*((1+23*u)*T).
@@ -2227,7 +2272,7 @@ have Hmh : Rabs (FT2R mh) <= (1 + 89*u)*T.
   - apply Rplus_le_compat; assumption.
   - eapply Rle_trans; [| exact HscalarT]. right; ring. }
 have Hmlu := FastTwoSum_accuracy sh v Fmh_sum Hord.
-have Hulpm := DWMulDW_acc.aux_ulp_rel_emin (t:=t) (FT2R sh + FT2R v).
+have Hulpm := ulp_le_relative_plus_emin (t:=t) (FT2R sh + FT2R v).
 fold u eta in Hulpm.
 have Hml : Rabs (FT2R ml) <= 2*u*T.
 { eapply Rle_trans; [exact Hmlu |].
@@ -3133,7 +3178,7 @@ have Ffast := Fast2Mult_acc_helpers.Fast2Mult_finite_unconditional xh mh Fch.
 have Fcl1 : is_finite cl1 = true by exact (proj2 Ffast).
 have Hcl1u := Fast2Mult_acc.Fast2Mult_accuracy_norm xh mh Fch.
 fold cl1 in Hcl1u.
-have Hulp := DWMulDW_acc.aux_ulp_rel_emin (t:=t) (FT2R xh * FT2R mh).
+have Hulp := ulp_le_relative_plus_emin (t:=t) (FT2R xh * FT2R mh).
 fold u eta in Hulp.
 have Hcl1 : Rabs (FT2R cl1) <= 4 by nra.
 set tl0 := BMULT xl ml.
@@ -4653,7 +4698,7 @@ have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_normal
+have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_normal
   xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia) Nprod N0.
 change (Rabs (zr-X*M) <=
   4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4714,7 +4759,7 @@ have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
+have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_final_underflow
   xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N3.
 change (Rabs (zr-X*M) <=
   4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4799,19 +4844,19 @@ specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
 destruct Htail as [[N1 [N2 N3]]|[[N1 [N2 N3]]|[N1 [N2 N3]]]].
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
+- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low1_tail_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
     2*bpow radix2 (@common.emin t)).
   fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
+- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low2_other_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
     2*bpow radix2 (@common.emin t)).
   fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
+- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low1_low2_final_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4938,7 +4983,7 @@ have F3 : is_finite cl3=true by
    exact (DWMulDW_acc.FINcl3 xh xl mh ml FIN)).
 have Ffast := Fast2Mult_acc_helpers.Fast2Mult_finite_unconditional xh mh Fch.
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Htl00 := DWMulDW_acc.leading_product_gap_low_low_zero
+have Htl00 := DWMulDW_div_helpers.leading_product_gap_low_low_zero
   xh xl mh ml DWx DWm F0 Hgap.
 fold tl0 in Htl00.
 have Hdelta := Fast2Mult_sum_error_floor xh mh Hp14 Ffast.
@@ -5116,7 +5161,7 @@ Qed.
 (** The two-ulps reserve also covers the first [9/8] of the normal leading
     binade.  This is the boundary band where the direct FLT estimate and the
     paper term overlap; above it the remaining proof must use the correlated
-    perturbed-Algorithm-12 argument. *)
+    direct floored-node argument. *)
 Lemma DWDivDW3_closing_zprod_near_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
@@ -5158,7 +5203,7 @@ destruct (Rle_or_lt
   specialize (FIN NANS STD).
   fold th rh rl e d m in FIN.
   change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-  have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
+  have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_normal_near_threshold
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod Hnear.
   cbv zeta in Hmul. exact Hmul.
 - have H := DWDivDW3_closing_zprod_gap_accuracy
@@ -5169,7 +5214,7 @@ Qed.
 
 (** Far above the leading-product boundary, the sole missing node pattern is
     the low-low floor followed by three normal correction nodes. *)
-Lemma DWDivDW3_closing_low0_perturbed_far_accuracy
+Lemma DWDivDW3_closing_low0_far_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5215,7 +5260,7 @@ destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m in DWm.
 have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD). fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_perturbed_far
+have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_far
   xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia)
   Hfar U0 N1 N2 N3.
 cbv zeta in Hmul. exact Hmul.
@@ -5275,7 +5320,7 @@ destruct (Rle_or_lt N (Rabs (FT2R xl*FT2R (snd m)))) as [N0|U0].
   + destruct (Rle_or_lt N
       (Rabs (FT2R xl*FT2R (fst m)+
         FT2R (BFMA xh (snd m) (BMULT xl (snd m)))))) as [N2|U2].
-    * have H := DWDivDW3_closing_low0_perturbed_far_accuracy
+    * have H := DWDivDW3_closing_low0_far_accuracy
         xh xl yh yl Hp14 COND.
       fold th rh rl e d m in H. cbv zeta in H. fold N in H.
       exact (H Hfar U0 N1 N2 N3).

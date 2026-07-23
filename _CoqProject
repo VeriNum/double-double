@@ -16,6 +16,7 @@ common/float_acc_lems.v
 common/dd_tactics.v
 common/real_extras.v
 common/FLT_lemmas.v
+common/FLT_helpers.v
 
 DDModels.v
 DWord_defs.v
@@ -34,6 +35,7 @@ accuracy_proofs/dw_opps/DWPlusDW_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusDW_acc.v
 accuracy_proofs/dw_opps/DWMulFP_acc.v
 accuracy_proofs/dw_opps/DWMulDW_acc.v
+accuracy_proofs/dw_opps/DWMulDW_div_helpers.v
 accuracy_proofs/dw_opps/DWDivFP_acc.v
 accuracy_proofs/dw_opps/DWDivDW_acc.v
 accuracy_proofs/dw_opps/DWPlusFP_finite_acc.v
