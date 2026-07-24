@@ -65,7 +65,6 @@ Require Import DWTimesFP DWTimesDW DWDivFP DDModels DWord_defs
 Require Import DWDivDW.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc DWPlusFP_acc DWMulDW_acc
                DWDivFP_acc DWPlusDW_acc_helpers DW_acc_lemmas.
-Require Import DD.accuracy_proofs.dw_opps.DWMulDW_div_helpers.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error.
 
@@ -4698,7 +4697,7 @@ have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_normal
+have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_normal
   xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia) Nprod N0.
 change (Rabs (zr-X*M) <=
   4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4759,7 +4758,7 @@ have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_final_underflow
+have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
   xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N3.
 change (Rabs (zr-X*M) <=
   4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4844,19 +4843,19 @@ specialize (FIN NANS STD).
 fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
 destruct Htail as [[N1 [N2 N3]]|[[N1 [N2 N3]]|[N1 [N2 N3]]]].
-- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low1_tail_normal
+- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
     2*bpow radix2 (@common.emin t)).
   fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low2_other_normal
+- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
     2*bpow radix2 (@common.emin t)).
   fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_low1_low2_final_normal
+- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
   change (Rabs (zr-X*M) <=
     4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
@@ -4983,7 +4982,7 @@ have F3 : is_finite cl3=true by
    exact (DWMulDW_acc.FINcl3 xh xl mh ml FIN)).
 have Ffast := Fast2Mult_acc_helpers.Fast2Mult_finite_unconditional xh mh Fch.
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Htl00 := DWMulDW_div_helpers.leading_product_gap_low_low_zero
+have Htl00 := DWMulDW_acc.leading_product_gap_low_low_zero
   xh xl mh ml DWx DWm F0 Hgap.
 fold tl0 in Htl00.
 have Hdelta := Fast2Mult_sum_error_floor xh mh Hp14 Ffast.
@@ -5203,7 +5202,7 @@ destruct (Rle_or_lt
   specialize (FIN NANS STD).
   fold th rh rl e d m in FIN.
   change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-  have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_normal_near_threshold
+  have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
     xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod Hnear.
   cbv zeta in Hmul. exact Hmul.
 - have H := DWDivDW3_closing_zprod_gap_accuracy
@@ -5260,7 +5259,7 @@ destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m in DWm.
 have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD). fold th rh rl e d m in FIN.
 change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_div_helpers.DWTimesDW_abs_low0_far
+have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_far
   xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia)
   Hfar U0 N1 N2 N3.
 cbv zeta in Hmul. exact Hmul.
