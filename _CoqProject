@@ -35,7 +35,6 @@ accuracy_proofs/dw_opps/DWPlusDW_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusDW_acc.v
 accuracy_proofs/dw_opps/DWMulFP_acc.v
 accuracy_proofs/dw_opps/DWMulDW_acc.v
-accuracy_proofs/dw_opps/DWMulDW_div_helpers.v
 accuracy_proofs/dw_opps/DWDivFP_acc.v
 accuracy_proofs/dw_opps/DWDivDW_acc.v
 accuracy_proofs/dw_opps/DWPlusFP_finite_acc.v
