@@ -75,6 +75,8 @@ Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
 Definition _a : ident := $"a".
 Definition _b : ident := $"b".
+Definition _dw_div_dw_check : ident := $"dw_div_dw_check".
+Definition _dw_div_fp_check : ident := $"dw_div_fp_check".
 Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
 Definition _dw_mult_fp_check : ident := $"dw_mult_fp_check".
 Definition _dw_plus_dw_check : ident := $"dw_plus_dw_check".
@@ -100,17 +102,28 @@ Definition _ldexp : ident := $"ldexp".
 Definition _main : ident := $"main".
 Definition _mult_safe : ident := $"mult_safe".
 Definition _prod_bnd : ident := $"prod_bnd".
+Definition _q : ident := $"q".
 Definition _q_omega : ident := $"q_omega".
+Definition _q_plo : ident := $"q_plo".
 Definition _q_prod : ident := $"q_prod".
+Definition _q_qlo : ident := $"q_qlo".
+Definition _q_yhi : ident := $"q_yhi".
+Definition _q_ylo : ident := $"q_ylo".
+Definition _qt_hi : ident := $"qt_hi".
+Definition _qt_lo : ident := $"qt_lo".
 Definition _s : ident := $"s".
 Definition _t : ident := $"t".
 Definition _thresh : ident := $"thresh".
 Definition _two_sum_check : ident := $"two_sum_check".
 Definition _x : ident := $"x".
 Definition _xh_bnd : ident := $"xh_bnd".
+Definition _xh_hi : ident := $"xh_hi".
+Definition _xh_lo : ident := $"xh_lo".
 Definition _y : ident := $"y".
 Definition _y_bnd : ident := $"y_bnd".
 Definition _yh_bnd : ident := $"yh_bnd".
+Definition _yh_hi : ident := $"yh_hi".
+Definition _yh_lo : ident := $"yh_lo".
 Definition _z : ident := $"z".
 Definition _zx : ident := $"zx".
 Definition _zxh : ident := $"zxh".
@@ -143,6 +156,11 @@ Definition _t'30 : ident := 157%positive.
 Definition _t'31 : ident := 158%positive.
 Definition _t'32 : ident := 159%positive.
 Definition _t'33 : ident := 160%positive.
+Definition _t'34 : ident := 161%positive.
+Definition _t'35 : ident := 162%positive.
+Definition _t'36 : ident := 163%positive.
+Definition _t'37 : ident := 164%positive.
+Definition _t'38 : ident := 165%positive.
 Definition _t'4 : ident := 131%positive.
 Definition _t'5 : ident := 132%positive.
 Definition _t'6 : ident := 133%positive.
@@ -1004,6 +1022,194 @@ Definition f_dw_mult_dw_check := {|
                             (Sreturn (Some (Etempvar _t'19 tint)))))))))))))))))
 |}.
 
+Definition f_dw_div_fp_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, (tptr (Tstruct _dword noattr))) :: (_y, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_fin_xh, tint) :: (_fin_xl, tint) :: (_fin_y, tint) ::
+               (_dwx, tint) :: (_q_omega, tdouble) :: (_q_plo, tdouble) ::
+               (_q_qlo, tdouble) :: (_xh_hi, tint) :: (_xh_lo, tint) ::
+               (_q, tdouble) :: (_qt_hi, tint) :: (_qt_lo, tint) ::
+               (_t'17, tint) :: (_t'16, tint) :: (_t'15, tint) ::
+               (_t'14, tint) :: (_t'13, tint) :: (_t'12, tdouble) ::
+               (_t'11, tdouble) :: (_t'10, tdouble) :: (_t'9, tdouble) ::
+               (_t'8, tdouble) :: (_t'7, tdouble) :: (_t'6, tdouble) ::
+               (_t'5, tint) :: (_t'4, tint) :: (_t'3, tint) ::
+               (_t'2, tint) :: (_t'1, tint) :: (_t'25, tdouble) ::
+               (_t'24, tdouble) :: (_t'23, tdouble) :: (_t'22, tdouble) ::
+               (_t'21, tdouble) :: (_t'20, tdouble) :: (_t'19, tdouble) ::
+               (_t'18, tdouble) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Ssequence
+      (Sset _t'25
+        (Efield
+          (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+            (Tstruct _dword noattr)) _s tdouble))
+      (Scall (Some _t'1)
+        (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+        ((Etempvar _t'25 tdouble) :: nil)))
+    (Sset _fin_xh (Etempvar _t'1 tint)))
+  (Ssequence
+    (Ssequence
+      (Ssequence
+        (Sset _t'24
+          (Efield
+            (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+              (Tstruct _dword noattr)) _t tdouble))
+        (Scall (Some _t'2)
+          (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+          ((Etempvar _t'24 tdouble) :: nil)))
+      (Sset _fin_xl (Etempvar _t'2 tint)))
+    (Ssequence
+      (Ssequence
+        (Scall (Some _t'3)
+          (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+          ((Etempvar _y tdouble) :: nil))
+        (Sset _fin_y (Etempvar _t'3 tint)))
+      (Ssequence
+        (Ssequence
+          (Ssequence
+            (Sifthenelse (Etempvar _fin_xh tint)
+              (Sset _t'4 (Ecast (Etempvar _fin_xl tint) tbool))
+              (Sset _t'4 (Econst_int (Int.repr 0) tint)))
+            (Sifthenelse (Etempvar _t'4 tint)
+              (Ssequence
+                (Sset _t'21
+                  (Efield
+                    (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                      (Tstruct _dword noattr)) _s tdouble))
+                (Ssequence
+                  (Sset _t'22
+                    (Efield
+                      (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                        (Tstruct _dword noattr)) _t tdouble))
+                  (Ssequence
+                    (Sset _t'23
+                      (Efield
+                        (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                          (Tstruct _dword noattr)) _s tdouble))
+                    (Sset _t'5
+                      (Ecast
+                        (Ebinop Oeq
+                          (Ebinop Oadd (Etempvar _t'21 tdouble)
+                            (Etempvar _t'22 tdouble) tdouble)
+                          (Etempvar _t'23 tdouble) tint) tbool)))))
+              (Sset _t'5 (Econst_int (Int.repr 0) tint))))
+          (Sset _dwx (Etempvar _t'5 tint)))
+        (Ssequence
+          (Ssequence
+            (Scall (Some _t'6)
+              (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble
+                             cc_default))
+              ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+               (Econst_int (Int.repr 1022) tint) :: nil))
+            (Sset _q_omega (Etempvar _t'6 tdouble)))
+          (Ssequence
+            (Ssequence
+              (Scall (Some _t'7)
+                (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble
+                               cc_default))
+                ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                 (Eunop Oneg (Econst_int (Int.repr 968) tint) tint) :: nil))
+              (Sset _q_plo (Etempvar _t'7 tdouble)))
+            (Ssequence
+              (Ssequence
+                (Scall (Some _t'8)
+                  (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble
+                                 cc_default))
+                  ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                   (Eunop Oneg (Econst_int (Int.repr 969) tint) tint) :: nil))
+                (Sset _q_qlo (Etempvar _t'8 tdouble)))
+              (Ssequence
+                (Ssequence
+                  (Ssequence
+                    (Sset _t'20
+                      (Efield
+                        (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                          (Tstruct _dword noattr)) _s tdouble))
+                    (Scall (Some _t'9)
+                      (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                    cc_default))
+                      ((Etempvar _t'20 tdouble) :: nil)))
+                  (Sset _xh_hi
+                    (Ebinop Ole (Etempvar _t'9 tdouble)
+                      (Etempvar _q_omega tdouble) tint)))
+                (Ssequence
+                  (Ssequence
+                    (Ssequence
+                      (Sset _t'19
+                        (Efield
+                          (Ederef
+                            (Etempvar _x (tptr (Tstruct _dword noattr)))
+                            (Tstruct _dword noattr)) _s tdouble))
+                      (Scall (Some _t'10)
+                        (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                      cc_default))
+                        ((Etempvar _t'19 tdouble) :: nil)))
+                    (Sset _xh_lo
+                      (Ebinop Ole (Etempvar _q_plo tdouble)
+                        (Etempvar _t'10 tdouble) tint)))
+                  (Ssequence
+                    (Ssequence
+                      (Sset _t'18
+                        (Efield
+                          (Ederef
+                            (Etempvar _x (tptr (Tstruct _dword noattr)))
+                            (Tstruct _dword noattr)) _s tdouble))
+                      (Sset _q
+                        (Ebinop Odiv (Etempvar _t'18 tdouble)
+                          (Etempvar _y tdouble) tdouble)))
+                    (Ssequence
+                      (Ssequence
+                        (Scall (Some _t'11)
+                          (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                        cc_default))
+                          ((Etempvar _q tdouble) :: nil))
+                        (Sset _qt_hi
+                          (Ebinop Olt (Etempvar _t'11 tdouble)
+                            (Etempvar _q_omega tdouble) tint)))
+                      (Ssequence
+                        (Ssequence
+                          (Scall (Some _t'12)
+                            (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                          cc_default))
+                            ((Etempvar _q tdouble) :: nil))
+                          (Sset _qt_lo
+                            (Ebinop Olt (Etempvar _q_qlo tdouble)
+                              (Etempvar _t'12 tdouble) tint)))
+                        (Ssequence
+                          (Ssequence
+                            (Ssequence
+                              (Ssequence
+                                (Ssequence
+                                  (Sifthenelse (Etempvar _dwx tint)
+                                    (Sset _t'13
+                                      (Ecast (Etempvar _fin_y tint) tbool))
+                                    (Sset _t'13
+                                      (Econst_int (Int.repr 0) tint)))
+                                  (Sifthenelse (Etempvar _t'13 tint)
+                                    (Sset _t'14
+                                      (Ecast (Etempvar _xh_hi tint) tbool))
+                                    (Sset _t'14
+                                      (Econst_int (Int.repr 0) tint))))
+                                (Sifthenelse (Etempvar _t'14 tint)
+                                  (Sset _t'15
+                                    (Ecast (Etempvar _xh_lo tint) tbool))
+                                  (Sset _t'15 (Econst_int (Int.repr 0) tint))))
+                              (Sifthenelse (Etempvar _t'15 tint)
+                                (Sset _t'16
+                                  (Ecast (Etempvar _qt_hi tint) tbool))
+                                (Sset _t'16 (Econst_int (Int.repr 0) tint))))
+                            (Sifthenelse (Etempvar _t'16 tint)
+                              (Sset _t'17
+                                (Ecast (Etempvar _qt_lo tint) tbool))
+                              (Sset _t'17 (Econst_int (Int.repr 0) tint))))
+                          (Sreturn (Some (Etempvar _t'17 tint))))))))))))))))
+|}.
+
 Definition f_dw_plus_fp_check := {|
   fn_return := tint;
   fn_callconv := cc_default;
@@ -1119,6 +1325,298 @@ Definition f_dw_plus_fp_check := {|
                     (Sset _t'11 (Ecast (Etempvar _y_bnd tint) tbool))
                     (Sset _t'11 (Econst_int (Int.repr 0) tint))))
                 (Sreturn (Some (Etempvar _t'11 tint)))))))))))
+|}.
+
+Definition f_dw_div_dw_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, (tptr (Tstruct _dword noattr))) ::
+                (_y, (tptr (Tstruct _dword noattr))) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_fin_xh, tint) :: (_fin_xl, tint) :: (_fin_yh, tint) ::
+               (_fin_yl, tint) :: (_dwx, tint) :: (_dwy, tint) ::
+               (_q_omega, tdouble) :: (_q_yhi, tdouble) ::
+               (_q_ylo, tdouble) :: (_q_qlo, tdouble) :: (_xh_hi, tint) ::
+               (_yh_hi, tint) :: (_yh_lo, tint) :: (_q, tdouble) ::
+               (_qt_hi, tint) :: (_qt_lo, tint) :: (_t'23, tint) ::
+               (_t'22, tint) :: (_t'21, tint) :: (_t'20, tint) ::
+               (_t'19, tint) :: (_t'18, tint) :: (_t'17, tdouble) ::
+               (_t'16, tdouble) :: (_t'15, tdouble) :: (_t'14, tdouble) ::
+               (_t'13, tdouble) :: (_t'12, tdouble) :: (_t'11, tdouble) ::
+               (_t'10, tdouble) :: (_t'9, tdouble) :: (_t'8, tint) ::
+               (_t'7, tint) :: (_t'6, tint) :: (_t'5, tint) ::
+               (_t'4, tint) :: (_t'3, tint) :: (_t'2, tint) ::
+               (_t'1, tint) :: (_t'38, tdouble) :: (_t'37, tdouble) ::
+               (_t'36, tdouble) :: (_t'35, tdouble) :: (_t'34, tdouble) ::
+               (_t'33, tdouble) :: (_t'32, tdouble) :: (_t'31, tdouble) ::
+               (_t'30, tdouble) :: (_t'29, tdouble) :: (_t'28, tdouble) ::
+               (_t'27, tdouble) :: (_t'26, tdouble) :: (_t'25, tdouble) ::
+               (_t'24, tdouble) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Ssequence
+      (Sset _t'38
+        (Efield
+          (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+            (Tstruct _dword noattr)) _s tdouble))
+      (Scall (Some _t'1)
+        (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+        ((Etempvar _t'38 tdouble) :: nil)))
+    (Sset _fin_xh (Etempvar _t'1 tint)))
+  (Ssequence
+    (Ssequence
+      (Ssequence
+        (Sset _t'37
+          (Efield
+            (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+              (Tstruct _dword noattr)) _t tdouble))
+        (Scall (Some _t'2)
+          (Evar _isfinite_double (Tfunction (tdouble :: nil) tint cc_default))
+          ((Etempvar _t'37 tdouble) :: nil)))
+      (Sset _fin_xl (Etempvar _t'2 tint)))
+    (Ssequence
+      (Ssequence
+        (Ssequence
+          (Sset _t'36
+            (Efield
+              (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
+                (Tstruct _dword noattr)) _s tdouble))
+          (Scall (Some _t'3)
+            (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
+                                     cc_default))
+            ((Etempvar _t'36 tdouble) :: nil)))
+        (Sset _fin_yh (Etempvar _t'3 tint)))
+      (Ssequence
+        (Ssequence
+          (Ssequence
+            (Sset _t'35
+              (Efield
+                (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
+                  (Tstruct _dword noattr)) _t tdouble))
+            (Scall (Some _t'4)
+              (Evar _isfinite_double (Tfunction (tdouble :: nil) tint
+                                       cc_default))
+              ((Etempvar _t'35 tdouble) :: nil)))
+          (Sset _fin_yl (Etempvar _t'4 tint)))
+        (Ssequence
+          (Ssequence
+            (Ssequence
+              (Sifthenelse (Etempvar _fin_xh tint)
+                (Sset _t'5 (Ecast (Etempvar _fin_xl tint) tbool))
+                (Sset _t'5 (Econst_int (Int.repr 0) tint)))
+              (Sifthenelse (Etempvar _t'5 tint)
+                (Ssequence
+                  (Sset _t'32
+                    (Efield
+                      (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                        (Tstruct _dword noattr)) _s tdouble))
+                  (Ssequence
+                    (Sset _t'33
+                      (Efield
+                        (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
+                          (Tstruct _dword noattr)) _t tdouble))
+                    (Ssequence
+                      (Sset _t'34
+                        (Efield
+                          (Ederef
+                            (Etempvar _x (tptr (Tstruct _dword noattr)))
+                            (Tstruct _dword noattr)) _s tdouble))
+                      (Sset _t'6
+                        (Ecast
+                          (Ebinop Oeq
+                            (Ebinop Oadd (Etempvar _t'32 tdouble)
+                              (Etempvar _t'33 tdouble) tdouble)
+                            (Etempvar _t'34 tdouble) tint) tbool)))))
+                (Sset _t'6 (Econst_int (Int.repr 0) tint))))
+            (Sset _dwx (Etempvar _t'6 tint)))
+          (Ssequence
+            (Ssequence
+              (Ssequence
+                (Sifthenelse (Etempvar _fin_yh tint)
+                  (Sset _t'7 (Ecast (Etempvar _fin_yl tint) tbool))
+                  (Sset _t'7 (Econst_int (Int.repr 0) tint)))
+                (Sifthenelse (Etempvar _t'7 tint)
+                  (Ssequence
+                    (Sset _t'29
+                      (Efield
+                        (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
+                          (Tstruct _dword noattr)) _s tdouble))
+                    (Ssequence
+                      (Sset _t'30
+                        (Efield
+                          (Ederef
+                            (Etempvar _y (tptr (Tstruct _dword noattr)))
+                            (Tstruct _dword noattr)) _t tdouble))
+                      (Ssequence
+                        (Sset _t'31
+                          (Efield
+                            (Ederef
+                              (Etempvar _y (tptr (Tstruct _dword noattr)))
+                              (Tstruct _dword noattr)) _s tdouble))
+                        (Sset _t'8
+                          (Ecast
+                            (Ebinop Oeq
+                              (Ebinop Oadd (Etempvar _t'29 tdouble)
+                                (Etempvar _t'30 tdouble) tdouble)
+                              (Etempvar _t'31 tdouble) tint) tbool)))))
+                  (Sset _t'8 (Econst_int (Int.repr 0) tint))))
+              (Sset _dwy (Etempvar _t'8 tint)))
+            (Ssequence
+              (Ssequence
+                (Scall (Some _t'9)
+                  (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble
+                                 cc_default))
+                  ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                   (Econst_int (Int.repr 1022) tint) :: nil))
+                (Sset _q_omega (Etempvar _t'9 tdouble)))
+              (Ssequence
+                (Ssequence
+                  (Scall (Some _t'10)
+                    (Evar _ldexp (Tfunction (tdouble :: tint :: nil) tdouble
+                                   cc_default))
+                    ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                     (Econst_int (Int.repr 969) tint) :: nil))
+                  (Sset _q_yhi (Etempvar _t'10 tdouble)))
+                (Ssequence
+                  (Ssequence
+                    (Scall (Some _t'11)
+                      (Evar _ldexp (Tfunction (tdouble :: tint :: nil)
+                                     tdouble cc_default))
+                      ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                       (Eunop Oneg (Econst_int (Int.repr 968) tint) tint) ::
+                       nil))
+                    (Sset _q_ylo (Etempvar _t'11 tdouble)))
+                  (Ssequence
+                    (Ssequence
+                      (Scall (Some _t'12)
+                        (Evar _ldexp (Tfunction (tdouble :: tint :: nil)
+                                       tdouble cc_default))
+                        ((Econst_float (Float.of_bits (Int64.repr 4607182418800017408)) tdouble) ::
+                         (Eunop Oneg (Econst_int (Int.repr 969) tint) tint) ::
+                         nil))
+                      (Sset _q_qlo (Etempvar _t'12 tdouble)))
+                    (Ssequence
+                      (Ssequence
+                        (Ssequence
+                          (Sset _t'28
+                            (Efield
+                              (Ederef
+                                (Etempvar _x (tptr (Tstruct _dword noattr)))
+                                (Tstruct _dword noattr)) _s tdouble))
+                          (Scall (Some _t'13)
+                            (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                          cc_default))
+                            ((Etempvar _t'28 tdouble) :: nil)))
+                        (Sset _xh_hi
+                          (Ebinop Ole (Etempvar _t'13 tdouble)
+                            (Etempvar _q_omega tdouble) tint)))
+                      (Ssequence
+                        (Ssequence
+                          (Ssequence
+                            (Sset _t'27
+                              (Efield
+                                (Ederef
+                                  (Etempvar _y (tptr (Tstruct _dword noattr)))
+                                  (Tstruct _dword noattr)) _s tdouble))
+                            (Scall (Some _t'14)
+                              (Evar _fabs (Tfunction (tdouble :: nil) tdouble
+                                            cc_default))
+                              ((Etempvar _t'27 tdouble) :: nil)))
+                          (Sset _yh_hi
+                            (Ebinop Ole (Etempvar _t'14 tdouble)
+                              (Etempvar _q_yhi tdouble) tint)))
+                        (Ssequence
+                          (Ssequence
+                            (Ssequence
+                              (Sset _t'26
+                                (Efield
+                                  (Ederef
+                                    (Etempvar _y (tptr (Tstruct _dword noattr)))
+                                    (Tstruct _dword noattr)) _s tdouble))
+                              (Scall (Some _t'15)
+                                (Evar _fabs (Tfunction (tdouble :: nil)
+                                              tdouble cc_default))
+                                ((Etempvar _t'26 tdouble) :: nil)))
+                            (Sset _yh_lo
+                              (Ebinop Ole (Etempvar _q_ylo tdouble)
+                                (Etempvar _t'15 tdouble) tint)))
+                          (Ssequence
+                            (Ssequence
+                              (Sset _t'24
+                                (Efield
+                                  (Ederef
+                                    (Etempvar _x (tptr (Tstruct _dword noattr)))
+                                    (Tstruct _dword noattr)) _s tdouble))
+                              (Ssequence
+                                (Sset _t'25
+                                  (Efield
+                                    (Ederef
+                                      (Etempvar _y (tptr (Tstruct _dword noattr)))
+                                      (Tstruct _dword noattr)) _s tdouble))
+                                (Sset _q
+                                  (Ebinop Odiv (Etempvar _t'24 tdouble)
+                                    (Etempvar _t'25 tdouble) tdouble))))
+                            (Ssequence
+                              (Ssequence
+                                (Scall (Some _t'16)
+                                  (Evar _fabs (Tfunction (tdouble :: nil)
+                                                tdouble cc_default))
+                                  ((Etempvar _q tdouble) :: nil))
+                                (Sset _qt_hi
+                                  (Ebinop Olt (Etempvar _t'16 tdouble)
+                                    (Etempvar _q_omega tdouble) tint)))
+                              (Ssequence
+                                (Ssequence
+                                  (Scall (Some _t'17)
+                                    (Evar _fabs (Tfunction (tdouble :: nil)
+                                                  tdouble cc_default))
+                                    ((Etempvar _q tdouble) :: nil))
+                                  (Sset _qt_lo
+                                    (Ebinop Olt (Etempvar _q_qlo tdouble)
+                                      (Etempvar _t'17 tdouble) tint)))
+                                (Ssequence
+                                  (Ssequence
+                                    (Ssequence
+                                      (Ssequence
+                                        (Ssequence
+                                          (Ssequence
+                                            (Sifthenelse (Etempvar _dwx tint)
+                                              (Sset _t'18
+                                                (Ecast (Etempvar _dwy tint)
+                                                  tbool))
+                                              (Sset _t'18
+                                                (Econst_int (Int.repr 0) tint)))
+                                            (Sifthenelse (Etempvar _t'18 tint)
+                                              (Sset _t'19
+                                                (Ecast (Etempvar _xh_hi tint)
+                                                  tbool))
+                                              (Sset _t'19
+                                                (Econst_int (Int.repr 0) tint))))
+                                          (Sifthenelse (Etempvar _t'19 tint)
+                                            (Sset _t'20
+                                              (Ecast (Etempvar _yh_hi tint)
+                                                tbool))
+                                            (Sset _t'20
+                                              (Econst_int (Int.repr 0) tint))))
+                                        (Sifthenelse (Etempvar _t'20 tint)
+                                          (Sset _t'21
+                                            (Ecast (Etempvar _yh_lo tint)
+                                              tbool))
+                                          (Sset _t'21
+                                            (Econst_int (Int.repr 0) tint))))
+                                      (Sifthenelse (Etempvar _t'21 tint)
+                                        (Sset _t'22
+                                          (Ecast (Etempvar _qt_hi tint)
+                                            tbool))
+                                        (Sset _t'22
+                                          (Econst_int (Int.repr 0) tint))))
+                                    (Sifthenelse (Etempvar _t'22 tint)
+                                      (Sset _t'23
+                                        (Ecast (Etempvar _qt_lo tint) tbool))
+                                      (Sset _t'23
+                                        (Econst_int (Int.repr 0) tint))))
+                                  (Sreturn (Some (Etempvar _t'23 tint))))))))))))))))))))
 |}.
 
 Definition composites : list composite_definition :=
@@ -1388,16 +1886,18 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_dw_plus_dw_check, Gfun(Internal f_dw_plus_dw_check)) ::
  (_dw_mult_fp_check, Gfun(Internal f_dw_mult_fp_check)) ::
  (_dw_mult_dw_check, Gfun(Internal f_dw_mult_dw_check)) ::
- (_dw_plus_fp_check, Gfun(Internal f_dw_plus_fp_check)) :: nil).
+ (_dw_div_fp_check, Gfun(Internal f_dw_div_fp_check)) ::
+ (_dw_plus_fp_check, Gfun(Internal f_dw_plus_fp_check)) ::
+ (_dw_div_dw_check, Gfun(Internal f_dw_div_dw_check)) :: nil).
 
 Definition public_idents : list ident :=
-(_dw_plus_fp_check :: _dw_mult_dw_check :: _dw_mult_fp_check ::
- _dw_plus_dw_check :: _fast2_mult_check2 :: _two_sum_check ::
- _fast2_sum_check :: _fast2_mult_acc_check :: _fast2_mult_check ::
- _isfinite_double :: _fabs :: _ldexp :: ___builtin_debug ::
- ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
- ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
- ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+(_dw_div_dw_check :: _dw_plus_fp_check :: _dw_div_fp_check ::
+ _dw_mult_dw_check :: _dw_mult_fp_check :: _dw_plus_dw_check ::
+ _fast2_mult_check2 :: _two_sum_check :: _fast2_sum_check ::
+ _fast2_mult_acc_check :: _fast2_mult_check :: _isfinite_double :: _fabs ::
+ _ldexp :: ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::

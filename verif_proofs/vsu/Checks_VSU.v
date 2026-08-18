@@ -29,6 +29,7 @@ Require Import DD.verif_proofs.verif_fp_utils_dw_mult_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_mult_fp_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_div_fp_check.
+Require Import DD.verif_proofs.verif_fp_utils_dw_div_dw_check.
 Require Import DD.verif_proofs.vsu.VSU_tactics.
 
 Definition ChecksVSU: @VSU NullExtension.Espec
@@ -46,4 +47,5 @@ Proof.
   1:{ solve_SF_dd body_dw_mult_dw_check. }
   1:{ solve_SF_dd body_dw_plus_fp_check. }
   1:{ solve_SF_dd body_dw_div_fp_check. }
+  1:{ solve_SF_dd body_dw_div_dw_check. }
 Qed.

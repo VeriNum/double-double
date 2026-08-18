@@ -86,14 +86,14 @@ Definition Checks_Internal : funspecs :=
     fast2_sum_check_spec;
     two_sum_check_spec; fast2_mult_check2_spec; dw_plus_dw_check_spec;
     dw_mult_fp_check_spec; dw_mult_dw_check_spec; dw_plus_fp_check_spec;
-    dw_div_fp_check_spec ].
+    dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
 Definition Checks_Exports : funspecs :=
   [ two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
     fast2_mult_acc_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
-    dw_mult_dw_check_spec; dw_div_fp_check_spec ].
+    dw_mult_dw_check_spec; dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Collect the function-API specs together into Gprog: list funspec.
    Shared by all body-proof files. *)

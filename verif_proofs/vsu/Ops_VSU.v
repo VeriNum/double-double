@@ -42,6 +42,7 @@ Proof.
   1:{ solve_SF_dd body_dw_mult_dw12. }
   1:{ solve_SF_dd body_dw_mult_dw12_guarded. }
   1:{ solve_SF_dd body_dw_div_dw18. }
+  1:{ solve_SF_dd body_dw_div_dw18_guarded. }
   1:{ solve_SF_dd body_dw_div_fp15. }
   1:{ solve_SF_dd body_dw_div_fp15_guarded. }
 Qed.

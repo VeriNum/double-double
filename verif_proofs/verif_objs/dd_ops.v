@@ -88,6 +88,8 @@ Definition _delta : ident := $"delta".
 Definition _dh : ident := $"dh".
 Definition _dt : ident := $"dt".
 Definition _dw_div_dw18 : ident := $"dw_div_dw18".
+Definition _dw_div_dw18_guarded : ident := $"dw_div_dw18_guarded".
+Definition _dw_div_dw_check : ident := $"dw_div_dw_check".
 Definition _dw_div_fp15 : ident := $"dw_div_fp15".
 Definition _dw_div_fp15_guarded : ident := $"dw_div_fp15_guarded".
 Definition _dw_div_fp_check : ident := $"dw_div_fp_check".
@@ -859,6 +861,39 @@ Definition f_dw_div_dw18 := {|
                  (tptr (Tstruct _dword noattr))) :: nil))))))))
 |}.
 
+Definition f_dw_div_dw18_guarded := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) ::
+                (_y, (tptr (Tstruct _dword noattr))) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _dw_div_dw_check (Tfunction
+                               ((tptr (Tstruct _dword noattr)) ::
+                                (tptr (Tstruct _dword noattr)) :: nil) tint
+                               cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Scall None
+    (Evar _dw_div_dw18 (Tfunction
+                         ((tptr (Tstruct _dword noattr)) ::
+                          (tptr (Tstruct _dword noattr)) ::
+                          (tptr (Tstruct _dword noattr)) :: nil) tvoid
+                         cc_default))
+    ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _x (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil)))
+|}.
+
 Definition f_dw_div_fp15 := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
@@ -1262,6 +1297,12 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
+ (_dw_div_dw_check,
+   Gfun(External (EF_external "dw_div_dw_check"
+                   (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
+      nil) tint cc_default)) ::
  (_two_sum_guarded, Gfun(Internal f_two_sum_guarded)) ::
  (_fast_2sum, Gfun(Internal f_fast_2sum)) ::
  (_fast_2sum_guarded, Gfun(Internal f_fast_2sum_guarded)) ::
@@ -1277,37 +1318,39 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_dw_mult_dw12, Gfun(Internal f_dw_mult_dw12)) ::
  (_dw_mult_dw12_guarded, Gfun(Internal f_dw_mult_dw12_guarded)) ::
  (_dw_div_dw18, Gfun(Internal f_dw_div_dw18)) ::
+ (_dw_div_dw18_guarded, Gfun(Internal f_dw_div_dw18_guarded)) ::
  (_dw_div_fp15, Gfun(Internal f_dw_div_fp15)) ::
  (_dw_div_fp15_guarded, Gfun(Internal f_dw_div_fp15_guarded)) :: nil).
 
 Definition public_idents : list ident :=
-(_dw_div_fp15_guarded :: _dw_div_fp15 :: _dw_div_dw18 ::
- _dw_mult_dw12_guarded :: _dw_mult_dw12 :: _dw_mult_fp9_guarded ::
- _dw_mult_fp9 :: _dw_plus_dw2_guarded :: _dw_plus_dw2 ::
- _dw_plus_fp_guarded :: _dw_plus_fp :: _fast_2mult_acc_guarded ::
- _fast_2mult_guarded :: _fast_2mult :: _fast_2sum_guarded :: _fast_2sum ::
- _two_sum_guarded :: _dw_mult_dw_check :: _dw_mult_fp_check ::
- _dw_div_fp_check :: _dw_plus_fp_check :: _dw_plus_dw_check ::
- _fast2_mult_acc_check :: _fast2_mult_check :: _two_sum_check ::
- _fast2_sum_check :: _exit :: _two_sum :: _fma :: ___builtin_debug ::
- ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
- ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
- ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
- ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
- ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
- ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
- ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
- ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
- ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
- ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
- ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
- ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
- ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
- ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
- ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
- ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
- ___compcert_va_composite :: ___compcert_va_float64 ::
- ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
+(_dw_div_fp15_guarded :: _dw_div_fp15 :: _dw_div_dw18_guarded ::
+ _dw_div_dw18 :: _dw_mult_dw12_guarded :: _dw_mult_dw12 ::
+ _dw_mult_fp9_guarded :: _dw_mult_fp9 :: _dw_plus_dw2_guarded ::
+ _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp ::
+ _fast_2mult_acc_guarded :: _fast_2mult_guarded :: _fast_2mult ::
+ _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded :: _dw_div_dw_check ::
+ _dw_mult_dw_check :: _dw_mult_fp_check :: _dw_div_fp_check ::
+ _dw_plus_fp_check :: _dw_plus_dw_check :: _fast2_mult_acc_check ::
+ _fast2_mult_check :: _two_sum_check :: _fast2_sum_check :: _exit ::
+ _two_sum :: _fma :: ___builtin_debug :: ___builtin_fmin ::
+ ___builtin_fmax :: ___builtin_fnmsub :: ___builtin_fnmadd ::
+ ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_clsll ::
+ ___builtin_clsl :: ___builtin_cls :: ___builtin_expect ::
+ ___builtin_unreachable :: ___builtin_va_end :: ___builtin_va_copy ::
+ ___builtin_va_arg :: ___builtin_va_start :: ___builtin_membar ::
+ ___builtin_annot_intval :: ___builtin_annot :: ___builtin_sel ::
+ ___builtin_memcpy_aligned :: ___builtin_sqrt :: ___builtin_fsqrt ::
+ ___builtin_fabsf :: ___builtin_fabs :: ___builtin_ctzll ::
+ ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll :: ___builtin_clzl ::
+ ___builtin_clz :: ___builtin_bswap16 :: ___builtin_bswap32 ::
+ ___builtin_bswap :: ___builtin_bswap64 :: ___compcert_i64_umulh ::
+ ___compcert_i64_smulh :: ___compcert_i64_sar :: ___compcert_i64_shr ::
+ ___compcert_i64_shl :: ___compcert_i64_umod :: ___compcert_i64_smod ::
+ ___compcert_i64_udiv :: ___compcert_i64_sdiv :: ___compcert_i64_utof ::
+ ___compcert_i64_stof :: ___compcert_i64_utod :: ___compcert_i64_stod ::
+ ___compcert_i64_dtou :: ___compcert_i64_dtos :: ___compcert_va_composite ::
+ ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
+ nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.

@@ -23,6 +23,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc_helpers.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 
@@ -477,7 +478,10 @@ forward_if Post_if.
   assert (Hdw : double_word_prop
                   (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
                   (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
-    by exact (@DWTimesDW3_double_word _ Tdouble _
+    (* Qualified: DWDivDW_acc also defines a DWTimesDW3_double_word (the
+       internal-node variant taking the two DW props + a normality bound), and
+       requiring that file below would otherwise shadow this one. *)
+    by exact (@DWMulDW_acc.DWTimesDW3_double_word _ Tdouble _
                 (fst xh) (snd xh) (fst yh) (snd yh) Hp4 HFC).
   entailer!!.
 Qed.
@@ -512,6 +516,45 @@ forward_if Post_if.
   pose proof
     (relative_errorDWDivFP3_from_cond_combined (fst xh) (snd xh) y Hp4 HFC)
     as Hacc.
+  entailer!!.
+Qed.
+
+(* DWDivDW (Algorithm 18) guarded wrapper.  Same skeleton as
+   body_dw_div_fp15_guarded, with a second dword operand: call the check, exit on
+   failure (whose PROP(False) postcondition makes that branch vacuously satisfy
+   the accuracy claim), otherwise recover DWDivDW_cond from the check's boolean
+   and call the unguarded op.  Hp14 is the format side condition 14 <= fprec
+   Tdouble = 53, discharged here, so the exported 24u^2 bound rests on
+   DWDivDW_cond alone. *)
+Lemma body_dw_div_dw18_guarded :
+  semax_body Vprog Gprog f_dw_div_dw18_guarded dw_div_dw18_guarded_spec.
+Proof.
+start_function.
+forward_call (x, y, xh, yh).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWDivDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  LOCAL (temp _st s; temp _x x; temp _y y)
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x;
+       data_at Tsh dword (f2val yh) y)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP (DWDivDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
+    by entailer!.
+  forward_call (s, x, y, xh, yh).
+  assert (Hp14 : (14 <= fprec Tdouble)%Z)
+    by (unfold fprec, Tdouble; simpl; lia).
+  pose proof
+    (relative_errorDWDivDW3_from_cond_combined
+       (fst xh) (snd xh) (fst yh) (snd yh) Hp14 HFC)
+    as Hacc.
+  unfold relative_error_DWDivDW.
   entailer!!.
 Qed.
 

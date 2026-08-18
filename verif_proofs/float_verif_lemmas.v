@@ -794,3 +794,104 @@ Proof.
     simpl in H; try discriminate.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
+(* ==================================================================== *)
+(*  DW-division-check helpers (dw_div_dw_check / DWDivDW_cond)          *)
+(* ==================================================================== *)
+
+(* q_hi969_val: IEEE-754 double for 2^969 = 2^(-(emin + 2p - 1)), the
+   reciprocal-node upper bound on |yh| in DWDivDW_cond.  Same Bldexp-of-1.0
+   construction as q_omega_val / q_lo968_val.
+
+   Why this exponent: DWDivDW_cond's conjunct 2^(emin+2p-1) <= |1/FT2R yh| is a
+   statement about the EXACT real reciprocal, so for FT2R yh <> 0 it is
+   *equivalent* to Rabs (FT2R yh) <= 2^969 (see recip_lower_from_upper below).
+   The check therefore tests |y->s| directly with a non-strict comparison -- no
+   rounded reciprocal node and no rounded->exact transfer are needed, and the
+   test is exactly as strong as the conjunct rather than stronger. *)
+Definition q_hi969_val :=
+  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
+    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
+    (Float.of_bits (Int64.repr 4607182418800017408)) 969.
+
+Lemma q_hi969_val_finite : is_finite (ftype_of_float q_hi969_val) = true.
+Proof.
+  cbv [q_hi969_val Binary.is_finite Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
+Qed.
+
+Lemma q_hi969_val_FT2R :
+  FT2R (ftype_of_float q_hi969_val) = bpow Zaux.radix2 969.
+Proof.
+  cbv [q_hi969_val ftype_of_float Float.of_bits
+       Bits.b64_of_bits Binary.Bldexp]; simpl.
+  cbv [Binary.lift Binary.Bmult]; simpl.
+  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
+    simpl.
+  cbv [FT2R]; simpl.
+  cbv [F2R]; simpl.
+  nra.
+Qed.
+
+(* Upper-bound mirror of Float_cmp_Cle_lo: lifts the C test `fabs b <= v` into
+   the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
+   Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
+   the /4*Omega form), so the same lemma serves both the 2^969 bound on |yh| and
+   the 2^(femax-2) bounds that DWDivDW_cond states as bpow (femax t - 2). *)
+Lemma Float_cmp_Cle_hi :
+  forall (v : Floats.float) (b : ftype Tdouble) (C : R),
+  is_finite b = true ->
+  is_finite (ftype_of_float v) = true ->
+  FT2R (ftype_of_float v) = C ->
+  Float.cmp Cle
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b))
+    v = true ->
+  Rabs (FT2R b) <= C.
+Proof.
+  intros v b C Hb Hv HC H.
+  cbv [Float.cmp cmp_of_comparison Float.compare] in H.
+  assert (Hfb : Binary.is_finite 53 1024
+    (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype b)) = true).
+  { rewrite Binary.is_finite_Babs; rewrite <- is_finite_Binary; exact Hb. }
+  assert (Hfv : Binary.is_finite 53 1024 v = true).
+  { generalize Hv. rewrite is_finite_Binary, float_of_ftype_of_float;
+    cbv [fprec femax]; auto. }
+  rewrite Binary.Bcompare_correct in H; [| exact Hfb | exact Hfv].
+  rewrite Binary.B2R_Babs, B2R_float_of_ftype in H.
+  assert (Hvr : Binary.B2R 53 1024 v = C).
+  { rewrite <- HC, FT2R_ftype_of_float; cbv [fprec femax]; reflexivity. }
+  rewrite Hvr in H.
+  destruct (Rcompare (Rabs (FT2R b)) C) eqn:Hcmp; simpl in H; try discriminate.
+  - apply Req_le. apply Rcompare_Eq_inv in Hcmp; lra.
+  - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp; lra.
+Qed.
+
+(* An upper bound on |r| is a lower bound on |1/r|, for r <> 0.  This is what
+   makes the check's direct non-strict test on |y->s| discharge DWDivDW_cond's
+   reciprocal conjunct exactly (no rounding, no strictness slop).  The r <> 0
+   side condition is essential and not cosmetic: at r = 0 the Coq convention
+   1/0 = 0 makes the conclusion false while the hypothesis Rabs 0 <= C holds.
+   In the check it is supplied by the separate yh_lo clause
+   (2^(emin+2p) <= |y->s|), not by this bound. *)
+Lemma recip_lower_from_upper : forall (r C : R),
+  0 < C -> r <> 0%R -> Rabs r <= C -> / C <= Rabs (1 / r).
+Proof.
+  intros r C HC Hr H.
+  assert (Hra : 0 < Rabs r) by (apply Rabs_pos_lt; exact Hr).
+  replace (1 / r)%R with (/ r)%R by (unfold Rdiv; ring).
+  rewrite Rabs_Rinv by exact Hr.
+  apply Rinv_le_contravar; [exact Hra | exact H].
+Qed.
+
+(* bpow-shaped instance of recip_lower_from_upper, which is the form DWDivDW_cond
+   states its reciprocal conjunct in: a non-strict upper bound |r| <= 2^k on the
+   divisor is exactly the lower bound 2^(-k) <= |1/r| on the reciprocal.  At
+   k = -(emin + 2p - 1) = 969 for Tdouble this is what yh_hi discharges. *)
+Lemma recip_lower_from_bpow_upper : forall (r : R) (k : Z),
+  r <> 0%R ->
+  Rabs r <= bpow Zaux.radix2 k ->
+  bpow Zaux.radix2 (- k) <= Rabs (1 / r).
+Proof.
+  intros r k Hr H.
+  rewrite bpow_opp.
+  apply recip_lower_from_upper; [apply bpow_gt_0 | exact Hr | exact H].
+Qed.
