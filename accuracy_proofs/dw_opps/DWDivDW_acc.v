@@ -6132,17 +6132,17 @@ Lemma DWDivDW_relative_of_mixed_param
   0 <= bx -> 0 <= bq ->
   Rabs (zr-Q) <=
     a*u^2*Rabs Q+bx*eta*Rabs X+bq*eta*Rabs Q+2*eta ->
-  eta*Rabs X <= 201201/100000*u^2*Rabs Q ->
+  eta*Rabs X <= 201/100*(1001/1000)*u^2*Rabs Q ->
   eta <= u^2 ->
   eta <= 201/100*u^2*Rabs Q ->
-  a+bx*(201201/100000)+bq+2*(201/100) <= c ->
+  a+bx*(201/100*(1001/1000))+bq+2*(201/100) <= c ->
   Rabs ((zr-Q)/Q) <= c*u^2.
 Proof.
 move => Hu0 HQne Hbx Hbq Habs HX Hetau2 Heta Hbud.
 have HQabs : 0 < Rabs Q by apply Rabs_pos_lt.
 have Hu2Q : 0 <= u^2*Rabs Q.
 { apply Rmult_le_pos; [apply pow_le; lra|lra]. }
-have H1 : bx*(eta*Rabs X) <= bx*(201201/100000*(u^2*Rabs Q)).
+have H1 : bx*(eta*Rabs X) <= bx*(201/100*(1001/1000)*(u^2*Rabs Q)).
 { apply Rmult_le_compat_l; [exact Hbx|].
   eapply Rle_trans; [exact HX|]. right; ring. }
 have HQ' : eta*Rabs Q <= u^2*Rabs Q.
@@ -6152,7 +6152,7 @@ have H2 : bq*(eta*Rabs Q) <= bq*(u^2*Rabs Q).
 have H3 : 2*eta <= 2*(201/100*(u^2*Rabs Q)).
 { apply Rmult_le_compat_l; [lra|].
   eapply Rle_trans; [exact Heta|]. right; ring. }
-have H4 : (a+bx*(201201/100000)+bq+2*(201/100))*(u^2*Rabs Q)
+have H4 : (a+bx*(201/100*(1001/1000))+bq+2*(201/100))*(u^2*Rabs Q)
     <= c*(u^2*Rabs Q).
 { apply Rmult_le_compat_r; [exact Hu2Q|exact Hbud]. }
 have Herr : Rabs (zr-Q) <= c*u^2*Rabs Q.
@@ -6254,7 +6254,7 @@ have Hscale := DWDivDW_X_th_quotient_scale_from_cond
 fold th Q in Hscale. cbv zeta in Hscale. fold X Q in Hscale.
 rewrite Rabs_mult in Hscale.
 set T := Rabs (FT2R th) in HetaT, Hscale.
-have HetaX : eta*Rabs X <= 201201/100000*u^2*Rabs Q.
+have HetaX : eta*Rabs X <= 201/100*(1001/1000)*u^2*Rabs Q.
 { have Hx := Rmult_le_compat_r (Rabs X) _ _ HX0 HetaT.
   eapply Rle_trans; [exact Hx|].
   replace ((201/100*u^2*T)*Rabs X)%R with
@@ -6262,7 +6262,7 @@ have HetaX : eta*Rabs X <= 201201/100000*u^2*Rabs Q.
   have Hc : 0 <= 201/100*u^2 by nra.
   have Hs := Rmult_le_compat_l (201/100*u^2) _ _ Hc Hscale.
   eapply Rle_trans; [exact Hs|].
-  apply Req_le. field. }
+  apply Req_le. ring. }
 have Hetau2 : eta <= u^2.
 { unfold eta, u, common.emin.
   exact (DWDivDW_cond_eta_le_u2 xh xl yh yl COND). }
@@ -6788,19 +6788,6 @@ Theorem relative_errorDWDivDW3_from_cond_underflow :
     2*eta.
 Proof.
 exact (DWDivDW3_accuracy_from_cond_mixed xh xl yh yl Hp14 COND).
-Qed.
-
-(** The unique regime-independent absolute theorem.  As in DWDivFP, clients
-    should consume this physical-floor statement rather than an internal
-    per-node bridge or fallback estimate. *)
-Theorem relative_errorDWDivDW3_from_cond_combined_abs :
-  Rabs (zr-Q) <=
-    941/100*u^2*Rabs Q+
-    202/100*eta*Rabs X+
-    102/100*eta*Rabs Q+
-    2*eta.
-Proof.
-exact relative_errorDWDivDW3_from_cond_underflow.
 Qed.
 
 (** Pure-relative theorem obtained from the still-independent floor
