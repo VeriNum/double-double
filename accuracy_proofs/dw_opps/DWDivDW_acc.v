@@ -4782,11 +4782,10 @@ Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (fst mhl) (snd mhl).
 
-(** In the low-low-normal closing regime, the runtime multiplication is
-    exactly the paper Algorithm 12.  The fixed-lattice propagation theorem in
-    [DWMulDW_acc] removes all later normality premises, so this branch spends
-    none of the two-ulps floor allowance. *)
-Local Lemma DWDivDW3_closing_low0_normal_accuracy
+(** Aggregate closing-block contract.  The proof performs the internal
+    leading-product and low-order underflow case analysis directly, exposing
+    only the mixed relative/floor estimate required by division. *)
+Local Lemma DWDivDW3_closing_mixed_error_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -4795,221 +4794,6 @@ Local Lemma DWDivDW3_closing_low0_normal_accuracy
   let e := Fast2Sum rh rl in
   let d := DWTimesFP3 (fst e) (snd e) th in
   let m := DWPlusFP (fst d) (snd d) th in
-  bpow radix2 (@common.emin t+2*fprec t-1) <=
-    Rabs (FT2R xh*FT2R (fst m)) ->
-  bpow radix2 (@common.emin t+fprec t-1) <=
-    Rabs (FT2R xl*FT2R (snd m)) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Nprod N0.
-set X := FT2R xh+FT2R xl.
-set M := FT2R (fst m)+FT2R (snd m).
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-have Hrel := DWDivDW_reciprocal_relative_from_cond
-  xh xl yh yl Hp14 COND.
-specialize (Hrel NANS STD).
-fold th rh rl e d m in Hrel.
-destruct Hrel as [_ [_ [_ [DWm _]]]].
-fold m in DWm.
-have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
-specialize (FIN NANS STD).
-fold th rh rl e d m in FIN.
-change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_normal
-  xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia) Nprod N0.
-change (Rabs (zr-X*M) <=
-  4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-  2*bpow radix2 (@common.emin t)).
-fold X M zr in Hmul. cbv zeta in Hmul.
-eapply Rle_trans; [exact Hmul|].
-have Heta := bpow_ge_0 radix2 (@common.emin t). nra.
-Qed.
-
-(** When both endpoint correction nodes underflow, their relative error
-    components are zero.  The two interior FMAs still fit in the paper
-    [4*u^2] budget, while all four physical floors share two output ulps. *)
-Local Lemma DWDivDW3_closing_low0_final_underflow_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  bpow radix2 (@common.emin t+2*fprec t-1) <=
-    Rabs (FT2R xh*FT2R (fst m)) ->
-  Rabs (FT2R xl*FT2R (snd m)) <
-    bpow radix2 (@common.emin t+fprec t-1) ->
-  Rabs (FT2R (Fast2Mult_err xh (fst m))+
-    FT2R (BFMA xl (fst m)
-      (BFMA xh (snd m) (BMULT xl (snd m))))) <
-    bpow radix2 (@common.emin t+fprec t-1) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Nprod N0 N3.
-set X := FT2R xh+FT2R xl.
-set M := FT2R (fst m)+FT2R (snd m).
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-have Hrel := DWDivDW_reciprocal_relative_from_cond
-  xh xl yh yl Hp14 COND.
-specialize (Hrel NANS STD).
-fold th rh rl e d m in Hrel.
-destruct Hrel as [_ [_ [_ [DWm _]]]].
-fold m in DWm.
-have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
-specialize (FIN NANS STD).
-fold th rh rl e d m in FIN.
-change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
-  xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N3.
-change (Rabs (zr-X*M) <=
-  4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-  2*bpow radix2 (@common.emin t)).
-fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-Qed.
-
-(** Sharp closing bridge for the two interior-underflow arms.  The final node
-    is normal in both arms; exactly one of the two interior FMAs underflows. *)
-Local Lemma DWDivDW3_closing_low0_interior_underflow_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  bpow radix2 (@common.emin t+2*fprec t-1) <=
-    Rabs (FT2R xh*FT2R (fst m)) ->
-  Rabs (FT2R xl*FT2R (snd m)) <
-    bpow radix2 (@common.emin t+fprec t-1) ->
-  ((Rabs (FT2R xh*FT2R (snd m)+
-       FT2R (BMULT xl (snd m))) <
-       bpow radix2 (@common.emin t+fprec t-1) /\
-    bpow radix2 (@common.emin t+fprec t-1) <=
-      Rabs (FT2R xl*FT2R (fst m)+
-        FT2R (BFMA xh (snd m) (BMULT xl (snd m)))) /\
-    bpow radix2 (@common.emin t+fprec t-1) <=
-      Rabs (FT2R (Fast2Mult_err xh (fst m))+
-        FT2R (BFMA xl (fst m)
-          (BFMA xh (snd m) (BMULT xl (snd m)))))) \/
-   (bpow radix2 (@common.emin t+fprec t-1) <=
-      Rabs (FT2R xh*FT2R (snd m)+
-        FT2R (BMULT xl (snd m))) /\
-    Rabs (FT2R xl*FT2R (fst m)+
-      FT2R (BFMA xh (snd m) (BMULT xl (snd m)))) <
-      bpow radix2 (@common.emin t+fprec t-1) /\
-    bpow radix2 (@common.emin t+fprec t-1) <=
-      Rabs (FT2R (Fast2Mult_err xh (fst m))+
-        FT2R (BFMA xl (fst m)
-          (BFMA xh (snd m) (BMULT xl (snd m)))))) \/
-   (Rabs (FT2R xh*FT2R (snd m)+
-       FT2R (BMULT xl (snd m))) <
-       bpow radix2 (@common.emin t+fprec t-1) /\
-    Rabs (FT2R xl*FT2R (fst m)+
-      FT2R (BFMA xh (snd m) (BMULT xl (snd m)))) <
-      bpow radix2 (@common.emin t+fprec t-1) /\
-    bpow radix2 (@common.emin t+fprec t-1) <=
-      Rabs (FT2R (Fast2Mult_err xh (fst m))+
-        FT2R (BFMA xl (fst m)
-          (BFMA xh (snd m) (BMULT xl (snd m))))))) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Nprod N0 Htail.
-set X := FT2R xh+FT2R xl.
-set M := FT2R (fst m)+FT2R (snd m).
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-have Hrel := DWDivDW_reciprocal_relative_from_cond
-  xh xl yh yl Hp14 COND.
-specialize (Hrel NANS STD).
-fold th rh rl e d m in Hrel.
-destruct Hrel as [_ [_ [_ [DWm _]]]].
-fold m in DWm.
-have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
-specialize (FIN NANS STD).
-fold th rh rl e d m in FIN.
-change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-destruct Htail as [[N1 [N2 N3]]|[[N1 [N2 N3]]|[N1 [N2 N3]]]].
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
-    xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
-  change (Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t)).
-  fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
-    xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
-  change (Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t)).
-  fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-- have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
-    xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod N0 N1 N2 N3.
-  change (Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t)).
-  fold X M zr in Hmul. cbv zeta in Hmul. exact Hmul.
-Qed.
-
-(** Complementary leading-product gap.  Here the low-low multiplication is
-    zero, Fast2Mult loses at most one half floor ulp, and the three remaining
-    correction roundings cost [eta/2], [eta/2], and [eta]. *)
-Local Lemma DWDivDW3_closing_zprod_gap_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  Rabs (FT2R xh*FT2R (fst m)) <
-    bpow radix2 (@common.emin t+2*fprec t-1) ->
   let X := FT2R xh+FT2R xl in
   let M := FT2R (fst m)+FT2R (snd m) in
   let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
@@ -5026,7 +4810,6 @@ set e := Fast2Sum rh rl.
 set d := DWTimesFP3 (fst e) (snd e) th.
 set m := DWPlusFP (fst d) (snd d) th.
 set mh := fst m; set ml := snd m.
-move => Hgap.
 set X := FT2R xh+FT2R xl.
 set M := FT2R mh+FT2R ml.
 set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
@@ -5044,7 +4827,6 @@ have Hu : u <= /16384.
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have HN0 : 0 < N by (unfold N;apply bpow_gt_0).
-fold P0 P T in Hgap.
 move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
 have Hrel := DWDivDW_reciprocal_relative_from_cond
   xh xl yh yl Hp14 COND.
@@ -5053,7 +4835,13 @@ destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m mh ml in DWm.
 have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD). fold th rh rl e d m mh ml in FIN.
 change (is_finite_p (DWTimesDW3 xh xl mh ml)) in FIN.
-have Heta := DWDivDW_eta_absorbed_by_zprod xh xl yh yl Hp14 COND.
+change (Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta).
+destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
+- destruct (Rle_or_lt T P) as [Nprod|Hgap].
+  + have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
+      xh xl mh ml DWx DWm FIN Hp14 Nprod Hnear.
+    fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
+  + have Heta := DWDivDW_eta_absorbed_by_zprod xh xl yh yl Hp14 COND.
 specialize (Heta NANS STD).
 fold th rh rl e d m in Heta. cbv zeta in Heta.
 fold m mh u eta P0 P in Heta.
@@ -5288,229 +5076,43 @@ have Hreserve : /2*eta+u^2*P <= 4*u^2*Rabs (X*M).
   - nra.
   - apply Rmult_le_compat_l; [nra|exact HXM]. }
 nra.
-Qed.
-
-(** The two-ulps reserve also covers the first [9/8] of the normal leading
-    binade.  This is the boundary band where the direct FLT estimate and the
-    paper term overlap; above it the remaining proof must use the correlated
-    direct floored-node argument. *)
-Local Lemma DWDivDW3_closing_zprod_near_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  Rabs (FT2R xh*FT2R (fst m)) <=
-    9/8*bpow radix2 (@common.emin t+2*fprec t-1) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Hnear.
-destruct (Rle_or_lt
-  (bpow radix2 (@common.emin t+2*fprec t-1))
-  (Rabs (FT2R xh*FT2R (fst m)))) as [Nprod|Hgap].
-- move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-  have Hrel := DWDivDW_reciprocal_relative_from_cond
-    xh xl yh yl Hp14 COND.
-  specialize (Hrel NANS STD).
-  fold th rh rl e d m in Hrel.
-  destruct Hrel as [_ [_ [_ [DWm _]]]].
-  fold m in DWm.
-  have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
-  specialize (FIN NANS STD).
-  fold th rh rl e d m in FIN.
-  change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-  have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
-    xh xl (fst m) (snd m) DWx DWm FIN Hp14 Nprod Hnear.
-  cbv zeta in Hmul. exact Hmul.
-- have H := DWDivDW3_closing_zprod_gap_accuracy
-    xh xl yh yl Hp14 COND.
-  fold th rh rl e d m in H. cbv zeta in H.
-  exact (H Hgap).
-Qed.
-
-(** Far above the leading-product boundary, the sole missing node pattern is
-    the low-low floor followed by three normal correction nodes. *)
-Local Lemma DWDivDW3_closing_low0_far_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  9/8*bpow radix2 (@common.emin t+2*fprec t-1) <
-    Rabs (FT2R xh*FT2R (fst m)) ->
-  Rabs (FT2R xl*FT2R (snd m)) <
-    bpow radix2 (@common.emin t+fprec t-1) ->
-  bpow radix2 (@common.emin t+fprec t-1) <=
-    Rabs (FT2R xh*FT2R (snd m)+FT2R (BMULT xl (snd m))) ->
-  bpow radix2 (@common.emin t+fprec t-1) <=
-    Rabs (FT2R xl*FT2R (fst m)+
-      FT2R (BFMA xh (snd m) (BMULT xl (snd m)))) ->
-  bpow radix2 (@common.emin t+fprec t-1) <=
-    Rabs (FT2R (Fast2Mult_err xh (fst m))+
-      FT2R (BFMA xl (fst m)
-        (BFMA xh (snd m) (BMULT xl (snd m))))) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Hfar U0 N1 N2 N3.
-move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-have Hrel := DWDivDW_reciprocal_relative_from_cond
-  xh xl yh yl Hp14 COND.
-specialize (Hrel NANS STD). fold th rh rl e d m in Hrel.
-destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m in DWm.
-have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
-specialize (FIN NANS STD). fold th rh rl e d m in FIN.
-change (is_finite_p (DWTimesDW3 xh xl (fst m) (snd m))) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_far
-  xh xl (fst m) (snd m) DWx DWm FIN ltac:(lia)
-  Hfar U0 N1 N2 N3.
-cbv zeta in Hmul. exact Hmul.
-Qed.
-
-(** Complete sharp closing bridge for the far leading-product regime. *)
-Local Lemma DWDivDW3_closing_far_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  9/8*bpow radix2 (@common.emin t+2*fprec t-1) <
-    Rabs (FT2R xh*FT2R (fst m)) ->
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-move => Hfar.
-set N := bpow radix2 (@common.emin t+fprec t-1).
-have Nprod : bpow radix2 (@common.emin t+2*fprec t-1) <=
-    Rabs (FT2R xh*FT2R (fst m)).
-{ set T := bpow radix2 (@common.emin t+2*fprec t-1) in Hfar |- *.
-  have HT0 : 0<T by (unfold T;apply bpow_gt_0).
-  have Hcoef : T<=9/8*T by (clear -HT0;nra).
-  eapply Rle_trans;[exact Hcoef|apply Rlt_le;exact Hfar]. }
-destruct (Rle_or_lt N (Rabs (FT2R xl*FT2R (snd m)))) as [N0|U0].
-- have H := DWDivDW3_closing_low0_normal_accuracy
-    xh xl yh yl Hp14 COND.
-  fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-  exact (H Nprod N0).
-- destruct (Rle_or_lt N
-    (Rabs (FT2R (Fast2Mult_err xh (fst m))+
-      FT2R (BFMA xl (fst m)
-        (BFMA xh (snd m) (BMULT xl (snd m))))))) as [N3|U3].
-  2:{ have H := DWDivDW3_closing_low0_final_underflow_accuracy
-        xh xl yh yl Hp14 COND.
-      fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-      exact (H Nprod U0 U3). }
-  destruct (Rle_or_lt N
-    (Rabs (FT2R xh*FT2R (snd m)+FT2R (BMULT xl (snd m)))))
-    as [N1|U1].
+- have Nprod : T <= P.
+  { have HT0 : 0<T by (unfold T;apply bpow_gt_0).
+    have Hcoef : T<=9/8*T by (clear -HT0;nra).
+    eapply Rle_trans; [exact Hcoef|apply Rlt_le;exact Hfar]. }
+  destruct (Rle_or_lt N (Rabs (FT2R xl*FT2R ml))) as [N0|U0].
+  + have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_normal
+      xh xl mh ml DWx DWm FIN ltac:(lia) Nprod N0.
+    fold X M zr u in Hmul. cbv zeta in Hmul.
+    eapply Rle_trans; [exact Hmul|]. nra.
   + destruct (Rle_or_lt N
-      (Rabs (FT2R xl*FT2R (fst m)+
-        FT2R (BFMA xh (snd m) (BMULT xl (snd m)))))) as [N2|U2].
-    * have H := DWDivDW3_closing_low0_far_accuracy
-        xh xl yh yl Hp14 COND.
-      fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-      exact (H Hfar U0 N1 N2 N3).
-    * have H := DWDivDW3_closing_low0_interior_underflow_accuracy
-        xh xl yh yl Hp14 COND.
-      fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-      apply H; [exact Nprod|exact U0|]. right;left. repeat split; assumption.
-  + destruct (Rle_or_lt N
-      (Rabs (FT2R xl*FT2R (fst m)+
-        FT2R (BFMA xh (snd m) (BMULT xl (snd m)))))) as [N2|U2].
-    * have H := DWDivDW3_closing_low0_interior_underflow_accuracy
-        xh xl yh yl Hp14 COND.
-      fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-      apply H; [exact Nprod|exact U0|]. left. repeat split; assumption.
-    * have H := DWDivDW3_closing_low0_interior_underflow_accuracy
-        xh xl yh yl Hp14 COND.
-      fold th rh rl e d m in H. cbv zeta in H. fold N in H.
-      apply H; [exact Nprod|exact U0|]. right;right. repeat split; assumption.
-Qed.
-
-(** Aggregate closing-block contract.  The internal proof splits on the
-    leading-product and low-order underflow regimes, but clients only need the
-    resulting mixed relative/floor estimate. *)
-Local Lemma DWDivDW3_closing_mixed_error_from_cond
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set T := bpow radix2 (@common.emin t+2*fprec t-1).
-set P := Rabs (FT2R xh*FT2R (fst m)).
-destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
-- have H := DWDivDW3_closing_zprod_near_accuracy
-    xh xl yh yl Hp14 COND.
-  fold th rh rl e d m in H. cbv zeta in H.
-  fold P T in Hnear. exact (H Hnear).
-- have H := DWDivDW3_closing_far_accuracy
-    xh xl yh yl Hp14 COND.
-  fold th rh rl e d m in H. cbv zeta in H.
-  fold P T in Hfar. exact (H Hfar).
+      (Rabs (FT2R (Fast2Mult_err xh mh)+
+        FT2R (BFMA xl mh (BFMA xh ml (BMULT xl ml))))))
+      as [N3|U3].
+    * destruct (Rle_or_lt N
+        (Rabs (FT2R xh*FT2R ml+FT2R (BMULT xl ml)))) as [N1|U1].
+      -- destruct (Rle_or_lt N
+          (Rabs (FT2R xl*FT2R mh+
+            FT2R (BFMA xh ml (BMULT xl ml))))) as [N2|U2].
+         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_far
+              xh xl mh ml DWx DWm FIN ltac:(lia)
+              Hfar U0 N1 N2 N3.
+            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
+         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
+              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 N1 U2 N3.
+            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
+      -- destruct (Rle_or_lt N
+          (Rabs (FT2R xl*FT2R mh+
+            FT2R (BFMA xh ml (BMULT xl ml))))) as [N2|U2].
+         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
+              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U1 N2 N3.
+            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
+         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
+              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U1 U2 N3.
+            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
+    * have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
+        xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U3.
+      fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
 Qed.
 
 (** Coefficient-parametric form of the composition.  Pure real arithmetic: the
