@@ -6251,7 +6251,7 @@ specialize (Hsc NANS STD). fold th u eta in Hsc.
 destruct Hsc as [_ HetaT].
 have Hscale := DWDivDW_X_th_quotient_scale_from_cond
   xh xl yh yl Hp14 COND.
-fold th Q in Hscale. cbv zeta in Hscale. fold X Q in Hscale.
+fold th in Hscale. cbv zeta in Hscale. fold X Y Q in Hscale.
 rewrite Rabs_mult in Hscale.
 set T := Rabs (FT2R th) in HetaT, Hscale.
 have HetaX : eta*Rabs X <= 201/100*(1001/1000)*u^2*Rabs Q.
@@ -6268,11 +6268,11 @@ have Hetau2 : eta <= u^2.
   exact (DWDivDW_cond_eta_le_u2 xh xl yh yl COND). }
 have HetaOut := DWDivDW_eta_absorbed_by_quotient_tight
   xh xl yh yl Hp14 COND.
-specialize (HetaOut STD). fold u eta Q in HetaOut.
-fold X Q in HetaOut.
+specialize (HetaOut STD). fold u eta in HetaOut.
+fold X Y Q in HetaOut.
 (* ---- destruct the refinement arms ---------------------------------- *)
-have Harms := DWDivDW_refinement_product_value_error_tight_floor
-  xh xl yh yl Hp14 COND.
+have Harms := @DWDivDW_refinement_product_value_error_tight_floor
+  NANS t STD xh xl yh yl Hp14 COND.
 cbv zeta in Harms.
 destruct Harms as [Hunc Harm].
 destruct Harm as [Hord|Hsmall].
@@ -6794,10 +6794,15 @@ Qed.
     conversions, sharpened by [DWDivDW_cond_eta_le_u2].  Its coefficient will
     become [13.9] once the denormal interface above is replaced by the
     correlated per-node estimate. *)
+(** Sharpest exported regime-independent relative bound.  It comes from the
+    two-arm refinement split ([relative_errorDWDivDW3_from_cond_arms]), whose
+    arms keep their own reciprocal coefficients rather than being merged into a
+    common shape.  Merging them instead gives
+    [DWDivDW3_relative_from_mixed_floor_accuracy] at [18.52]. *)
 Theorem relative_errorDWDivDW3_from_cond_combined_tight :
-  Rabs ((zr-Q)/Q) <= 1852/100*u^2.
+  Rabs ((zr-Q)/Q) <= 165/10*u^2.
 Proof.
-exact (DWDivDW3_relative_from_mixed_floor_accuracy
+exact (relative_errorDWDivDW3_from_cond_arms
   xh xl yh yl Hp14 COND).
 Qed.
 
