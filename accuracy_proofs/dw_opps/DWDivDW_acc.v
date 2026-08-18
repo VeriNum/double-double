@@ -2834,10 +2834,10 @@ split.
 - split; [exact Heh|exact Hel].
 Qed.
 
-(** Tight compensated form of the refinement-product error.  The high-product
-    rounding is recovered by [cl1], and the closing Fast2Sum's high rounding
-    cancels between [z] and [dl].  Consequently the ordinary contribution is
-    third order; only the two explicit FLT floor terms remain second order. *)
+(** Two-arm compensated refinement-product estimate.  When the closing
+    Fast2Sum is ordered, its sum is exact and the refinement costs one floor
+    ulp.  Otherwise the general two-floor bound holds and the Newton residual
+    is itself second order. *)
 Lemma DWDivDW_refinement_product_value_error_tight_floor
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
@@ -2848,14 +2848,14 @@ Lemma DWDivDW_refinement_product_value_error_tight_floor
   let d := DWTimesFP3 (fst e) (snd e) th in
   let Y := FT2R yh+FT2R yl in
   Rabs ((FT2R (fst d)+FT2R (snd d))-
-    (FT2R (fst e)+FT2R (snd e))*FT2R th)
-    <= 140*bpow radix2 (-fprec t)^3*Rabs (FT2R th) +
-       2*bpow radix2 (@common.emin t)
-  /\ (Rabs ((FT2R (fst d)+FT2R (snd d))-
         (FT2R (fst e)+FT2R (snd e))*FT2R th)
         <= 36*bpow radix2 (-fprec t)^3*Rabs (FT2R th) +
            1*bpow radix2 (@common.emin t)
-      \/ Rabs (1-Y*FT2R th) <= 72*bpow radix2 (-fprec t)^2).
+  \/ (Rabs ((FT2R (fst d)+FT2R (snd d))-
+        (FT2R (fst e)+FT2R (snd e))*FT2R th)
+        <= 140*bpow radix2 (-fprec t)^3*Rabs (FT2R th) +
+           2*bpow radix2 (@common.emin t)
+      /\ Rabs (1-Y*FT2R th) <= 72*bpow radix2 (-fprec t)^2).
 Proof.
 move => Hp14 COND.
 set th := BDIV (Zconst t 1) yh.
@@ -3044,11 +3044,10 @@ have Hunc : Rabs ((FT2R dh+FT2R dl)-
   (* The displayed constants leave ample room at p >= 14. *)
   nra. }
 change (Rabs ((FT2R dh+FT2R dl)-
-  (FT2R eh+FT2R el)*FT2R th) <= 140*u^3*T+2*eta
-  /\ (Rabs ((FT2R dh+FT2R dl)-
         (FT2R eh+FT2R el)*FT2R th) <= 36*u^3*T+1*eta
-      \/ Rabs (1-(FT2R yh+FT2R yl)*FT2R th) <= 72*u^2)).
-split; [exact Hunc|].
+  \/ (Rabs ((FT2R dh+FT2R dl)-
+        (FT2R eh+FT2R el)*FT2R th) <= 140*u^3*T+2*eta
+      /\ Rabs (1-(FT2R yh+FT2R yl)*FT2R th) <= 72*u^2)).
 (* ---- the two refinement arms ----------------------------------------
    Ordered: Algorithm 9's closing Fast2Sum is exact
    ([DWTimesFP3_sum_exact_of_ord]), so [dh+dl = ch+cl3] and the bound is
@@ -3065,7 +3064,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   have Hex := DWTimesFP3_sum_exact_of_ord eh el th (conj Fdh Fdl) Hord.
   change (FT2R dh+FT2R dl=FT2R ch+FT2R cl3) in Hex.
   rewrite Hex. eapply Rle_trans; [exact Hcore|lra].
-- right.
+- right. split; [exact Hunc|].
   have Hnord' : Rabs (FT2R ch) < Rabs (FT2R cl3) by (apply Rnot_le_lt; exact Hnord).
   have Hlo : Rabs (FT2R eh)*T-Rabs (FT2R ch-FT2R eh*FT2R th)
       <= Rabs (FT2R ch).
@@ -5699,12 +5698,11 @@ fold X Y Q in HetaOut.
 have Harms := @DWDivDW_refinement_product_value_error_tight_floor
   NANS t STD xh xl yh yl Hp14 COND.
 cbv zeta in Harms.
-destruct Harms as [Hunc Harm].
-destruct Harm as [Hord|Hsmall].
+destruct Harms as [Htight|[Hcoarse Hsmall]].
 - (* ===== ordered arm: fr = 1, nw = 2.298 ===== *)
   have Href := DWDivDW_refinement_product_error_scaled_param
     xh xl yh yl 36 1 Hp14 COND ltac:(lra) ltac:(lra) ltac:(lra).
-  cbv zeta in Href. specialize (Href Hord).
+  cbv zeta in Href. specialize (Href Htight).
   have Hnew := DWDivDW_newton_step_error_tight_from_cond
     xh xl yh yl Hp14 COND.
   fold th Y u in Hnew. cbv zeta in Hnew.
@@ -5734,7 +5732,7 @@ destruct Harm as [Hord|Hsmall].
 - (* ===== unordered arm: fr = 2, nw collapses ===== *)
   have Href := DWDivDW_refinement_product_error_scaled_param
     xh xl yh yl 140 2 Hp14 COND ltac:(lra) ltac:(lra) ltac:(lra).
-  cbv zeta in Href. specialize (Href Hunc).
+  cbv zeta in Href. specialize (Href Hcoarse).
   have HDWy : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl).
   { apply (dw_word_DWdouble yh yl yh). exact DWy. }
   have Hth := DWDivDW_th_FLT_FLX_from_cond xh xl yh yl COND.
