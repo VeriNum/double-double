@@ -49,6 +49,8 @@
         result under explicit no-underflow assumptions.
       - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
         runtime model, giving relative error at most [(98/10) * u^2].
+      - [relative_errorDWDivDW3_from_cond_combined_tight] gives the
+        regime-independent bound, including underflow, of [(165/10) * u^2].
 
     Both the bridge and the transferred relative-error theorem are proved
     below from explicit normal-range premises for every rounding node that
@@ -412,40 +414,6 @@ have He := round_FLT_error_rel_emin (t:=t) v.
 nra.
 Qed.
 
-(** Projecting an already exact FLX value into FLT costs at most half an
-    underflow-floor ulp.  This is sharper than comparing two independently
-    rounded values, where double rounding can cost a full floor ulp. *)
-Lemma round_FLT_exact_FLX_diff_half {t : type} (v : R) :
-  generic_format radix2 (FLX_exp (fprec t)) v ->
-  Rabs
-    (round radix2 (SpecFloat.fexp (fprec t) (femax t))
-       (Znearest choice) v-v)
-  <= /2*bpow radix2 (@common.emin t).
-Proof.
-move => Fv.
-destruct (Rle_lt_dec
-  (bpow radix2 (@common.emin t+fprec t-1)) (Rabs v)) as [Hn|Hs].
-- have Fflt : generic_format radix2
-      (SpecFloat.fexp (fprec t) (femax t)) v.
-  { apply (generic_format_FLT_FLX radix2 (@common.emin t) (fprec t));
-      assumption. }
-  rewrite round_generic; [rewrite Rminus_diag Rabs_R0|exact Fflt].
-  have Heta := bpow_ge_0 radix2 (@common.emin t). lra.
-- destruct (Req_dec v 0) as [->|Hv].
-  + rewrite round_0 Rminus_diag Rabs_R0.
-    have Heta := bpow_ge_0 radix2 (@common.emin t). lra.
-  + have Herr := error_le_half_ulp radix2
-      (SpecFloat.fexp (fprec t) (femax t)) choice v.
-    specialize (Herr valid_fexp_inst).
-    have Hbnd : Rabs v <
-        bpow radix2 (@common.emin t+fprec t).
-    { eapply Rlt_le_trans; [exact Hs|]. apply bpow_le; lia. }
-    have Hulp : Ulp.ulp radix2
-        (SpecFloat.fexp (fprec t) (femax t)) v =
-        bpow radix2 (@common.emin t).
-    { apply ulp_FLT_small; [apply fprec_gt_0|exact Hbnd]. }
-    rewrite Hulp in Herr. exact Herr.
-Qed.
 
 (** A compensated product loses only an underflow-floor term even when its
     exact product error is too small for the usual Fast2Mult exactness
@@ -4648,78 +4616,6 @@ eapply Rle_trans with (r2:=
   + right; ring.
 Qed.
 
-Lemma DWDivDW_refinement_product_error_scaled_tight
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let X := FT2R xh + FT2R xl in
-  let Q := X / (FT2R yh + FT2R yl) in
-  Rabs (X * ((FT2R (fst d) + FT2R (snd d)) -
-                  (FT2R (fst e) + FT2R (snd e))*FT2R th))
-    <= 1/100 * bpow radix2 (-fprec t)^2 * Rabs Q +
-       2*bpow radix2 (@common.emin t)*Rabs X.
-Proof.
-move => Hp14 COND.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set X := FT2R xh + FT2R xl.
-set Q := X/(FT2R yh + FT2R yl).
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-set T := Rabs (FT2R th).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have HT0 : 0 <= T by (unfold T; apply Rabs_pos).
-have HX0 : 0 <= Rabs X by apply Rabs_pos.
-have Heta0 : 0 <= eta by (unfold eta; apply bpow_ge_0).
-have Href := proj1 (DWDivDW_refinement_product_value_error_tight_floor
-  xh xl yh yl Hp14 COND).
-specialize (Href NANS STD).
-fold th rh rl e d u eta T in Href.
-have Hscale := DWDivDW_X_th_quotient_scale_from_cond
-  xh xl yh yl Hp14 COND.
-fold th X Q in Hscale. cbv zeta in Hscale.
-rewrite Rabs_mult in Hscale. fold T in Hscale.
-change (Rabs (X*((FT2R (fst d)+FT2R (snd d))-
-  (FT2R (fst e)+FT2R (snd e))*FT2R th)) <=
-  1/100*u^2*Rabs Q+2*eta*Rabs X).
-rewrite Rabs_mult.
-have Hmul := Rmult_le_compat_l (Rabs X) _ _ HX0 Href.
-eapply Rle_trans; [exact Hmul|].
-have Hthird : Rabs X*(140*u^3*T) <= 1/100*u^2*Rabs Q.
-{ replace (Rabs X*(140*u^3*T))%R with
-      (140*u^3*(Rabs X*T))%R by ring.
-  have Hc : 0 <= 140*u^3 by nra.
-  have Hs := Rmult_le_compat_l (140*u^3) _ _ Hc Hscale.
-  eapply Rle_trans; [exact Hs|].
-  have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
-  replace (140*u^3*(1001/1000*Rabs Q))%R with
-    ((140*u^3*(1001/1000))*Rabs Q)%R by ring.
-  replace (1/100*u^2*Rabs Q)%R with
-    ((1/100*u^2)*Rabs Q)%R by ring.
-  apply Rmult_le_compat_r; [exact HQ0|]. nra. }
-eapply Rle_trans with (r2:=
-  Rabs X*(140*u^3*T)+Rabs X*(2*eta)).
-- fold T; right; ring.
-- eapply Rle_trans.
-  + apply Rplus_le_compat; [exact Hthird|apply Rle_refl].
-  + right; ring.
-Qed.
-
-(** Tight reciprocal reconstruction on the quotient scale.  The ordinary
-    coefficient is below [5.4], leaving the closing Algorithm 12 enough room
-    to retain the published [9.8] total.  Denormal effects remain separated
-    into a reciprocal-residual floor [eta*|Q|] and the two Algorithm 9 floors
-    [eta*|X|]. *)
 (** Coefficient-parametric reciprocal reconstruction.  The refinement block's
     floor coefficient [fr] and the Newton remainder's coefficient [nw] are
     taken as inputs, so the two arms of the refinement split share this whole
@@ -4868,181 +4764,6 @@ eapply Rle_trans.
 - right; ring.
 Qed.
 
-Lemma DWDivDW_reciprocal_error_scaled_tight_floor
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  let X := FT2R xh+FT2R xl in
-  let Y := FT2R yh+FT2R yl in
-  let Q := X/Y in
-  Rabs (X*((FT2R (fst m)+FT2R (snd m))-/Y)) <=
-    54/10*bpow radix2 (-fprec t)^2*Rabs Q+
-    201/100*bpow radix2 (@common.emin t)*Rabs X+
-    101/100*bpow radix2 (@common.emin t)*Rabs Q.
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set X := FT2R xh+FT2R xl.
-set Y := FT2R yh+FT2R yl.
-set Q := X/Y.
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-set E := FT2R (fst e)+FT2R (snd e).
-set D := FT2R (fst d)+FT2R (snd d).
-set M := FT2R (fst m)+FT2R (snd m).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have HX0 : 0 <= Rabs X by apply Rabs_pos.
-have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
-have Heta0 : 0 <= eta by (unfold eta; apply bpow_ge_0).
-have HYne : Y<>0.
-{ move: (COND) => [_ [_ [_ [_ [_ [DWy _]]]]]].
-  have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
-  intro HY0; apply Hyhne.
-  have Hyl := @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
-  fold u in Hyl.
-  have Hrev := Rabs_triang_inv (FT2R yh) (-FT2R yl).
-  rewrite Rabs_Ropp in Hrev.
-  replace (FT2R yh- -FT2R yl)%R with Y in Hrev by (unfold Y;ring).
-  rewrite HY0 Rabs_R0 in Hrev.
-  have Hy0 : 0 <= Rabs (FT2R yh) by apply Rabs_pos.
-  have Hz : Rabs (FT2R yh)=0 by nra.
-  exact (Rabs_eq_R0 _ Hz). }
-have HQX : Rabs X*Rabs (/Y)=Rabs Q.
-{ unfold Q, Rdiv. rewrite Rabs_mult. reflexivity. }
-have Hscale := DWDivDW_X_th_quotient_scale_from_cond
-  xh xl yh yl Hp14 COND.
-fold th Q in Hscale. cbv zeta in Hscale.
-have Hres := DWDivDW_residual_value_error_tight_floor
-  xh xl yh yl Hp14 COND.
-fold th rh rl e Y u eta E in Hres. cbv zeta in Hres.
-fold X Q in Hscale. fold E in Hres.
-have Hresc : Rabs (X*((E-(1-Y*FT2R th))*FT2R th)) <=
-    (1001/1000*Rabs Q)*(1001/1000*u^2+1*eta).
-{ have Hfac : Rabs (X*((E-(1-Y*FT2R th))*FT2R th)) =
-      Rabs (X*FT2R th)*Rabs (E-(1-Y*FT2R th)).
-  { rewrite !Rabs_mult. ring. }
-  rewrite Hfac.
-  have Hmul := Rmult_le_compat _ _ _ _
-    (Rabs_pos _) (Rabs_pos _) Hscale Hres.
-  exact Hmul. }
-have Href := DWDivDW_refinement_product_error_scaled_tight
-  xh xl yh yl Hp14 COND.
-fold th rh rl e d X Q u eta E D in Href. cbv zeta in Href.
-fold X Q E D u eta in Href.
-have Hnew := DWDivDW_newton_step_error_tight_from_cond
-  xh xl yh yl Hp14 COND.
-fold th Y u in Hnew. cbv zeta in Hnew.
-have HnewX : Rabs (X*(FT2R th+(1-Y*FT2R th)*FT2R th-/Y)) <=
-    2298/1000*u^2*Rabs Q.
-{ rewrite Rabs_mult.
-  have Hmul := Rmult_le_compat_l (Rabs X) _ _ HX0 Hnew.
-  eapply Rle_trans; [exact Hmul|]. right.
-  rewrite -HQX. ring. }
-have Hu2Q : 0 <= u^2*Rabs Q.
-{ apply Rmult_le_pos; [apply pow_le; lra|exact HQ0]. }
-have HetaX : 0 <= eta*Rabs X.
-{ apply Rmult_le_pos; [exact Heta0|exact HX0]. }
-have HetaQ : 0 <= eta*Rabs Q.
-{ apply Rmult_le_pos; [exact Heta0|exact HQ0]. }
-have Hpre : Rabs (X*((D+FT2R th)-/Y)) <=
-    3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-    1001/1000*eta*Rabs Q.
-{ have Heq : X*((D+FT2R th)-/Y) =
-    X*(D-E*FT2R th)+X*((E-(1-Y*FT2R th))*FT2R th)+
-    X*(FT2R th+(1-Y*FT2R th)*FT2R th-/Y) by ring.
-  rewrite Heq.
-  have Ht1 := Rabs_triang (X*(D-E*FT2R th))
-    (X*((E-(1-Y*FT2R th))*FT2R th)).
-  have Ht2 := Rabs_triang
-    (X*(D-E*FT2R th)+X*((E-(1-Y*FT2R th))*FT2R th))
-    (X*(FT2R th+(1-Y*FT2R th)*FT2R th-/Y)).
-  eapply Rle_trans; [exact Ht2|].
-  eapply Rle_trans.
-  - apply Rplus_le_compat; [exact Ht1|exact HnewX].
-  - eapply Rle_trans.
-    + apply Rplus_le_compat.
-      * apply Rplus_le_compat; [exact Href|exact Hresc].
-      * apply Rle_refl.
-    + change (((1/100*u^2*Rabs Q+2*eta*Rabs X)+
-        (1001/1000*Rabs Q)*(1001/1000*u^2+1*eta))+
-        2298/1000*u^2*Rabs Q <=
-        3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-        1001/1000*eta*Rabs Q).
-      nra. }
-have Hplus := DWDivDW_reciprocal_plus_error_paper_tight
-  xh xl yh yl Hp14 COND.
-fold th rh rl e d m u D M in Hplus. cbv zeta in Hplus.
-have HXS : Rabs (X*(D+FT2R th)) <= Rabs Q+
-    (3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-     1001/1000*eta*Rabs Q).
-{ have Heq : X*(D+FT2R th)=X/Y+X*((D+FT2R th)-/Y).
-  { field; exact HYne. }
-  rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
-  fold Q. apply Rplus_le_compat_l. exact Hpre. }
-have HplusX : Rabs (X*(M-(D+FT2R th))) <=
-    2*u^2*(Rabs Q+
-      (3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-       1001/1000*eta*Rabs Q)).
-{ rewrite Rabs_mult.
-  have Hx := Rmult_le_compat_l (Rabs X) _ _ HX0 Hplus.
-  eapply Rle_trans; [exact Hx|].
-  have Hfac : Rabs X*(2*u^2*Rabs (D+FT2R th)) =
-      2*u^2*Rabs (X*(D+FT2R th)).
-  { rewrite Rabs_mult. ring. }
-  rewrite Hfac.
-  apply Rmult_le_compat_l; [nra|exact HXS]. }
-change (Rabs (X*(M-/Y)) <=
-  54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-  101/100*eta*Rabs Q).
-have Heq : X*(M-/Y)=X*(M-(D+FT2R th))+X*((D+FT2R th)-/Y)
-  by ring.
-rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
-eapply Rle_trans.
-- apply Rplus_le_compat; [exact HplusX|exact Hpre].
-- set Bq := u^2*Rabs Q.
-  set Fx := eta*Rabs X.
-  set Fq := eta*Rabs Q.
-  have HBq : 0 <= Bq by (unfold Bq; exact Hu2Q).
-  have HFx : 0 <= Fx by (unfold Fx; exact HetaX).
-  have HFq : 0 <= Fq by (unfold Fq; exact HetaQ).
-  have Ho : 2+3311/1000*(1+2*u^2) <= 54/10 by nra.
-  have Hfx : 2*(1+2*u^2) <= 201/100 by nra.
-  have Hfq : 1001/1000*(1+2*u^2) <= 101/100 by nra.
-  replace (2*u^2*(Rabs Q+
-      (3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-       1001/1000*eta*Rabs Q))+
-      (3311/1000*u^2*Rabs Q+2*eta*Rabs X+
-       1001/1000*eta*Rabs Q))%R with
-    ((2+3311/1000*(1+2*u^2))*Bq+
-     (2*(1+2*u^2))*Fx+
-     (1001/1000*(1+2*u^2))*Fq)%R by (unfold Bq,Fx,Fq;ring).
-  replace (54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-      101/100*eta*Rabs Q)%R with
-    (54/10*Bq+201/100*Fx+101/100*Fq)%R
-      by (unfold Bq,Fx,Fq;ring).
-  change ((2+3311/1000*(1+2*u^2))*Bq+
-     (2*(1+2*u^2))*Fx+
-     (1001/1000*(1+2*u^2))*Fq <=
-     54/10*Bq+201/100*Fx+101/100*Fq).
-  apply Rplus_le_compat.
-  + apply Rplus_le_compat.
-    * apply Rmult_le_compat_r; assumption.
-    * apply Rmult_le_compat_r; assumption.
-  + apply Rmult_le_compat_r; assumption.
-Qed.
 
 (** Reciprocal reconstruction prefix of the paper computation. *)
 Definition DWDivDW_reciprocal_FLX_model (yh yl : ftype t) : R * R :=
@@ -5066,7 +4787,7 @@ Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
     exactly the paper Algorithm 12.  The fixed-lattice propagation theorem in
     [DWMulDW_acc] removes all later normality premises, so this branch spends
     none of the two-ulps floor allowance. *)
-Lemma DWDivDW3_closing_low0_normal_accuracy
+Local Lemma DWDivDW3_closing_low0_normal_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5123,7 +4844,7 @@ Qed.
 (** When both endpoint correction nodes underflow, their relative error
     components are zero.  The two interior FMAs still fit in the paper
     [4*u^2] budget, while all four physical floors share two output ulps. *)
-Lemma DWDivDW3_closing_low0_final_underflow_accuracy
+Local Lemma DWDivDW3_closing_low0_final_underflow_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5181,7 +4902,7 @@ Qed.
 
 (** Sharp closing bridge for the two interior-underflow arms.  The final node
     is normal in both arms; exactly one of the two interior FMAs underflows. *)
-Lemma DWDivDW3_closing_low0_interior_underflow_accuracy
+Local Lemma DWDivDW3_closing_low0_interior_underflow_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5279,7 +5000,7 @@ Qed.
 (** Complementary leading-product gap.  Here the low-low multiplication is
     zero, Fast2Mult loses at most one half floor ulp, and the three remaining
     correction roundings cost [eta/2], [eta/2], and [eta]. *)
-Lemma DWDivDW3_closing_zprod_gap_accuracy
+Local Lemma DWDivDW3_closing_zprod_gap_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5574,7 +5295,7 @@ Qed.
     binade.  This is the boundary band where the direct FLT estimate and the
     paper term overlap; above it the remaining proof must use the correlated
     direct floored-node argument. *)
-Lemma DWDivDW3_closing_zprod_near_accuracy
+Local Lemma DWDivDW3_closing_zprod_near_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5626,7 +5347,7 @@ Qed.
 
 (** Far above the leading-product boundary, the sole missing node pattern is
     the low-low floor followed by three normal correction nodes. *)
-Lemma DWDivDW3_closing_low0_far_accuracy
+Local Lemma DWDivDW3_closing_low0_far_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5679,7 +5400,7 @@ cbv zeta in Hmul. exact Hmul.
 Qed.
 
 (** Complete sharp closing bridge for the far leading-product regime. *)
-Lemma DWDivDW3_closing_far_accuracy
+Local Lemma DWDivDW3_closing_far_accuracy
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -5753,11 +5474,46 @@ destruct (Rle_or_lt N (Rabs (FT2R xl*FT2R (snd m)))) as [N0|U0].
       apply H; [exact Nprod|exact U0|]. right;right. repeat split; assumption.
 Qed.
 
-(** DWDivFP-style mixed-floor composition.  The reciprocal reconstruction
-    contributes its dimensionally correct [eta*|X|] and [eta*|Q|] floors;
-    the fixed-input closing FLT/FLX conversion contributes two final output
-    ulps.  All ordinary terms—including Algorithm 12's paper [4*u^2] term—
-    fit under the published [9.8*u^2] coefficient. *)
+(** Aggregate closing-block contract.  The internal proof splits on the
+    leading-product and low-order underflow regimes, but clients only need the
+    resulting mixed relative/floor estimate. *)
+Local Lemma DWDivDW3_closing_mixed_error_from_cond
+    (xh xl yh yl : ftype t) :
+  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
+  let th := BDIV (Zconst t 1) yh in
+  let rh := BFMA (BOPP yh) th (Zconst t 1) in
+  let rl := BOPP (BMULT yl th) in
+  let e := Fast2Sum rh rl in
+  let d := DWTimesFP3 (fst e) (snd e) th in
+  let m := DWPlusFP (fst d) (snd d) th in
+  let X := FT2R xh+FT2R xl in
+  let M := FT2R (fst m)+FT2R (snd m) in
+  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
+            FT2R (snd (DWDivDW3 xh xl yh yl)) in
+  Rabs (zr-X*M) <=
+    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
+    2*bpow radix2 (@common.emin t).
+Proof.
+move => Hp14 COND /=.
+set th := BDIV (Zconst t 1) yh.
+set rh := BFMA (BOPP yh) th (Zconst t 1).
+set rl := BOPP (BMULT yl th).
+set e := Fast2Sum rh rl.
+set d := DWTimesFP3 (fst e) (snd e) th.
+set m := DWPlusFP (fst d) (snd d) th.
+set T := bpow radix2 (@common.emin t+2*fprec t-1).
+set P := Rabs (FT2R xh*FT2R (fst m)).
+destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
+- have H := DWDivDW3_closing_zprod_near_accuracy
+    xh xl yh yl Hp14 COND.
+  fold th rh rl e d m in H. cbv zeta in H.
+  fold P T in Hnear. exact (H Hnear).
+- have H := DWDivDW3_closing_far_accuracy
+    xh xl yh yl Hp14 COND.
+  fold th rh rl e d m in H. cbv zeta in H.
+  fold P T in Hfar. exact (H Hfar).
+Qed.
+
 (** Coefficient-parametric form of the composition.  Pure real arithmetic: the
     reciprocal reconstruction's three coefficients stay symbolic, so the two
     arms of the refinement split can instantiate it with their own constants
@@ -5796,330 +5552,6 @@ rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
 eapply Rle_trans.
 - apply Rplus_le_compat; [exact Hclosing|exact Hrec].
 - right; ring.
-Qed.
-
-Lemma DWDivDW_mixed_closing_composition
-    (u eta X Y Q M zr : R) :
-  0 <= u -> u <= /16384 -> 0 <= eta -> Y <> 0 -> Q = X/Y ->
-  Rabs (X*(M-/Y)) <=
-    54/10*u^2*Rabs Q+
-    201/100*eta*Rabs X+101/100*eta*Rabs Q ->
-  Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta ->
-  Rabs (zr-Q) <=
-    941/100*u^2*Rabs Q+
-    202/100*eta*Rabs X+102/100*eta*Rabs Q+2*eta.
-Proof.
-move => Hu0 Hu Heta0 HYne HQ Hrec Hclose.
-have HX0 : 0 <= Rabs X by apply Rabs_pos.
-have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
-have HXM : Rabs (X*M) <= Rabs Q+
-    (54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-     101/100*eta*Rabs Q).
-{ have Heq : X*M=Q+X*(M-/Y).
-  { rewrite HQ. field; exact HYne. }
-  rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
-  apply Rplus_le_compat_l. exact Hrec. }
-have Hclosing : Rabs (zr-X*M) <=
-    4*u^2*(Rabs Q+
-      (54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-       101/100*eta*Rabs Q))+2*eta.
-{ eapply Rle_trans; [exact Hclose|].
-  apply Rplus_le_compat_r.
-  apply Rmult_le_compat_l; [nra|exact HXM]. }
-have Heq : zr-Q=(zr-X*M)+X*(M-/Y).
-{ rewrite HQ. field; exact HYne. }
-rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
-eapply Rle_trans.
-- apply Rplus_le_compat; [exact Hclosing|exact Hrec].
-- set Bq := u^2*Rabs Q.
-  set Fx := eta*Rabs X.
-  set Fq := eta*Rabs Q.
-  have HBq : 0 <= Bq.
-  { unfold Bq. apply Rmult_le_pos; [apply pow_le;exact Hu0|exact HQ0]. }
-  have HFx : 0 <= Fx.
-  { unfold Fx. apply Rmult_le_pos; assumption. }
-  have HFq : 0 <= Fq.
-  { unfold Fq. apply Rmult_le_pos; assumption. }
-  have Ho : 4+54/10*(1+4*u^2) <= 941/100 by nra.
-  have Hfx : 201/100*(1+4*u^2) <= 202/100 by nra.
-  have Hfq : 101/100*(1+4*u^2) <= 102/100 by nra.
-  replace ((4*u^2*(Rabs Q+
-    (54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-     101/100*eta*Rabs Q))+2*eta)+
-    (54/10*u^2*Rabs Q+201/100*eta*Rabs X+
-     101/100*eta*Rabs Q))%R with
-    ((4+54/10*(1+4*u^2))*Bq+
-     (201/100*(1+4*u^2))*Fx+
-     (101/100*(1+4*u^2))*Fq+2*eta)%R
-    by (unfold Bq,Fx,Fq;ring).
-  replace (941/100*u^2*Rabs Q+202/100*eta*Rabs X+
-    102/100*eta*Rabs Q+2*eta)%R with
-    (941/100*Bq+202/100*Fx+102/100*Fq+2*eta)%R
-    by (unfold Bq,Fx,Fq;ring).
-  repeat apply Rplus_le_compat; try apply Rle_refl.
-  + apply Rmult_le_compat_r; assumption.
-  + apply Rmult_le_compat_r; assumption.
-  + apply Rmult_le_compat_r; assumption.
-Qed.
-
-(** Correct closing interface for the full denormal theorem.  Unlike a bound
-    on the distance between the final FLT and FLX output pairs, this premise
-    keeps the normal midpoint contribution inside Algorithm 12's correlated
-    [4*u^2] term and exposes only its two physical floor ulps. *)
-Lemma DWDivDW3_accuracy_from_closing_mixed_floor
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  let X := FT2R xh+FT2R xl in
-  let Y := FT2R yh+FT2R yl in
-  let Q := X/Y in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t) ->
-  Rabs (zr-Q) <=
-    941/100*bpow radix2 (-fprec t)^2*Rabs Q+
-    202/100*bpow radix2 (@common.emin t)*Rabs X+
-    102/100*bpow radix2 (@common.emin t)*Rabs Q+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set X := FT2R xh+FT2R xl.
-set Y := FT2R yh+FT2R yl.
-set Q := X/Y.
-set M := FT2R (fst m)+FT2R (snd m).
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-move => Hclose.
-have Hu0 : 0 <= u by (unfold u; apply bpow_ge_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have Heta0 : 0 <= eta by (unfold eta;apply bpow_ge_0).
-have HYne : Y<>0.
-{ move: (COND) => [_ [_ [_ [_ [_ [DWy _]]]]]].
-  have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
-  intro HY0; apply Hyhne.
-  have Hyl := @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
-  fold u in Hyl.
-  have Hrev := Rabs_triang_inv (FT2R yh) (-FT2R yl).
-  rewrite Rabs_Ropp in Hrev.
-  replace (FT2R yh- -FT2R yl)%R with Y in Hrev by (unfold Y;ring).
-  rewrite HY0 Rabs_R0 in Hrev.
-  have Hz : Rabs (FT2R yh)=0 by
-    (have := Rabs_pos (FT2R yh); nra).
-  exact (Rabs_eq_R0 _ Hz). }
-have Hrec := DWDivDW_reciprocal_error_scaled_tight_floor
-  xh xl yh yl Hp14 COND.
-fold th rh rl e d m X Y Q M u eta in Hrec. cbv zeta in Hrec.
-fold X Y Q M u eta in Hrec.
-exact (DWDivDW_mixed_closing_composition
-  u eta X Y Q M zr Hu0 Hu Heta0 HYne eq_refl Hrec Hclose).
-Qed.
-
-(** Regime-independent mixed theorem: the ordinary contribution remains the
-    paper [9.8*u^2] term and every denormal contribution stays displayed as a
-    physical floor ulp. *)
-Theorem DWDivDW3_accuracy_from_cond_mixed
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let X := FT2R xh+FT2R xl in
-  let Q := X/(FT2R yh+FT2R yl) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-Q) <=
-    941/100*bpow radix2 (-fprec t)^2*Rabs Q+
-    202/100*bpow radix2 (@common.emin t)*Rabs X+
-    102/100*bpow radix2 (@common.emin t)*Rabs Q+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set T := bpow radix2 (@common.emin t+2*fprec t-1).
-set P := Rabs (FT2R xh*FT2R (fst m)).
-have Hclose :
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-{ destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
-  - have H := DWDivDW3_closing_zprod_near_accuracy
-      xh xl yh yl Hp14 COND.
-    fold th rh rl e d m in H. cbv zeta in H.
-    fold P T in Hnear. exact (H Hnear).
-  - have H := DWDivDW3_closing_far_accuracy
-      xh xl yh yl Hp14 COND.
-    fold th rh rl e d m in H. cbv zeta in H.
-    fold P T in Hfar. exact (H Hfar). }
-have H := DWDivDW3_accuracy_from_closing_mixed_floor
-  xh xl yh yl Hp14 COND.
-fold th rh rl e d m in H. cbv zeta in H.
-exact (H Hclose).
-Qed.
-
-(** Uniform conversion of the mixed physical-floor statement to a pure
-    relative bound.  This is deliberately factored from the closing bridge:
-    the total consists of the paper [9.8] plus the public-condition conversion
-    of the explicitly displayed floor terms, namely
-
-      2.02*(eta*|X|) -> 4.065,   1.52*(eta*|Q|) -> 1.52,   2*eta -> 4.02.
-
-    The middle conversion uses [DWDivDW_cond_eta_le_u2]: the two [yh] clauses
-    of [DWDivDW_cond] force [emin+2p <= 0], hence [eta <= u^2].  The generic
-    [eta <= 4*u^2] of [DWDivDW_eta_scales_from_cond_tight] would charge [6.08]
-    here instead, which is where the older [24] came from.
-
-    The three floor terms are still converted independently, so this is not the
-    correlated estimate -- it is the same architecture with one sharp input. *)
-Lemma DWDivDW3_pure_relative_from_mixed_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let X := FT2R xh+FT2R xl in
-  let Q := X/(FT2R yh+FT2R yl) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-Q) <=
-    941/100*bpow radix2 (-fprec t)^2*Rabs Q+
-    202/100*bpow radix2 (@common.emin t)*Rabs X+
-    102/100*bpow radix2 (@common.emin t)*Rabs Q+
-    2*bpow radix2 (@common.emin t) ->
-  Rabs ((zr-Q)/Q) <= 1852/100*bpow radix2 (-fprec t)^2.
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set X := FT2R xh+FT2R xl.
-set Q := X/(FT2R yh+FT2R yl).
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-move => Habs.
-have Hu0 : 0 < u by apply bpow_gt_0.
-have HX0 : 0 <= Rabs X by apply Rabs_pos.
-have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
-have Heta := DWDivDW_eta_scales_from_cond_tight
-  xh xl yh yl Hp14 COND.
-specialize (Heta NANS STD). fold th u eta in Heta.
-destruct Heta as [Heta4 HetaT].
-have Hscale := DWDivDW_X_th_quotient_scale_from_cond
-  xh xl yh yl Hp14 COND.
-fold th Q in Hscale. cbv zeta in Hscale. fold X Q in Hscale.
-rewrite Rabs_mult in Hscale.
-set T := Rabs (FT2R th) in HetaT, Hscale.
-have HetaX : eta*Rabs X <=
-    201201/100000*u^2*Rabs Q.
-{ have Hx := Rmult_le_compat_r (Rabs X) _ _ HX0 HetaT.
-  eapply Rle_trans; [exact Hx|].
-  replace ((201/100*u^2*T)*Rabs X)%R with
-    (201/100*u^2*(Rabs X*T))%R by ring.
-  have Hc : 0 <= 201/100*u^2 by nra.
-  have Hs := Rmult_le_compat_l (201/100*u^2) _ _ Hc Hscale.
-  eapply Rle_trans; [exact Hs|]. right; field. }
-have Hetau2 : eta <= u^2.
-{ unfold eta, u, common.emin.
-  exact (DWDivDW_cond_eta_le_u2 xh xl yh yl COND). }
-have HetaQ : eta*Rabs Q <= 1*u^2*Rabs Q.
-{ apply Rmult_le_compat_r; [exact HQ0|lra]. }
-have HetaOut := DWDivDW_eta_absorbed_by_quotient_tight
-  xh xl yh yl Hp14 COND.
-specialize (HetaOut STD). fold u eta Q in HetaOut.
-fold X Q in HetaOut.
-have Herr : Rabs (zr-Q) <= 1852/100*u^2*Rabs Q.
-{ eapply Rle_trans; [exact Habs|].
-  have Hx := Rmult_le_compat_l (202/100) _ _ ltac:(lra) HetaX.
-  have Hq := Rmult_le_compat_l (102/100) _ _ ltac:(lra) HetaQ.
-  have Ho := Rmult_le_compat_l 2 _ _ ltac:(lra) HetaOut.
-  have Hx' : 202/100*eta*Rabs X <=
-      202/100*(201201/100000*u^2*Rabs Q).
-  { eapply Rle_trans; [|exact Hx]. right; ring. }
-  have Hq' : 102/100*eta*Rabs Q <=
-      102/100*(1*u^2*Rabs Q).
-  { eapply Rle_trans; [|exact Hq]. right; ring. }
-  eapply Rle_trans with (r2:=
-    941/100*u^2*Rabs Q+
-    202/100*(201201/100000*u^2*Rabs Q)+
-    102/100*(1*u^2*Rabs Q)+
-    2*(201/100*u^2*Rabs Q)).
-  - repeat apply Rplus_le_compat; try assumption; apply Rle_refl.
-  - set Bq := u^2*Rabs Q.
-    have HBq : 0 <= Bq.
-    { unfold Bq. apply Rmult_le_pos; [apply pow_le;lra|exact HQ0]. }
-    replace (941/100*u^2*Rabs Q+
-      202/100*(201201/100000*u^2*Rabs Q)+
-      102/100*(1*u^2*Rabs Q)+
-      2*(201/100*u^2*Rabs Q))%R with
-      ((941/100+202/100*(201201/100000)+
-        102/100*1+2*(201/100))*Bq)%R
-      by (unfold Bq;ring).
-    replace (1852/100*u^2*Rabs Q)%R with (1852/100*Bq)%R
-      by (unfold Bq;ring).
-    apply Rmult_le_compat_r; [exact HBq|]. nra. }
-have HQne : Q<>0.
-{ move: (COND) => [_ [_ [_ [_ [DWx [DWy [_ [Hq _]]]]]]]].
-  have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
-  have Hxhne : FT2R xh<>0.
-  { intro H0. move: Hq. rewrite H0 /Rdiv Rmult_0_l Rabs_R0 => Hbad.
-    have Hb := bpow_gt_0 radix2
-      (@common.emin t+2*fprec t-1).
-    exact (Rlt_not_le _ _ Hb Hbad). }
-  have HXne : X<>0.
-  { intro HXzero. apply Hxhne.
-    move: DWx. rewrite /double_word_prop -/X HXzero /rounded round_0.
-    by move => ->. }
-  have HYne : FT2R yh+FT2R yl<>0.
-  { intro HY0. apply Hyhne.
-    move: DWy. rewrite /double_word_prop HY0 /rounded round_0.
-    by move => ->. }
-  unfold Q,Rdiv. apply Rmult_integral_contrapositive_currified;
-    [exact HXne|apply Rinv_neq_0_compat;exact HYne]. }
-rewrite Rabs_mult Rabs_inv.
-apply (Rmult_le_reg_r (Rabs Q)); [apply Rabs_pos_lt;exact HQne|].
-rewrite Rmult_assoc Rinv_l; [rewrite Rmult_1_r;exact Herr|].
-apply Rgt_not_eq, Rabs_pos_lt; exact HQne.
-Qed.
-
-(** Internal pure-relative consequence of the mixed-floor estimate.  This is
-    kept as a bridge lemma, not exported as the combined accuracy theorem:
-    the public normal/denormal/combined proof path is assembled after the
-    runtime-to-paper bridge, as in [DWDivFP_acc]. *)
-Lemma DWDivDW3_relative_from_mixed_floor_accuracy
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
-  let Q := (FT2R xh+FT2R xl)/(FT2R yh+FT2R yl) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs ((zr-Q)/Q) <= 1852/100*bpow radix2 (-fprec t)^2.
-Proof.
-move => Hp14 COND /=.
-have Habs := DWDivDW3_accuracy_from_cond_mixed
-  xh xl yh yl Hp14 COND.
-cbv zeta in Habs.
-have H := DWDivDW3_pure_relative_from_mixed_accuracy
-  xh xl yh yl Hp14 COND.
-cbv zeta in H. exact (H Habs).
 Qed.
 
 (** Generic conversion of a mixed physical-floor estimate with symbolic
@@ -6175,9 +5607,9 @@ Qed.
       reciprocal residual is itself [O(u^2)], so the Newton remainder is
       fourth order and its coefficient collapses.
 
-    Neither arm's constants are weakened to a common shape -- that merging is
-    what produced the coarser [18.52]. *)
-Theorem relative_errorDWDivDW3_from_cond_arms
+    The arm-specific constants remain separate until the final relative-error
+    conversion, yielding the regime-independent coefficient [16.5]. *)
+Local Theorem relative_errorDWDivDW3_from_cond_arms
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let X := FT2R xh+FT2R xl in
@@ -6234,17 +5666,10 @@ have HQne : Q<>0.
     [exact HXne|apply Rinv_neq_0_compat; exact HYne]. }
 (* ---- the closing block, identical in both arms ---------------------- *)
 have Hclose : Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta.
-{ set T := bpow radix2 (@common.emin t+2*fprec t-1).
-  set P := Rabs (FT2R xh*FT2R (fst m)).
-  destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
-  - have H := DWDivDW3_closing_zprod_near_accuracy
-      xh xl yh yl Hp14 COND.
-    fold th rh rl e d m in H. cbv zeta in H.
-    fold P T in Hnear. fold X M zr u eta in H. exact (H Hnear).
-  - have H := DWDivDW3_closing_far_accuracy
-      xh xl yh yl Hp14 COND.
-    fold th rh rl e d m in H. cbv zeta in H.
-    fold P T in Hfar. fold X M zr u eta in H. exact (H Hfar). }
+{ have H := DWDivDW3_closing_mixed_error_from_cond
+    xh xl yh yl Hp14 COND.
+  fold th rh rl e d m in H. cbv zeta in H.
+  fold X M zr u eta in H. exact H. }
 (* ---- the three scale conversions, identical in both arms ------------ *)
 have Hsc := DWDivDW_eta_scales_from_cond_tight xh xl yh yl Hp14 COND.
 specialize (Hsc NANS STD). fold th u eta in Hsc.
@@ -6750,17 +6175,11 @@ Qed.
 End CondAccuracyDWDivDW.
 
 (* ============================================================
-   Public condition-level accuracy path
+   Public condition-level accuracy theorem
 
-   This section deliberately follows the ordering used in [DWDivFP_acc]:
-   the normal theorem above transfers the paper result through the exact
-   FLX/FLT bridge; the denormal theorem records the physical-floor estimate;
-   the combined theorem is the sole regime-independent entry point; and the
-   final theorem converts that estimate to a pure relative bound.
-
-   The current denormal estimate is a transitional interface.  Its floor
-   terms remain explicit so that the correlated two-output-ulp proof can
-   replace it without changing the normal bridge or redoing the paper proof.
+   The arm-specific proof above already covers both normal and underflowing
+   executions.  This section exports its [16.5*u^2] relative bound and retains
+   the historical [24*u^2] statement as a compatibility corollary.
    ============================================================ *)
 Section CondAccuracyDWDivDW_public.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -6770,35 +6189,14 @@ Hypothesis Hp14 : (14 <= fprec t)%Z.
 Hypothesis COND : DWDivDW_cond xh xl yh yl.
 
 Notation u := (bpow radix2 (-fprec t)).
-Notation eta := (bpow radix2 (@common.emin t)).
 Let X := FT2R xh + FT2R xl.
 Let Q := X / (FT2R yh + FT2R yl).
 Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
           FT2R (snd (DWDivDW3 xh xl yh yl)).
 
-(** Denormal-regime interface, analogous to
-    [relative_errorDWDivFP3_from_cond_underflow].  Unlike the old coarse
-    theorem, it retains actual floor ulps and counts the ordinary [9.8*u^2]
-    paper contribution only once. *)
-Theorem relative_errorDWDivDW3_from_cond_underflow :
-  Rabs (zr-Q) <=
-    941/100*u^2*Rabs Q+
-    202/100*eta*Rabs X+
-    102/100*eta*Rabs Q+
-    2*eta.
-Proof.
-exact (DWDivDW3_accuracy_from_cond_mixed xh xl yh yl Hp14 COND).
-Qed.
-
-(** Pure-relative theorem obtained from the still-independent floor
-    conversions, sharpened by [DWDivDW_cond_eta_le_u2].  Its coefficient will
-    become [13.9] once the denormal interface above is replaced by the
-    correlated per-node estimate. *)
-(** Sharpest exported regime-independent relative bound.  It comes from the
-    two-arm refinement split ([relative_errorDWDivDW3_from_cond_arms]), whose
-    arms keep their own reciprocal coefficients rather than being merged into a
-    common shape.  Merging them instead gives
-    [DWDivDW3_relative_from_mixed_floor_accuracy] at [18.52]. *)
+(** Sharpest exported regime-independent relative bound.  The proof keeps the
+    ordered and unordered refinement-arm budgets separate through the closing
+    multiplication and underflow-floor conversion. *)
 Theorem relative_errorDWDivDW3_from_cond_combined_tight :
   Rabs ((zr-Q)/Q) <= 165/10*u^2.
 Proof.
