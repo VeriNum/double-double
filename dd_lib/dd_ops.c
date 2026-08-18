@@ -33,6 +33,7 @@
 #include "dw_mult_dw_guarded.c"
 
 #include "dw_div_dw.c"
+#include "dw_div_dw_guarded.c"
 
 #include "dw_div_fp.c"
 #include "dw_div_fp_guarded.c"

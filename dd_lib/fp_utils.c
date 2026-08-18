@@ -245,3 +245,66 @@ int dw_plus_fp_check(struct dword *x, double y) {
     int y_bnd  = fabs(y)    <= q_omega;
     return dwx && fin_y && xh_bnd && y_bnd;
 }
+
+int dw_div_dw_check(struct dword *x, struct dword *y) {
+    /* Verifies DWDivDW_cond (DDModels.v), the guard for the reciprocal-bootstrap
+       double-word division dw_div_dw18.  Twelve conjuncts, seven clauses: xh, xl,
+       yh, yl finite; (x->s, x->t) and (y->s, y->t) double-words; 2^(emin+2p-1) <=
+       |1/y->s|; 2^(emin+2p) <= |y->s|; |x->s|, |y->s| <= Omega/4; and the quotient
+       |x->s/y->s| within the window [2^(emin+2p-1), Omega/4].
+
+       The quotient window is the same construction as dw_div_fp_check's, at the
+       same two exponents: both bounds are tested on the ROUNDED quotient
+       q = RN(x->s / y->s), and the rounded->exact transfer is one-directional in
+       Coq (BDIV_abs_le_bpow / BDIV_abs_gt_bpow).  The STRICT `<` on qt_hi does
+       double duty, giving the cond's real-quotient upper bound AND forcing q
+       finite; qt_lo is strict for the same soundness reason.  A non-strict `<=`
+       on either would be UNSOUND, since RN is monotone and idempotent on the
+       representable powers of two 2^1022 and 2^(-969).
+
+       Two clauses are deliberately absent, because adding them would make the
+       guard stronger than the condition it discharges:
+
+       - There is no test on a rounded reciprocal 1.0/y->s.  The cond's conjunct
+         2^(emin+2p-1) <= |1/y->s| is a statement about the EXACT real reciprocal,
+         so for y->s != 0 it is *equivalent* to |y->s| <= 2^(-(emin+2p-1)) = 2^969
+         -- a direct, non-strict comparison on the input with no rounding and no
+         transfer lemma.  (y->s != 0 comes from yh_lo below; at y->s == 0 the Coq
+         model has 1/0 = 0, so the conjunct is false there and yh_lo is what rules
+         that out.)  Testing q_qlo < fabs(1.0/y->s) instead would be strictly
+         stronger AND would need an extra finiteness clause, since a strict lower
+         bound on a rounded value does not force it finite (2^(emin+2p-1) < inf).
+
+       - There is no `fabs(y->s) <= q_omega` clause.  2^969 is the binding upper
+         bound on |y->s|, and it implies the cond's |y->s| <= Omega/4 = 2^1022
+         outright, so such a test would be dead.
+
+       The DW prop alone does not pin down finiteness of x->t / y->t in R (FT2R
+       sends NaN/Inf to 0), so fin_xl and fin_yl are asserted, even though
+       x->s + x->t == x->s implies them under IEEE comparison semantics. */
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_yh = isfinite_double(y->s);
+    int fin_yl = isfinite_double(y->t);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
+
+    double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
+    double q_yhi   = ldexp(1.0, 969);    /* 2^(-(emin+2*p-1)) reciprocal-node upper bound */
+    double q_ylo   = ldexp(1.0, -968);   /* 2^(emin+2*p)   divisor lower bound */
+    double q_qlo   = ldexp(1.0, -969);   /* 2^(emin+2*p-1) quotient lower bound */
+
+    int xh_hi = fabs(x->s) <= q_omega;   /* |x->s| <= Omega/4 */
+    /* |y->s| window: 2^(emin+2p) <= |y->s| <= 2^969.  yh_hi is the reciprocal
+       lower bound 2^(emin+2p-1) <= |1/y->s| and also gives |y->s| <= Omega/4;
+       yh_lo forces y->s != 0. */
+    int yh_hi = fabs(y->s) <= q_yhi;
+    int yh_lo = q_ylo <= fabs(y->s);
+
+    /* quotient window on the rounded quotient q = RN(x->s / y->s) */
+    double q = x->s / y->s;
+    int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y->s| <= Omega/4; also forces q finite */
+    int qt_lo = q_qlo < fabs(q);     /* STRICT: 2^(emin+2p-1) <= |x->s/y->s| */
+
+    return dwx && dwy && xh_hi && yh_hi && yh_lo && qt_hi && qt_lo;
+}
