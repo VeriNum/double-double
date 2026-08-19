@@ -385,595 +385,24 @@ split; [exact Ffma |].
 rewrite -(BFMA_round_correct t a b c Ffma). exact Hrnd.
 Qed.
 
-Lemma round_FLT_error_rel_emin {t : type} (v : R) :
-  Rabs
-    (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) v - v)
-  <= bpow radix2 (- fprec t) * Rabs v + /2 * bpow radix2 (@common.emin t).
-Proof.
-have He := error_le_half_ulp radix2
-  (SpecFloat.fexp (fprec t) (femax t)) choice v.
-specialize (He valid_fexp_inst).
-have Hu := ulp_le_relative_plus_emin (t:=t) v.
-eapply Rle_trans; [exact He |]. nra.
-Qed.
+(* The generic Algorithm-9 / Fast2Mult / Fast2Sum underflow-floor lemmas that
+   used to sit here now live in DWMulFP_acc.v, where they belong: they are
+   statements about DWTimesFP3 (Algorithm 9), they were already built on top of
+   DWMulFP_acc.DWTimesFP_relerr_bound, and nothing about them is division
+   specific.  Moving them upstream removed a layering inversion and relaxed
+   their p >= 14 hypothesis to p >= 3.  The operation-independent rounding
+   lemmas arrive through FLT_helpers; the Algorithm-9 lemmas arrive unqualified
+   through the Require Import DWMulFP_acc above:
 
-Lemma round_FLT_abs_rel_emin {t : type} (v : R) :
-  Rabs (round radix2 (SpecFloat.fexp (fprec t) (femax t))
-                    (Znearest choice) v)
-  <= (1 + bpow radix2 (- fprec t)) * Rabs v
-       + /2 * bpow radix2 (@common.emin t).
-Proof.
-have Htri := Rabs_triang (round radix2
-  (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) v - v) v.
-have Heq : (round radix2 (SpecFloat.fexp (fprec t) (femax t))
-               (Znearest choice) v - v + v)%R =
-           round radix2 (SpecFloat.fexp (fprec t) (femax t))
-               (Znearest choice) v by ring.
-rewrite Heq in Htri.
-have He := round_FLT_error_rel_emin (t:=t) v.
-nra.
-Qed.
+     round_FLT_error_rel_emin        round_abs_le_relative_plus_half_emin
+     Fast2Mult_sum_error_floor       DWTimesFP_core_error_floor_gap
+     Fast2Sum_sum_exact_of_sum_small (replaces Fast2Sum_sum_exact_floor_small)
+     DWTimesFP3_sum_exact_of_ord     DWTimesFP3_double_word_of_sum
+     Fast2Sum_double_word_of_sum     DWTimesFP3_error_floor_gap
+     DWTimesFP3_error_mixed          DWTimesFP3_error_mixed_flat
+     DWTimesFP3_double_word_mixed
 
-
-(** A compensated product loses only an underflow-floor term even when its
-    exact product error is too small for the usual Fast2Mult exactness
-    theorem.  Above the [emin+2p-1] threshold the sum is exact; below it the
-    relative error of the low FMA is itself bounded by half a floor ulp. *)
-Lemma Fast2Mult_sum_error_floor {NANS : Nans} {t : type}
-    {STD : is_standard t} (a b : ftype t) :
-  (14 <= fprec t)%Z -> is_finite_p (Fast2Mult a b) ->
-  Rabs (FT2R (Fast2Mult_mul a b)+FT2R (Fast2Mult_err a b)-
-        FT2R a*FT2R b)
-    <= /2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 FIN.
-set x := (FT2R a*FT2R b)%R.
-set ch := Fast2Mult_mul a b.
-set cl := Fast2Mult_err a b.
-set r := (x-FT2R ch)%R.
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have Heta0 : 0 < eta by apply bpow_gt_0.
-have Fch : is_finite ch=true by exact (proj1 FIN).
-have Fcl : is_finite cl=true by exact (proj2 FIN).
-have Hchr : FT2R ch=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
-{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
-  apply BMULT_round_correct. exact Fch. }
-have Hop : FT2R (BOPP ch) = -FT2R ch.
-{ symmetry. apply BOPP_binary. right; exact Fch. }
-have Hclr : FT2R cl=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) r.
-{ unfold cl, Fast2Mult_err, Fast2Mult.
-  rewrite -(BFMA_round_correct t a b (BOPP ch) Fcl) Hop.
-  unfold r, x. f_equal; ring. }
-destruct (Req_dec x 0) as [Hx0|Hx0].
-- have Hch0 : FT2R ch=0 by rewrite Hchr Hx0 round_0.
-  have Hr0 : r=0 by unfold r; rewrite Hx0 Hch0; ring.
-  rewrite Hx0 Hch0 Hclr Hr0 round_0.
-  rewrite Rminus_0_r Rplus_0_l Rabs_R0. nra.
-- destruct (Rle_dec
-    (bpow radix2 (@common.emin t+2*fprec t-1)) (Rabs x))
-    as [Hbig|Hsmall].
-  + have Hex := Fast2MultModel_correct a b Fch.
-    specialize (Hex ltac:(move=>_;exact Hbig)).
-    fold x ch cl in Hex.
-    rewrite Hex. replace (FT2R ch+(x-FT2R ch)-x)%R with 0 by ring.
-    rewrite Rabs_R0. nra.
-  + have Hxe := round_FLT_error_rel_emin (t:=t) x.
-    fold u eta in Hxe. rewrite -Hchr in Hxe.
-    have Hrabs : Rabs r <= u*Rabs x+/2*eta.
-    { unfold r. rewrite Rabs_minus_sym. exact Hxe. }
-    have HxB : Rabs x <
-        bpow radix2 (@common.emin t+2*fprec t-1)
-      by apply Rnot_le_lt.
-    have Hux := Rmult_lt_compat_l u _ _ Hu0 HxB.
-    have Hscale : u*bpow radix2
-        (@common.emin t+2*fprec t-1)=
-        bpow radix2 (@common.emin t+fprec t-1).
-    { unfold u. rewrite -bpow_plus. f_equal; ring. }
-    rewrite Hscale in Hux.
-    have Hetahalf : /2*eta = bpow radix2 (@common.emin t-1).
-    { unfold eta. rewrite (bpow_plus radix2 (@common.emin t) (-1)).
-      change (bpow radix2 (-1)) with (/2:R). ring. }
-    have Hetasmall : /2*eta <
-        bpow radix2 (@common.emin t+fprec t-1).
-    { rewrite Hetahalf. apply bpow_lt. lia. }
-    have Hrsmall : Rabs r <
-        bpow radix2 (@common.emin t+fprec t).
-      { have Hnext : bpow radix2 (@common.emin t+fprec t) =
-          2*bpow radix2 (@common.emin t+fprec t-1).
-      { transitivity
-          (bpow radix2 (@common.emin t+fprec t-1)*bpow radix2 1).
-        - rewrite -bpow_plus. f_equal; ring.
-        - change (bpow radix2 1) with (2:R). ring. }
-      rewrite Hnext. nra. }
-    have Hre := @Ulp.error_le_half_ulp radix2
-      (SpecFloat.fexp (fprec t) (femax t))
-      valid_fexp_inst choice r.
-    have Hulp : Ulp.ulp radix2
-        (SpecFloat.fexp (fprec t) (femax t)) r=eta.
-    { unfold SpecFloat.fexp, common.emin.
-      apply ulp_FLT_small; [apply fprec_gt_0|exact Hrsmall]. }
-    rewrite Hulp in Hre. rewrite -Hclr in Hre.
-    change (Rabs (FT2R ch+FT2R cl-x) <= /2*eta).
-    replace (FT2R ch+FT2R cl-x)%R with (FT2R cl-r)%R
-      by (unfold r; ring).
-    exact Hre.
-Qed.
-
-(** In the gap below Fast2Mult's exactness threshold, the compensated core of
-    Algorithm 9 still has a floor-only error.  This is the value before its
-    closing Fast2Sum; no ordinary [u^2] term is introduced in this regime. *)
-Lemma DWTimesFP_core_error_floor_gap {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  (14 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
-  ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
-      Rabs (FT2R ah*FT2R b) ->
-  let ch := Fast2Mult_mul ah b in
-  let cl3 := BFMA al b (Fast2Mult_err ah b) in
-  Rabs ((FT2R ch+FT2R cl3)-
-        (FT2R ah+FT2R al)*FT2R b)
-    <= 251/100*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 DWa FIN Hgap /=.
-set x := (FT2R ah*FT2R b)%R.
-set ch := Fast2Mult_mul ah b.
-set cl1 := Fast2Mult_err ah b.
-set cl3 := BFMA al b cl1.
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have Heta0 : 0 < eta by apply bpow_gt_0.
-have Ffast := DWMulFP_acc.FIN1 ah al b FIN.
-have Fch : is_finite ch=true by exact (proj1 Ffast).
-have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_acc.FIN2 ah al b FIN; fold cl1 cl3 in Fcl3.
-have Hdelta := Fast2Mult_sum_error_floor ah b Hp14 Ffast.
-fold x ch cl1 eta in Hdelta.
-have Hchr : FT2R ch=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
-{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
-  apply BMULT_round_correct. exact Fch. }
-have Hxe := round_FLT_error_rel_emin (t:=t) x.
-fold u eta in Hxe. rewrite -Hchr in Hxe.
-have Hr : Rabs (x-FT2R ch)<=u*Rabs x+/2*eta.
-{ rewrite Rabs_minus_sym. exact Hxe. }
-have Hcl1 : Rabs (FT2R cl1)<=
-    u*Rabs x+1501/1000*eta.
-{ have Htri := Rabs_triang
-      (FT2R cl1-(x-FT2R ch)) (x-FT2R ch).
-  replace (FT2R cl1-(x-FT2R ch)+(x-FT2R ch))%R with
-      (FT2R cl1)%R in Htri by ring.
-  have Heq : FT2R cl1-(x-FT2R ch)=
-      FT2R ch+FT2R cl1-x by ring.
-  rewrite Heq in Htri.
-  eapply Rle_trans; [exact Htri|].
-  eapply Rle_trans.
-  - apply Rplus_le_compat; [exact Hdelta|exact Hr].
-  - nra. }
-have Hal := @DWMulFP_acc.aux_dwu_rel t STD ah al DWa.
-fold u in Hal.
-have Halb : Rabs (FT2R al*FT2R b)<=u*Rabs x.
-{ unfold x. rewrite !Rabs_mult.
-  have H := Rmult_le_compat_r (Rabs (FT2R b)) _ _
-    (Rabs_pos _) Hal.
-  eapply Rle_trans; [exact H|]. right; ring. }
-set w := (FT2R al*FT2R b+FT2R cl1)%R.
-have Hw : Rabs w<=2*u*Rabs x+1501/1000*eta.
-{ unfold w. eapply Rle_trans; [apply Rabs_triang|]. nra. }
-have Hcl3r : FT2R cl3=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) w.
-{ unfold cl3. rewrite -(BFMA_round_correct t al b cl1 Fcl3).
-  unfold w. f_equal; ring. }
-have He3 := round_FLT_error_rel_emin (t:=t) w.
-fold u eta in He3. rewrite -Hcl3r in He3.
-have Huw := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) Hw.
-have Hscale : u^2*bpow radix2
-    (@common.emin t+2*fprec t-1)=/2*eta.
-{ replace (u^2)%R with (u*u)%R by ring.
-  unfold u, eta. rewrite -bpow_plus -bpow_plus.
-  replace (-fprec t+-fprec t+
-      (@common.emin t+2*fprec t-1))%Z with
-      (@common.emin t-1)%Z by ring.
-  rewrite (bpow_plus radix2 (@common.emin t) (-1)).
-  change (bpow radix2 (-1)) with (/2:R). ring. }
-have HxB : Rabs x < bpow radix2
-    (@common.emin t+2*fprec t-1) by apply Rnot_le_lt.
-have Hu20 : 0 < u^2 by nra.
-have HuB := Rmult_lt_compat_l (u^2) _ _ Hu20 HxB.
-rewrite Hscale in HuB.
-change (Rabs ((FT2R ch+FT2R cl3)-
-  (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
-have Heq : (FT2R ch+FT2R cl3)-
-    (FT2R ah+FT2R al)*FT2R b =
-  (FT2R ch+FT2R cl1-x)+(FT2R cl3-w) by (unfold x,w;ring).
-rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
-eapply Rle_trans.
-- apply Rplus_le_compat; [exact Hdelta|exact He3].
-- nra.
-Qed.
-
-(** Runtime Fast2Sum is in fact exact when both inputs are within six floor
-    ulps.  They share the FLT fixed-point lattice, and their sum remains far
-    inside the [p]-bit subnormal significand range. *)
-Lemma Fast2Sum_sum_exact_floor_small {NANS : Nans} {t : type}
-    {STD : is_standard t} (a b : ftype t) :
-  (14 <= fprec t)%Z -> is_finite_p (Fast2Sum a b) ->
-  Rabs (FT2R a)<=6*bpow radix2 (@common.emin t) ->
-  Rabs (FT2R b)<=6*bpow radix2 (@common.emin t) ->
-  FT2R (fst (Fast2Sum a b))+FT2R (snd (Fast2Sum a b))=
-    FT2R a+FT2R b.
-Proof.
-move => Hp14 FIN Ha Hb.
-set eta := bpow radix2 (@common.emin t).
-have Heta0 : 0 < eta by apply bpow_gt_0.
-have Fa : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)
-  by apply generic_format_FLT_FT2R.
-have Fb : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (FT2R b)
-  by apply generic_format_FLT_FT2R.
-have Faf := generic_format_FIX_FLT radix2 (@common.emin t)
-  (fprec t) (FT2R a) Fa.
-have Fbf := generic_format_FIX_FLT radix2 (@common.emin t)
-  (fprec t) (FT2R b) Fb.
-have Fsumfix : generic_format radix2 (FIX_exp (@common.emin t))
-    (FT2R a+FT2R b).
-{ destruct (FIX_format_generic radix2 (@common.emin t) (FT2R a) Faf)
-    as [fa Hfa Hefa].
-  destruct (FIX_format_generic radix2 (@common.emin t) (FT2R b) Fbf)
-    as [fb Hfb Hefb].
-  pose fs := Float radix2 (Fnum fa+Fnum fb) (@common.emin t).
-  apply generic_format_FIX.
-  apply (FIX_spec radix2 (@common.emin t) (FT2R a+FT2R b) fs).
-  - unfold fs, F2R. simpl.
-    rewrite Hfa Hfb /F2R Hefa Hefb. rewrite plus_IZR. ring.
-  - reflexivity. }
-have Hsumabs : Rabs (FT2R a+FT2R b)<=
-    bpow radix2 (@common.emin t+fprec t).
-{ eapply Rle_trans; [apply Rabs_triang|].
-  eapply Rle_trans with (r2:=12*eta); [fold eta in Ha,Hb;nra|].
-  eapply Rle_trans with (r2:=16*eta); [nra|].
-  unfold eta. change (16:R) with (bpow radix2 4).
-  rewrite -bpow_plus. apply bpow_le; lia. }
-have Fsum : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a+FT2R b).
-{ apply generic_format_FLT_FIX.
-  - apply fprec_gt_0.
-  - exact Hsumabs.
-  - exact Fsumfix. }
-have Fsumx : generic_format radix2 (FLX_exp (fprec t))
-    (FT2R a+FT2R b).
-{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)).
-  exact Fsum. }
-have Fax : generic_format radix2 (FLX_exp (fprec t)) (FT2R a).
-{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)); exact Fa. }
-have Fbx : generic_format radix2 (FLX_exp (fprec t)) (FT2R b).
-{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)); exact Fb. }
-have Heq := FastTwoSumEq_FLT a b FIN.
-have Hsumr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
-    (FT2R a+FT2R b)=FT2R a+FT2R b.
-{ apply round_generic; [apply valid_rnd_N|exact Fsumx]. }
-have Hbr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
-    (FT2R b)=FT2R b.
-{ apply round_generic; [apply valid_rnd_N|exact Fbx]. }
-have Hpaper : F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b)=
-    (FT2R a+FT2R b,0).
-{ unfold F2Sum.Fast2Sum, F2SumFLX.Fast2Sum.
-  rewrite Hsumr.
-  replace (FT2R a+FT2R b-FT2R a)%R with (FT2R b) by ring.
-  rewrite Hbr.
-  replace (FT2R b-FT2R b)%R with 0 by ring.
-  rewrite round_0. reflexivity. }
-rewrite Hpaper /F2Rp /= in Heq.
-have Hh := f_equal fst Heq.
-have Hl := f_equal snd Heq.
-simpl in Hh, Hl. rewrite -Hh -Hl. ring.
-Qed.
-
-(** Algorithm 9's closing Fast2Sum is exact as soon as its two inputs are
-    magnitude-ordered.  No precision bound, no input condition and no regime
-    hypothesis is needed -- [FastTwoSum_correct] applies directly.
-
-    This is the prerequisite for splitting the refinement block on the
-    ordering: in the ordered arm the two Fast2Sum roundings of
-    [DWDivDW_refinement_product_value_error_tight_floor] vanish, taking its
-    floor from [2*eta] down to [eta]. *)
-Lemma DWTimesFP3_sum_exact_of_ord {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  is_finite_p (DWTimesFP3 ah al b) ->
-  Rabs (FT2R (BFMA al b (Fast2Mult_err ah b))) <=
-    Rabs (FT2R (Fast2Mult_mul ah b)) ->
-  FT2R (fst (DWTimesFP3 ah al b)) +
-  FT2R (snd (DWTimesFP3 ah al b)) =
-    FT2R (Fast2Mult_mul ah b) +
-    FT2R (BFMA al b (Fast2Mult_err ah b)).
-Proof.
-move => FIN Hord.
-set ch := Fast2Mult_mul ah b.
-set cl1 := Fast2Mult_err ah b.
-set cl3 := BFMA al b cl1.
-have Fe : is_finite_p (Fast2Sum ch cl3).
-{ unfold DWTimesFP3 in FIN.
-  unfold ch, cl1, cl3, Fast2Mult_mul, Fast2Mult_err, Fast2Mult in *.
-  exact FIN. }
-fold ch cl1 cl3 in Hord.
-have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
-change (FT2R (snd (DWTimesFP3 ah al b)) =
-  FT2R ch + FT2R cl3 - FT2R (fst (DWTimesFP3 ah al b))) in Hsum.
-lra.
-Qed.
-
-(** If Algorithm 9's closing Fast2Sum preserves its two inputs, its returned
-    pair is a double word: the high component is exactly the rounding of that
-    preserved sum. *)
-Lemma DWTimesFP3_double_word_of_sum {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  is_finite_p (DWTimesFP3 ah al b) ->
-  let ch := Fast2Mult_mul ah b in
-  let cl3 := BFMA al b (Fast2Mult_err ah b) in
-  FT2R (fst (DWTimesFP3 ah al b))+FT2R (snd (DWTimesFP3 ah al b))=
-    FT2R ch+FT2R cl3 ->
-  double_word_prop (fst (DWTimesFP3 ah al b))
-                   (snd (DWTimesFP3 ah al b)).
-Proof.
-move => FIN /= Hsum.
-set ch := Fast2Mult_mul ah b.
-set cl3 := BFMA al b (Fast2Mult_err ah b).
-set d := DWTimesFP3 ah al b.
-fold d ch cl3 in Hsum.
-unfold double_word_prop, rounded. fold d.
-rewrite Hsum.
-change (FT2R (fst d)=round radix2
-  (SpecFloat.fexp (fprec t) (femax t))
-  (Znearest choice) (FT2R ch+FT2R cl3)).
-have Hfst : fst d=BPLUS ch cl3 by reflexivity.
-rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
-Qed.
-
-Lemma Fast2Sum_double_word_of_sum {NANS : Nans} {t : type}
-    {STD : is_standard t} (a b : ftype t) :
-  is_finite_p (Fast2Sum a b) ->
-  FT2R (fst (Fast2Sum a b))+FT2R (snd (Fast2Sum a b))=
-    FT2R a+FT2R b ->
-  double_word_prop (fst (Fast2Sum a b)) (snd (Fast2Sum a b)).
-Proof.
-move => FIN Hsum.
-set e := Fast2Sum a b.
-fold e in Hsum.
-unfold double_word_prop, rounded. fold e. rewrite Hsum.
-change (FT2R (fst e)=round radix2
-  (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-  (FT2R a+FT2R b)).
-have Hfst : fst e=BPLUS a b by reflexivity.
-rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
-Qed.
-
-(** Full Algorithm 9 in the Fast2Mult gap.  If the closing Fast2Sum ordering
-    holds it is exact.  If it fails, the leading and low terms are both within
-    six floor ulps, where their common fixed-point lattice makes Fast2Sum exact
-    as well.  Thus the compensated core's [2.51] ulps are the whole cost. *)
-Lemma DWTimesFP3_error_floor_gap {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  (14 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
-  ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
-      Rabs (FT2R ah*FT2R b) ->
-  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
-         FT2R (snd (DWTimesFP3 ah al b)))-
-        (FT2R ah+FT2R al)*FT2R b)
-    <= 251/100*bpow radix2 (@common.emin t) /\
-  double_word_prop (fst (DWTimesFP3 ah al b))
-                   (snd (DWTimesFP3 ah al b)).
-Proof.
-move => Hp14 DWa FIN Hgap.
-set x := (FT2R ah*FT2R b)%R.
-set P := Rabs x.
-set ch := Fast2Mult_mul ah b.
-set cl1 := Fast2Mult_err ah b.
-set cl3 := BFMA al b cl1.
-set d := DWTimesFP3 ah al b.
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
-have Heta0 : 0 < eta by apply bpow_gt_0.
-have Ffast := DWMulFP_acc.FIN1 ah al b FIN.
-have Fch : is_finite ch=true by exact (proj1 Ffast).
-have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_acc.FIN2 ah al b FIN; fold cl1 cl3 in Fcl3.
-have Hcore := DWTimesFP_core_error_floor_gap ah al b
-  Hp14 DWa FIN Hgap.
-fold ch cl3 eta in Hcore. cbv zeta in Hcore.
-have Hdelta := Fast2Mult_sum_error_floor ah b Hp14 Ffast.
-fold x ch cl1 eta in Hdelta.
-have Hchr : FT2R ch=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
-{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
-  apply BMULT_round_correct. exact Fch. }
-have Hxe := round_FLT_error_rel_emin (t:=t) x.
-fold u eta in Hxe. rewrite -Hchr in Hxe.
-fold P in Hxe.
-have Hr : Rabs (x-FT2R ch)<=u*P+/2*eta.
-{ rewrite Rabs_minus_sym. exact Hxe. }
-have Hchlo : (1-u)*P-/2*eta<=Rabs (FT2R ch).
-{ have Hrev := Rabs_triang_inv x (x-FT2R ch).
-  replace (x-(x-FT2R ch))%R with (FT2R ch) in Hrev by ring.
-  fold P in Hrev. nra. }
-have Hchup : Rabs (FT2R ch)<=(1+u)*P+/2*eta.
-{ have Htri := Rabs_triang (FT2R ch-x) x.
-  replace (FT2R ch-x+x)%R with (FT2R ch) in Htri by ring.
-  fold P in Htri. nra. }
-have Hcl1 : Rabs (FT2R cl1)<=u*P+1501/1000*eta.
-{ have Htri := Rabs_triang
-      (FT2R cl1-(x-FT2R ch)) (x-FT2R ch).
-  replace (FT2R cl1-(x-FT2R ch)+(x-FT2R ch))%R with
-      (FT2R cl1)%R in Htri by ring.
-  have Heq : FT2R cl1-(x-FT2R ch)=
-      FT2R ch+FT2R cl1-x by ring.
-  rewrite Heq in Htri. nra. }
-have Hal := @DWMulFP_acc.aux_dwu_rel t STD ah al DWa.
-fold u in Hal.
-have Halb : Rabs (FT2R al*FT2R b)<=u*P.
-{ unfold P,x. rewrite !Rabs_mult.
-  have H := Rmult_le_compat_r (Rabs (FT2R b)) _ _
-    (Rabs_pos _) Hal.
-  eapply Rle_trans; [exact H|]. right; ring. }
-set w := (FT2R al*FT2R b+FT2R cl1)%R.
-have Hw : Rabs w<=2*u*P+1501/1000*eta.
-{ unfold w. eapply Rle_trans; [apply Rabs_triang|]. nra. }
-have Hcl3r : FT2R cl3=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) w.
-{ unfold cl3. rewrite -(BFMA_round_correct t al b cl1 Fcl3).
-  unfold w. f_equal; ring. }
-have He3 := round_FLT_error_rel_emin (t:=t) w.
-fold u eta in He3. rewrite -Hcl3r in He3.
-have Hcl3up : Rabs (FT2R cl3)<=
-    (1+u)*(2*u*P+1501/1000*eta)+/2*eta.
-{ have Htri := Rabs_triang (FT2R cl3-w) w.
-  replace (FT2R cl3-w+w)%R with (FT2R cl3) in Htri by ring.
-  have Huw := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) Hw.
-  nra. }
-have Fe : is_finite_p (Fast2Sum ch cl3).
-{ unfold d, DWTimesFP3 in FIN. fold ch cl1 cl3 in FIN. exact FIN. }
-destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
-    as [Hord|Hnord].
-- have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
-  change (FT2R (snd d)=FT2R ch+FT2R cl3-FT2R (fst d)) in Hsum.
-  split.
-  +
-  change (Rabs ((FT2R (fst d)+FT2R (snd d))-
-    (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
-  rewrite Hsum.
-  replace (FT2R (fst d)+(FT2R ch+FT2R cl3-FT2R (fst d))-
-    (FT2R ah+FT2R al)*FT2R b)%R with
-    ((FT2R ch+FT2R cl3)-(FT2R ah+FT2R al)*FT2R b)%R by ring.
-  eapply Rle_trans; [exact Hcore|]. nra.
-  + exact (Fast2Sum_is_DW ch cl3 (proj1 Fe) Hord).
-- have HsmallP : P<5*eta.
-  { apply Rnot_le_lt. move => HPbig.
-    have HuP := Rmult_le_compat_r P _ _ HP0 Hu.
-    have Hueta := Rmult_le_compat_r eta _ _ (Rlt_le _ _ Heta0) Hu.
-    have HuP' : u*P<=/16384*P by nra.
-    have Hueta' : u*eta<=/16384*eta by nra.
-    have Hcl3coarse : Rabs (FT2R cl3)<=1/100*P+21/10*eta.
-    { eapply Rle_trans; [exact Hcl3up|]. nra. }
-    have Hchcoarse : 99/100*P-/2*eta<=Rabs (FT2R ch).
-    { eapply Rle_trans; [|exact Hchlo]. nra. }
-    have Hcontra : Rabs (FT2R cl3)<=Rabs (FT2R ch) by nra.
-    exact (Hnord Hcontra). }
-  have Hcha : Rabs (FT2R ch)<=6*eta.
-  { eapply Rle_trans; [exact Hchup|].
-    have Hueta := Rmult_le_compat_r eta _ _ (Rlt_le _ _ Heta0) Hu.
-    nra. }
-  have Hcl3a : Rabs (FT2R cl3)<=6*eta.
-  { eapply Rle_trans; [exact Hcl3up|].
-    have Hueta := Rmult_le_compat_r eta _ _ (Rlt_le _ _ Heta0) Hu.
-    have HuP := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0)
-      (Rlt_le _ _ HsmallP).
-    nra. }
-  have Hsum := Fast2Sum_sum_exact_floor_small ch cl3
-    Hp14 Fe Hcha Hcl3a.
-  fold d in Hsum.
-  split.
-  + change (Rabs ((FT2R (fst d)+FT2R (snd d))-
-      (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
-    rewrite Hsum. exact Hcore.
-  + exact (DWTimesFP3_double_word_of_sum ah al b FIN Hsum).
-Qed.
-
-(** Regime-independent Algorithm 9 bound.  Its paper [2*u^2] contribution is
-    retained verbatim in the exactness regime; only the complementary gap
-    contributes the [2.52]-ulp floor term proved above. *)
-Lemma DWTimesFP3_error_mixed_floor {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  (14 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
-  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
-         FT2R (snd (DWTimesFP3 ah al b)))-
-        (FT2R ah+FT2R al)*FT2R b)
-    <= 2*bpow radix2 (-fprec t)^2*
-         Rabs ((FT2R ah+FT2R al)*FT2R b)+
-       251/100*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 DWa FIN.
-set q := ((FT2R ah+FT2R al)*FT2R b)%R.
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Heta0 : 0 < eta by apply bpow_gt_0.
-destruct (Rle_dec
-  (bpow radix2 (@common.emin t+2*fprec t-1))
-  (Rabs (FT2R ah*FT2R b))) as [Hbig|Hgap].
-- have Hab0 : FT2R ah*FT2R b<>0.
-  { intro H0. move: Hbig. rewrite H0 Rabs_R0.
-    have := bpow_gt_0 radix2
-      (@common.emin t+2*fprec t-1). lra. }
-  have Ha0 : FT2R ah<>0.
-  { intro H0. apply Hab0. rewrite H0 Rmult_0_l; reflexivity. }
-  have Hb0 : FT2R b<>0.
-  { intro H0. apply Hab0. rewrite H0 Rmult_0_r; reflexivity. }
-  have Has0 : FT2R ah+FT2R al<>0.
-  { intro H0. apply Ha0.
-    move: DWa. rewrite /double_word_prop H0 /rounded round_0.
-    by move => ->. }
-  have Hq0 : q<>0.
-  { unfold q. apply Rmult_integral_contrapositive_currified; assumption. }
-  have Hrel := @DWMulFP_acc.DWTimesFP_relerr_bound
-    NANS t STD ah al b DWa FIN ltac:(lia) (or_intror Hbig).
-  unfold DWMulFP_acc.relative_error_DWTimesFP in Hrel.
-  cbv zeta in Hrel. fold q u in Hrel.
-  set err := (FT2R (fst (DWTimesFP3 ah al b))+
-    FT2R (snd (DWTimesFP3 ah al b))-q)%R.
-  have Heq : Rabs err=Rabs (err/q)*Rabs q.
-  { rewrite -Rabs_mult. f_equal. field; exact Hq0. }
-  change (Rabs err<=2*u^2*Rabs q+251/100*eta).
-  rewrite Heq.
-  have Hmul := Rmult_le_compat_r (Rabs q) _ _ (Rabs_pos _) Hrel.
-  eapply Rle_trans; [exact Hmul|]. nra.
-- have Hgap' := DWTimesFP3_error_floor_gap ah al b
-    Hp14 DWa FIN Hgap.
-  fold q eta in Hgap'.
-  destruct Hgap' as [Hgap' _].
-  change (Rabs (FT2R (fst (DWTimesFP3 ah al b))+
-    FT2R (snd (DWTimesFP3 ah al b))-q)<=
-    2*u^2*Rabs q+251/100*eta).
-  eapply Rle_trans; [exact Hgap'|].
-  have Hqpos := Rabs_pos q. nra.
-Qed.
-
-Lemma DWTimesFP3_double_word_mixed {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  (14 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
-  double_word_prop (fst (DWTimesFP3 ah al b))
-                   (snd (DWTimesFP3 ah al b)).
-Proof.
-move => Hp14 DWa FIN.
-destruct (Rle_dec
-  (bpow radix2 (@common.emin t+2*fprec t-1))
-  (Rabs (FT2R ah*FT2R b))) as [Hbig|Hgap].
-- have Fmul := DWMulFP_acc.FIN3 ah al b FIN.
-  have Fcl3 := DWMulFP_acc.FIN2 ah al b FIN.
-  have Hord := DWMulFP_acc.aux_cl3_le_ch ah al b
-    DWa Fmul Fcl3 Hbig.
-  exact (DWMulFP_acc.DWTimesFP3_double_word_from_pre
-    ah al b (proj1 FIN) Hord).
-- exact (proj2 (DWTimesFP3_error_floor_gap ah al b
-    Hp14 DWa FIN Hgap)).
-Qed.
+   DWMulFP_acc also exports the assembled public form DWTimesFP3_error_mixed. *)
 
 (** Absolute form of the paper-tight DWPlusFP theorem, including the zero-sum
     case through its multiplicative-error witness. *)
@@ -2009,7 +1438,7 @@ have Hround_u : forall (x C : R),
     Rabs (round radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
                       (Znearest choice) x) <= (C+1)*u.
 { move => x C Hx HCu.
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Hfac0 : 0 <= 1 + u by nra.
   have Hmul : (1+u)*Rabs x <= (1+u)*(C*u).
   { apply Rmult_le_compat_l; assumption. }
@@ -2023,7 +1452,7 @@ have Hround_uT : forall (x C : R),
     Rabs (round radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
                       (Znearest choice) x) <= (C+1)*u*T.
 { move => x C Hx HCu.
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Hfac0 : 0 <= 1 + u by nra.
   have Hmul : (1+u)*Rabs x <= (1+u)*(C*u*T).
   { apply Rmult_le_compat_l; assumption. }
@@ -2068,7 +1497,7 @@ have Hone : FT2R (Zconst t 1) = 1%R.
 have Hrh : Rabs (FT2R rh) <= 2*u.
 { unfold rh. rewrite -(BFMA_round_correct t (BOPP yh) th (Zconst t 1) Frh).
   rewrite -Hopp_yh Hone.
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Heq : (- FT2R yh * FT2R th + 1)%R =
       - (FT2R th * FT2R yh - 1) by ring.
   rewrite Heq Rabs_Ropp.
@@ -2087,7 +1516,7 @@ have Hopp_ql : (- FT2R ql = FT2R rl)%R.
 have Hrl : Rabs (FT2R rl) <= 2*u.
 { rewrite -Hopp_ql Rabs_Ropp. unfold ql.
   rewrite -(BMULT_round_correct t yl th Fql).
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Hfac0 : 0 <= 1 + u by nra.
   have Hmul : (1 + u) * Rabs (FT2R yl * FT2R th)
                   <= (1 + u) * (u * (1 + u)).
@@ -2103,7 +1532,7 @@ have Feh_sum : is_finite (BPLUS rh rl) = true.
 have Heh : Rabs (FT2R eh) <= 5*u.
 { unfold eh, e, Fast2Sum, fst.
   rewrite -(BPLUS_round_correct t rh rl Feh_sum).
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Htri := Rabs_triang (FT2R rh) (FT2R rl).
   have Hin : Rabs (FT2R rh + FT2R rl) <= 4*u by lra.
   have Hfac0 : 0 <= 1 + u by nra.
@@ -2211,7 +1640,7 @@ have Harg : Rabs (FT2R dh + FT2R th) <= (1 + 23*u)*T.
 have Hsh : Rabs (FT2R sh) <= (1 + 28*u)*T.
 { unfold sh, ts, TwoSumF, fst.
   rewrite -(BPLUS_round_correct t dh th Fsh).
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Hfac0 : 0 <= 1 + u by nra.
   have Hmul : (1+u)*Rabs (FT2R dh + FT2R th)
       <= (1+u)*((1+23*u)*T).
@@ -2297,7 +1726,7 @@ have Hsv : Rabs (FT2R sh + FT2R v) <= (1 + 86*u)*T.
 have Hmh : Rabs (FT2R mh) <= (1 + 89*u)*T.
 { unfold mh, m, Fast2Sum, fst.
   rewrite -(BPLUS_round_correct t sh v Fmh_sum).
-  eapply Rle_trans; [apply round_FLT_abs_rel_emin |].
+  eapply Rle_trans; [apply round_abs_le_relative_plus_half_emin |].
   have Hfac0 : 0 <= 1+u by nra.
   have Hmul : (1+u)*Rabs (FT2R sh + FT2R v)
       <= (1+u)*((1+86*u)*T).
@@ -4236,11 +3665,11 @@ fold th rh rl e in Hex. cbv zeta in Hex.
 have DWe := Fast2Sum_double_word_of_sum rh rl Fe Hex.
 fold e in DWe.
 split.
-- have H := DWTimesFP3_error_mixed_floor
-    (fst e) (snd e) th Hp14 DWe Fd.
+- have H := DWTimesFP3_error_mixed_flat
+    (fst e) (snd e) th ltac:(lia) DWe Fd.
   fold d in H. exact H.
 - exact (DWTimesFP3_double_word_mixed
-    (fst e) (snd e) th Hp14 DWe Fd).
+    (fst e) (snd e) th ltac:(lia) DWe Fd).
 Qed.
 
 Lemma DWDivDW_reciprocal_plus_error_paper_tight
@@ -4906,7 +4335,7 @@ have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
 have Htl00 := DWMulDW_acc.leading_product_gap_low_low_zero
   xh xl mh ml DWx DWm F0 Hgap.
 fold tl0 in Htl00.
-have Hdelta := Fast2Mult_sum_error_floor xh mh Hp14 Ffast.
+have Hdelta := Fast2Mult_sum_error_floor xh mh ltac:(lia) Ffast.
 fold P0 ch cl1 eta in Hdelta.
 have H1r : FT2R tl1=round radix2
     (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)

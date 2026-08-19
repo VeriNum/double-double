@@ -119,9 +119,21 @@ destruct (Rle_lt_dec
   have := Rabs_pos v. nra.
 Qed.
 
+(** Universal FLT rounding-error bound: a relative term plus half the
+    subnormal floor. *)
+Lemma round_FLT_error_rel_emin (v : R) :
+  Rabs (round radix2 fexp (Znearest choice) v - v) <=
+    bpow radix2 (- fprec t) * Rabs v +
+    /2 * bpow radix2 (common.emin (t:=t)).
+Proof.
+have He := @Ulp.error_le_half_ulp radix2 fexp valid_fexp_inst choice v.
+have Hu := ulp_le_relative_plus_emin v.
+eapply Rle_trans; [exact He|]. nra.
+Qed.
+
 Lemma round_abs_le_relative_plus_half_emin (v : R) :
   Rabs (round radix2 fexp (Znearest choice) v) <=
-  Rabs v * (1 + bpow radix2 (- fprec t)) +
+  (1 + bpow radix2 (- fprec t)) * Rabs v +
     /2 * bpow radix2 (common.emin (t:=t)).
 Proof.
 eapply Rle_trans; [apply round_abs_le_abs_plus_half_ulp|].

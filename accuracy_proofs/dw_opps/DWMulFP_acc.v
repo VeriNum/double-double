@@ -1,8 +1,49 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** This file contains accuracy proofs for double-word 
-plus a (double-word, floating-point number *)
+(** Accuracy and representation results for [DWTimesFP3], the implementation
+    model of Algorithm 9 for multiplying a double-word number by a
+    floating-point number.  ADMIT-FREE.
+
+    Notation: u = 2^(-p) is the relative rounding unit and eta = 2^emin is the
+    smallest positive subnormal, the physical underflow floor.
+
+    ============================================================================
+    PUBLIC INTERFACE
+
+      MIXED absolute/relative API (primary; holds over the whole range):
+        DWTimesFP3_error_mixed        branch-aware error: purely relative
+                                     (2u^2) above the TwoProd exactness
+                                     threshold 2^(emin+2p-1), purely absolute
+                                     (2.51*eta) below it, exact product zero
+                                     when the leading product is zero
+        DWTimesFP3_error_mixed_flat   its one-line consequence
+                                        2u^2|P| + 2.51*eta,
+                                     carrying both terms in every regime
+        DWTimesFP3_double_word_mixed  output is a double word, every regime
+
+      RELATIVE API (corollaries of the mixed normal arm; what VST clients use):
+        DWTimesFP_accuracy_from_cond  relerr <= 2u^2 from DWTimesFP_cond
+        DWTimesFP3_double_word        output is a double word from the cond
+
+      Proof developments that already have decomposed hypotheses may use:
+        DWTimesFP_relerr_bound        relerr <= 2u^2 from the named
+                                      precondition; this is the kernel that
+                                      proves the mixed theorem's normal arm
+        DWTimesFP3_error_normal_arm   absolute form of that arm
+        DWTimesFP_cond_no_gap         the cond forbids the nonzero gap, so
+                                      under it the eta term is never paid
+
+    Why the relative theorem is a corollary of the mixed theorem's ARM and not
+    of its flat form: 2u^2|P| + 2.51*eta is strictly weaker than 2u^2|P| in the
+    normal regime, so no algebra recovers the missing eta.  The arm is the
+    mixed API's normal-regime content, and that is what the cond-level
+    corollary invokes.
+
+    The Algorithm-9 underflow-floor block at the end of this file (previously
+    in DWDivDW_acc.v at p >= 14, now p >= 3) is also a cross-operation proof
+    interface: DWDivDW_acc consumes it for its reciprocal-refinement block.
+    ============================================================================ *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -954,6 +995,30 @@ destruct (Rmult_integral _ _ Hxy0) as [Hxh0 | Hy0].
 - unfold xr, yr. rewrite Hy0. ring.
 Qed.
 
+(* Converse side condition: above the TwoProd exactness threshold the exact
+   product is nonzero, so a relative error is meaningful and one may divide
+   by xr*yr.  Every statement in this file that converts between the relative
+   and absolute forms needs exactly these three facts, so they are proved
+   once here rather than inline at each use. *)
+Lemma xryr_ne_0_of_big :
+  double_word_prop xh xl ->
+  bpow radix2 (eminA + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R y) ->
+  FT2R xh * FT2R y <> 0 /\ FT2R y <> 0 /\ xr <> 0 /\ xr * yr <> 0.
+Proof.
+move => Hdw Hbig.
+have HP0 : FT2R xh * FT2R y <> 0.
+{ intro Habs. move: Hbig. rewrite Habs Rabs_R0.
+  have := bpow_gt_0 radix2 (eminA + 2 * fprec t - 1). lra. }
+have Hyne : FT2R y <> 0 by (intro Hy0; apply HP0; rewrite Hy0 Rmult_0_r).
+have Hxrne : xr <> 0.
+{ rewrite /xr => Hxr0. apply HP0.
+  have Hxh0 : FT2R xh = 0.
+  { move: Hdw. rewrite /double_word_prop /rounded Hxr0 round_0. by move ->. }
+  rewrite Hxh0; ring. }
+split; [exact HP0 | split; [exact Hyne | split; [exact Hxrne |]]].
+apply Rmult_integral_contrapositive_currified; [exact Hxrne | exact Hyne].
+Qed.
+
 (* KEYSTONE: on the normal leg the whole double-word error collapses to a
    single FLT rounding error.  Since Fast2Sum is exact (zh+zl = ch+cl3) and the
    product error cl1 = xh*y - ch is representable (Fast2MultModel_correct, valid
@@ -1034,17 +1099,7 @@ destruct Huf as [Hxy0 | Hbig].
        - |w| < bpow(emin+fprec-1): w is subnormal, so |round(w)-w| <= 1/2 bpow emin
          is tiny against |xr*yr| >= bpow(emin+2*fprec-1)(1-u), giving < 2u^2. *)
   have Hfmul : is_finite (BMULT xh y) = true by exact (FIN3 xh xl y Hfin).
-  have HP0 : FT2R xh * FT2R y <> 0.
-  { intro Habs. move: Hbig. rewrite Habs Rabs_R0.
-    have := bpow_gt_0 radix2 (eminA + 2 * fprec t - 1). lra. }
-  have Hyne : FT2R y <> 0 by (intro Hy0; apply HP0; rewrite Hy0 Rmult_0_r).
-  have Hxrne : xr <> 0.
-  { rewrite /xr => Hxr0. apply HP0.
-    have Hxh0 : FT2R xh = 0.
-    { move: Hdw. rewrite /double_word /rounded Hxr0 round_0. by move ->. }
-    rewrite Hxh0; ring. }
-  have Hxryrne : xr * yr <> 0
-    by (apply Rmult_integral_contrapositive_currified; [exact Hxrne | exact Hyne]).
+  move: (xryr_ne_0_of_big Hdw Hbig) => [HP0 [Hyne [Hxrne Hxryrne]]].
   have Herr := relerr_error_eq Hdw Hfin Hfmul Hbig.
   cbv zeta in Herr.
   set w := (FT2R xl * FT2R y + FT2R (Fast2Mult_err xh y))%R in Herr *.
@@ -1135,13 +1190,35 @@ destruct Huf as [Hxy0 | Hbig].
     unfold relative_error_DWTimesFP. exact Hb.
 Qed.
 
-(* Layer-2 corollary: a thin wrapper over DWTimesFP_relerr_bound.  It pulls
-   the three Layer-1 hypotheses out of the cond verified at the spec interface
-   (DWTimesFP_cond, defined in DDModels.v):
-     - double_word           <- the cond's double_word_prop (convertible);
-     - is_finite_p           <- DWTimesFP3_fst_finite / DWTimesFP3_snd_finite;
-     - the underflow disjunction is passed through verbatim.
-   The 3 <= fprec t hypothesis is threaded by the caller (true for Tdouble). *)
+(* ------------------------------------------------------------------
+   Layer 2: the cond-level relative bound.
+
+   DWTimesFP_cond's job here is to supply the underflow disjunction that
+   Layer 1 needs; DWTimesFP_cond_no_gap isolates that step, and is also
+   what tells the whole-range theory below (DWTimesFP3_error_mixed) that
+   its eta term is unreachable under the cond.
+   ------------------------------------------------------------------ *)
+
+(* The cond forbids the nonzero underflow gap.  This is literally the
+   third field of DWTimesFP_cond (DDModels.v), projecting the underflow
+   disjunct of Fast2Mult_cond: under the cond the leading product is
+   either exactly zero or at least the TwoProd exactness threshold.  So
+   the gap arm of DWTimesFP3_error_mixed is unreachable and its
+   C_FP * 2^emin floor term is never paid -- which is precisely why the
+   cond-level bound below is a pure 2u^2 relative bound. *)
+Lemma DWTimesFP_cond_no_gap :
+  DWTimesFP_cond xh xl y ->
+  FT2R xh * FT2R y = 0 \/
+  bpow Zaux.radix2 (eminA + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R y).
+Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
+
+(* Layer-2 corollary.  The cond supplies the two Layer-1 hypotheses
+   (double_word_prop is convertible with double_word; is_finite_p comes
+   from DWTimesFP3_fst_finite / DWTimesFP3_snd_finite), and
+   DWTimesFP_cond_no_gap supplies the underflow disjunction -- i.e. it is
+   the cond, via the gap-exclusion lemma, that buys the eta-free bound.
+   The 3 <= fprec t hypothesis is threaded by the caller (true for
+   Tdouble). *)
 Corollary DWTimesFP_accuracy_from_cond :
   (3 <= fprec t)%Z ->
   DWTimesFP_cond xh xl y ->
@@ -1152,9 +1229,705 @@ have Hfp : is_finite_p (DWTimesFP3 xh xl y).
 { split.
   - exact (DWTimesFP3_fst_finite xh xl y Hcond).
   - exact (DWTimesFP3_snd_finite xh xl y Hcond). }
+have Hnogap := DWTimesFP_cond_no_gap Hcond.
 move: Hcond => [Hfxl [Hdwp [Hf2m Hreal]]].
-have Huf := proj2 Hf2m.
-exact (DWTimesFP_relerr_bound Hdwp Hfp Hp3 Huf).
+exact (DWTimesFP_relerr_bound Hdwp Hfp Hp3 Hnogap).
 Qed.
 
 End DWTimesFP_Accuracy.
+
+(* ==================================================================
+   WHOLE-RANGE (MIXED) ANALYSIS OF ALGORITHM 9
+
+   Everything above assumes the leading product is either zero or at
+   least the TwoProd exactness threshold 2^(emin+2p-1) -- the underflow
+   disjunct of Fast2Mult_cond -- because below it the product residual
+   cl1 = xh*y - ch is not representable and no relative bound can hold.
+   This part removes that assumption.  In the complementary "gap" the
+   error is instead governed by the physical underflow floor
+   eta = 2^emin, and the two regimes assemble into the file's primary
+   public result, DWTimesFP3_error_mixed, whose only hypotheses are
+   p >= 3, a double-word input, and a finite output: NO cond, and in
+   particular no underflow disjunct.  DWTimesFP_cond_no_gap above is the
+   bridge back: under the cond the gap arm is unreachable, so the eta
+   term is never paid and the pure 2u^2 bound is recovered.
+
+   This material lives outside Section DWTimesFP_Accuracy because it is
+   written with @common.emin t rather than that section's eminA notation
+   (convertible, but not syntactically equal, and the fold/change steps
+   below depend on the spelling).
+
+   It previously sat in DWDivDW_acc.v behind p >= 14.  That bound was an
+   artifact of the proof route, not of the mathematics -- see the two
+   notes at Fast2Sum_sum_exact_of_sum_small and in the unordered arm of
+   DWTimesFP3_error_floor_gap -- and everything here holds at p >= 3.
+   DWDivDW_acc still consumes these lemmas for its reciprocal-refinement
+   block, so they are a cross-operation proof interface as well as
+   multiplication's mixed API.
+
+   The operation-independent FLT rounding facts used below live in
+   FLT_helpers.  Order below: generic Fast2Sum facts, then the Algorithm-9
+   building blocks, then the gap regime, then the public assembly.
+   ================================================================== *)
+
+(* ==================================================================
+   ALGORITHM-9 UNDERFLOW-FLOOR BLOCK  (whole-range / mixed API)
+
+   Below the TwoProd exactness threshold 2^(emin+2p-1) the leading
+   product's residual is not representable, so the relative analysis
+   above does not apply and the error is governed by an absolute floor
+   instead.  These lemmas bound that floor and assemble the two regimes
+   into the file's primary public result, DWTimesFP3_error_mixed.
+
+   They live outside Section DWTimesFP_Accuracy because they are stated
+   with @common.emin t rather than that section's eminA notation (the
+   two are convertible but not syntactically equal, and the fold/change
+   steps below depend on the spelling).
+
+   Previously in DWDivDW_acc.v behind a p >= 14 hypothesis, which was an
+   artifact of the proof route, not of the mathematics: everything here
+   holds at p >= 3.  DWDivDW_acc still consumes these lemmas, so they are
+   a cross-operation proof interface as well as multiplication's mixed API.
+   ================================================================== *)
+
+(* ---------- generic Fast2Sum: exactness and closure from its sum ---------- *)
+
+(** Runtime Fast2Sum is exact whenever the EXACT SUM still lies on the shared
+    FLT/FIX lattice at exponent [emin], i.e. [|a+b| <= 2^(emin+p)].  Both
+    addends are automatically multiples of [2^emin] -- [FLT_exp] is bounded
+    below by [emin], so every FLT value is -- hence the only requirement is on
+    the sum, and NO precision hypothesis is needed.  Above [2^(emin+p)] the
+    lattice coarsens and an [eta] multiple need no longer be representable,
+    which is exactly what this bound excludes. *)
+Lemma Fast2Sum_sum_exact_of_sum_small {NANS : Nans} {t : type}
+    {STD : is_standard t} (a b : ftype t) :
+  is_finite_p (Fast2Sum a b) ->
+  Rabs (FT2R a+FT2R b)<=bpow radix2 (@common.emin t+fprec t) ->
+  FT2R (fst (Fast2Sum a b))+FT2R (snd (Fast2Sum a b))=
+    FT2R a+FT2R b.
+Proof.
+move => FIN Hsumabs.
+have Fa : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)
+  by apply generic_format_FLT_FT2R.
+have Fb : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R b)
+  by apply generic_format_FLT_FT2R.
+have Faf := generic_format_FIX_FLT radix2 (@common.emin t)
+  (fprec t) (FT2R a) Fa.
+have Fbf := generic_format_FIX_FLT radix2 (@common.emin t)
+  (fprec t) (FT2R b) Fb.
+have Fsumfix : generic_format radix2 (FIX_exp (@common.emin t))
+    (FT2R a+FT2R b).
+{ destruct (FIX_format_generic radix2 (@common.emin t) (FT2R a) Faf)
+    as [fa Hfa Hefa].
+  destruct (FIX_format_generic radix2 (@common.emin t) (FT2R b) Fbf)
+    as [fb Hfb Hefb].
+  pose fs := Float radix2 (Fnum fa+Fnum fb) (@common.emin t).
+  apply generic_format_FIX.
+  apply (FIX_spec radix2 (@common.emin t) (FT2R a+FT2R b) fs).
+  - unfold fs, F2R. simpl.
+    rewrite Hfa Hfb /F2R Hefa Hefb. rewrite plus_IZR. ring.
+  - reflexivity. }
+have Fsum : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a+FT2R b).
+{ apply generic_format_FLT_FIX.
+  - apply fprec_gt_0.
+  - exact Hsumabs.
+  - exact Fsumfix. }
+have Fsumx : generic_format radix2 (FLX_exp (fprec t))
+    (FT2R a+FT2R b).
+{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)).
+  exact Fsum. }
+have Fax : generic_format radix2 (FLX_exp (fprec t)) (FT2R a).
+{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)); exact Fa. }
+have Fbx : generic_format radix2 (FLX_exp (fprec t)) (FT2R b).
+{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)); exact Fb. }
+have Heq := FastTwoSumEq_FLT a b FIN.
+have Hsumr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
+    (FT2R a+FT2R b)=FT2R a+FT2R b.
+{ apply round_generic; [apply valid_rnd_N|exact Fsumx]. }
+have Hbr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
+    (FT2R b)=FT2R b.
+{ apply round_generic; [apply valid_rnd_N|exact Fbx]. }
+have Hpaper : F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b)=
+    (FT2R a+FT2R b,0).
+{ unfold F2Sum.Fast2Sum, F2SumFLX.Fast2Sum.
+  rewrite Hsumr.
+  replace (FT2R a+FT2R b-FT2R a)%R with (FT2R b) by ring.
+  rewrite Hbr.
+  replace (FT2R b-FT2R b)%R with 0 by ring.
+  rewrite round_0. reflexivity. }
+rewrite Hpaper /F2Rp /= in Heq.
+have Hh := f_equal fst Heq.
+have Hl := f_equal snd Heq.
+simpl in Hh, Hl. rewrite -Hh -Hl. ring.
+Qed.
+
+Lemma Fast2Sum_double_word_of_sum {NANS : Nans} {t : type}
+    {STD : is_standard t} (a b : ftype t) :
+  is_finite_p (Fast2Sum a b) ->
+  FT2R (fst (Fast2Sum a b))+FT2R (snd (Fast2Sum a b))=
+    FT2R a+FT2R b ->
+  double_word_prop (fst (Fast2Sum a b)) (snd (Fast2Sum a b)).
+Proof.
+move => FIN Hsum.
+set e := Fast2Sum a b.
+fold e in Hsum.
+unfold double_word_prop, rounded. fold e. rewrite Hsum.
+change (FT2R (fst e)=round radix2
+  (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
+  (FT2R a+FT2R b)).
+have Hfst : fst e=BPLUS a b by reflexivity.
+rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
+Qed.
+
+(* ---------- Algorithm-9 building blocks ---------- *)
+
+(** A compensated product loses only an underflow-floor term even when its
+    exact product error is too small for the usual Fast2Mult exactness
+    theorem.  Above the [emin+2p-1] threshold the sum is exact; below it the
+    relative error of the low FMA is itself bounded by half a floor ulp. *)
+Lemma Fast2Mult_sum_error_floor {NANS : Nans} {t : type}
+    {STD : is_standard t} (a b : ftype t) :
+  (3 <= fprec t)%Z -> is_finite_p (Fast2Mult a b) ->
+  Rabs (FT2R (Fast2Mult_mul a b)+FT2R (Fast2Mult_err a b)-
+        FT2R a*FT2R b)
+    <= /2*bpow radix2 (@common.emin t).
+Proof.
+move => Hp3 FIN.
+set x := (FT2R a*FT2R b)%R.
+set ch := Fast2Mult_mul a b.
+set cl := Fast2Mult_err a b.
+set r := (x-FT2R ch)%R.
+set u := bpow radix2 (-fprec t).
+set eta := bpow radix2 (@common.emin t).
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu : u <= /8.
+{ unfold u. have -> : (/8:R)=bpow radix2 (-3) by (simpl;lra).
+  apply bpow_le; lia. }
+have Heta0 : 0 < eta by apply bpow_gt_0.
+have Fch : is_finite ch=true by exact (proj1 FIN).
+have Fcl : is_finite cl=true by exact (proj2 FIN).
+have Hchr : FT2R ch=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
+{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
+  apply BMULT_round_correct. exact Fch. }
+have Hop : FT2R (BOPP ch) = -FT2R ch.
+{ symmetry. apply BOPP_binary. right; exact Fch. }
+have Hclr : FT2R cl=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) r.
+{ unfold cl, Fast2Mult_err, Fast2Mult.
+  rewrite -(BFMA_round_correct t a b (BOPP ch) Fcl) Hop.
+  unfold r, x. f_equal; ring. }
+destruct (Req_dec x 0) as [Hx0|Hx0].
+- have Hch0 : FT2R ch=0 by rewrite Hchr Hx0 round_0.
+  have Hr0 : r=0 by unfold r; rewrite Hx0 Hch0; ring.
+  rewrite Hx0 Hch0 Hclr Hr0 round_0.
+  rewrite Rminus_0_r Rplus_0_l Rabs_R0. nra.
+- destruct (Rle_dec
+    (bpow radix2 (@common.emin t+2*fprec t-1)) (Rabs x))
+    as [Hbig|Hsmall].
+  + have Hex := Fast2MultModel_correct a b Fch.
+    specialize (Hex ltac:(move=>_;exact Hbig)).
+    fold x ch cl in Hex.
+    rewrite Hex. replace (FT2R ch+(x-FT2R ch)-x)%R with 0 by ring.
+    rewrite Rabs_R0. nra.
+  + have Hxe := round_FLT_error_rel_emin (t:=t) x.
+    fold u eta in Hxe. rewrite -Hchr in Hxe.
+    have Hrabs : Rabs r <= u*Rabs x+/2*eta.
+    { unfold r. rewrite Rabs_minus_sym. exact Hxe. }
+    have HxB : Rabs x <
+        bpow radix2 (@common.emin t+2*fprec t-1)
+      by apply Rnot_le_lt.
+    have Hux := Rmult_lt_compat_l u _ _ Hu0 HxB.
+    have Hscale : u*bpow radix2
+        (@common.emin t+2*fprec t-1)=
+        bpow radix2 (@common.emin t+fprec t-1).
+    { unfold u. rewrite -bpow_plus. f_equal; ring. }
+    rewrite Hscale in Hux.
+    have Hetahalf : /2*eta = bpow radix2 (@common.emin t-1).
+    { unfold eta. rewrite (bpow_plus radix2 (@common.emin t) (-1)).
+      change (bpow radix2 (-1)) with (/2:R). ring. }
+    have Hetasmall : /2*eta <
+        bpow radix2 (@common.emin t+fprec t-1).
+    { rewrite Hetahalf. apply bpow_lt. lia. }
+    have Hrsmall : Rabs r <
+        bpow radix2 (@common.emin t+fprec t).
+      { have Hnext : bpow radix2 (@common.emin t+fprec t) =
+          2*bpow radix2 (@common.emin t+fprec t-1).
+      { transitivity
+          (bpow radix2 (@common.emin t+fprec t-1)*bpow radix2 1).
+        - rewrite -bpow_plus. f_equal; ring.
+        - change (bpow radix2 1) with (2:R). ring. }
+      rewrite Hnext. nra. }
+    have Hre := @Ulp.error_le_half_ulp radix2
+      (SpecFloat.fexp (fprec t) (femax t))
+      valid_fexp_inst choice r.
+    have Hulp : Ulp.ulp radix2
+        (SpecFloat.fexp (fprec t) (femax t)) r=eta.
+    { unfold SpecFloat.fexp, common.emin.
+      apply ulp_FLT_small; [apply fprec_gt_0|exact Hrsmall]. }
+    rewrite Hulp in Hre. rewrite -Hclr in Hre.
+    change (Rabs (FT2R ch+FT2R cl-x) <= /2*eta).
+    replace (FT2R ch+FT2R cl-x)%R with (FT2R cl-r)%R
+      by (unfold r; ring).
+    exact Hre.
+Qed.
+
+(** Algorithm 9's closing Fast2Sum is exact as soon as its two inputs are
+    magnitude-ordered.  No precision bound, no input condition and no regime
+    hypothesis is needed -- [FastTwoSum_correct] applies directly.
+
+    This is the prerequisite for splitting the refinement block on the
+    ordering: in the ordered arm the two Fast2Sum roundings of
+    [DWDivDW_refinement_product_value_error_tight_floor] vanish, taking its
+    floor from [2*eta] down to [eta]. *)
+Lemma DWTimesFP3_sum_exact_of_ord {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  is_finite_p (DWTimesFP3 ah al b) ->
+  Rabs (FT2R (BFMA al b (Fast2Mult_err ah b))) <=
+    Rabs (FT2R (Fast2Mult_mul ah b)) ->
+  FT2R (fst (DWTimesFP3 ah al b)) +
+  FT2R (snd (DWTimesFP3 ah al b)) =
+    FT2R (Fast2Mult_mul ah b) +
+    FT2R (BFMA al b (Fast2Mult_err ah b)).
+Proof.
+move => FIN Hord.
+set ch := Fast2Mult_mul ah b.
+set cl1 := Fast2Mult_err ah b.
+set cl3 := BFMA al b cl1.
+have Fe : is_finite_p (Fast2Sum ch cl3).
+{ unfold DWTimesFP3 in FIN.
+  unfold ch, cl1, cl3, Fast2Mult_mul, Fast2Mult_err, Fast2Mult in *.
+  exact FIN. }
+fold ch cl1 cl3 in Hord.
+have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
+change (FT2R (snd (DWTimesFP3 ah al b)) =
+  FT2R ch + FT2R cl3 - FT2R (fst (DWTimesFP3 ah al b))) in Hsum.
+lra.
+Qed.
+
+(** If Algorithm 9's closing Fast2Sum preserves its two inputs, its returned
+    pair is a double word: the high component is exactly the rounding of that
+    preserved sum. *)
+Lemma DWTimesFP3_double_word_of_sum {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  is_finite_p (DWTimesFP3 ah al b) ->
+  let ch := Fast2Mult_mul ah b in
+  let cl3 := BFMA al b (Fast2Mult_err ah b) in
+  FT2R (fst (DWTimesFP3 ah al b))+FT2R (snd (DWTimesFP3 ah al b))=
+    FT2R ch+FT2R cl3 ->
+  double_word_prop (fst (DWTimesFP3 ah al b))
+                   (snd (DWTimesFP3 ah al b)).
+Proof.
+move => FIN /= Hsum.
+set ch := Fast2Mult_mul ah b.
+set cl3 := BFMA al b (Fast2Mult_err ah b).
+set d := DWTimesFP3 ah al b.
+fold d ch cl3 in Hsum.
+unfold double_word_prop, rounded. fold d.
+rewrite Hsum.
+change (FT2R (fst d)=round radix2
+  (SpecFloat.fexp (fprec t) (femax t))
+  (Znearest choice) (FT2R ch+FT2R cl3)).
+have Hfst : fst d=BPLUS ch cl3 by reflexivity.
+rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
+Qed.
+
+(* ---------- the gap regime: below the TwoProd exactness threshold ---------- *)
+
+(** In the gap below Fast2Mult's exactness threshold, the compensated core of
+    Algorithm 9 still has a floor-only error.  This is the value before its
+    closing Fast2Sum; no ordinary [u^2] term is introduced in this regime. *)
+Lemma DWTimesFP_core_error_floor_gap {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWTimesFP3 ah al b) ->
+  ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
+      Rabs (FT2R ah*FT2R b) ->
+  let ch := Fast2Mult_mul ah b in
+  let cl3 := BFMA al b (Fast2Mult_err ah b) in
+  Rabs ((FT2R ch+FT2R cl3)-
+        (FT2R ah+FT2R al)*FT2R b)
+    <= 251/100*bpow radix2 (@common.emin t).
+Proof.
+move => Hp3 DWa FIN Hgap /=.
+set x := (FT2R ah*FT2R b)%R.
+set ch := Fast2Mult_mul ah b.
+set cl1 := Fast2Mult_err ah b.
+set cl3 := BFMA al b cl1.
+set u := bpow radix2 (-fprec t).
+set eta := bpow radix2 (@common.emin t).
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu : u <= /8.
+{ unfold u. have -> : (/8:R)=bpow radix2 (-3) by (simpl;lra).
+  apply bpow_le; lia. }
+have Heta0 : 0 < eta by apply bpow_gt_0.
+have Ffast := FIN1 ah al b FIN.
+have Fch : is_finite ch=true by exact (proj1 Ffast).
+have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
+have Fcl3 := FIN2 ah al b FIN; fold cl1 cl3 in Fcl3.
+have Hdelta := Fast2Mult_sum_error_floor ah b Hp3 Ffast.
+fold x ch cl1 eta in Hdelta.
+have Hchr : FT2R ch=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
+{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
+  apply BMULT_round_correct. exact Fch. }
+have Hxe := round_FLT_error_rel_emin (t:=t) x.
+fold u eta in Hxe. rewrite -Hchr in Hxe.
+have Hr : Rabs (x-FT2R ch)<=u*Rabs x+/2*eta.
+{ rewrite Rabs_minus_sym. exact Hxe. }
+have Hcl1 : Rabs (FT2R cl1)<=
+    u*Rabs x+1501/1000*eta.
+{ have Htri := Rabs_triang
+      (FT2R cl1-(x-FT2R ch)) (x-FT2R ch).
+  replace (FT2R cl1-(x-FT2R ch)+(x-FT2R ch))%R with
+      (FT2R cl1)%R in Htri by ring.
+  have Heq : FT2R cl1-(x-FT2R ch)=
+      FT2R ch+FT2R cl1-x by ring.
+  rewrite Heq in Htri.
+  eapply Rle_trans; [exact Htri|].
+  eapply Rle_trans.
+  - apply Rplus_le_compat; [exact Hdelta|exact Hr].
+  - nra. }
+have Hal := @aux_dwu_rel t STD ah al DWa.
+fold u in Hal.
+have Halb : Rabs (FT2R al*FT2R b)<=u*Rabs x.
+{ unfold x. rewrite !Rabs_mult.
+  have H := Rmult_le_compat_r (Rabs (FT2R b)) _ _
+    (Rabs_pos _) Hal.
+  eapply Rle_trans; [exact H|]. right; ring. }
+set w := (FT2R al*FT2R b+FT2R cl1)%R.
+have Hw : Rabs w<=2*u*Rabs x+1501/1000*eta.
+{ unfold w. eapply Rle_trans; [apply Rabs_triang|]. nra. }
+have Hcl3r : FT2R cl3=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) w.
+{ unfold cl3. rewrite -(BFMA_round_correct t al b cl1 Fcl3).
+  unfold w. f_equal; ring. }
+have He3 := round_FLT_error_rel_emin (t:=t) w.
+fold u eta in He3. rewrite -Hcl3r in He3.
+have Huw := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) Hw.
+have Hscale : u^2*bpow radix2
+    (@common.emin t+2*fprec t-1)=/2*eta.
+{ replace (u^2)%R with (u*u)%R by ring.
+  unfold u, eta. rewrite -bpow_plus -bpow_plus.
+  replace (-fprec t+-fprec t+
+      (@common.emin t+2*fprec t-1))%Z with
+      (@common.emin t-1)%Z by ring.
+  rewrite (bpow_plus radix2 (@common.emin t) (-1)).
+  change (bpow radix2 (-1)) with (/2:R). ring. }
+have HxB : Rabs x < bpow radix2
+    (@common.emin t+2*fprec t-1) by apply Rnot_le_lt.
+have Hu20 : 0 < u^2 by nra.
+have HuB := Rmult_lt_compat_l (u^2) _ _ Hu20 HxB.
+rewrite Hscale in HuB.
+change (Rabs ((FT2R ch+FT2R cl3)-
+  (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
+have Heq : (FT2R ch+FT2R cl3)-
+    (FT2R ah+FT2R al)*FT2R b =
+  (FT2R ch+FT2R cl1-x)+(FT2R cl3-w) by (unfold x,w;ring).
+rewrite Heq. eapply Rle_trans; [apply Rabs_triang|].
+eapply Rle_trans.
+- apply Rplus_le_compat; [exact Hdelta|exact He3].
+- nra.
+Qed.
+
+(** Full Algorithm 9 in the Fast2Mult gap.  If the closing Fast2Sum ordering
+    holds it is exact.  If it fails, the leading and low terms are both within
+    six floor ulps, where their common fixed-point lattice makes Fast2Sum exact
+    as well.  Thus the compensated core's [2.51] ulps are the whole cost. *)
+Lemma DWTimesFP3_error_floor_gap {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWTimesFP3 ah al b) ->
+  ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
+      Rabs (FT2R ah*FT2R b) ->
+  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
+         FT2R (snd (DWTimesFP3 ah al b)))-
+        (FT2R ah+FT2R al)*FT2R b)
+    <= 251/100*bpow radix2 (@common.emin t) /\
+  double_word_prop (fst (DWTimesFP3 ah al b))
+                   (snd (DWTimesFP3 ah al b)).
+Proof.
+move => Hp3 DWa FIN Hgap.
+set x := (FT2R ah*FT2R b)%R.
+set P := Rabs x.
+set ch := Fast2Mult_mul ah b.
+set cl1 := Fast2Mult_err ah b.
+set cl3 := BFMA al b cl1.
+set d := DWTimesFP3 ah al b.
+set u := bpow radix2 (-fprec t).
+set eta := bpow radix2 (@common.emin t).
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu : u <= /8.
+{ unfold u. have -> : (/8:R)=bpow radix2 (-3) by (simpl;lra).
+  apply bpow_le; lia. }
+have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
+have Heta0 : 0 < eta by apply bpow_gt_0.
+have Ffast := FIN1 ah al b FIN.
+have Fch : is_finite ch=true by exact (proj1 Ffast).
+have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
+have Fcl3 := FIN2 ah al b FIN; fold cl1 cl3 in Fcl3.
+have Hcore := DWTimesFP_core_error_floor_gap ah al b
+  Hp3 DWa FIN Hgap.
+fold ch cl3 eta in Hcore. cbv zeta in Hcore.
+have Hdelta := Fast2Mult_sum_error_floor ah b Hp3 Ffast.
+fold x ch cl1 eta in Hdelta.
+have Hchr : FT2R ch=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
+{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
+  apply BMULT_round_correct. exact Fch. }
+have Hxe := round_FLT_error_rel_emin (t:=t) x.
+fold u eta in Hxe. rewrite -Hchr in Hxe.
+fold P in Hxe.
+have Hr : Rabs (x-FT2R ch)<=u*P+/2*eta.
+{ rewrite Rabs_minus_sym. exact Hxe. }
+have Hchlo : (1-u)*P-/2*eta<=Rabs (FT2R ch).
+{ have Hrev := Rabs_triang_inv x (x-FT2R ch).
+  replace (x-(x-FT2R ch))%R with (FT2R ch) in Hrev by ring.
+  fold P in Hrev. nra. }
+have Hchup : Rabs (FT2R ch)<=(1+u)*P+/2*eta.
+{ have Htri := Rabs_triang (FT2R ch-x) x.
+  replace (FT2R ch-x+x)%R with (FT2R ch) in Htri by ring.
+  fold P in Htri. nra. }
+have Hcl1 : Rabs (FT2R cl1)<=u*P+1501/1000*eta.
+{ have Htri := Rabs_triang
+      (FT2R cl1-(x-FT2R ch)) (x-FT2R ch).
+  replace (FT2R cl1-(x-FT2R ch)+(x-FT2R ch))%R with
+      (FT2R cl1)%R in Htri by ring.
+  have Heq : FT2R cl1-(x-FT2R ch)=
+      FT2R ch+FT2R cl1-x by ring.
+  rewrite Heq in Htri. nra. }
+have Hal := @aux_dwu_rel t STD ah al DWa.
+fold u in Hal.
+have Halb : Rabs (FT2R al*FT2R b)<=u*P.
+{ unfold P,x. rewrite !Rabs_mult.
+  have H := Rmult_le_compat_r (Rabs (FT2R b)) _ _
+    (Rabs_pos _) Hal.
+  eapply Rle_trans; [exact H|]. right; ring. }
+set w := (FT2R al*FT2R b+FT2R cl1)%R.
+have Hw : Rabs w<=2*u*P+1501/1000*eta.
+{ unfold w. eapply Rle_trans; [apply Rabs_triang|]. nra. }
+have Hcl3r : FT2R cl3=round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) w.
+{ unfold cl3. rewrite -(BFMA_round_correct t al b cl1 Fcl3).
+  unfold w. f_equal; ring. }
+have He3 := round_FLT_error_rel_emin (t:=t) w.
+fold u eta in He3. rewrite -Hcl3r in He3.
+have Hcl3up : Rabs (FT2R cl3)<=
+    (1+u)*(2*u*P+1501/1000*eta)+/2*eta.
+{ have Htri := Rabs_triang (FT2R cl3-w) w.
+  replace (FT2R cl3-w+w)%R with (FT2R cl3) in Htri by ring.
+  have Huw := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) Hw.
+  nra. }
+have Fe : is_finite_p (Fast2Sum ch cl3).
+{ unfold d, DWTimesFP3 in FIN. fold ch cl1 cl3 in FIN. exact FIN. }
+destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
+    as [Hord|Hnord].
+- have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
+  change (FT2R (snd d)=FT2R ch+FT2R cl3-FT2R (fst d)) in Hsum.
+  split.
+  +
+  change (Rabs ((FT2R (fst d)+FT2R (snd d))-
+    (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
+  rewrite Hsum.
+  replace (FT2R (fst d)+(FT2R ch+FT2R cl3-FT2R (fst d))-
+    (FT2R ah+FT2R al)*FT2R b)%R with
+    ((FT2R ch+FT2R cl3)-(FT2R ah+FT2R al)*FT2R b)%R by ring.
+  eapply Rle_trans; [exact Hcore|]. nra.
+  + exact (Fast2Sum_is_DW ch cl3 (proj1 Fe) Hord).
+- (* Unordered closing Fast2Sum.  |cl3| > |ch| can only happen when the
+     leading product is tiny: |cl3| <= (1+u)(2uP + 1.501eta) + eta/2 while
+     |ch| >= (1-u)P - eta/2, and at u <= 1/8 those cross only below
+     4.5281*eta, so P < 4.6*eta.  The EXACT sum ch + cl3 is then within
+     one binade of the subnormal range -- bound it through the compensated
+     core error, not by the triangle inequality on |ch| and |cl3|
+     separately, which would overshoot 2^(emin+3) -- and the shared
+     FLT/FIX lattice at exponent emin makes Fast2Sum exact. *)
+  have HuP' : u*P<=/8*P.
+  { have H := Rmult_le_compat_r P _ _ HP0 Hu. nra. }
+  have Hueta' : u*eta<=/8*eta.
+  { have H := Rmult_le_compat_r eta _ _ (Rlt_le _ _ Heta0) Hu. nra. }
+  have Hu2P : u*(u*P)<=/64*P.
+  { have H := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) HuP'.
+    have H2 : (/8*(u*P)<=/8*(/8*P))%R by nra.
+    nra. }
+  have HsmallP : P<46/10*eta.
+  { apply Rnot_le_lt. move => HPbig.
+    have Hcl3coarse : Rabs (FT2R cl3)<=9/32*P+22/10*eta.
+    { eapply Rle_trans; [exact Hcl3up|]. nra. }
+    have Hchcoarse : 7/8*P-/2*eta<=Rabs (FT2R ch).
+    { eapply Rle_trans; [|exact Hchlo]. nra. }
+    have Hcontra : Rabs (FT2R cl3)<=Rabs (FT2R ch) by nra.
+    exact (Hnord Hcontra). }
+  have Halb' : Rabs ((FT2R ah+FT2R al)*FT2R b)<=(1+u)*P.
+  { replace ((FT2R ah+FT2R al)*FT2R b)%R with
+        (x+FT2R al*FT2R b)%R by (unfold x; ring).
+    eapply Rle_trans; [apply Rabs_triang|].
+    fold P. nra. }
+  have Hbig8 : 8*eta<=bpow radix2 (@common.emin t+fprec t).
+  { unfold eta. have -> : (8:R)=bpow radix2 3 by (simpl;lra).
+    rewrite -bpow_plus. apply bpow_le; lia. }
+  have Hsumsmall : Rabs (FT2R ch+FT2R cl3)<=
+      bpow radix2 (@common.emin t+fprec t).
+  { have Htri2 := Rabs_triang
+        ((FT2R ch+FT2R cl3)-(FT2R ah+FT2R al)*FT2R b)
+        ((FT2R ah+FT2R al)*FT2R b).
+    replace ((FT2R ch+FT2R cl3)-(FT2R ah+FT2R al)*FT2R b+
+        (FT2R ah+FT2R al)*FT2R b)%R with (FT2R ch+FT2R cl3)%R
+      in Htri2 by ring.
+    have Hstep : Rabs (FT2R ch+FT2R cl3)<=251/100*eta+(1+u)*P.
+    { eapply Rle_trans; [exact Htri2|].
+      apply Rplus_le_compat; [exact Hcore|exact Halb']. }
+    (* 2.51*eta + (1+u)*P < 2.51*eta + (9/8)*4.6*eta = 7.685*eta <= 8*eta.
+       Linear in the atoms eta, P and u*P, so lra suffices. *)
+    have Hstep2 : 251/100*eta+(1+u)*P<=8*eta.
+    { have H1 : ((1+u)*P = P+u*P)%R by ring.
+      rewrite H1. lra. }
+    eapply Rle_trans; [exact Hstep|].
+    eapply Rle_trans; [exact Hstep2|exact Hbig8]. }
+  have Hsum := Fast2Sum_sum_exact_of_sum_small ch cl3 Fe Hsumsmall.
+  fold d in Hsum.
+  split.
+  + change (Rabs ((FT2R (fst d)+FT2R (snd d))-
+      (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
+    rewrite Hsum. exact Hcore.
+  + exact (DWTimesFP3_double_word_of_sum ah al b FIN Hsum).
+Qed.
+
+(* ---------- public assembly: the whole-range mixed API ---------- *)
+
+(* Normal arm.  Above the TwoProd exactness threshold the product residual
+   is representable and the entire Algorithm-9 error is relative, with no
+   physical-floor contribution: this is Layer 1's DWTimesFP_relerr_bound
+   cleared of its division by the exact product. *)
+Lemma DWTimesFP3_error_normal_arm {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWTimesFP3 ah al b) ->
+  bpow radix2 (@common.emin t+2*fprec t-1) <=
+    Rabs (FT2R ah*FT2R b) ->
+  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
+         FT2R (snd (DWTimesFP3 ah al b)))-
+        (FT2R ah+FT2R al)*FT2R b)
+    <= 2*bpow radix2 (-fprec t)^2*
+         Rabs ((FT2R ah+FT2R al)*FT2R b).
+Proof.
+move => Hp3 DWa FIN Hbig.
+move: (xryr_ne_0_of_big ah al b DWa Hbig) => [_ [Hyne [Hxrne Hne]]].
+have Hrel := DWTimesFP_relerr_bound ah al b DWa FIN Hp3 (or_intror Hbig).
+unfold relative_error_DWTimesFP in Hrel.
+set E := (FT2R (fst (DWTimesFP3 ah al b))+
+          FT2R (snd (DWTimesFP3 ah al b))-
+          (FT2R ah+FT2R al)*FT2R b)%R.
+set Q := ((FT2R ah+FT2R al)*FT2R b)%R.
+fold E Q in Hrel. fold Q.
+have Heq : Rabs E = Rabs (E/Q)*Rabs Q.
+{ rewrite -Rabs_mult. f_equal. field. exact Hne. }
+rewrite Heq.
+have Hmul := Rmult_le_compat_r (Rabs Q) _ _ (Rabs_pos _) Hrel.
+eapply Rle_trans; [exact Hmul|]. right; ring.
+Qed.
+
+(* ------------------------------------------------------------------
+   PRIMARY API: branch-aware whole-range Algorithm-9 error.
+
+   The two arms are the two sides of Fast2Mult_cond's underflow
+   disjunct (DDModels.v), so every input falls in exactly one:
+
+     - normal arm  |xh*y| >= 2^(emin+2p-1) : purely relative, 2u^2;
+     - gap arm     |xh*y| <  2^(emin+2p-1) : purely absolute, C_FP*eta
+                                             with C_FP = 2.51.
+
+   The gap arm covers the exact-zero case too (|0| is below the
+   threshold), so the dichotomy is exhaustive; the third conjunct
+   records the sharper fact that the exact product is then 0 as well.
+
+   C_FP = 2.51 recomputed for p >= 3: the gap cost is
+   eta/2 (Fast2Mult residual floor) + u|w| + eta/2 (cross-term floor)
+   with |w| <= 2uP + 1.501eta and u^2 P < eta/2 in the gap, i.e.
+   < 2eta + 1.501*u*eta <= 2.188*eta at u <= 1/8.  So 2.51 holds with
+   about 0.3 eta of margin at every p >= 3.
+   ------------------------------------------------------------------ *)
+Theorem DWTimesFP3_error_mixed {NANS : Nans} {t : type}
+    {STD : is_standard t} (xh xl y : ftype t) :
+  (3 <= fprec t)%Z -> 
+  double_word_prop xh xl ->
+  is_finite_p (DWTimesFP3 xh xl y) ->
+  (bpow radix2 (@common.emin t+2*fprec t-1) <=
+     Rabs (FT2R xh*FT2R y) ->
+   Rabs ((FT2R (fst (DWTimesFP3 xh xl y))+
+          FT2R (snd (DWTimesFP3 xh xl y)))-
+         (FT2R xh+FT2R xl)*FT2R y)
+     <= 2*bpow radix2 (-fprec t)^2*
+          Rabs ((FT2R xh+FT2R xl)*FT2R y)) /\
+  (Rabs (FT2R xh*FT2R y) <
+     bpow radix2 (@common.emin t+2*fprec t-1) ->
+   Rabs ((FT2R (fst (DWTimesFP3 xh xl y))+
+          FT2R (snd (DWTimesFP3 xh xl y)))-
+         (FT2R xh+FT2R xl)*FT2R y)
+     <= 251/100*bpow radix2 (@common.emin t)) /\
+  (FT2R xh*FT2R y = 0 -> (FT2R xh+FT2R xl)*FT2R y = 0).
+Proof.
+move => Hp3 DWa FIN.
+split; [|split].
+- move => Hbig.
+  exact (DWTimesFP3_error_normal_arm xh xl y Hp3 DWa FIN Hbig).
+- move => Hgap.
+  exact (proj1 (DWTimesFP3_error_floor_gap xh xl y
+    Hp3 DWa FIN (Rlt_not_le _ _ Hgap))).
+- move => Hz. exact (xryr0_of_prod0 xh xl y DWa Hz).
+Qed.
+
+(* Flat "conventional mixed" consequence: a single bound valid in every
+   regime, at the cost of carrying both terms everywhere.  This is the
+   form most clients want and the form DWDivDW_acc consumes.  It is a
+   two-line consequence of the branch theorem -- each arm supplies one
+   summand and the other is nonnegative -- rather than a second copy of
+   the regime analysis. *)
+Corollary DWTimesFP3_error_mixed_flat {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWTimesFP3 ah al b) ->
+  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
+         FT2R (snd (DWTimesFP3 ah al b)))-
+        (FT2R ah+FT2R al)*FT2R b)
+    <= 2*bpow radix2 (-fprec t)^2*
+         Rabs ((FT2R ah+FT2R al)*FT2R b)+
+       251/100*bpow radix2 (@common.emin t).
+Proof.
+move => Hp3 DWa FIN.
+move: (DWTimesFP3_error_mixed ah al b Hp3 DWa FIN) => [Hnorm [Hgap _]].
+have Hu2 : 0 <= 2*bpow radix2 (-fprec t)^2*
+    Rabs ((FT2R ah+FT2R al)*FT2R b).
+{ have := bpow_ge_0 radix2 (-fprec t).
+  have := Rabs_pos ((FT2R ah+FT2R al)*FT2R b). nra. }
+have Heta : 0 <= 251/100*bpow radix2 (@common.emin t).
+{ have := bpow_ge_0 radix2 (@common.emin t). nra. }
+destruct (Rle_or_lt (bpow radix2 (@common.emin t+2*fprec t-1))
+    (Rabs (FT2R ah*FT2R b))) as [Hbig|Hsmall].
+- have H := Hnorm Hbig. lra.
+- have H := Hgap Hsmall. lra.
+Qed.
+
+Lemma DWTimesFP3_double_word_mixed {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWTimesFP3 ah al b) ->
+  double_word_prop (fst (DWTimesFP3 ah al b))
+                   (snd (DWTimesFP3 ah al b)).
+Proof.
+move => Hp3 DWa FIN.
+destruct (Rle_dec
+  (bpow radix2 (@common.emin t+2*fprec t-1))
+  (Rabs (FT2R ah*FT2R b))) as [Hbig|Hgap].
+- have Fmul := FIN3 ah al b FIN.
+  have Fcl3 := FIN2 ah al b FIN.
+  have Hord := aux_cl3_le_ch ah al b
+    DWa Fmul Fcl3 Hbig.
+  exact (DWTimesFP3_double_word_from_pre
+    ah al b (proj1 FIN) Hord).
+- exact (proj2 (DWTimesFP3_error_floor_gap ah al b
+    Hp3 DWa FIN Hgap)).
+Qed.
