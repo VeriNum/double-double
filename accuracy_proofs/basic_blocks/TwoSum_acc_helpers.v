@@ -12,7 +12,7 @@
 
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
-Require Import float_acc_lems op_defs dd_tactics.
+Require Import float_acc_lems op_defs dd_tactics FLT_helpers.
 Require Import DWPlus DDModels common.
 Require Import F2SumFLT F2SumFLX.
 From Flocq Require Import Pff2Flocq Core.
@@ -202,6 +202,61 @@ Proof.
   { apply Rplus_le_compat; [exact Hbmax|].
     apply Rmult_le_compat_l; [lra | exact Hulps]. }
   lra.
+Qed.
+
+(* No-overflow of the first Fast2Sum step from pure magnitude headroom on the
+   SECOND argument -- no ordering hypothesis of any kind.
+
+   The two lemmas above both need an ordering because they bound the step
+   argument through |a|.  That is unnecessary: since
+     s - a = b + (s - (a + b)),   s = BPLUS a b,
+   the step argument is controlled by |b| plus the rounding error of the sum,
+     |s - a| <= |b| + /2 ulp(s),
+   and NOT by |s| + |a|.  So a bound on |b| alone suffices.  This is the route
+   needed in the Fast2Mult underflow gap, where neither the magnitude ordering
+   |b| <= |a| nor the ulp ordering ulp b <= ulp a is available.
+
+   The stated conclusion is the sharp Omega/2, which callers need in order to
+   chain into the second Fast2Sum step (see is_finite_FastSum_small):
+     |b| <= Omega/4, ulp(_) <= bpow (femax - fprec) <= Omega/4
+     ==> |s - a| <= Omega/4 + Omega/8 = 3/8 Omega
+     ==> |rnd (s - a)| <= 3/8 Omega + Omega/8 = Omega/2. *)
+Lemma round_2Sum_a_bnd_small (a b : ftype t):
+  Rabs (FT2R b) <= /4 * Omega ->
+  is_finite (BPLUS a b) = true ->
+  Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) <= /2 * Omega .
+Proof.
+  move => Hb Hfin.
+  have HO  : 0 < Omega by apply bpow_gt_0.
+  have HB0 : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+  have HB4 := @bpow_femax_fprec_le_quarter_Omega t.
+  (* rounding error of the sum, and the generic ulp ceiling *)
+  have Herr : Rabs (FT2R (BPLUS a b) - (FT2R a + FT2R b))
+              <= /2 * ulp (FT2R (BPLUS a b)).
+  { rewrite -!BPLUS_round_correct //. apply Ulp.error_le_half_ulp_round; FLT_basics. }
+  have Hulps : ulp (FT2R (BPLUS a b)) <= bpow radix2 (femax t - fprec t)
+    by (apply ulp_below_overflow; apply is_finite_no_overflow => //).
+  (* |s - a| <= |b| + /2 ulp(s) *)
+  have Hsa : Rabs (FT2R (BPLUS a b) - FT2R a)
+             <= /4 * Omega + /2 * bpow radix2 (femax t - fprec t).
+  { replace (FT2R (BPLUS a b) - FT2R a)%R
+      with (FT2R b + (FT2R (BPLUS a b) - (FT2R a + FT2R b)))%R by ring.
+    eapply Rle_trans; [apply Rabs_triang|]. lra. }
+  (* rounding the step costs at most another /2 ulp *)
+  eapply Rle_trans; [apply round_abs_le_abs_plus_half_ulp|].
+  have Hu2 : ulp (FT2R (BPLUS a b) - FT2R a) <= bpow radix2 (femax t - fprec t)
+    by (apply ulp_below_overflow; lra).
+  lra.
+Qed.
+
+Lemma no_overflow_2Sum_a_small (a b : ftype t):
+  Rabs (FT2R b) <= /4 * Omega ->
+  is_finite (BPLUS a b) = true ->
+  Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) < Omega .
+Proof.
+  move => Hb Hfin.
+  have H := round_2Sum_a_bnd_small a b Hb Hfin.
+  have HO : 0 < Omega by apply bpow_gt_0. lra.
 Qed.
 
 Lemma no_overflow_2Sum_b_1 (a b : ftype t) :
@@ -469,6 +524,51 @@ Proof.
   move: HB; rewrite /BMINUS/BINOP !is_finite_Binary !float_of_ftype_of_float => //.
   --
   apply no_overflow_2Sum_a_ulp => //.
+Qed.
+
+(* Same finiteness result as is_finite_FastSum / is_finite_FastSum_ulp, but from
+   pure magnitude headroom on the second argument instead of from an ordering.
+   |b| <= Omega/4 is enough for BOTH Fast2Sum steps:
+
+     z = BMINUS s a : |rnd (s - a)| <= Omega/2      (round_2Sum_a_bnd_small)
+     t = BMINUS b z : |b - z| <= Omega/4 + Omega/2 = 3/4 Omega, so
+                      |rnd (b - z)| <= 3/4 Omega + Omega/8 = 7/8 Omega < Omega.
+
+   Unlike its two siblings this route says nothing about the VALUE of the error
+   term -- Fast2Sum need not be exact here -- only that it is finite.  That is
+   exactly what is wanted in the Fast2Mult underflow gap, where the closing
+   Fast2Sum of DWTimesFP3 may be unordered: the value is then recovered
+   separately from the shared FLT/FIX lattice (see
+   DWMulFP_acc.Fast2Sum_sum_exact_of_sum_small). *)
+Lemma is_finite_FastSum_small (a b : ftype t):
+  Rabs (FT2R b) <= /4 * Omega ->
+  is_finite (BPLUS a b) = true ->
+  is_finite (snd (DDModels.Fast2Sum a b)) = true .
+Proof.
+  move => Hb Hfin.
+  rewrite /DDModels.Fast2Sum/fst/snd.
+  destruct (BPLUS_finite_e t a b Hfin) as [Hfina Hfinb].
+  have HO  : 0 < Omega by apply bpow_gt_0.
+  have HB0 : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
+  have HB4 := @bpow_femax_fprec_le_quarter_Omega t.
+  (* first step: z = BMINUS s a is finite, with |z| <= Omega/2 *)
+  have Hstep1 := round_2Sum_a_bnd_small a b Hb Hfin.
+  have Hfinz : is_finite (BMINUS (BPLUS a b) a) = true.
+  { apply no_overflow_minus_is_finite => //. unfold Bminus_no_overflow. lra. }
+  have Hzb : Rabs (FT2R (BMINUS (BPLUS a b) a)) <= /2 * Omega
+    by (rewrite -BMINUS_round_correct //; exact Hstep1).
+  (* second step: |b - z| <= 3/4 Omega, so its rounding stays below Omega *)
+  have Hd : Rabs (FT2R b - FT2R (BMINUS (BPLUS a b) a)) <= /4 * Omega + /2 * Omega.
+  { replace (FT2R b - FT2R (BMINUS (BPLUS a b) a))%R
+      with (FT2R b + - FT2R (BMINUS (BPLUS a b) a))%R by ring.
+    eapply Rle_trans; [apply Rabs_triang|]. rewrite Rabs_Ropp. lra. }
+  have Hnov2 : Rabs (rnd (FT2R b - FT2R (BMINUS (BPLUS a b) a))) < Omega.
+  { eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
+    have Hu : ulp (FT2R b - FT2R (BMINUS (BPLUS a b) a))
+              <= bpow radix2 (femax t - fprec t)
+      by (apply ulp_below_overflow; lra).
+    lra. }
+  apply no_overflow_minus_is_finite => //.
 Qed.
 
 Lemma is_finite_2Sum_b_2 (a b : ftype t):

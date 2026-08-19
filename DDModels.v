@@ -221,6 +221,40 @@ Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
   Fast2Mult_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
+(* DWTimesFP_cond_acc is the "accurate-only" precondition for DWTimesFP3: it
+   weakens Fast2Mult_cond to Fast2Mult_cond_acc, i.e. it drops the underflow
+   disjunct (FT2R xh * FT2R y = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R y|) and
+   keeps only overflow safety.  Exactly the DWTimesFP analogue of
+   Fast2Mult_cond_acc vs Fast2Mult_cond above.
+
+   It suffices for the whole-range MIXED bound
+
+     |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta
+
+   (DWMulFP_acc.DWTimesFP3_error_mixed_flat) and for output double-word closure
+   (DWTimesFP3_double_word_mixed), because both hold in EVERY regime given only
+   the double-word relation and finiteness of the computed pair -- and the three
+   conjuncts below are what a runtime guard needs to establish that finiteness.
+   It does NOT suffice for the pure 2u^2 relative bound, which is available only
+   when the nonzero underflow gap is excluded; that remains the province of the
+   full DWTimesFP_cond (see DWMulFP_acc.DWTimesFP_cond_no_gap).
+
+   This is the cond discharged by the runtime guard dw_mult_fp_check and carried
+   by the exported funspec dw_mult_fp9_guarded_spec. *)
+Definition DWTimesFP_cond_acc (xh xl y : ftype t) : Prop :=
+  is_finite xl = true /\
+  double_word_prop xh xl /\
+  Fast2Mult_cond_acc xh y /\
+  Rabs (FT2R xh * FT2R y) <= /2 * Omega.
+
+Lemma DWTimesFP_cond_acc_of_cond (xh xl y : ftype t) :
+  DWTimesFP_cond xh xl y -> DWTimesFP_cond_acc xh xl y.
+Proof.
+  intros (Hfxl & Hdwp & Hf2m & Hreal).
+  repeat split; try assumption.
+  exact (Fast2Mult_cond_acc_of_cond xh y Hf2m).
+Qed.
+
 End DWTimesFPCond.
 
 

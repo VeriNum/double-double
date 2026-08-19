@@ -96,18 +96,36 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_mult_fp_check(struct dword *x, double y) {
-    /* Verifies DWTimesFP_cond: x->t, y finite; (x->s, x->t) is a double-word;
-       Fast2Mult(x->s, y) is safe (round(x->s * y) finite AND the underflow
-       disjunction below); and the real product |FT2R x->s * FT2R y| <= Omega/2
-       = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down finiteness of
-       x->t in R (FT2R sends NaN/Inf to 0), so fin_xl is asserted, even though
-       x->s + x->t == x->s implies it under IEEE comparison semantics. */
+    /* Verifies DWTimesFP_cond_acc: x->t, y finite; (x->s, x->t) is a double-word;
+       round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
+       Omega/2 = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down
+       finiteness of x->t in R (FT2R sends NaN/Inf to 0), so fin_xl is asserted,
+       even though x->s + x->t == x->s implies it under IEEE comparison
+       semantics.
+
+       NOT CHECKED, deliberately: Fast2Mult's underflow disjunction
+         FT2R x->s * FT2R y = 0  \/  2^(emin+2*p-1) <= |FT2R x->s * FT2R y|
+       (the `mult_safe` test this function used to carry, and which
+       fast2_mult_check and dw_mult_dw_check still do).  That disjunct buys the
+       PURE relative bound 2u^2 by excluding the Fast2Mult underflow gap, at the
+       cost of aborting on any input whose leading product lands in it -- ordinary
+       tiny-operand inputs.  The contract exported by dw_mult_fp9_guarded is
+       instead the whole-range MIXED bound
+
+         |(zh+zl) - (x->s + x->t)*y| <= 2u^2 |(x->s + x->t)*y| + 2.51*eta
+
+       (DWMulFP_acc.DWTimesFP3_error_mixed_flat, via
+       DWTimesFP_mixed_accuracy_from_cond_acc), which holds in EVERY regime given
+       only the double-word relation and finiteness of the computed pair.  The
+       three conjuncts below are exactly what is needed to establish that
+       finiteness (DWMulFP_acc.DWTimesFP3_finite_acc), so the gap is accepted
+       rather than fatal.  Output double-word closure likewise survives
+       (DWTimesFP3_double_word_from_cond_acc). */
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
     int dwx    = fin_xh && fin_xl && (x->s + x->t == x->s);
     double z = x->s * y;
-    double thresh = DBL_MIN * ldexp(1.0, 53);  /* 2^(emin + 2*p - 1) */
     double q_prod = ldexp(1.0, 1023);          /* Omega/2 = 2^(femax-1) */
     /* Product magnitude bound, replacing the old per-factor bounds.  This single
        STRICT check on the rounded product z = RN(x->s * y) does double duty:
@@ -137,16 +155,7 @@ int dw_mult_fp_check(struct dword *x, double y) {
        maximally general: it accepts any factor split (e.g. a large x->s times a
        small y) whose product is in range. */
     int prod_bnd = fabs(z) < q_prod;
-    /* Fast2Mult(x->s, y) underflow disjunction, mirror fast2_mult_check.  Encodes
-       the cond's real-product disjunct (FT2R x->s * FT2R y = 0  \/
-       2^(emin+2*p-1) <= |FT2R x->s * FT2R y|).  Same rounded-vs-exact
-       one-directional argument as above: thresh < |RN(x->s*y)| => thresh <
-       |x->s*y| (no_underflow_real_from_round_mul).  Overflow can no longer make
-       fabs(z) spuriously large, because prod_bnd already forces z finite. */
-    int zxh = x->s == 0.0 && fin_y;
-    int zy  = y    == 0.0 && fin_xh;
-    int mult_safe = (zxh || zy) || thresh < fabs(z);
-    return dwx && fin_y && prod_bnd && mult_safe;
+    return dwx && fin_y && prod_bnd;
 }
 
 int dw_mult_dw_check(struct dword *x, struct dword *y) {

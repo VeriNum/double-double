@@ -165,6 +165,10 @@ Definition dw_div_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
+(* Accurate-only cond: no underflow disjunct, so the guard accepts the Fast2Mult
+   underflow gap.  What that buys the caller is the whole-range MIXED bound
+   (DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc) rather than the pure
+   2u^2 relative bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check
   WITH x : val,
@@ -177,7 +181,7 @@ Definition dw_mult_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesFP_cond (fst xh) (snd xh) y)
+         DWTimesFP_cond_acc (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 

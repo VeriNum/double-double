@@ -256,6 +256,19 @@ Definition dw_plus_dw2_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
+(* The public API for DW x FP is the WHOLE-RANGE mixed bound
+
+     |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta,   eta = 2^emin,
+
+   i.e. DWMulFP_acc.DWTimesFP3_error_mixed_flat, reached here through its
+   cond-level form DWTimesFP_mixed_accuracy_from_cond_acc.  The PRE is empty:
+   dw_mult_fp9_guarded's runtime check makes the POST unconditional, and the
+   check now tests only DWTimesFP_cond_acc -- no underflow disjunct -- so inputs
+   whose leading product falls in the Fast2Mult underflow gap are computed rather
+   than rejected.  The price is stated in the bound: the 2.51*eta floor term is
+   carried in every regime, including the normal one where the sharper pure 2u^2
+   relative bound (DWTimesFP_accuracy_from_cond, which needs the gap excluded)
+   would hold. *)
 Definition dw_mult_fp9_guarded_spec :=
   DECLARE _dw_mult_fp9_guarded
   WITH s: val, x: val,
@@ -267,8 +280,10 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP((relative_error_DWTimesFP (fst xh) (snd xh) y
-           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R
+    PROP((absolute_error_DWTimesFP (fst xh) (snd xh) y
+           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2 *
+                Rabs ((FT2R (fst xh) + FT2R (snd xh)) * FT2R y)
+              + 251/100 * bpow Zaux.radix2 (@common.emin Tdouble))%R
          /\ double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
                              (snd (DWTimesFP3 (fst xh) (snd xh) y)))
     RETURN()
@@ -461,7 +476,7 @@ Definition dw_mult_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWTimesFP_cond (fst xh) (snd xh) y)
+    PROP(b = true -> DWTimesFP_cond_acc (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 

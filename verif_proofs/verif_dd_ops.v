@@ -422,7 +422,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesFP_cond (fst xh) (snd xh) y)
+  PROP (DWTimesFP_cond_acc (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -433,15 +433,21 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
+  assert_PROP (DWTimesFP_cond_acc (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
+  (* The whole-range mixed bound is the public API for DW x FP: the guard only
+     establishes DWTimesFP_cond_acc (no underflow disjunct), which is exactly
+     what DWTimesFP3_error_mixed_flat needs once finiteness is derived. *)
   pose proof
-    (@DWTimesFP_accuracy_from_cond _ Tdouble _ (fst xh) (snd xh) y Hfp H0)
+    (@DWTimesFP_mixed_accuracy_from_cond_acc _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hacc.
+  unfold absolute_error_DWTimesFP in Hacc.
   assert (Hdw : double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
                                  (snd (DWTimesFP3 (fst xh) (snd xh) y)))
-    by exact (@DWTimesFP3_double_word _ Tdouble _ (fst xh) (snd xh) y H0).
+    by exact (@DWTimesFP3_double_word_from_cond_acc _ Tdouble _
+                (fst xh) (snd xh) y Hfp HFC).
   entailer!!.
 Qed.
 

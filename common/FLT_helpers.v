@@ -47,6 +47,21 @@ unfold SpecFloat.fexp, SpecFloat.emin.
 apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
 Qed.
 
+(** One ulp of headroom is at most a quarter of the overflow threshold.  Pairs
+    with [ulp_below_overflow] below to turn ulp-sized slack into
+    [Omega]-relative slack, which is how the no-overflow side conditions of the
+    multi-step algorithms are discharged. *)
+Lemma bpow_femax_fprec_le_quarter_Omega :
+  bpow radix2 (femax t - fprec t) <= /4 * Omega.
+Proof.
+have -> : (/4 * Omega = bpow radix2 (femax t - 2))%R.
+{ have -> : Omega = (bpow radix2 (femax t - 2) * bpow radix2 2)%R
+    by rewrite -bpow_plus; f_equal; lia.
+  have -> : bpow radix2 2 = 4%R by reflexivity.
+  lra. }
+apply bpow_le. pose proof fprec_lb t; lia.
+Qed.
+
 (** A rounded value is bounded by the input magnitude plus half its ulp. *)
 Lemma round_abs_le_abs_plus_half_ulp (v : R) :
   Rabs (round radix2 fexp
