@@ -332,7 +332,7 @@ Definition dw_div_fp15_guarded_spec :=
    through the model-level relative_error_DWDivDW (DWDivDW_acc.v) exactly as
    dw_mult_dw12_guarded_spec states its bound through relative_error_DWTimesDW:
 
-     |(zh+zl - Q)/Q| <= 24 u^2,   Q = (xh+xl)/(yh+yl).
+     |(zh+zl - Q)/Q| <= 16.5 u^2,   Q = (xh+xl)/(yh+yl).
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
    condition rather than an input condition -- at Tdouble it is 14 <= 53 and the
@@ -344,10 +344,8 @@ Definition dw_div_fp15_guarded_spec :=
    AND double-word-ness of the internal reciprocal node (mh, ml) plus a normality
    bound, and there is no from-cond version of it yet.
 
-   The coefficient 24 (rather than the tight 9.8 of the paper bound) is the
-   regime-independent figure: the underflow regime contributes absolute 2^emin
-   floor terms.  relative_errorDWDivDW3_from_cond_combined_abs retains those
-   floors explicitly and follows from the same hypotheses if a caller needs them. *)
+   The canonical theorem proves this regime-independent coefficient directly,
+   including executions affected by underflow. *)
 Definition dw_div_dw18_guarded_spec :=
   DECLARE _dw_div_dw18_guarded
   WITH s: val, x: val, y: val,
@@ -361,7 +359,7 @@ Definition dw_div_dw18_guarded_spec :=
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
     PROP((relative_error_DWDivDW (fst xh) (snd xh) (fst yh) (snd yh)
-          <= 24 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+          <= (165/10) * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;

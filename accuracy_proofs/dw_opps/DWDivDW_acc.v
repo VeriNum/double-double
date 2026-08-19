@@ -49,7 +49,7 @@
         result under explicit no-underflow assumptions.
       - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
         runtime model, giving relative error at most [(98/10) * u^2].
-      - [relative_errorDWDivDW3_from_cond_combined_tight] gives the
+      - [relative_errorDWDivDW3_from_cond_combined] gives the
         regime-independent bound, including underflow, of [(165/10) * u^2].
 
     Both the bridge and the transferred relative-error theorem are proved
@@ -5778,8 +5778,8 @@ End CondAccuracyDWDivDW.
    Public condition-level accuracy theorem
 
    The arm-specific proof above already covers both normal and underflowing
-   executions.  This section exports its [16.5*u^2] relative bound and retains
-   the historical [24*u^2] statement as a compatibility corollary.
+   executions.  This section exports its [16.5*u^2] relative bound as the
+   canonical condition-level result.
    ============================================================ *)
 Section CondAccuracyDWDivDW_public.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -5794,24 +5794,14 @@ Let Q := X / (FT2R yh + FT2R yl).
 Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
           FT2R (snd (DWDivDW3 xh xl yh yl)).
 
-(** Sharpest exported regime-independent relative bound.  The proof keeps the
+(** Canonical exported regime-independent relative bound.  The proof keeps the
     ordered and unordered refinement-arm budgets separate through the closing
     multiplication and underflow-floor conversion. *)
-Theorem relative_errorDWDivDW3_from_cond_combined_tight :
+Theorem relative_errorDWDivDW3_from_cond_combined :
   Rabs ((zr-Q)/Q) <= 165/10*u^2.
 Proof.
 exact (relative_errorDWDivDW3_from_cond_arms
   xh xl yh yl Hp14 COND).
-Qed.
-
-(** Compatibility restatement at the historical coefficient, kept so the VST
-    layer ([dw_div_dw18_guarded_spec]) continues to consume an unchanged
-    statement. *)
-Theorem relative_errorDWDivDW3_from_cond_combined :
-  Rabs ((zr-Q)/Q) <= 24*u^2.
-Proof.
-eapply Rle_trans; [exact relative_errorDWDivDW3_from_cond_combined_tight|].
-apply Rmult_le_compat_r; [apply pow_le; apply bpow_ge_0|lra].
 Qed.
 
 End CondAccuracyDWDivDW_public.

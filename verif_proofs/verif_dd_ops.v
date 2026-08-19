@@ -524,7 +524,7 @@ Qed.
    failure (whose PROP(False) postcondition makes that branch vacuously satisfy
    the accuracy claim), otherwise recover DWDivDW_cond from the check's boolean
    and call the unguarded op.  Hp14 is the format side condition 14 <= fprec
-   Tdouble = 53, discharged here, so the exported 24u^2 bound rests on
+   Tdouble = 53, discharged here, so the exported 16.5u^2 bound rests on
    DWDivDW_cond alone. *)
 Lemma body_dw_div_dw18_guarded :
   semax_body Vprog Gprog f_dw_div_dw18_guarded dw_div_dw18_guarded_spec.
@@ -557,4 +557,3 @@ forward_if Post_if.
   unfold relative_error_DWDivDW.
   entailer!!.
 Qed.
-
