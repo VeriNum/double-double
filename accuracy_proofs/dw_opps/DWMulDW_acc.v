@@ -22,8 +22,16 @@
         theorem.
 
     PUBLIC INTERFACE
-      Most clients should use:
-        DWTimesDW_accuracy_from_cond   accuracy from DWTimesDW_cond
+
+      MIXED absolute/relative API (p >= 8; see below):
+        DWTimesDW3_error_mixed         4u^2|P| + min(2*eta, 4u^2|P|), i.e.
+                                       min(4u^2|P| + 2*eta, 8u^2|P|): the
+                                       underflow budget and the relative
+                                       bound in one statement
+        DWTimesDW3_error_mixed_floor   the 4u^2|P| + 2*eta reading alone
+
+      RELATIVE API (p >= 5; what VST clients use):
+        DWTimesDW_accuracy_from_cond   relerr <= 8u^2 from DWTimesDW_cond
         DWTimesDW3_double_word         output is a double word from the cond
 
       Proof developments that already have decomposed hypotheses may use:
@@ -31,6 +39,17 @@
         DWTimesDW_accuracy_pre_of_cond proof that the cond supplies them
         DWTimesDW_relerr_bound         accuracy from the named precondition
         DWTimesDW_relerr_normal        tighter, all-intermediates-normal result
+
+      NOTE ON PRECISION.  The relative API stays at p >= 5 and is proved
+      directly (via aux_eta_bnd), NOT as a corollary of the mixed theorem:
+      the mixed theorem needs p >= 8, so routing the relative bound through
+      it would raise the relative API's precision requirement and break its
+      VST clients, which pass a p >= 5 hypothesis.  The p >= 8 comes from a
+      single regime, DWTimesDW_abs_normal_near_threshold, where the 7.5u^2
+      aggregate of aux_eta_bnd meets the 9/8 near-threshold window with only
+      1.6% of headroom; the other seven regimes hold at p >= 5.  So for
+      p in [5,8) the 8u^2 relative bound is available and the mixed form is
+      not; from p >= 8 both are, and the mixed form implies the relative one.
 
       DWDivDW_acc also reuses the finiteness, bridge, and detailed absolute
       error regime lemmas below.  Those declarations are auxiliary to
@@ -4270,7 +4289,7 @@ Theorem DWTimesDW_abs_low0_final_underflow :
   double_word xh xl ->
   double_word yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  (14 <= fprec t)%Z ->
+  (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xl*FT2R yl) < bpow radix2 (eminA+fprec t-1) ->
@@ -4280,7 +4299,7 @@ Theorem DWTimesDW_abs_low0_final_underflow :
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+2*bpow radix2 eminA.
 Proof.
-move => DWx DWy FIN Hp14 Nprod N0 N3.
+move => DWx DWy FIN Hp5 Nprod N0 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Fmul := FINmul xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
@@ -4299,8 +4318,8 @@ subst er0; subst er3.
 set P := Rabs (FT2R xh*FT2R yh).
 set eta := bpow radix2 eminA.
 have Hu0 : 0 < u by (unfold u;apply bpow_gt_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
+have Hu : u <= /32.
+{ unfold u. have -> : (/32:R)=bpow radix2 (-5) by (simpl;lra).
   apply bpow_le;lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
@@ -4402,7 +4421,7 @@ Theorem DWTimesDW_abs_low0_low1_tail_normal :
   double_word xh xl ->
   double_word yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  (14 <= fprec t)%Z ->
+  (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xl*FT2R yl) < bpow radix2 (eminA+fprec t-1) ->
@@ -4417,7 +4436,7 @@ Theorem DWTimesDW_abs_low0_low1_tail_normal :
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+2*bpow radix2 eminA.
 Proof.
-move => DWx DWy FIN Hp14 Nprod N0 N1 N2 N3.
+move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Fmul := FINmul xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
@@ -4441,8 +4460,8 @@ set P := Rabs (FT2R xh*FT2R yh).
 set eta := bpow radix2 eminA.
 set U := bpow radix2 (eminA+fprec t-1).
 have Hu0 : 0 < u by (unfold u;apply bpow_gt_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
+have Hu : u <= /32.
+{ unfold u. have -> : (/32:R)=bpow radix2 (-5) by (simpl;lra).
   apply bpow_le;lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
@@ -4639,7 +4658,7 @@ Theorem DWTimesDW_abs_low0_low2_other_normal :
   double_word xh xl ->
   double_word yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  (14 <= fprec t)%Z ->
+  (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xl*FT2R yl) < bpow radix2 (eminA+fprec t-1) ->
@@ -4654,7 +4673,7 @@ Theorem DWTimesDW_abs_low0_low2_other_normal :
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+2*bpow radix2 eminA.
 Proof.
-move => DWx DWy FIN Hp14 Nprod N0 N1 N2 N3.
+move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Fmul := FINmul xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
@@ -4678,8 +4697,8 @@ set P := Rabs (FT2R xh*FT2R yh).
 set eta := bpow radix2 eminA.
 set U := bpow radix2 (eminA+fprec t-1).
 have Hu0 : 0 < u by (unfold u;apply bpow_gt_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
+have Hu : u <= /32.
+{ unfold u. have -> : (/32:R)=bpow radix2 (-5) by (simpl;lra).
   apply bpow_le;lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
@@ -4870,13 +4889,29 @@ rewrite (BMULT_round_correct t xl0 yl0 F0) in Hr.
 exact Hr.
 Qed.
 
-(* ulp is at most a relative step plus the subnormal floor: a universal bound
-   used to keep the extra DW x DW rounding-error terms small. *)
+(* Near-threshold regime: the leading product is normal but within 9/8 of the
+   TwoProd exactness threshold T = 2^(emin+2p-1), so eta is not small relative
+   to the product and the floor budget must be spent explicitly.
+
+   WHY p >= 8 HERE (and only here).  The aggregate low-order error is
+   7.5*u^2*P (aux_eta_bnd), the target is 4*u^2|xr*yr| + 2*eta, and
+   |xr*yr| >= (1-u)^2*P with u^2*T = eta/2.  So it suffices that
+
+       (15/2 - 4*(1-u)^2) * P <= 4*T,   and here P <= (9/8)*T,
+
+   i.e. (15/2 - 4*(1-u)^2)*(9/8) <= 4.  As u -> 0 the left side tends to
+   3.5*(9/8) = 3.9375, so the inequality holds with only 1.6% of headroom,
+   and the u-linear term (coefficient 9) eats it at
+   u > 0.0069687: it holds at p >= 8 and fails at p = 7
+   (4.0075 > 4).  The bound is therefore a genuine limit of this route --
+   7.5 from aux_eta_bnd against the 9/8 window -- not slack in an nra call.
+   Every other regime of Algorithm 12 holds at p >= 5; this theorem is the
+   sole reason DWTimesDW3_error_mixed_floor below carries p >= 8. *)
 Theorem DWTimesDW_abs_normal_near_threshold :
   double_word xh xl ->
   double_word yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  (14 <= fprec t)%Z ->
+  (8 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xh*FT2R yh) <=
@@ -4884,7 +4919,7 @@ Theorem DWTimesDW_abs_normal_near_threshold :
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+2*bpow radix2 eminA.
 Proof.
-move => DWx DWy FIN Hp14 Nprod Pnear.
+move => DWx DWy FIN Hp8 Nprod Pnear.
 have Hp5 : (5 <= fprec t)%Z by lia.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Fmul := FINmul xh xl yh yl FIN.
@@ -4900,8 +4935,8 @@ set P := Rabs (FT2R xh*FT2R yh) in Nprod, Pnear, HerrRaw *.
 set T := bpow radix2 (eminA+2*fprec t-1) in Nprod, Pnear *.
 set eta := bpow radix2 eminA.
 have Hu0 : 0 < u by (unfold u;apply bpow_gt_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
+have Hu : u <= /256.
+{ unfold u. have -> : (/256:R)=bpow radix2 (-8) by (simpl;lra).
   apply bpow_le; lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have HT0 : 0 < T by (unfold T;apply bpow_gt_0).
@@ -4942,7 +4977,7 @@ Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
   double_word xh xl ->
   double_word yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  (14 <= fprec t)%Z ->
+  (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xl*FT2R yl) < bpow radix2 (eminA+fprec t-1) ->
@@ -4957,7 +4992,7 @@ Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+2*bpow radix2 eminA.
 Proof.
-move => DWx DWy FIN Hp14 Nprod N0 N1 N2 N3.
+move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Fmul := FINmul xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
@@ -4981,8 +5016,8 @@ set P := Rabs (FT2R xh*FT2R yh).
 set eta := bpow radix2 eminA.
 set U := bpow radix2 (eminA+fprec t-1).
 have Hu0 : 0 < u by (unfold u;apply bpow_gt_0).
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
+have Hu : u <= /32.
+{ unfold u. have -> : (/32:R)=bpow radix2 (-5) by (simpl;lra).
   apply bpow_le;lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
@@ -5110,6 +5145,220 @@ eapply Rle_trans; [exact Htri|].
 eapply Rle_trans.
 - apply Rplus_le_compat; [exact Hrel|exact HEF012].
 - apply Req_le. field.
+Qed.
+
+(* ==================================================================
+   WHOLE-RANGE (MIXED) ANALYSIS OF ALGORITHM 12
+
+   DWTimesDW_relerr_bound above is a pure relative bound: it charges the
+   four physical-floor errors of the low-order block against the leading
+   product, which costs a factor two (4u^2 -> 8u^2).  The theorems below
+   keep the floor budget explicit instead, as
+       |zh+zl - xr*yr| <= 4u^2|xr*yr| + 2*eta,
+   which is the physically meaningful form near gradual underflow, and
+   package it with the 8u^2 bound so that both readings are available
+   from one statement.
+
+   Assembly.  DWTimesDW_accuracy_pre splits the leading product into
+   xh*yh = 0 (all four partial products vanish, so the result is exactly
+   zero) and 2^(emin+2p-1) <= |xh*yh|; the intermediate gap is excluded by
+   Fast2Mult_cond, exactly as for Algorithm 9.  On the second branch the
+   regime lemmas above are exhaustive, split first on the leading product
+   against 9/8 of the threshold and then on which of the low-order nodes
+   are normal.
+   ================================================================== *)
+
+(* All four partial products vanish together: xh*yh = 0 forces one factor
+   of each pair to be zero, and the double-word relation then forces the
+   matching low component to be zero as well. *)
+Lemma DWTimesDW3_products_0_of_prod0 :
+  double_word_prop xh xl -> double_word_prop yh yl ->
+  FT2R xh * FT2R yh = 0 ->
+  FT2R xh * FT2R yh = 0 /\ FT2R xh * FT2R yl = 0 /\
+  FT2R xl * FT2R yh = 0 /\ FT2R xl * FT2R yl = 0 /\ xr * yr = 0.
+Proof.
+move => DWx DWy Hz.
+have Hzero : forall a b : ftype t, double_word_prop a b ->
+    FT2R a = 0 -> FT2R b = 0.
+{ move => a b Hdw Ha0.
+  have Hr : rounded t (FT2R b) = FT2R b
+    by (unfold rounded; apply round_generic;
+        [ apply valid_rnd_N | apply generic_format_FLT_FT2R ]).
+  move: Hdw; rewrite /double_word_prop Ha0 Rplus_0_l Hr.
+  move => H; exact (eq_sym H). }
+destruct (Rmult_integral _ _ Hz) as [Hxh0 | Hyh0].
+- have Hxl0 := Hzero xh xl DWx Hxh0.
+  repeat split; rewrite ?Hxh0 ?Hxl0 /xr /yr ?Hxh0 ?Hxl0; ring.
+- have Hyl0 := Hzero yh yl DWy Hyh0.
+  repeat split; rewrite ?Hyh0 ?Hyl0 /xr /yr ?Hyh0 ?Hyl0; ring.
+Qed.
+
+(* Hence the computed pair is exactly (0,0): every rounded node of
+   Algorithm 12 is a rounding of an exact zero, and the closing Fast2Sum
+   is trivially ordered so its sum is preserved. *)
+Lemma DWTimesDW3_zero_of_prod0 :
+  double_word_prop xh xl -> double_word_prop yh yl ->
+  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  FT2R xh * FT2R yh = 0 ->
+  zh + zl = 0 /\ xr * yr = 0.
+Proof.
+move => DWx DWy FIN Hz.
+move: (DWTimesDW3_products_0_of_prod0 DWx DWy Hz) =>
+  [Hhh [Hhl [Hlh [Hll Hxryr]]]].
+have Fmul := FINmul xh xl yh yl FIN.
+have F0   := FINtl0 xh xl yh yl FIN.
+have F1   := FINtl1 xh xl yh yl FIN.
+have F2   := FINcl2 xh xl yh yl FIN.
+have F3   := FINcl3 xh xl yh yl FIN.
+have Ffast := Fast2Mult_acc_helpers.Fast2Mult_finite_unconditional xh yh Fmul.
+set ch  := Fast2Mult_mul xh yh.
+set cl1 := Fast2Mult_err xh yh.
+set tl0 := BMULT xl yl.
+set tl1 := BFMA xh yl tl0.
+set cl2 := BFMA xl yh tl1.
+set cl3 := BPLUS cl1 cl2.
+have Hch : FT2R ch = 0.
+{ unfold ch, Fast2Mult_mul, Fast2Mult.
+  rewrite -(BMULT_round_correct t xh yh Fmul) Hhh round_0; reflexivity. }
+have Hcl1 : FT2R cl1 = 0.
+{ have Hop : FT2R (BOPP ch) = - FT2R ch
+    by (symmetry; apply BOPP_binary; right; exact (proj1 Ffast)).
+  unfold cl1, Fast2Mult_err, Fast2Mult.
+  rewrite -(BFMA_round_correct t xh yh (BOPP ch) (proj2 Ffast)) Hop Hch.
+  replace (FT2R xh * FT2R yh + - 0)%R with 0%R by (rewrite Hhh; ring).
+  rewrite round_0; reflexivity. }
+have Htl0 : FT2R tl0 = 0.
+{ unfold tl0. rewrite -(BMULT_round_correct t xl yl F0) Hll round_0;
+  reflexivity. }
+have Htl1 : FT2R tl1 = 0.
+{ unfold tl1. rewrite -(BFMA_round_correct t xh yl tl0 F1) Htl0.
+  replace (FT2R xh * FT2R yl + 0)%R with 0%R by (rewrite Hhl; ring).
+  rewrite round_0; reflexivity. }
+have Hcl2 : FT2R cl2 = 0.
+{ unfold cl2. rewrite -(BFMA_round_correct t xl yh tl1 F2) Htl1.
+  replace (FT2R xl * FT2R yh + 0)%R with 0%R by (rewrite Hlh; ring).
+  rewrite round_0; reflexivity. }
+have Hcl3 : FT2R cl3 = 0.
+{ unfold cl3. rewrite -(BPLUS_round_correct t cl1 cl2 F3) Hcl1 Hcl2.
+  replace (0 + 0)%R with 0%R by ring. rewrite round_0; reflexivity. }
+have Hord : Rabs (FT2R cl3) <= Rabs (FT2R ch)
+  by (rewrite Hch Hcl3 Rabs_R0; apply Rle_refl).
+have Hsum := FastTwoSum_correct ch cl3 (proj1 FIN) Hord.
+split; [|exact Hxryr].
+change (FT2R (fst (DWTimesDW3 xh xl yh yl)) +
+        FT2R (snd (DWTimesDW3 xh xl yh yl)) = 0).
+change (FT2R (snd (Fast2Sum ch cl3)) =
+        FT2R ch + FT2R cl3 - FT2R (fst (Fast2Sum ch cl3))) in Hsum.
+change (FT2R (fst (Fast2Sum ch cl3)) +
+        FT2R (snd (Fast2Sum ch cl3)) = 0).
+rewrite Hsum Hch Hcl3. ring.
+Qed.
+
+(* Exhaustive regime assembly.  The 8 <= fprec t hypothesis comes from the
+   near-threshold regime alone (DWTimesDW_abs_normal_near_threshold);
+   every other regime holds at p >= 5.  See the note on that theorem. *)
+Theorem DWTimesDW3_error_mixed_floor :
+  (8 <= fprec t)%Z ->
+  DWTimesDW_accuracy_pre xh xl yh yl ->
+  Rabs (zh + zl - xr * yr) <=
+    4 * u ^ 2 * Rabs (xr * yr) + 2 * bpow radix2 eminA.
+Proof.
+move => Hp8 [DWx [DWy [FIN Hprod]]].
+have Heta0 : 0 < bpow radix2 eminA by apply bpow_gt_0.
+set T := bpow radix2 (eminA + 2 * fprec t - 1).
+set N := bpow radix2 (eminA + fprec t - 1).
+set P := Rabs (FT2R xh * FT2R yh).
+destruct Hprod as [Hz | Nprod].
+- (* leading product exactly zero: the result is exactly zero too *)
+  move: (DWTimesDW3_zero_of_prod0 DWx DWy FIN Hz) => [Hzr Hxryr].
+  rewrite Hzr Hxryr Rabs_R0 Rminus_0_r Rabs_R0.
+  have := bpow_ge_0 radix2 (- fprec t). nra.
+- (* normal leading product: split near / far, then on the low-order nodes *)
+  fold T P in Nprod.
+  destruct (Rle_or_lt P (9 / 8 * T)) as [Hnear | Hfar].
+  + exact (DWTimesDW_abs_normal_near_threshold
+      DWx DWy FIN Hp8 Nprod Hnear).
+  + destruct (Rle_or_lt N (Rabs (FT2R xl * FT2R yl))) as [N0 | U0].
+    * have H := DWTimesDW_abs_low0_normal
+        DWx DWy FIN ltac:(lia) Nprod N0.
+      eapply Rle_trans; [exact H|]. nra.
+    * destruct (Rle_or_lt N
+        (Rabs (FT2R (Fast2Mult_err xh yh) +
+               FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl))))))
+        as [N3 | U3].
+      -- destruct (Rle_or_lt N
+           (Rabs (FT2R xh * FT2R yl + FT2R (BMULT xl yl)))) as [N1 | U1].
+         ++ destruct (Rle_or_lt N
+              (Rabs (FT2R xl * FT2R yh +
+                     FT2R (BFMA xh yl (BMULT xl yl))))) as [N2 | U2].
+            ** exact (DWTimesDW_abs_low0_far xh xl yh yl
+                 DWx DWy FIN ltac:(lia) Hfar U0 N1 N2 N3).
+            ** exact (DWTimesDW_abs_low0_low2_other_normal
+                 DWx DWy FIN ltac:(lia) Nprod U0 N1 U2 N3).
+         ++ destruct (Rle_or_lt N
+              (Rabs (FT2R xl * FT2R yh +
+                     FT2R (BFMA xh yl (BMULT xl yl))))) as [N2 | U2].
+            ** exact (DWTimesDW_abs_low0_low1_tail_normal
+                 DWx DWy FIN ltac:(lia) Nprod U0 U1 N2 N3).
+            ** exact (DWTimesDW_abs_low0_low1_low2_final_normal
+                 DWx DWy FIN ltac:(lia) Nprod U0 U1 U2 N3).
+      -- exact (DWTimesDW_abs_low0_final_underflow
+           DWx DWy FIN ltac:(lia) Nprod U0 U3).
+Qed.
+
+(* PRIMARY whole-range API.  The Rmin packages the two readings of the same
+   error: 4u^2|P| + 2*eta exposes the physical underflow budget, while the
+   second branch recovers the pure relative bound
+     4u^2|P| + 4u^2|P| = 8u^2|P|
+   from DWTimesDW_relerr_bound.  So
+     Rmin (2*eta) (4u^2|P|)  =  min(4u^2|P| + 2*eta, 8u^2|P|),
+   and neither reading is weaker than what the file proved before. *)
+Theorem DWTimesDW3_error_mixed :
+  (8 <= fprec t)%Z ->
+  DWTimesDW_accuracy_pre xh xl yh yl ->
+  Rabs (zh + zl - xr * yr) <=
+    4 * u ^ 2 * Rabs (xr * yr) +
+    Rmin (2 * bpow radix2 eminA) (4 * u ^ 2 * Rabs (xr * yr)).
+Proof.
+move => Hp8 Hpre.
+destruct (Rle_or_lt (2 * bpow radix2 eminA)
+    (4 * u ^ 2 * Rabs (xr * yr))) as [Hle | Hlt].
+- rewrite Rmin_left; [|exact Hle].
+  exact (DWTimesDW3_error_mixed_floor Hp8 Hpre).
+- rewrite Rmin_right; [|apply Rlt_le; exact Hlt].
+  (* second reading: the 8u^2 relative bound, cleared of its division *)
+  have Hrel := DWTimesDW_relerr_bound xh xl yh yl ltac:(lia) Hpre.
+  unfold relative_error_DWTimesDW in Hrel.
+  destruct (Req_dec (xr * yr) 0) as [Hzero | Hne].
+  + move: Hpre => [DWx [DWy [FIN Hprod]]].
+    have Hz : FT2R xh * FT2R yh = 0.
+    { destruct Hprod as [Hz|Nprod]; [exact Hz|].
+      exfalso. move: Hzero.
+      have Hlow := aux_dw_exact_product_lower xh xl yh yl DWx DWy.
+      specialize (Hlow STD). fold u xr yr in Hlow.
+      have Hu : bpow radix2 (- fprec t) <= /256.
+      { have -> : (/256:R) = bpow radix2 (-8) by (simpl;lra).
+        apply bpow_le; lia. }
+      have HT0 : 0 < bpow radix2 (eminA + 2 * fprec t - 1)
+        by apply bpow_gt_0.
+      have HP : 0 < Rabs (FT2R xh * FT2R yh) by lra.
+      move => Hz0. rewrite Hz0 Rabs_R0 in Hlow. nra. }
+    move: (DWTimesDW3_zero_of_prod0 DWx DWy FIN Hz) => [Hzr Hxryr].
+    rewrite Hzr Hxryr Rabs_R0 Rminus_0_r Rabs_R0. nra.
+  + have Hxr : xr <> 0 by (intro H; apply Hne; rewrite H; ring).
+    have Hyr : yr <> 0 by (intro H; apply Hne; rewrite H; ring).
+    have Habs : Rabs (zh + zl - xr * yr) <=
+        8 * u ^ 2 * Rabs (xr * yr).
+    { have Heq : Rabs (zh + zl - xr * yr)
+               = Rabs ((zh + zl - xr * yr) / (xr * yr)) *
+                 Rabs (xr * yr).
+      { rewrite -Rabs_mult. f_equal. field.
+        split; [exact Hyr | exact Hxr]. }
+      rewrite Heq.
+      have Hmul := Rmult_le_compat_r (Rabs (xr * yr)) _ _
+        (Rabs_pos _) Hrel.
+      eapply Rle_trans; [exact Hmul|]. right; ring. }
+    lra.
 Qed.
 
 End DWMulDW_Division_Helpers.

@@ -4268,7 +4268,7 @@ change (Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta).
 destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
 - destruct (Rle_or_lt T P) as [Nprod|Hgap].
   + have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
-      xh xl mh ml DWx DWm FIN Hp14 Nprod Hnear.
+      xh xl mh ml DWx DWm FIN ltac:(lia) Nprod Hnear.
     fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
   + have Heta := DWDivDW_eta_absorbed_by_zprod xh xl yh yl Hp14 COND.
 specialize (Heta NANS STD).
@@ -4528,19 +4528,19 @@ nra.
               Hfar U0 N1 N2 N3.
             fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
          ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
-              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 N1 U2 N3.
+              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 N1 U2 N3.
             fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
       -- destruct (Rle_or_lt N
           (Rabs (FT2R xl*FT2R mh+
             FT2R (BFMA xh ml (BMULT xl ml))))) as [N2|U2].
          ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
-              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U1 N2 N3.
+              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U1 N2 N3.
             fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
          ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
-              xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U1 U2 N3.
+              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U1 U2 N3.
             fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
     * have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
-        xh xl mh ml DWx DWm FIN Hp14 Nprod U0 U3.
+        xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U3.
       fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
 Qed.
 
