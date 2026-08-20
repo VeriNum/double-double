@@ -458,7 +458,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -471,24 +471,23 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+    (DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp5 : (5 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
+  (* The whole-range mixed bound is the public API for DW x DW: the guard only
+     establishes DWTimesDW_cond_acc (no underflow disjunct), which is exactly
+     what DWTimesDW3_error_mixed_floor_acc needs once finiteness is derived. *)
   pose proof
-    (@DWTimesDW_accuracy_from_cond _ Tdouble _
+    (@DWTimesDW_mixed_accuracy_from_cond_acc _ Tdouble _
         (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
     as Hacc.
-  assert (Hp4 : (4 <= fprec Tdouble)%Z)
-    by (unfold fprec, Tdouble; simpl; lia).
+  unfold absolute_error_DWTimesDW in Hacc.
   assert (Hdw : double_word_prop
                   (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
                   (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
-    (* Qualified: DWDivDW_acc also defines a DWTimesDW3_double_word (the
-       internal-node variant taking the two DW props + a normality bound), and
-       requiring that file below would otherwise shadow this one. *)
-    by exact (@DWMulDW_acc.DWTimesDW3_double_word _ Tdouble _
-                (fst xh) (snd xh) (fst yh) (snd yh) Hp4 HFC).
+    by exact (@DWTimesDW3_double_word_from_cond_acc _ Tdouble _
+                (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC).
   entailer!!.
 Qed.
 

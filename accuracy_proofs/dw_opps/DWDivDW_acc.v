@@ -4283,36 +4283,6 @@ have Hq : T <= Rabs (FT2R xh/FT2R yh).
 have HPlow : /2*T <= P.
 { have H := Rmult_le_compat_l (/2) _ _ ltac:(lra) Hq.
   eapply Rle_trans; [exact H|exact HPlow0]. }
-have Hxl := @DWMulFP_acc.aux_dwu_rel t STD xh xl DWx.
-have Hml := @DWMulFP_acc.aux_dwu_rel t STD mh ml DWm.
-fold u in Hxl,Hml.
-have Hxhml : Rabs (FT2R xh*FT2R ml) <= u*P.
-{ unfold P,P0. rewrite !Rabs_mult.
-  have H := Rmult_le_compat_l (Rabs (FT2R xh)) _ _
-    (Rabs_pos _) Hml. eapply Rle_trans; [exact H|]. right;ring. }
-have Hxlmh : Rabs (FT2R xl*FT2R mh) <= u*P.
-{ unfold P,P0. rewrite !Rabs_mult.
-  have H := Rmult_le_compat_r (Rabs (FT2R mh)) _ _
-    (Rabs_pos _) Hxl. eapply Rle_trans; [exact H|]. right;ring. }
-have Hxlml : Rabs (FT2R xl*FT2R ml) <= u^2*P.
-{ unfold P,P0. rewrite !Rabs_mult.
-  have H := Rmult_le_compat _ _ _ _ (Rabs_pos _) (Rabs_pos _) Hxl Hml.
-  eapply Rle_trans; [exact H|]. right;ring. }
-have HuT : u*T=N.
-{ unfold u,T,N. rewrite -bpow_plus. f_equal;ring. }
-have HuP_N : u*P < N.
-{ have H := Rmult_lt_compat_l u _ _ Hu0 Hgap.
-  rewrite HuT in H. exact H. }
-have HtwoN : 2*N=bpow radix2 (@common.emin t+fprec t).
-{ unfold N. transitivity
-    (bpow radix2 1*bpow radix2 (@common.emin t+fprec t-1));
-    [change (bpow radix2 1) with (2:R);ring|].
-  rewrite -bpow_plus. f_equal;ring. }
-have HfourN : 4*N=bpow radix2 (@common.emin t+fprec t+1).
-{ unfold N. transitivity
-    (bpow radix2 2*bpow radix2 (@common.emin t+fprec t-1));
-    [change (bpow radix2 2) with (4:R);ring|].
-  rewrite -bpow_plus. f_equal;ring. }
 set ch := BMULT xh mh.
 set cl1 := Fast2Mult_err xh mh.
 set tl0 := BMULT xl ml.
@@ -4321,177 +4291,44 @@ set cl2 := BFMA xl mh tl1.
 set cl3 := BPLUS cl1 cl2.
 have Fch : is_finite ch=true by
   (unfold ch;exact (DWMulDW_acc.FINmul xh xl mh ml FIN)).
-have F0 : is_finite tl0=true by
-  (unfold tl0;exact (DWMulDW_acc.FINtl0 xh xl mh ml FIN)).
-have F1 : is_finite tl1=true by
-  (unfold tl1,tl0;exact (DWMulDW_acc.FINtl1 xh xl mh ml FIN)).
-have F2 : is_finite cl2=true by
-  (unfold cl2,tl1,tl0;exact (DWMulDW_acc.FINcl2 xh xl mh ml FIN)).
-have F3 : is_finite cl3=true by
-  (unfold cl3,cl1,cl2,tl1,tl0;
-   exact (DWMulDW_acc.FINcl3 xh xl mh ml FIN)).
-have Ffast := Fast2Mult_acc_helpers.Fast2Mult_finite_unconditional xh mh Fch.
-have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Htl00 := DWMulDW_acc.leading_product_gap_low_low_zero
-  xh xl mh ml DWx DWm F0 Hgap.
-fold tl0 in Htl00.
-have Hdelta := Fast2Mult_sum_error_floor xh mh ltac:(lia) Ffast.
-fold P0 ch cl1 eta in Hdelta.
-have H1r : FT2R tl1=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-    (FT2R xh*FT2R ml).
-{ unfold tl1. rewrite -(BFMA_round_correct t xh ml tl0 F1) Htl00.
-  f_equal;ring. }
-have He1 : Rabs (FT2R tl1-FT2R xh*FT2R ml) <= /2*eta.
-{ rewrite H1r. eapply Rle_trans.
-  - apply DWMulDW_acc.round_FLT_error_below_binade with(k:=0%Z);
-      [lia|].
-    replace (@common.emin t+fprec t+0)%Z with
-      (@common.emin t+fprec t)%Z by ring.
-    rewrite -HtwoN. nra.
-  - right. unfold eta.
-    replace (@common.emin t+0)%Z with (@common.emin t) by ring.
-    reflexivity. }
-have HNfmt : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) N.
-{ unfold N. apply generic_format_bpow. unfold SpecFloat.fexp,FLT_exp.
-  unfold common.emin,SpecFloat.emin. lia. }
-have Htl1N : Rabs (FT2R tl1) <= N.
-{ rewrite H1r -round_NE_abs.
-  rewrite -(round_generic radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) N HNfmt).
-  apply round_le; [exact valid_fexp_inst|apply valid_rnd_N|].
-  eapply Rle_trans; [exact Hxhml|]. lra. }
-set a2 := FT2R xl*FT2R mh+FT2R tl1.
-have Ha2 : Rabs a2 < 2*N.
-{ unfold a2. eapply Rle_lt_trans; [apply Rabs_triang|]. nra. }
-have H2r : FT2R cl2=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) a2.
-{ unfold cl2,a2. symmetry;exact (BFMA_round_correct t xl mh tl1 F2). }
-have He2 : Rabs (FT2R cl2-a2) <= /2*eta.
-{ rewrite H2r. eapply Rle_trans.
-  - apply DWMulDW_acc.round_FLT_error_below_binade with(k:=0%Z);
-      [lia|].
-    replace (@common.emin t+fprec t+0)%Z with
-      (@common.emin t+fprec t)%Z by ring.
-    rewrite -HtwoN. exact Ha2.
-  - right. unfold eta.
-    replace (@common.emin t+0)%Z with (@common.emin t) by ring.
-    reflexivity. }
-have H2Nfmt : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (2*N).
-{ rewrite HtwoN. apply generic_format_bpow.
-  unfold SpecFloat.fexp,FLT_exp,common.emin,SpecFloat.emin. lia. }
-have Hcl2N : Rabs (FT2R cl2) <= 2*N.
-{ rewrite H2r -round_NE_abs.
-  rewrite -(round_generic radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) (2*N) H2Nfmt).
-  apply round_le; [exact valid_fexp_inst|apply valid_rnd_N|]. lra. }
-have Hcl1N : Rabs (FT2R cl1) <= /2*N.
-{ have Hc := Fast2Mult_acc.Fast2Mult_accuracy_norm xh mh Fch.
-  fold cl1 P0 in Hc.
-  have HgapP : Rabs P0 <
-      bpow radix2 (@common.emin t+fprec t+(fprec t-1)).
-  { change (P < T) in Hgap. unfold T in Hgap.
-    replace (@common.emin t+fprec t+(fprec t-1))%Z with
-      (@common.emin t+2*fprec t-1)%Z by ring.
-    exact Hgap. }
-  have Hb := DWMulDW_acc.half_ulp_FLT_below_binade
-    (t:=t) P0 (fprec t-1) ltac:(lia) HgapP.
-  unfold N. eapply Rle_trans; [exact Hc|].
-  replace (@common.emin t+fprec t-1)%Z with
-    (@common.emin t+(fprec t-1))%Z by ring.
-  exact Hb. }
-set a3 := FT2R cl1+FT2R cl2.
-have Ha3 : Rabs a3 < 4*N.
-{ unfold a3. eapply Rle_lt_trans; [apply Rabs_triang|]. nra. }
-have H3r : FT2R cl3=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) a3.
-{ unfold cl3,a3. symmetry;exact (BPLUS_round_correct t cl1 cl2 F3). }
-have He3 : Rabs (FT2R cl3-a3) <= eta.
-{ rewrite H3r.
-  have H := DWMulDW_acc.round_FLT_error_below_binade
-    (t:=t) a3 1%Z ltac:(lia)
-      ltac:(replace (@common.emin t+fprec t+1)%Z with
-        (@common.emin t+fprec t+1)%Z by ring;
-        rewrite -HfourN;exact Ha3).
-  eapply Rle_trans; [exact H|]. unfold eta.
-  rewrite (bpow_plus radix2 (@common.emin t) 1).
-  change (bpow radix2 1) with (2:R). ring_simplify; lra. }
-have H4Nfmt : generic_format radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (4*N).
-{ rewrite HfourN. apply generic_format_bpow.
-  unfold SpecFloat.fexp,FLT_exp,common.emin,SpecFloat.emin. lia. }
-have Hcl3N : Rabs (FT2R cl3) <= 4*N.
-{ rewrite H3r -round_NE_abs.
-  rewrite -(round_generic radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) (4*N) H4Nfmt).
-  apply round_le; [exact valid_fexp_inst|apply valid_rnd_N|]. lra. }
-have Hcherr := round_FLT_error_rel_emin (t:=t) P0.
-fold u eta in Hcherr.
-have Hchr : FT2R ch=round radix2
-    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) P0.
-{ unfold ch. symmetry;exact (BMULT_round_correct t xh mh Fch). }
-rewrite -Hchr in Hcherr.
-fold P in Hcherr.
+(* The whole guard-free error chain that used to be inlined here (five
+   rounding nodes, ~210 lines) is DWMulDW_acc's operand-generic gap lemma,
+   instantiated at the two double words (xh,xl) and (mh,ml).  Nothing in it
+   was ever division-specific. *)
+have Herr := DWMulDW_acc.DWTimesDW_core_error_floor_gap
+  xh xl mh ml ltac:(lia) DWx DWm FIN Hgap.
+fold u eta P0 P ch cl1 tl0 tl1 cl2 cl3 in Herr.
+(* Division's own two contributions.  The ordering |cl3| <= |ch| is where the
+   quotient window is genuinely needed: it turns eta into 4u^2*P (HetaP, from
+   DWDivDW_eta_absorbed_by_zprod), which is what makes the relative-form node
+   bound 6uP+4eta fit under (1-u)P-eta/2. *)
+have Hcl3b := DWMulDW_acc.gap_cl3_upper_bound
+  xh xl mh ml ltac:(lia) DWx DWm FIN Hgap.
+fold u eta P0 P cl1 tl0 tl1 cl2 cl3 in Hcl3b.
+have Hchlo := DWMulDW_acc.gap_ch_lower_bound xh mh Fch.
+fold u eta P0 P ch in Hchlo.
 have HetaP : eta <= 4*u^2*P.
 { change (eta <= 4*u^2*P). unfold P,P0,mh.
   exact Heta. }
-have Hchlo : (1-u-2*u^2)*P <= Rabs (FT2R ch).
-{ have Htri := Rabs_triang (P0-FT2R ch) (FT2R ch).
-  replace (P0-FT2R ch+FT2R ch) with P0 in Htri by ring.
-  fold P in Htri.
-  replace (P0-FT2R ch) with (-(FT2R ch-P0)) in Htri by ring.
-  rewrite Rabs_Ropp in Htri.
-  set A := u*P. set B := u^2*P.
-  have HerrAB : Rabs (FT2R ch-P0) <= A+2*B.
-  { unfold A,B. nra. }
-  replace ((1-u-2*u^2)*P) with (P-A-2*B) by (unfold A,B;ring).
-  nra. }
-have HNP : N <= 2*u*P.
-{ rewrite -HuT. replace (2*u*P) with (u*(2*P)) by ring.
-  apply Rmult_le_compat_l; [lra|]. nra. }
+(* linearize the atoms u*P and u^2*P so the crossing test is linear:
+   6uP + 4eta <= 6uP + 16u^2P and (1-u)P - eta/2 >= P - uP - 2u^2P, and
+   u <= /16384 makes 7uP + 18u^2P <= P with room to spare *)
+have HuP : u*P <= /16384*P.
+{ have H := Rmult_le_compat_r P _ _ HP0 Hu. nra. }
+have HuP0 : 0 <= u*P by nra.
+have Hu2P : u^2*P <= /16384*(u*P).
+{ have H := Rmult_le_compat_r (u*P) _ _ HuP0 Hu.
+  have He : u^2*P = u*(u*P) by ring. rewrite He. nra. }
 have Hord : Rabs (FT2R cl3) <= Rabs (FT2R ch).
-{ eapply Rle_trans; [exact Hcl3N|]. eapply Rle_trans; [|exact Hchlo].
-  have H := Rmult_le_compat_l 4 _ _ ltac:(lra) HNP. nra. }
+{ eapply Rle_trans; [exact Hcl3b|].
+  eapply Rle_trans; [|exact Hchlo].
+  have H6 : 6*u*P = 6*(u*P) by ring. rewrite H6. nra. }
 have Hsum := FastTwoSum_correct ch cl3 (proj1 FIN) Hord.
 set zh := Fast2Sum_sum ch cl3.
 set zl := Fast2Sum_err ch cl3.
 fold zh zl in Hsum.
 have HsumE : FT2R zh+FT2R zl=FT2R ch+FT2R cl3.
 { rewrite Hsum. ring. }
-have Herr : Rabs ((FT2R ch+FT2R cl3)-X*M) <=
-    5/2*eta+u^2*P.
-{ fold ch in Hdelta.
-  set A := FT2R ch+FT2R cl1-P0.
-  set B := -FT2R xl*FT2R ml.
-  set C := FT2R tl1-FT2R xh*FT2R ml.
-  set D := FT2R cl2-a2.
-  set E := FT2R cl3-a3.
-  have Heq : (FT2R ch+FT2R cl3)-X*M = A+B+C+D+E.
-  { unfold A,B,C,D,E,X,M,a2,a3,P0. ring. }
-  rewrite Heq.
-  have Ht1 := Rabs_triang (A+B+C+D) E.
-  have Ht2 := Rabs_triang (A+B+C) D.
-  have Ht3 := Rabs_triang (A+B) C.
-  have Ht4 := Rabs_triang A B.
-  have Htri : Rabs (A+B+C+D+E) <=
-      Rabs A+Rabs B+Rabs C+Rabs D+Rabs E.
-  { eapply Rle_trans; [exact Ht1|]. apply Rplus_le_compat_r.
-    eapply Rle_trans; [exact Ht2|]. apply Rplus_le_compat_r.
-    eapply Rle_trans; [exact Ht3|]. apply Rplus_le_compat_r.
-    exact Ht4. }
-  have Hlow : Rabs B <= u^2*P
-    by unfold B; replace (-FT2R xl*FT2R ml) with (-(FT2R xl*FT2R ml)) by ring;
-       rewrite Rabs_Ropp;exact Hxlml.
-  fold A in Hdelta. fold C in He1. fold D in He2. fold E in He3.
-  eapply Rle_trans; [exact Htri|].
-  eapply Rle_trans.
-  - apply Rplus_le_compat; [|exact He3].
-    apply Rplus_le_compat; [|exact He2].
-    apply Rplus_le_compat; [|exact He1].
-    apply Rplus_le_compat; [exact Hdelta|exact Hlow].
-  - ring_simplify. lra. }
 have HXM := DWMulDW_acc.aux_dw_exact_product_lower xh xl mh ml DWx DWm.
 fold u X M P0 P in HXM.
 specialize (HXM STD).
@@ -4499,6 +4336,8 @@ change (Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta).
 change (Rabs ((FT2R zh+FT2R zl)-X*M) <=
   4*u^2*Rabs (X*M)+2*eta).
 rewrite HsumE. eapply Rle_trans; [exact Herr|].
+(* squeeze the exported 5/2*eta down to division's advertised 2*eta: the
+   spare eta/2 plus the u^2*P residual both fit inside 4u^2|X*M| *)
 have Hreserve : /2*eta+u^2*P <= 4*u^2*Rabs (X*M).
 { have Hbase : 3*u^2*P <= 4*u^2*((1-u)^2*P) by nra.
   eapply Rle_trans; [|eapply Rle_trans; [exact Hbase|]].

@@ -290,6 +290,26 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
+(* The public API for DW x DW is the WHOLE-RANGE mixed bound
+
+     |(zh+zl) - (xh+xl)*(yh+yl)|
+        <= 4u^2 |(xh+xl)*(yh+yl)| + 2.5*eta,   eta = 2^emin,
+
+   i.e. DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc, reached here through its
+   cond-level form DWTimesDW_mixed_accuracy_from_cond_acc.  The PRE is empty:
+   dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
+   check now tests only DWTimesDW_cond_acc -- no underflow disjunct -- so inputs
+   whose leading product falls in the Fast2Mult underflow gap are computed rather
+   than rejected.  The price is stated in the bound: the 2.5*eta floor term is
+   carried in every regime, including the normal one where the sharper pure 8u^2
+   relative bound (DWTimesDW_accuracy_from_cond, which needs the gap excluded)
+   would hold.
+
+   Output double-word closure survives the weakening: it needs only that the
+   closing Fast2Sum preserves its sum, which holds above the threshold via the
+   ordering |cl3| <= |ch| and inside the gap because failure of that ordering
+   forces the exact sum onto the FLT/FIX lattice at emin, where Fast2Sum is
+   exact anyway (DWTimesDW3_double_word_from_cond_acc). *)
 Definition dw_mult_dw12_guarded_spec :=
   DECLARE _dw_mult_dw12_guarded
   WITH s: val, x: val, y: val,
@@ -302,8 +322,11 @@ Definition dw_mult_dw12_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP((relative_error_DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)
-           <= 8 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R
+    PROP((absolute_error_DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)
+           <= 4 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2 *
+                Rabs ((FT2R (fst xh) + FT2R (snd xh)) *
+                      (FT2R (fst yh) + FT2R (snd yh)))
+              + 5/2 * bpow Zaux.radix2 (@common.emin Tdouble))%R
          /\ double_word_prop
               (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
               (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
@@ -345,7 +368,7 @@ Definition dw_div_fp15_guarded_spec :=
 (* DWDivDW (Algorithm 18) guarded wrapper.  The exported bound is the pure
    relative form proven as relative_errorDWDivDW3_from_cond_combined, stated
    through the model-level relative_error_DWDivDW (DWDivDW_acc.v) exactly as
-   dw_mult_dw12_guarded_spec states its bound through relative_error_DWTimesDW:
+   dw_plus_dw2_guarded_spec states its bound through relative_error_DWPlusDW:
 
      |(zh+zl - Q)/Q| <= 16.5 u^2,   Q = (xh+xl)/(yh+yl).
 
@@ -491,7 +514,7 @@ Definition dw_mult_dw_check_spec :=
          data_at Tsh dword (f2val yh) y )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(b = true -> DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).

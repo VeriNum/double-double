@@ -280,6 +280,45 @@ Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
   Fast2Mult_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
+(* DWTimesDW_cond_acc is the "accurate-only" precondition for DWTimesDW3, the
+   exact analogue of DWTimesFP_cond_acc above: it weakens Fast2Mult_cond to
+   Fast2Mult_cond_acc, dropping the underflow disjunct
+   (FT2R xh * FT2R yh = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R yh|) and keeping
+   only overflow safety.
+
+   It suffices for the whole-range MIXED bound
+
+     |(zh+zl) - (xh+xl)*(yh+yl)| <= 4u^2 |(xh+xl)*(yh+yl)| + 5/2*eta
+
+   and for output double-word closure, because both hold in EVERY regime given
+   only the two double-word relations and finiteness of the computed pair -- and
+   the conjuncts below are what a runtime guard needs to establish that
+   finiteness (DWMulDW_acc.DWTimesDW3_finite_acc).  It does NOT suffice for the
+   pure 8u^2 relative bound (DWTimesDW_accuracy_from_cond), which is available
+   only when the nonzero underflow gap is excluded; that remains the province of
+   the full DWTimesDW_cond.
+
+   This is the cond discharged by the runtime guard dw_mult_dw_check and carried
+   by the exported funspec dw_mult_dw12_guarded_spec, exactly as
+   DWTimesFP_cond_acc is for dw_mult_fp_check / dw_mult_fp9_guarded_spec.  The
+   full DWTimesDW_cond remains in use inside DWDivDW_acc, whose reciprocal
+   refinement needs the underflow disjunct for the error-free product step. *)
+Definition DWTimesDW_cond_acc (xh xl yh yl : ftype t) : Prop :=
+  is_finite xl = true /\
+  is_finite yl = true /\
+  double_word_prop xh xl /\
+  double_word_prop yh yl /\
+  Fast2Mult_cond_acc xh yh /\
+  Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
+
+Lemma DWTimesDW_cond_acc_of_cond (xh xl yh yl : ftype t) :
+  DWTimesDW_cond xh xl yh yl -> DWTimesDW_cond_acc xh xl yh yl.
+Proof.
+  intros (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hreal).
+  repeat split; try assumption.
+  exact (Fast2Mult_cond_acc_of_cond xh yh Hf2m).
+Qed.
+
 End DWTimesDWCond.
 
 

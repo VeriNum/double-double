@@ -18,13 +18,27 @@ Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* dw_mult_dw_check(x, y) returns 1 only if DWTimesDW_cond holds.  Structure:
-   body_dw_plus_dw_check's fin + dwx + dwy cascade, then the ldexp/fabs factor
-   bounds and mult_safe short-circuit of body_dw_mult_fp_check, with the scalar
-   y promoted to a second double-word (y->s, y->t).  Raw facts are threaded
-   through each forward_if and DWTimesDW_cond is discharged only at the final
-   return join.  _fin_xh and _fin_yh are carried past the DW checks because the
-   zxh/zyh short-circuits read them. *)
+(* dw_mult_dw_check(x, y) returns 1 only if DWTimesDW_cond_acc holds: xl, yl
+   finite, (xh, xl) and (yh, yl) each a double-word, and the STRICT
+   rounded-product test |RN(xh*yh)| < 2^1023, which supplies both
+   is_finite (BMULT xh yh) and the real product bound
+   |FT2R xh * FT2R yh| <= Omega/2 (prod_bnd_facts).
+
+   The check does NOT test Fast2Mult's underflow disjunction (the `mult_safe`
+   short-circuit it used to carry, still present in fast2_mult_check).
+   DWTimesDW_cond_acc is all the exported contract needs:
+   dw_mult_dw12_guarded_spec states the whole-range mixed bound
+   4u^2|P| + 2.5*eta (DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc) rather than
+   the pure 8u^2 relative bound, and that holds in the Fast2Mult underflow gap
+   too -- as does output double-word closure
+   (DWTimesDW3_double_word_from_cond_acc).  So the guard now accepts gap inputs
+   instead of aborting on them.
+
+   Structure mirrors body_dw_mult_fp_check with the scalar y promoted to a second
+   double-word (y->s, y->t): the dwx and dwy cascades, the ldexp bound constant,
+   the fabs comparison, and a final return cascade that is a pure conjunction
+   with no disjunctive arm.  Raw facts are carried through each forward_if and
+   DWTimesDW_cond_acc is discharged only at the final return join. *)
 Lemma body_dw_mult_dw_check :
   semax_body Vprog Gprog f_dw_mult_dw_check dw_mult_dw_check_spec.
 Proof.
@@ -68,7 +82,6 @@ Proof.
                          is_finite (snd xh) = true /\
                          double_word_prop (fst xh) (snd xh))
       LOCAL (temp _t'6 (Vint (if b6 then Int.one else Int.zero));
-             temp _fin_xh (Vint (if vret_fxh then Int.one else Int.zero));
              temp _fin_yh (Vint (if vret_fyh then Int.one else Int.zero));
              temp _fin_yl (Vint (if vret_fyl then Int.one else Int.zero));
              temp _x x; temp _y y)
@@ -104,7 +117,6 @@ Proof.
         PROP (b7 = true -> is_finite (fst yh) = true /\ is_finite (snd yh) = true)
         LOCAL (temp _t'7 (Vint (if b7 then Int.one else Int.zero));
                temp _dwx (Vint (if b6 then Int.one else Int.zero));
-               temp _fin_xh (Vint (if vret_fxh then Int.one else Int.zero));
                temp _fin_yh (Vint (if vret_fyh then Int.one else Int.zero));
                temp _fin_yl (Vint (if vret_fyl then Int.one else Int.zero));
                temp _x x; temp _y y)
@@ -131,8 +143,6 @@ Proof.
                              double_word_prop (fst yh) (snd yh))
           LOCAL (temp _t'8 (Vint (if b8 then Int.one else Int.zero));
                  temp _dwx (Vint (if b6 then Int.one else Int.zero));
-                 temp _fin_xh (Vint (if vret_fxh then Int.one else Int.zero));
-                 temp _fin_yh (Vint (if vret_fyh then Int.one else Int.zero));
                  temp _x x; temp _y y)
           SEP (data_at Tsh dword (f2val xh) x;
                data_at Tsh dword (f2val yh) y)).
@@ -161,9 +171,6 @@ Proof.
 
            (* z = x->s * y->s *)
            forward. forward. forward.
-           (* thresh = DBL_MIN * ldexp(1.0, 53) *)
-           forward_call.
-           forward.
            (* q_prod = ldexp(1.0, 1023) = q_prod_val
               (forward_call folds the following plain Sset _q_prod). *)
            forward_call.
@@ -176,286 +183,74 @@ Proof.
                             (Float.mul (float_of_ftype (fst xh))
                                        (float_of_ftype (fst yh))))
                          q_prod_val).
-           set (px := Float.cmp Ceq (float_of_ftype (fst xh))
-                        (Float.of_bits (Int64.repr 0)) = true
-                      /\ is_finite (fst yh) = true).
-           set (py := Float.cmp Ceq (float_of_ftype (fst yh))
-                        (Float.of_bits (Int64.repr 0)) = true
-                      /\ is_finite (fst xh) = true).
 
-           (* --- zxh: (x->s == 0.0) && fin_yh --- *)
-           forward. (* load t'21 = x->s *)
-           set (Post_zxh :=
-             EX b_zxh : bool,
-             PROP (b_zxh = true -> px)
-             LOCAL (temp _t'12 (Vint (if b_zxh then Int.one else Int.zero));
+           (* === return dwx && dwy && prod_bnd ===
+              A pure conjunction now that mult_safe is gone: two nested
+              short-circuit levels, each carrying one more raw fact forward. *)
+           set (Post_t11 :=
+             EX b11 : bool,
+             PROP (b11 = true -> b6 = true /\ b8 = true)
+             LOCAL (temp _t'11 (Vint (if b11 then Int.one else Int.zero));
                     temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                    temp _thresh (Vfloat thresh_val);
-                    temp _z (Vfloat (Float.mul (float_of_ftype (fst xh))
-                                               (float_of_ftype (fst yh))));
-                    temp _fin_xh (Vint (if vret_fxh then Int.one else Int.zero));
                     temp _dwx (Vint (if b6 then Int.one else Int.zero));
                     temp _dwy (Vint (if b8 then Int.one else Int.zero));
                     temp _x x; temp _y y)
              SEP (data_at Tsh dword (f2val xh) x;
                   data_at Tsh dword (f2val yh) y)).
-           forward_if Post_zxh.
-           ++ (* x->s == 0.0 : t'12 = (bool) fin_yh *)
-              forward.
-              unfold Post_zxh; Exists vret_fyh; entailer!.
-              repeat apply conj;
-                try reflexivity; try cmp_val_eq;
-                try (destruct vret_fyh; reflexivity);
-                try (intros Hout; unfold px; split;
-                     [ assumption | apply (proj1 Hspec_fyh); exact Hout ]).
-           ++ (* x->s != 0.0 : t'12 = 0 *)
-              forward.
-              unfold Post_zxh; Exists false; entailer!; try fix_cmp_locals.
-           ++ unfold Post_zxh; clear Post_zxh.
-              Intros b_zxh; rename H into Hb_zxh.
-              forward. (* store _zxh *)
-
-              (* --- zyh: (y->s == 0.0) && fin_xh --- *)
-              forward. (* load t'20 = y->s *)
-              set (Post_zyh :=
-                EX b_zyh : bool,
-                PROP (b_zyh = true -> py)
-                LOCAL (temp _t'13 (Vint (if b_zyh then Int.one else Int.zero));
-                       temp _zxh (Vint (if b_zxh then Int.one else Int.zero));
-                       temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                       temp _thresh (Vfloat thresh_val);
-                       temp _z (Vfloat (Float.mul (float_of_ftype (fst xh))
-                                                  (float_of_ftype (fst yh))));
-                       temp _dwx (Vint (if b6 then Int.one else Int.zero));
-                       temp _dwy (Vint (if b8 then Int.one else Int.zero));
-                       temp _x x; temp _y y)
-                SEP (data_at Tsh dword (f2val xh) x;
-                     data_at Tsh dword (f2val yh) y)).
-              forward_if Post_zyh.
-              +++ (* y->s == 0.0 : t'13 = (bool) fin_xh *)
-                  forward.
-                  unfold Post_zyh; Exists vret_fxh; entailer!.
-                  repeat apply conj;
-                    try reflexivity; try cmp_val_eq;
-                    try (destruct vret_fxh; reflexivity);
-                    try (intros Hout; unfold py; split;
-                         [ assumption | apply (proj1 Hspec_fxh); exact Hout ]).
-              +++ (* y->s != 0.0 : t'13 = 0 *)
-                  forward.
-                  unfold Post_zyh; Exists false; entailer!; try fix_cmp_locals.
-              +++ unfold Post_zyh; clear Post_zyh.
-                  Intros b_zyh; rename H into Hb_zyh.
-                  forward. (* store _zyh *)
-
-                  (* --- mult_safe: (zxh || zyh) || thresh < fabs(z) --- *)
-                  set (Post_xy :=
-                    EX b_xy : bool,
-                    PROP (b_xy = true -> px \/ py)
-                    LOCAL (temp _t'14 (Vint (if b_xy then Int.one else Int.zero));
-                           temp _zxh (Vint (if b_zxh then Int.one else Int.zero));
-                           temp _zyh (Vint (if b_zyh then Int.one else Int.zero));
-                           temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                           temp _thresh (Vfloat thresh_val);
-                           temp _z (Vfloat (Float.mul (float_of_ftype (fst xh))
-                                                      (float_of_ftype (fst yh))));
-                           temp _dwx (Vint (if b6 then Int.one else Int.zero));
-                           temp _dwy (Vint (if b8 then Int.one else Int.zero));
-                           temp _x x; temp _y y)
-                    SEP (data_at Tsh dword (f2val xh) x;
-                         data_at Tsh dword (f2val yh) y)).
-                  forward_if Post_xy.
-                  *** (* zxh != 0 : t'14 = 1 *)
-                      forward.
-                      unfold Post_xy; clear Post_xy; Exists true; entailer!; try fix_cmp_locals.
-                      left; apply Hb_zxh.
-                      destruct b_zxh; [reflexivity | simpl in H; contradiction].
-                  *** (* zxh = 0 : t'14 = (bool) zyh *)
-                      forward.
-                      unfold Post_xy; clear Post_xy; Exists (orb b_zxh b_zyh);
-                        entailer!; try fix_cmp_locals.
-                      match goal with |- ?A /\ ?B => refine (conj _ _) end.
-                      { intro Htrue.
-                        destruct (orb_prop _ _ Htrue) as [Hzx | Hzy].
-                        - left; apply Hb_zxh; exact Hzx.
-                        - right; apply Hb_zyh; exact Hzy. }
-                      { assert (b_zxh = false) as Hbzx_false.
-                        { destruct b_zxh; [exfalso; discriminate H | reflexivity]. }
-                        subst b_zxh; simpl; destruct b_zyh; reflexivity. }
-                  *** unfold Post_xy; clear Post_xy.
-                      Intros b_xy; rename H into Hb_xy.
-                      set (Post_ms :=
-                        EX b_ms : bool,
-                        PROP (b_ms = true -> px \/ py \/
-                          Float.cmp Clt thresh_val
-                            (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                               (Float.mul (float_of_ftype (fst xh))
-                                          (float_of_ftype (fst yh)))) = true)
-                        LOCAL (temp _t'15 (Vint (if b_ms then Int.one else Int.zero));
-                               temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                               temp _dwx (Vint (if b6 then Int.one else Int.zero));
-                               temp _dwy (Vint (if b8 then Int.one else Int.zero));
-                               temp _x x; temp _y y)
-                        SEP (data_at Tsh dword (f2val xh) x;
-                             data_at Tsh dword (f2val yh) y)).
-                      forward_if Post_ms.
-                      ---- (* t'14 != 0 : t'15 = 1, zero product confirmed *)
-                           assert (b_xy = true) as Hbxy_eq
-                             by (destruct b_xy; auto; simpl in H; contradiction).
-                           assert (Hpxy : px \/ py) by (apply Hb_xy; exact Hbxy_eq).
-                           forward.
-                           unfold Post_ms; clear Post_ms; Exists true; entailer!.
-                           repeat apply conj;
-                             try reflexivity; try cmp_val_eq;
-                             try (intros _);
-                             try (destruct Hpxy as [Hpx | Hpy];
-                                    [left; exact Hpx | right; left; exact Hpy]).
-                      ---- (* t'14 = 0 : t'15 = (bool)(thresh < fabs(z)) *)
-                           forward_call.
-                           forward.
-                           unfold Post_ms; clear Post_ms.
-                           set (bc := Float.cmp Clt thresh_val
-                                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                                           (Float.mul (float_of_ftype (fst xh))
-                                                      (float_of_ftype (fst yh))))).
-                           Exists bc; entailer!.
-                           repeat apply conj;
-                             try reflexivity; try cmp_val_eq;
-                             try (unfold bool2val; rewrite Vint_b2z_if; reflexivity);
-                             try (intros Hbc; right; right; exact Hbc).
-                      ---- try (unfold Post_ms; clear Post_ms).
-                           Intros b_ms; rename H into Hb_ms.
-                           forward. (* store _mult_safe *)
-
-                           (* === return dwx && dwy && prod_bnd && mult_safe === *)
-                           set (Post_t17 :=
-                             EX b17 : bool,
-                             PROP (b17 = true -> b6 = true /\ b8 = true)
-                             LOCAL (temp _t'17 (Vint (if b17 then Int.one else Int.zero));
-                                    temp _mult_safe (Vint (if b_ms then Int.one else Int.zero));
-                                    temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                                    temp _dwx (Vint (if b6 then Int.one else Int.zero));
-                                    temp _dwy (Vint (if b8 then Int.one else Int.zero));
-                                    temp _x x; temp _y y)
-                             SEP (data_at Tsh dword (f2val xh) x;
-                                  data_at Tsh dword (f2val yh) y)).
-                           forward_if Post_t17.
-                           **** (* dwx != 0 : t'17 = (bool) dwy *)
-                                assert (b6 = true) as Hb6_eq
-                                  by (destruct b6; auto; simpl in H; rep_lia).
-                                forward.
-                                unfold Post_t17; Exists b8; entailer!;
-                                  try (destruct b8; reflexivity);
-                                  try (intros Hout; repeat split; auto).
-                           **** forward.
-                                unfold Post_t17; Exists false; entailer!.
-                           **** unfold Post_t17; clear Post_t17.
-                                Intros b17; rename H into Hb17.
-                                set (Post_t18 :=
-                                  EX b18 : bool,
-                                  PROP (b18 = true -> b6 = true /\ b8 = true /\ bpb = true)
-                                  LOCAL (temp _t'18 (Vint (if b18 then Int.one else Int.zero));
-                                         temp _mult_safe (Vint (if b_ms then Int.one else Int.zero));
-                                         temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
-                                         temp _x x; temp _y y)
-                                  SEP (data_at Tsh dword (f2val xh) x;
-                                       data_at Tsh dword (f2val yh) y)).
-                                forward_if Post_t18.
-                                ----- (* t'17 != 0 : t'18 = (bool) prod_bnd *)
-                                    assert (b17 = true) as Hb17_eq
-                                      by (destruct b17; auto; simpl in H; rep_lia).
-                                    forward.
-                                    unfold Post_t18; Exists bpb; entailer!.
-                                    split.
-                                    { intros Hout. destruct (Hb17 eq_refl); auto. }
-                                    { unfold bpb.
-                                      match goal with
-                                      | |- context [Float.cmp Clt ?a ?b] =>
-                                          destruct (Float.cmp Clt a b); reflexivity
-                                      end. }
-                                ----- forward.
-                                    unfold Post_t18; Exists false; entailer!.
-                                ----- unfold Post_t18; clear Post_t18.
-                                    Intros b18; rename H into Hb18.
-                                    set (Post_t19 :=
-                                      EX b19 : bool,
-                                      PROP (b19 = true -> b6 = true /\ b8 = true /\
-                                                          bpb = true /\ b_ms = true)
-                                      LOCAL (temp _t'19 (Vint (if b19 then Int.one else Int.zero));
-                                             temp _mult_safe (Vint (if b_ms then Int.one else Int.zero));
-                                             temp _x x; temp _y y)
-                                      SEP (data_at Tsh dword (f2val xh) x;
-                                           data_at Tsh dword (f2val yh) y)).
-                                    forward_if Post_t19.
-                                    +++++ (* t'18 != 0 : t'19 = (bool) mult_safe *)
-                                         assert (b18 = true) as Hb18_eq
-                                           by (destruct b18; auto; simpl in H; rep_lia).
-                                         forward.
-                                         unfold Post_t19; Exists b_ms; entailer!.
-                                         split.
-                                         { intros Hout.
-                                           destruct (Hb18 eq_refl) as [Hb6t [Hb8t Hbpbt]].
-                                           repeat split; auto. }
-                                         { destruct b_ms; reflexivity. }
-                                    +++++ forward.
-                                         unfold Post_t19; Exists false; entailer!.
-                                    +++++ unfold Post_t19; clear Post_t19.
-                                         Intros b19; rename H into Hb19.
-                                         forward. (* return t'19 *)
-                                         Exists b19; entailer!.
-                                         (* FINAL discharge of DWTimesDW_cond *)
-                                         destruct (Hb19 eq_refl)
-                                           as [Hb6t [Hb8t [Hbpbt Hbmst]]].
-                                         destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwx]].
-                                         destruct (Hb8 Hb8t) as [Hfyh [Hfyl Hdwy]].
-                                         (* prod_bnd discharges Fast2Mult finiteness AND the
-                                            product-magnitude bound in one shot. *)
-                                         destruct (prod_bnd_facts (fst xh) (fst yh))
-                                           as [Hbmul_fin Hprodb].
-                                         { unfold bpb in Hbpbt; exact Hbpbt. }
-                                         unfold DDModels.DWTimesDW_cond, DDModels.Fast2Mult_cond.
-                                         repeat (split; try assumption).
-                                         (* remaining goal: the underflow disjunction *)
-                                         destruct (Hb_ms Hbmst) as [Hpx | [Hpy | Hclt]].
-                                         ------ (*px : x->s = 0 *)
-                                                left. unfold px in Hpx.
-                                                pose proof (Float_cmp_Ceq_zero_mul_FT2R_l
-                                                             (float_of_ftype (fst xh))
-                                                             (FT2R (fst yh))
-                                                             (proj1 Hpx)) as Hr.
-                                                rewrite ftype_of_float_of_ftype in Hr.
-                                                exact Hr.
-                                         ------ (*py : y->s = 0 *)
-                                                left. unfold py in Hpy.
-                                                pose proof (Float_cmp_Ceq_zero_mul_FT2R_r
-                                                             (FT2R (fst xh))
-                                                             (float_of_ftype (fst yh))
-                                                             (proj1 Hpy)) as Hr.
-                                                rewrite ftype_of_float_of_ftype in Hr.
-                                                exact Hr.
-                                         ------ (*Hclt : thresh < fabs(xh*yh) : above threshold *)
-                                                right.
-                                                assert (Hfin_mul :
-                                                  is_finite (ftype_of_float
-                                                    (Float.mul (float_of_ftype (fst xh))
-                                                               (float_of_ftype (fst yh)))) = true)
-                                                  by exact Hbmul_fin.
-                                                pose proof (Float_cmp_Cle_mul
-                                                  (float_of_ftype (fst xh)) (float_of_ftype (fst yh))
-                                                  (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))
-                                                  (ftype_of_float thresh_val)
-                                                  Hfin_mul thresh_val_finite
-                                                  (eq_sym thresh_val_FT2R)) as Hcmp.
-                                                rewrite ?ftype_of_float_of_ftype in Hcmp.
-                                                rewrite ?float_of_ftype_of_float in Hcmp.
-                                                apply Rlt_le, Rlt_bool_to_Rlt,
-                                                      no_underflow_real_from_round_mul.
-                                                apply Rlt_bool_to_Rlt.
-                                                destruct (Rlt_bool _ _) eqn:Hrb.
-                                                { reflexivity. }
-                                                { exfalso.
-                                                  match type of Hcmp with
-                                                  | _ = bool2val ?c => assert (E : c = true) by exact Hclt
-                                                  end.
-                                                  rewrite E in Hcmp.
-                                                  discriminate Hcmp. }
+           forward_if Post_t11.
+           *** (* dwx != 0 : t'11 = (bool) dwy *)
+               assert (b6 = true) as Hb6_eq
+                 by (destruct b6; auto; simpl in H; rep_lia).
+               forward.
+               unfold Post_t11; Exists b8; entailer!.
+               (* entailer! discharges the PROP (b6 is already true here); what
+                  is left is the two LOCAL matches for _t'11 and _prod_bnd. *)
+               split.
+               { destruct b8; reflexivity. }
+               { cmp_val_eq. }
+           *** forward.
+               unfold Post_t11; Exists false; entailer!.
+               cmp_val_eq.  (* residual _prod_bnd LOCAL match *)
+           *** unfold Post_t11; clear Post_t11.
+               Intros b11; rename H into Hb11.
+               set (Post_t12 :=
+                 EX b12 : bool,
+                 PROP (b12 = true -> b6 = true /\ b8 = true /\ bpb = true)
+                 LOCAL (temp _t'12 (Vint (if b12 then Int.one else Int.zero));
+                        temp _prod_bnd (Vint (if bpb then Int.one else Int.zero));
+                        temp _x x; temp _y y)
+                 SEP (data_at Tsh dword (f2val xh) x;
+                      data_at Tsh dword (f2val yh) y)).
+               forward_if Post_t12.
+               **** (* t'11 != 0 : t'12 = (bool) prod_bnd *)
+                    assert (b11 = true) as Hb11_eq
+                      by (destruct b11; auto; simpl in H; rep_lia).
+                    forward.
+                    unfold Post_t12; Exists bpb; entailer!.
+                    split.
+                    { intros Hout. destruct (Hb11 eq_refl); auto. }
+                    { unfold bpb.
+                      match goal with
+                      | |- context [Float.cmp Clt ?a ?b] =>
+                          destruct (Float.cmp Clt a b); reflexivity
+                      end. }
+               **** forward.
+                    unfold Post_t12; Exists false; entailer!.
+               **** unfold Post_t12; clear Post_t12.
+                    Intros b12; rename H into Hb12.
+                    forward. (* return t'12 *)
+                    Exists b12; entailer!.
+                    (* FINAL discharge: the six conjuncts of DWTimesDW_cond_acc.
+                       No underflow disjunct to prove -- that is the whole point
+                       of the weakening -- so prod_bnd_facts closes both
+                       remaining goals (Fast2Mult finiteness AND the
+                       product-magnitude bound) in one shot. *)
+                    destruct (Hb12 eq_refl) as [Hb6t [Hb8t Hbpbt]].
+                    destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwx]].
+                    destruct (Hb8 Hb8t) as [Hfyh [Hfyl Hdwy]].
+                    destruct (prod_bnd_facts (fst xh) (fst yh))
+                      as [Hbmul_fin Hprodb].
+                    { unfold bpb in Hbpbt; exact Hbpbt. }
+                    unfold DDModels.DWTimesDW_cond_acc, DDModels.Fast2Mult_cond_acc.
+                    repeat (split; try assumption).
 Qed.

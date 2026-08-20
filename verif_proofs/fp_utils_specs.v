@@ -198,7 +198,7 @@ Definition dw_mult_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
