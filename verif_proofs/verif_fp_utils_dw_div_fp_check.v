@@ -4,9 +4,16 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_cond holds:
+(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_cond_acc holds:
    xh, xl, y finite, (xh, xl) a double-word, |xh| within [2^(emin+2p), Omega/4],
-   and the quotient |xh/y| within [2^(emin+2p-1), Omega/4].
+   and the quotient |xh/y| within [2^(emin+p-1), Omega/4].
+
+   The quotient floor is 2^(emin+p-1) = 2^-1022 = DBL_MIN, not the 2^(emin+2p-1)
+   = 2^-969 this guard used to test: the extra strength bought only the pure
+   relative 6u^2 bound, while the mixed bound the guarded wrapper exports needs
+   just 2^(emin+p-1).  See dd_lib/fp_utils.c and DDModels.DWDivFP_cond_acc.  The
+   |xh| lower bound 2^(emin+2p) is UNCHANGED -- it is the product-node floor, a
+   different bound on a different node.
 
    The finiteness + double-word (dwx) cascade is identical to body_dw_plus_fp_check;
    the |xh| window is two magnitude comparisons on xh (via Float_cmp_Cle_bpow1022 for
@@ -14,7 +21,9 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
    The quotient window is tested on the ROUNDED quotient q = RN(xh/y): the strict
    upper bound (Float_cmp_Clt_bpow1022) also yields is_finite q, hence FT2R y <> 0
    (BDIV_denom_ne0), so BDIV_abs_le_bpow / BDIV_abs_gt_bpow transfer the rounded
-   bounds to the exact quotient (rounded->exact soundness, one-directional). *)
+   bounds to the exact quotient (rounded->exact soundness, one-directional).
+   Both transfers need the threshold to be a representable power of two in the
+   normal range, which 2^-1022 is. *)
 Lemma body_dw_div_fp_check :
   semax_body Vprog Gprog f_dw_div_fp_check dw_div_fp_check_spec.
 Proof.
@@ -85,12 +94,14 @@ Proof.
       forward.                          (* _dwx := t'5 *)
       forward_call.                     (* q_omega := ldexp(1.0, 1022) = q_omega_val (store absorbed) *)
       forward_call.                     (* q_plo   := ldexp(1.0, -968) = q_lo968_val (store absorbed) *)
-      forward_call.                     (* q_qlo   := ldexp(1.0, -969) = q_lo969_val (store absorbed) *)
+      forward_call.                     (* q_qlo   := ldexp(1.0, -1022) = q_lo1022_val (store absorbed) *)
       (* Normalize the negated integer exponents and fold the threshold constants
-         so the temps read as q_omega_val / q_lo968_val / q_lo969_val. *)
+         so the temps read as q_omega_val / q_lo968_val / q_lo1022_val.  The
+         q_omega exponent is the positive 1022 and q_qlo's is the negated one, so
+         the two folds stay unambiguous despite sharing the magnitude. *)
       replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
-      replace (- Int.unsigned (Int.repr 969))%Z with (-969)%Z by reflexivity.
-      fold q_omega_val q_lo968_val q_lo969_val.
+      replace (- Int.unsigned (Int.repr 1022))%Z with (-1022)%Z by reflexivity.
+      fold q_omega_val q_lo968_val q_lo1022_val.
       forward. forward_call (fst xh). forward.   (* xh_hi := fabs(x->s) <= q_omega *)
       forward. forward_call (fst xh). forward.   (* xh_lo := q_plo <= fabs(x->s) *)
       forward.                          (* t'18 := x->s *)
@@ -106,7 +117,7 @@ Proof.
       set (bqt_hi := Float.cmp Clt
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) y)) q_omega_val).
-      set (bqt_lo := Float.cmp Clt q_lo969_val
+      set (bqt_lo := Float.cmp Clt q_lo1022_val
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) y))).
 
@@ -326,11 +337,11 @@ Proof.
                           change (Float.div (fst xh) y) with (BDIV (fst xh) y) in Hfin_q, Hq_hi.
                           assert (Hyne : FT2R y <> 0%R)
                             by (apply (BDIV_denom_ne0 (fst xh) y Hfin_y Hfin_q)).
-                          assert (Hqt_lo0 : bpow Zaux.radix2 (-969) <
+                          assert (Hqt_lo0 : bpow Zaux.radix2 (-1022) <
                                     Rabs (FT2R (BDIV (fst xh) y))).
-                          { apply (Float_cmp_Clt_lo q_lo969_val (BDIV (fst xh) y)
-                                     (bpow Zaux.radix2 (-969)) Hfin_q
-                                     q_lo969_val_finite q_lo969_val_FT2R).
+                          { apply (Float_cmp_Clt_lo q_lo1022_val (BDIV (fst xh) y)
+                                     (bpow Zaux.radix2 (-1022)) Hfin_q
+                                     q_lo1022_val_finite q_lo1022_val_FT2R).
                             unfold bqt_lo in Hbqtlt; exact Hbqtlt. }
                           (* generic_format of the thresholds *)
                           assert (Hfmt1022 : generic_format radix2 fexp (bpow Zaux.radix2 1022))
@@ -339,7 +350,7 @@ Proof.
                                 try change (fprec Tdouble) with 53%Z;
                                 try change (femax Tdouble) with 1024%Z;
                                 apply Z.max_lub; lia).
-                          assert (Hfmt969 : generic_format radix2 fexp (bpow Zaux.radix2 (-969)))
+                          assert (Hfmt_m1022 : generic_format radix2 fexp (bpow Zaux.radix2 (-1022)))
                             by (apply generic_format_bpow;
                                 unfold fexp, SpecFloat.fexp, SpecFloat.emin;
                                 try change (fprec Tdouble) with 53%Z;
@@ -350,16 +361,16 @@ Proof.
                                     bpow Zaux.radix2 1022).
                           { apply (BDIV_abs_le_bpow (fst xh) y 1022 Hyne Hfin_q Hfmt1022).
                             exact Hq_hi. }
-                          assert (Hquot_lo : bpow Zaux.radix2 (-969) <
+                          assert (Hquot_lo : bpow Zaux.radix2 (-1022) <
                                     Rabs (FT2R (fst xh) / FT2R y)).
-                          { apply (BDIV_abs_gt_bpow (fst xh) y (-969) Hyne Hfin_q Hfmt969).
+                          { apply (BDIV_abs_gt_bpow (fst xh) y (-1022) Hyne Hfin_q Hfmt_m1022).
                             exact Hqt_lo0. }
                           (* /4*Omega = bpow(femax-2) *)
                           assert (Hq4 : (/4 * bpow Zaux.radix2 (femax Tdouble)
                                         = bpow Zaux.radix2 (femax Tdouble - 2))%R).
                           { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
                             rewrite bpow_plus. simpl. lra. }
-                          unfold DDModels.DWDivFP_cond.
+                          unfold DDModels.DWDivFP_cond_acc.
                           (* conjuncts 1-4 (finiteness/double-word) and, up to conversion,
                              the |xh/y| upper bound and |xh| lower bound close by assumption;
                              the two remaining bounds are the strict quotient lower bound and

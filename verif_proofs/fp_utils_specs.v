@@ -149,6 +149,11 @@ Definition dw_plus_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
+(* Accurate-only cond: the quotient floor is the relaxed 2^(emin+p-1), so the
+   guard accepts 53 more binades of quotient (down to DBL_MIN) than it used to.
+   What that buys the caller is the whole-range MIXED bound
+   (DWDivFP_acc.relative_errorDWDivFP3_from_cond_combined_acc) rather than the
+   pure 6u^2 relative bound; see dw_div_fp15_guarded_spec in DDOpsASI.v. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
@@ -161,7 +166,7 @@ Definition dw_div_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivFP_cond (fst xh) (snd xh) y)
+         DWDivFP_cond_acc (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 

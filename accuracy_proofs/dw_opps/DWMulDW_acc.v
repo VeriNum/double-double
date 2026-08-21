@@ -28,6 +28,7 @@
                                        min(4u^2|P| + 2*eta, 8u^2|P|): the
                                        underflow budget and the relative
                                        bound in one statement
+        DWTimesDW3_error_mixed_from_cond  the same, from DWTimesDW_cond
         DWTimesDW3_error_mixed_floor   the 4u^2|P| + 2*eta reading alone
 
       RELATIVE API (p >= 5; what VST clients use):
@@ -6221,6 +6222,21 @@ Proof.
 move => Hp5 Hcond.
 have Hpre := DWTimesDW_accuracy_pre_acc_of_cond_acc ltac:(lia) Hcond.
 exact (DWTimesDW3_double_word_mixed Hp5 Hpre).
+Qed.
+
+(* Client-facing entry point, matching this file's two-tier idiom (compare
+   DWTimesDW_relerr_bound / DWTimesDW_accuracy_from_cond): the cond supplies
+   the decomposed hypotheses via DWTimesDW_accuracy_pre_of_cond. *)
+Corollary DWTimesDW3_error_mixed_from_cond :
+  (8 <= fprec t)%Z ->
+  DWTimesDW_cond xh xl yh yl ->
+  Rabs (zh + zl - xr * yr) <=
+    4 * u ^ 2 * Rabs (xr * yr) +
+    Rmin (2 * bpow radix2 eminA) (4 * u ^ 2 * Rabs (xr * yr)).
+Proof.
+move => Hp8 COND.
+exact (DWTimesDW3_error_mixed Hp8
+  (DWTimesDW_accuracy_pre_of_cond xh xl yh yl ltac:(lia) COND)).
 Qed.
 
 End DWMulDW_Division_Helpers.

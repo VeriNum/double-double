@@ -341,9 +341,14 @@ Definition dw_mult_dw12_guarded_spec :=
    division d/y can be subnormal (0 for exact division), so the underflow regime
    contributes one 2^emin absolute term.  The exported bound is therefore the
    regime-independent combined bound proven as
-   relative_errorDWDivFP3_from_cond_combined:
+   relative_errorDWDivFP3_from_cond_combined_acc:
      |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
-   which holds unconditionally once the runtime check discharges DWDivFP_cond. *)
+   which holds unconditionally once the runtime check discharges
+   DWDivFP_cond_acc.  Note the cond is the RELAXED one: its quotient floor is
+   2^(emin+p-1) = DBL_MIN, so the wrapper's accepted domain reaches 53 binades
+   further down than the strong DWDivFP_cond would allow.  The POST below is
+   unchanged by that relaxation -- the mixed bound was always what this wrapper
+   exported; only the set of inputs it accepts got wider. *)
 Definition dw_div_fp15_guarded_spec :=
   DECLARE _dw_div_fp15_guarded
   WITH s: val, x: val,
@@ -519,6 +524,9 @@ Definition dw_mult_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
+(* Accurate-only cond (relaxed quotient floor 2^(emin+p-1) = DBL_MIN); the
+   caller gets the mixed bound, not the pure 6u^2 one.  See
+   dw_div_fp15_guarded_spec above and DDModels.DWDivFP_cond_acc. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
@@ -528,7 +536,7 @@ Definition dw_div_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWDivFP_cond (fst xh) (snd xh) y)
+    PROP(b = true -> DWDivFP_cond_acc (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 

@@ -4464,6 +4464,38 @@ rewrite Rmult_assoc Rinv_l; [rewrite Rmult_1_r; exact Herr|].
 apply Rgt_not_eq; exact HQabs.
 Qed.
 
+(** Absolute counterpart of [DWDivDW_relative_of_mixed_param]: stop one step
+    earlier, keeping the [2*eta] physical-floor term instead of trading it for
+    a further [2*(2.01)*u^2|Q|].  It consumes the same two guard-derived scale
+    facts, [eta*|X| <= 2.01201*u^2|Q|] and [eta <= u^2]; only the final
+    [eta <= 2.01*u^2|Q|] absorption is dropped.  Pure real arithmetic. *)
+Lemma DWDivDW_absolute_of_mixed_param
+    (u eta X Q zr a bx bq c : R) :
+  0 <= eta -> 0 <= bx -> 0 <= bq ->
+  Rabs (zr-Q) <=
+    a*u^2*Rabs Q+bx*eta*Rabs X+bq*eta*Rabs Q+2*eta ->
+  eta*Rabs X <= 201/100*(1001/1000)*u^2*Rabs Q ->
+  eta <= u^2 ->
+  a+bx*(201/100*(1001/1000))+bq <= c ->
+  Rabs (zr-Q) <= c*u^2*Rabs Q+2*eta.
+Proof.
+move => Heta0 Hbx Hbq Habs HX Hetau2 Hbud.
+have HQabs : 0 <= Rabs Q by apply Rabs_pos.
+have Hu2Q : 0 <= u^2*Rabs Q.
+{ apply Rmult_le_pos; [apply pow2_ge_0|exact HQabs]. }
+have H1 : bx*(eta*Rabs X) <= bx*(201/100*(1001/1000)*(u^2*Rabs Q)).
+{ apply Rmult_le_compat_l; [exact Hbx|].
+  eapply Rle_trans; [exact HX|]. right; ring. }
+have HQ' : eta*Rabs Q <= u^2*Rabs Q.
+{ apply Rmult_le_compat_r; [exact HQabs|exact Hetau2]. }
+have H2 : bq*(eta*Rabs Q) <= bq*(u^2*Rabs Q).
+{ apply Rmult_le_compat_l; [exact Hbq|exact HQ']. }
+have H4 : (a+bx*(201/100*(1001/1000))+bq)*(u^2*Rabs Q)
+    <= c*(u^2*Rabs Q).
+{ apply Rmult_le_compat_r; [exact Hu2Q|exact Hbud]. }
+eapply Rle_trans; [exact Habs|]. nra.
+Qed.
+
 (** Master two-arm theorem.  The refinement split of
     [DWDivDW_refinement_product_value_error_tight_floor] is destructed here,
     and each arm carries its own reciprocal coefficients through the shared
@@ -4478,14 +4510,15 @@ Qed.
 
     The arm-specific constants remain separate until the final relative-error
     conversion, yielding the regime-independent coefficient [16.5]. *)
-Local Theorem relative_errorDWDivDW3_from_cond_arms
+Local Theorem DWDivDW3_error_mixed_arms
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_cond xh xl yh yl ->
   let X := FT2R xh+FT2R xl in
   let Q := X/(FT2R yh+FT2R yl) in
   let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
             FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs ((zr-Q)/Q) <= 165/10*bpow radix2 (-fprec t)^2.
+  Rabs (zr-Q) <= 1233/100*bpow radix2 (-fprec t)^2*Rabs Q+
+                 2*bpow radix2 (@common.emin t).
 Proof.
 move => Hp14 COND /=.
 set th := BDIV (Zconst t 1) yh.
@@ -4592,12 +4625,12 @@ destruct Harms as [Htight|[Hcoarse Hsmall]].
     (1*(1+2*u^2))
     (1001/1000*(1+2*u^2))
     ltac:(lra) Hu Heta0 HYne eq_refl Hrec Hclose.
-  apply (DWDivDW_relative_of_mixed_param u eta X Q zr
+  apply (DWDivDW_absolute_of_mixed_param u eta X Q zr
     (4+(2+(2298/1000+1013/1000)*(1+2*u^2))*(1+4*u^2))
     ((1*(1+2*u^2))*(1+4*u^2))
     ((1001/1000*(1+2*u^2))*(1+4*u^2))
-    (165/10) Hu0 HQne ltac:(nra) ltac:(nra)
-    Hcomp HetaX Hetau2 HetaOut).
+    (1233/100) Heta0 ltac:(nra) ltac:(nra)
+    Hcomp HetaX Hetau2).
   nra.
 - (* ===== unordered arm: fr = 2, nw collapses ===== *)
   have Href := DWDivDW_refinement_product_error_scaled_param
@@ -4636,12 +4669,12 @@ destruct Harms as [Htight|[Hcoarse Hsmall]].
     (2*(1+2*u^2))
     (1001/1000*(1+2*u^2))
     ltac:(lra) Hu Heta0 HYne eq_refl Hrec Hclose.
-  apply (DWDivDW_relative_of_mixed_param u eta X Q zr
+  apply (DWDivDW_absolute_of_mixed_param u eta X Q zr
     (4+(2+(1/10+1013/1000)*(1+2*u^2))*(1+4*u^2))
     ((2*(1+2*u^2))*(1+4*u^2))
     ((1001/1000*(1+2*u^2))*(1+4*u^2))
-    (165/10) Hu0 HQne ltac:(nra) ltac:(nra)
-    Hcomp HetaX Hetau2 HetaOut).
+    (1233/100) Heta0 ltac:(nra) ltac:(nra)
+    Hcomp HetaX Hetau2).
   nra.
 Qed.
 
@@ -5062,14 +5095,95 @@ Let Q := X / (FT2R yh + FT2R yl).
 Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
           FT2R (snd (DWDivDW3 xh xl yh yl)).
 
-(** Canonical exported regime-independent relative bound.  The proof keeps the
-    ordered and unordered refinement-arm budgets separate through the closing
-    multiplication and underflow-floor conversion. *)
+(** PRIMARY API: the mixed relative/physical-floor bound.
+
+    The [2*eta] is the closing block's own underflow budget.  It is NOT an
+    artifact of a missing guard: no strengthening of [DWDivDW_cond] removes it,
+    because the residual nodes it comes from may legitimately be zero, which is
+    exactly why the cond deliberately does not bound them below.
+
+    The two refinement-arm budgets stay separate to the very end;
+    [DWDivDW_absolute_of_mixed_param] converts each arm's [(a,bx,bq)] against
+    the guard-derived scale facts, giving [12.32401] on the ordered arm and
+    [12.13802] on the unordered one -- both under the exported [12.33].  Those
+    coefficients are not exposed. *)
+Theorem DWDivDW3_error_mixed :
+  Rabs (zr-Q) <= 1233/100*u^2*Rabs Q+2*bpow radix2 (@common.emin t).
+Proof.
+exact (DWDivDW3_error_mixed_arms xh xl yh yl Hp14 COND).
+Qed.
+
+(** Canonical exported regime-independent RELATIVE bound, now a short corollary
+    of the mixed theorem: the cond's quotient window makes one floor ulp worth
+    [2.01*u^2|Q|] ([DWDivDW_eta_absorbed_by_quotient_tight]), so
+    [12.33 + 2*2.01 = 16.35 <= 16.5].  The mixed form is therefore strictly
+    sharper wherever [eta] sits below that maximum -- i.e. everywhere the
+    quotient is comfortably normal. *)
 Theorem relative_errorDWDivDW3_from_cond_combined :
   Rabs ((zr-Q)/Q) <= 165/10*u^2.
 Proof.
-exact (relative_errorDWDivDW3_from_cond_arms
-  xh xl yh yl Hp14 COND).
+have Habs := DWDivDW3_error_mixed.
+have HetaOut := DWDivDW_eta_absorbed_by_quotient_tight
+  xh xl yh yl Hp14 COND.
+specialize (HetaOut STD). fold X Q in HetaOut.
+(* Q <> 0 is free from the absorption fact: 0 < eta forces 0 < |Q|. *)
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hb : 0 < bpow radix2 (@common.emin t) by apply bpow_gt_0.
+have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
+have HQabs : 0 < Rabs Q.
+{ have Hu2 : 0 < u^2 by nra. nra. }
+have Herr : Rabs (zr-Q) <= 165/10*u^2*Rabs Q.
+{ eapply Rle_trans; [exact Habs|]. nra. }
+rewrite Rabs_mult Rabs_inv.
+apply (Rmult_le_reg_r (Rabs Q)); [exact HQabs|].
+rewrite Rmult_assoc Rinv_l; [rewrite Rmult_1_r; exact Herr|].
+apply Rgt_not_eq; exact HQabs.
+Qed.
+
+(* Node notations for the reciprocal-bootstrap prologue, as in the other
+   sections of this file.  Declared here, after the two error theorems, so
+   their statements are unaffected. *)
+Notation th  := (BDIV (Zconst t 1) yh).
+Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
+Notation rl  := (BOPP (BMULT yl th)).
+Notation eh  := (fst (Fast2Sum rh rl)).
+Notation el  := (snd (Fast2Sum rh rl)).
+Notation dh  := (fst (DWTimesFP3 eh el th)).
+Notation dl  := (snd (DWTimesFP3 eh el th)).
+Notation mh  := (fst (DWPlusFP dh dl th)).
+Notation ml  := (snd (DWPlusFP dh dl th)).
+
+(** Closure, under exactly the hypotheses of the error bounds above.
+
+    This previously needed two assumptions beyond the cond -- that the
+    reconstructed reciprocal [(mh,ml)] is a double word, and that the closing
+    product [xh*mh] avoids deep underflow (see [DWDivDW3_double_word] and the
+    banner over Section ResultDWDivDW).  The first is supplied by
+    [DWDivDW_reciprocal_relative_from_cond]; the second is no longer needed at
+    all, because [DWMulDW_acc.DWTimesDW3_double_word_mixed] establishes
+    Algorithm 12's closure over the WHOLE range -- below the TwoProd threshold
+    it routes through the gap arm of [DWTimesDW3_error_floor_gap] rather than
+    the magnitude-ordering argument that needed the normal-range bound.
+
+    Note what is NOT required: no lower bound on [xh*mh], and no strengthening
+    of [DWDivDW_cond].  The runtime check [dw_div_dw_check] is unchanged. *)
+Theorem DWDivDW3_double_word_from_cond :
+  double_word_prop (fst (DWDivDW3 xh xl yh yl))
+                   (snd (DWDivDW3 xh xl yh yl)).
+Proof.
+have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
+specialize (FIN NANS STD).
+have FINmul : is_finite_p (DWTimesDW3 xh xl mh ml) by exact FIN.
+have Hrec := DWDivDW_reciprocal_relative_from_cond xh xl yh yl Hp14 COND.
+specialize (Hrec NANS STD).
+cbv zeta in Hrec.
+destruct Hrec as [_ [_ [_ [DWm _]]]].
+move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
+have Hdw : double_word_prop (fst (DWTimesDW3 xh xl mh ml))
+                            (snd (DWTimesDW3 xh xl mh ml))
+  by exact (DWMulDW_acc.DWTimesDW3_double_word_mixed xh xl mh ml
+              ltac:(lia) (conj DWx (conj DWm FINmul))).
+exact Hdw.
 Qed.
 
 End CondAccuracyDWDivDW_public.

@@ -214,23 +214,56 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_div_fp_check(struct dword *x, double y) {
-    /* Verifies DWDivFP_cond (DDModels.v): xh, xl, y finite; (x->s, x->t) a
+    /* Verifies DWDivFP_cond_acc (DDModels.v): xh, xl, y finite; (x->s, x->t) a
        double-word; |x->s| within the window [2^(emin+2p), Omega/4]; and the
-       quotient |x->s / y| within the window [2^(emin+2p-1), Omega/4].
+       quotient |x->s / y| within the window [2^(emin+p-1), Omega/4].
 
-       The two quotient bounds are tested on the ROUNDED quotient q = RN(x->s / y);
+       QUOTIENT FLOOR, and why it is not 2^(emin+2p-1).  This test used to sit at
+       2^(emin+2p-1) = 2^-969, the floor of the full DWDivFP_cond.  That extra
+       strength served exactly one purpose: it kept the quotient far enough above
+       the underflow floor that one floor ulp could be charged against it at
+       3u^2 (DWDivFP_acc.DWDivFP_cond_eta_le_3u2_quotient), converting the mixed
+       bound into the PURE relative bound 6u^2 (DWDivFP3_accuracy).  It is NOT
+       needed for anything this function's caller actually gets.  The contract
+       exported by dw_div_fp15_guarded is the whole-range MIXED bound
+
+         |(zh+zl) - (x->s + x->t)/y| <= 3u^2 |(x->s + x->t)/y| + 2^emin
+
+       (DWDivFP_acc.relative_errorDWDivFP3_from_cond_combined_acc), and that --
+       together with output double-word closure
+       (DWDivFP3_is_DW_from_cond_acc) and finiteness of the computed pair
+       (DWDivFP3_{fst,snd}_finite_acc) -- needs only 2^(emin+p-1).  That is the
+       floor of the proof architecture, not a tuning knob: it is exactly where
+       ulp v <= |v| * 2^(1-p) stops holding, so below it the leading quotient
+       node RN(x->s/y) is subnormal and the FLX->FLT bridge for it fails.
+
+       For IEEE-754 double, 2^(emin+p-1) = 2^-1022 = DBL_MIN, the smallest
+       normal.  Relaxing to it admits 53 more binades of quotient than the old
+       test did, and makes this check simpler rather than harder.  A caller who
+       wants the 6u^2 relative bound must establish the full DWDivFP_cond
+       itself, i.e. re-test the quotient at 2^-969.
+
+       Both quotient bounds are tested on the ROUNDED quotient q = RN(x->s / y);
        the rounded->exact transfer is the division analog of dw_mult_fp_check's
        product-magnitude argument, proven one-directional in Coq
-       (no_overflow_real_from_round_div / no_underflow_real_from_round_div).  As
-       with prod_bnd there, the STRICT `<` on q's upper bound does double duty: it
-       establishes the cond's real-quotient upper bound |x->s/y| <= Omega/4 AND
-       forces q finite (a NaN abs compares unordered -> false; +Inf -> false),
-       which in turn forces the divisor y != 0 in R.  The lower bound q_qlo < |q|
-       is likewise strict, giving 2^(emin+2p-1) <= |x->s/y| (and again y != 0).
+       (BDIV_abs_le_bpow / BDIV_abs_gt_bpow).  As with prod_bnd there, the
+       STRICT `<` on q's upper bound does double duty: it establishes the cond's
+       real-quotient upper bound |x->s/y| <= Omega/4 AND forces q finite (a NaN
+       abs compares unordered -> false; +Inf -> false), which in turn forces the
+       divisor y != 0 in R.  The lower bound q_qlo < |q| is likewise strict,
+       giving 2^(emin+p-1) <= |x->s/y|.  A non-strict `<=` on either would be
+       UNSOUND: 2^-1022 and 2^1022 are both representable powers of two on which
+       RN is monotone and idempotent, so a real quotient at or beyond either
+       rounds to at or beyond it.
 
        The |x->s| window is a pair of direct comparisons on x->s (no rounding),
-       exactly like dw_plus_fp_check's xh_bnd; the extra lower bound is the
-       product-node underflow guard 2^(emin+2p) <= |x->s| from DWDivFP_cond.
+       exactly like dw_plus_fp_check's xh_bnd.  Its lower bound is the
+       product-node underflow guard 2^(emin+2p) <= |x->s|, which
+       DWDivFP_cond_acc keeps UNCHANGED: it is a different bound, on the
+       internal node pih = round(th*y) ~ x->s, and it is what makes that node
+       TwoProd-exact (DWDivFP_acc.cond_UF_prod_acc).  A normal quotient can
+       coexist with a subnormal product when y is tiny, so neither floor implies
+       the other, and relaxing the quotient floor does not touch this one.
 
        The DW prop alone does not pin down finiteness of x->t in R (FT2R sends
        NaN/Inf to 0), so fin_xl is asserted, even though x->s + x->t == x->s
@@ -241,8 +274,8 @@ int dw_div_fp_check(struct dword *x, double y) {
     int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
 
     double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
-    double q_plo   = ldexp(1.0, -968);   /* 2^(emin+2*p)   product-node lower bound */
-    double q_qlo   = ldexp(1.0, -969);   /* 2^(emin+2*p-1) quotient lower bound */
+    double q_plo   = ldexp(1.0, -968);   /* 2^(emin+2*p)  product-node lower bound */
+    double q_qlo   = ldexp(1.0, -1022);  /* 2^(emin+p-1) = DBL_MIN, quotient lower bound */
 
     /* |x->s| window: 2^(emin+2p) <= |x->s| <= Omega/4 */
     int xh_hi = fabs(x->s) <= q_omega;
@@ -251,7 +284,7 @@ int dw_div_fp_check(struct dword *x, double y) {
     /* quotient window on the rounded quotient q = RN(x->s / y) */
     double q = x->s / y;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y| <= Omega/4; also forces q finite */
-    int qt_lo = q_qlo < fabs(q);     /* STRICT: 2^(emin+2p-1) <= |x->s/y|; forces y != 0 */
+    int qt_lo = q_qlo < fabs(q);     /* STRICT: 2^(emin+p-1) <= |x->s/y| */
 
     return dwx && fin_y && xh_hi && xh_lo && qt_hi && qt_lo;
 }

@@ -492,9 +492,10 @@ forward_if Post_if.
 Qed.
 
 (* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
-   call the check, exit on failure, otherwise recover DWDivFP_cond and call the
-   unguarded op.  The exported accuracy postcondition is the regime-independent
-   combined bound (relative_errorDWDivFP3_from_cond_combined), which the cond
+   call the check, exit on failure, otherwise recover DWDivFP_cond_acc and call
+   the unguarded op.  The exported accuracy postcondition is the
+   regime-independent combined bound
+   (relative_errorDWDivFP3_from_cond_combined_acc), which the relaxed cond
    discharges unconditionally -- see dw_div_fp15_guarded_spec. *)
 Lemma body_dw_div_fp15_guarded :
   semax_body Vprog Gprog f_dw_div_fp15_guarded dw_div_fp15_guarded_spec.
@@ -503,7 +504,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivFP_cond (fst xh) (snd xh) y)
+  PROP (DWDivFP_cond_acc (fst xh) (snd xh) y)
   LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -514,12 +515,12 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivFP_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWDivFP_cond_acc (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hp4 : (4 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (relative_errorDWDivFP3_from_cond_combined (fst xh) (snd xh) y Hp4 HFC)
+    (relative_errorDWDivFP3_from_cond_combined_acc (fst xh) (snd xh) y Hp4 HFC)
     as Hacc.
   entailer!!.
 Qed.

@@ -7,7 +7,61 @@
     FLT runtime model [DDModels.DWDivFP3] onto the paper's real-valued FLX
     model [DWDivFP.DWDivFP3], then the Layer-1 relative-error theorem obtained
     from the paper's tight 3u^2 bound (DWDivFP.DWDFP3_correct), and finally a
-    Layer-2 corollary discharging finiteness/underflow from DWDivFP_cond. *)
+    Layer-2 corollary discharging finiteness/underflow from DWDivFP_cond.
+
+    Notation: u = 2^(-p) is the relative rounding unit and eta = 2^emin is the
+    smallest positive subnormal, the physical underflow floor.  ADMIT-FREE.
+
+    ============================================================================
+    PUBLIC INTERFACE
+
+      TWO CONDS.  Everything below comes in a pair.  The _acc names take the
+      RELAXED DDModels.DWDivFP_cond_acc, whose quotient floor is 2^(emin+p-1) --
+      the floor Layer 1 actually needs, and the one the runtime guard
+      dw_div_fp_check discharges.  The unsuffixed names take the strong
+      DWDivFP_cond (quotient floor 2^(emin+2p-1)) and are re-derived from the
+      _acc ones through DDModels.DWDivFP_cond_acc_of_cond, so their statements
+      are unchanged.  For Tdouble the relaxation widens the admitted quotient
+      range by 53 binades, from 2^-969 down to 2^-1022 = DBL_MIN.
+
+      MIXED absolute/relative API (primary; holds in every regime):
+        DWDivFP3_error_mixed{,_acc}    |Qhat - Q| <= 3u^2|Q| + eta
+        relative_errorDWDivFP3_from_cond_combined{,_acc}
+                                       the same statement under the name the
+                                       VST clients use; do not rename or
+                                       restate (see the note at its site).
+                                       The _acc form is what the guarded
+                                       wrapper's proof applies.
+        DWDivFP3_is_DW_from_cond{,_acc}  output is a double word from the cond
+        DWDivFP3_{fst,snd}_finite{,_acc} finiteness of the computed pair
+
+      RELATIVE API (a restricted refinement of the above, at twice the
+      constant -- see the banner above its section).  This one has NO _acc
+      form: the relaxed cond cannot support a pure relative bound at all.
+        DWDivFP3_accuracy              relerr <= 6u^2 from DWDivFP_cond
+
+      The exchange rate that buys it, reusable on its own (strong cond only):
+        DWDivFP_cond_quotient_lower    (1-u)*2^(emin+2p-1) <= |Q|
+        DWDivFP_cond_eta_le_3u2_quotient   eta <= 3u^2|Q|
+
+      NORMAL-REGIME results (tighter, but each needs a hypothesis excluding a
+      subnormal closing correction -- NOT whole-range, do not export these as
+      the operation's guarantee):
+        relative_errorDWDivFP3_correct        3u^2, FLX-bridged Layer 1
+        relative_errorDWDivFP3_from_cond{,_acc}
+                                              3u^2, normal leg (adds Hdyn)
+        relative_errorDWDivFP3_from_cond_underflow{,_acc}
+                                              3u^2|Q| + eta, underflow leg
+                                              (adds the complementary Huf)
+
+    Layer ordering.  The mixed theorem comes FIRST and the relative one is
+    derived from it, because 3u^2|Q| + eta is what the algorithm actually
+    satisfies unconditionally; the pure 3u^2 holds only when the closing
+    correction is normal, and the 6u^2 whole-range form is bought by charging
+    the floor against DWDivFP_cond's quotient window -- which is precisely the
+    strength DWDivFP_cond_acc gives up, and precisely why the 6u^2 bound is not
+    runtime-reachable through dw_div_fp_check.
+    ============================================================================ *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -900,10 +954,14 @@ Qed.
 
 (* Shared finiteness cascade for DWDivFP3: proves both quotient nodes and their
    BPLUS are finite, with |th| and |tl| bounded by Omega/2 and |th+tl| < Omega.
-   Consumed by both DWDivFP3_fst_finite and DWDivFP3_snd_finite. *)
-Lemma DWDivFP3_cascade (xh xl y : ftype t) :
+   Consumed by both DWDivFP3_fst_finite_acc and DWDivFP3_snd_finite_acc.
+
+   Stated on the RELAXED cond DWDivFP_cond_acc: the quotient bound enters only
+   through Hnorm below, at emin+p-1 (thy_residual / ulp_FLT_le), and the
+   product node is carried by clause 8, which the relaxed cond keeps. *)
+Lemma DWDivFP3_cascade_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_cond_acc xh xl y ->
   is_finite (BDIV xh y) = true /\
   is_finite (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y) = true /\
   is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) = true /\
@@ -928,7 +986,7 @@ have He0 : 0 <= bpow radix2 (@common.emin t) by apply bpow_ge_0.
 have H4Ω : bpow radix2 (femax t - 2) = / 4 * Omega by apply aux_quarter_Omega.
 have Hyne : FT2R y <> 0.
 { intro H0.
-  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
 have HYe : bpow radix2 emin <= Rabs (FT2R y) by apply y_ge_emin, Hyne.
 have HYpos : 0 < Rabs (FT2R y)
@@ -951,9 +1009,7 @@ have HW : Rabs (FT2R xh) * bpow radix2 (- fprec t) <= / 64 * Omega.
 have HW0 : 0 <= Rabs (FT2R xh) * bpow radix2 (- fprec t)
   by apply Rmult_le_pos; [ exact Hxhp | apply bpow_ge_0 ].
 have Hnorm : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
-{ eapply Rle_trans; [| exact Hquot]. apply bpow_le.
-  change (@common.emin t) with (SpecFloat.emin (fprec t) (femax t)).
-  pose proof (fprec_gt_one t). lia. }
+{ change (@common.emin t) with (SpecFloat.emin (fprec t) (femax t)). exact Hquot. }
 (* ---- th ---- *)
 have Fth : is_finite (BDIV xh y) = true
   by apply th_finite; [ exact Hfxh | exact Hyne | exact Hqub ].
@@ -1322,9 +1378,9 @@ split; [ exact Fth | split; [ exact Ftl | split; [ exact Hfp | split; [ exact Ht
   | split; [ exact Htlb | split; [ exact Hsum_lt | exact Hd_le_xh ]]]]]].
 Qed.
 
-Lemma DWDivFP3_fst_finite (xh xl y : ftype t) :
+Lemma DWDivFP3_fst_finite_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_cond_acc xh xl y ->
   is_finite (fst (DWDivFP3 xh xl y)) = true.
 Proof.
 intros Hp4 COND.
@@ -1334,19 +1390,19 @@ have Hfstred : fst (DWDivFP3 xh xl y)
                               (Fast2Mult_err (BDIV xh y) y)) xl) y)
   by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
 rewrite Hfstred.
-exact (proj1 (proj2 (proj2 (DWDivFP3_cascade xh xl y Hp4 COND)))).
+exact (proj1 (proj2 (proj2 (DWDivFP3_cascade_acc xh xl y Hp4 COND)))).
 Qed.
 
 (* Finiteness of snd (DWDivFP3): the closing Fast2Sum's snd needs the ulp
    ordering ulp(tl) <= ulp(th) (or th = 0), from the double-word relation of the
    result (|tl| <= ulp(th)), then is_finite_FastSum_ulp. *)
-Lemma DWDivFP3_snd_finite (xh xl y : ftype t) :
+Lemma DWDivFP3_snd_finite_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_cond_acc xh xl y ->
   is_finite (snd (DWDivFP3 xh xl y)) = true.
 Proof.
 intros Hp4 COND.
-destruct (DWDivFP3_cascade xh xl y Hp4 COND) as (Fth & Ftl & Hfp & Hthb & Htlb & Hsum_lt & _).
+destruct (DWDivFP3_cascade_acc xh xl y Hp4 COND) as (Fth & Ftl & Hfp & Hthb & Htlb & Hsum_lt & _).
 have HΩ32 : 32 <= Omega.
 { have -> : (32 = bpow radix2 5)%R by (simpl; lra).
   apply bpow_le; pose proof (fprec_lt_femax t); lia. }
@@ -1399,22 +1455,43 @@ apply (abst_snd _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMIN
   | exact (half_ulp_le _ Hp4 Htlz_lt) | exact Htlz ].
 Qed.
 
-(* DWDivFP_cond proves the ordering |tl| <= |th|: |d| <= |xh| (cascade) lifts
-   through division by the fixed y (round monotone, |RN z| = RN|z|).  Uniform --
-   no normal/underflow split, no per-node underflow hypotheses. *)
-Lemma DWDivFP3_ordering (xh xl y : ftype t) :
+(* The strong cond implies the relaxed one (DWDivFP_cond_acc_of_cond), so the
+   finiteness results hold under it too.  These keep the names the file's public
+   interface advertises; the widened-domain versions are the _acc ones above. *)
+Lemma DWDivFP3_fst_finite (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_cond xh xl y ->
+  is_finite (fst (DWDivFP3 xh xl y)) = true.
+Proof.
+intros Hp4 H.
+exact (DWDivFP3_fst_finite_acc xh xl y Hp4 (DWDivFP_cond_acc_of_cond xh xl y H)).
+Qed.
+
+Lemma DWDivFP3_snd_finite (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_cond xh xl y ->
+  is_finite (snd (DWDivFP3 xh xl y)) = true.
+Proof.
+intros Hp4 H.
+exact (DWDivFP3_snd_finite_acc xh xl y Hp4 (DWDivFP_cond_acc_of_cond xh xl y H)).
+Qed.
+
+(* DWDivFP_cond_acc proves the ordering |tl| <= |th|: |d| <= |xh| (cascade) lifts
+   through division by the fixed y (round monotone, |RN z| = RN|z|).  Uniform --
+   no normal/underflow split, no per-node underflow hypotheses. *)
+Lemma DWDivFP3_ordering_acc (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_cond_acc xh xl y ->
   Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                           (Fast2Mult_err (BDIV xh y) y)) xl) y))
     <= Rabs (FT2R (BDIV xh y)).
 Proof.
 intros Hp4 COND.
-destruct (DWDivFP3_cascade xh xl y Hp4 COND)
+destruct (DWDivFP3_cascade_acc xh xl y Hp4 COND)
   as (Fth & Ftl & _ & _ & _ & _ & Hd_le_xh).
 have Hyne : FT2R y <> 0.
 { move: COND => [_ [_ [_ [_ [Hquot _]]]]].
-  intro H0. have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  intro H0. have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
 set d := BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                (Fast2Mult_err (BDIV xh y) y)) xl.
@@ -1425,16 +1502,28 @@ rewrite !Rabs_mult.
 apply Rmult_le_compat_r; [ apply Rabs_pos | exact Hd_le_xh ].
 Qed.
 
-(* Both simplified conditions discharged from the cond -> result is a DW. *)
+(* Both simplified conditions discharged from the cond -> result is a DW.
+   Output double-word closure survives the relaxation: it needs only that the
+   closing Fast2Sum preserves its sum, i.e. the ordering above, which is uniform
+   in the regime. *)
+Corollary DWDivFP3_is_DW_from_cond_acc (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_cond_acc xh xl y ->
+  double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
+Proof.
+intros Hp4 COND.
+apply DWDivFP3_is_DW.
+- exact (proj1 (proj2 (proj2 (DWDivFP3_cascade_acc xh xl y Hp4 COND)))).
+- exact (DWDivFP3_ordering_acc xh xl y Hp4 COND).
+Qed.
+
 Corollary DWDivFP3_is_DW_from_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_cond xh xl y ->
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
 Proof.
-intros Hp4 COND.
-apply DWDivFP3_is_DW.
-- exact (proj1 (proj2 (proj2 (DWDivFP3_cascade xh xl y Hp4 COND)))).
-- exact (DWDivFP3_ordering xh xl y Hp4 COND).
+intros Hp4 H.
+exact (DWDivFP3_is_DW_from_cond_acc xh xl y Hp4 (DWDivFP_cond_acc_of_cond xh xl y H)).
 Qed.
 
 (* The intermediate normal-range (strong-underflow) facts consumed by the
@@ -1446,22 +1535,19 @@ Qed.
    emin+2p-1.  Since |th*y| >= |xh|(1-u) (thy_residual) and the cond bounds
    |xh| >= bpow(emin+2p), and 1-u >= 1/2, we get |th*y| >= bpow(emin+2p)/2 =
    bpow(emin+2p-1).  This is why bridge_prod now uses Fast2Mult_correct_weak. *)
-Lemma cond_UF_prod (xh xl y : ftype t) :
-  DWDivFP_cond xh xl y ->
+Lemma cond_UF_prod_acc (xh xl y : ftype t) :
+  DWDivFP_cond_acc xh xl y ->
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R (BDIV xh y) * FT2R y).
 Proof.
 move => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
 have Hyne : FT2R y <> 0.
 { intro H0.
-  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
 have Hfth : is_finite (BDIV xh y) = true
   by apply th_finite; [ exact Hfxh | exact Hyne | exact Hqub ].
 have Hqn : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
-{ apply Rle_trans with
-    (bpow radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)).
-  - apply bpow_le. unfold common.emin. pose proof (fprec_gt_one t). lia.
-  - exact Hquot. }
+{ unfold common.emin. exact Hquot. }
 have Hres := thy_residual xh y Hfth Hyne Hqn.
 have HX0 : 0 <= Rabs (FT2R xh) by apply Rabs_pos.
 have Hu2 : bpow radix2 (- fprec t) <= /2.
@@ -1521,34 +1607,46 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_cond xh xl y.
+Hypothesis COND : DWDivFP_cond_acc xh xl y.
 Hypothesis Hdyn : bpow radix2 (emin + fprec t - 1)
   <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y).
 
-Theorem relative_errorDWDivFP3_from_cond :
+Theorem relative_errorDWDivFP3_from_cond_acc :
   relative_error_DWDivFP xh xl y <= 3 * u ^ 2.
 Proof.
 have Hfp : is_finite_p (DWDivFP3 xh xl y).
 { split;
-    [ exact (DWDivFP3_fst_finite xh xl y Hp4 COND)
-    | exact (DWDivFP3_snd_finite xh xl y Hp4 COND) ]. }
+    [ exact (DWDivFP3_fst_finite_acc xh xl y Hp4 COND)
+    | exact (DWDivFP3_snd_finite_acc xh xl y Hp4 COND) ]. }
 move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub _]]]]]]].
 have Hyne : FT2R y <> 0.
 { intro H0.
-  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc.
   lra. }
 have Uth : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
-{ apply Rle_trans with
-    (bpow radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)).
-  - apply bpow_le. unfold common.emin. pose proof (fprec_gt_0 t). lia.
-  - exact Hquot. }
+{ unfold common.emin. exact Hquot. }
 exact (relative_errorDWDivFP3_correct xh xl y Hdwp Hfp Hp4 Hyne
-         Uth (cond_UF_prod xh xl y COND) Hdyn).
+         Uth (cond_UF_prod_acc xh xl y COND) Hdyn).
 Qed.
 
 End CondAccuracyDWDivFP.
+
+(* Same result under the strong cond, keeping the name the public interface
+   advertises. *)
+Theorem relative_errorDWDivFP3_from_cond {NANS: Nans} {t : type} {STD: is_standard t}
+  (xh xl y : ftype t)
+  (Hp4 : (4 <= fprec t)%Z)
+  (COND : DWDivFP_cond xh xl y)
+  (Hdyn : bpow radix2 (@common.emin t + fprec t - 1)
+          <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                       (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)) :
+  relative_error_DWDivFP xh xl y <= 3 * (bpow radix2 (- fprec t)) ^ 2.
+Proof.
+exact (relative_errorDWDivFP3_from_cond_acc xh xl y Hp4
+         (DWDivFP_cond_acc_of_cond xh xl y COND) Hdyn).
+Qed.
 
 (* Layer-2, UNDERFLOW leg: when the closing quotient d/y is subnormal, the runtime
    diverges from the FLX model only at the single node tl = round(d/y), by at most
@@ -1566,7 +1664,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_cond xh xl y.
+Hypothesis COND : DWDivFP_cond_acc xh xl y.
 Hypothesis Huf : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                           (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
                  < bpow radix2 (emin + fprec t - 1).
@@ -1579,7 +1677,7 @@ Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 Local Instance vflx_uf : Generic_fmt.Valid_exp (FLX_exp (fprec t)).
 Proof. apply FLX.FLX_exp_valid, fprec_gt_0. Qed.
 
-Theorem relative_errorDWDivFP3_from_cond_underflow :
+Theorem relative_errorDWDivFP3_from_cond_underflow_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
@@ -1587,18 +1685,16 @@ Proof.
 set d := BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                        (Fast2Mult_err (BDIV xh y) y)) xl.
 have Hfp : is_finite_p (DWDivFP3 xh xl y)
-  by split; [ exact (DWDivFP3_fst_finite xh xl y Hp4 COND)
-            | exact (DWDivFP3_snd_finite xh xl y Hp4 COND) ].
+  by split; [ exact (DWDivFP3_fst_finite_acc xh xl y Hp4 COND)
+            | exact (DWDivFP3_snd_finite_acc xh xl y Hp4 COND) ].
 move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
 have Hyne : FT2R y <> 0.
-{ intro H0. have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+{ intro H0. have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
 have Uth : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
-{ apply Rle_trans with (bpow radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)).
-  - apply bpow_le. unfold common.emin. pose proof (fprec_gt_0 t). lia.
-  - exact Hquot. }
+{ unfold common.emin. exact Hquot. }
 have UFprod : bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R (BDIV xh y) * FT2R y)
-  by exact (cond_UF_prod xh xl y COND).
+  by exact (cond_UF_prod_acc xh xl y COND).
 have HFy : generic_format radix2 (FLX_exp (fprec t)) (FT2R y)
   by (apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t));
       apply generic_format_FLT_FT2R).
@@ -1615,23 +1711,24 @@ have Ftls : generic_format radix2 (FLX_exp (fprec t))
 have Ftl : generic_format radix2 (FLX_exp (fprec t)) (FT2R (BDIV d y))
   by (apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t));
       apply generic_format_FLT_FT2R).
-(* |FT2R th| is normal (>= bpow(emin+2p-1)); both roundings of v0 are <= bpow(emin+p-1) *)
-have Fbnd_hi : generic_format radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
-                 (bpow radix2 (emin + 2 * fprec t - 1)).
-{ apply generic_format_bpow. unfold FLT_exp, common.emin. pose proof (fprec_gt_one t). lia. }
+(* |FT2R th| is >= bpow(emin+p-1); both roundings of v0 are <= bpow(emin+p-1).
+   These two meet exactly at emin+p-1, which is why that exponent is the floor of
+   the whole construction: Hord_p / Hord_r below are tight there.  Note Hth_gelo
+   is derived at emin+p-1 DIRECTLY from the cond's quotient bound -- routing it
+   through the stronger emin+2p-1 (as an earlier version did) and immediately
+   weakening was the only place the strong quotient window was still being read. *)
 have Fbnd_lo_flx : generic_format radix2 (FLX_exp (fprec t))
                  (bpow radix2 (emin + fprec t - 1)).
 { apply generic_format_bpow. unfold FLX_exp, common.emin. pose proof (fprec_gt_one t). lia. }
 have Fbnd_lo_flt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
                  (bpow radix2 (emin + fprec t - 1)).
 { apply generic_format_bpow. unfold SpecFloat.fexp, common.emin. pose proof (fprec_gt_one t). lia. }
-have Hth_ge : bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R (BDIV xh y)).
+have Hth_gelo : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R (BDIV xh y)).
 { rewrite -(BDIV_round_correct t xh y Hyne (FINth xh xl y Hfp)).
   apply abs_round_ge_generic;
-    first [ exact Fbnd_hi | (unfold common.emin; exact Hquot)
+    first [ exact Fbnd_lo_flt | exact Fbnd_lo_flx
+          | (unfold common.emin; exact Hquot)
           | exact vfe_flt | apply valid_rnd_N | typeclasses eauto ]. }
-have Hth_gelo : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R (BDIV xh y)).
-{ eapply Rle_trans; [| exact Hth_ge ]. apply bpow_le. pose proof (fprec_gt_0 t). lia. }
 have Htls_le : Rabs (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0)
                <= bpow radix2 (emin + fprec t - 1).
 { apply abs_round_le_generic;
@@ -1714,6 +1811,25 @@ Qed.
 
 End CondAccuracyDWDivFP_underflow.
 
+(* Same result under the strong cond, keeping the name the public interface
+   advertises. *)
+Theorem relative_errorDWDivFP3_from_cond_underflow
+  {NANS: Nans} {t : type} {STD: is_standard t}
+  (xh xl y : ftype t)
+  (Hp4 : (4 <= fprec t)%Z)
+  (COND : DWDivFP_cond xh xl y)
+  (Huf : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                   (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
+         < bpow radix2 (@common.emin t + fprec t - 1)) :
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * (bpow radix2 (- fprec t)) ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y)
+       + bpow radix2 (@common.emin t).
+Proof.
+exact (relative_errorDWDivFP3_from_cond_underflow_acc xh xl y Hp4
+         (DWDivFP_cond_acc_of_cond xh xl y COND) Huf).
+Qed.
+
 (* Layer-2, COMBINED: the regime-independent bound under DWDivFP_cond alone.  The
    split point |d/y| vs 2^(emin+fprec-1) is decidable, so a case-split feeds the
    normal leg (relative_errorDWDivFP3_from_cond, whose extra Hdyn is exactly the
@@ -1733,9 +1849,12 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_cond xh xl y.
+Hypothesis COND : DWDivFP_cond_acc xh xl y.
 
-Theorem relative_errorDWDivFP3_from_cond_combined :
+(** PRIMARY API.  Mixed relative/absolute error, valid in every regime, under
+    the RELAXED cond -- this is what the runtime guard discharges.  The
+    strong-cond versions of both names below are re-derived after the section. *)
+Theorem DWDivFP3_error_mixed_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
@@ -1748,18 +1867,18 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
   move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
   have Hyne : FT2R y <> 0.
   { intro H0.
-    have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+    have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
     move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
   have Hxhne : FT2R xh <> 0.
   { intro Hx0. move: Hquot; rewrite Hx0 /Rdiv Rmult_0_l Rabs_R0 => Hc.
-    have := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1). lra. }
+    have := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1). lra. }
   have Hsne : FT2R xh + FT2R xl <> 0.
   { intro Hs0. apply Hxhne. move: Hdwp; rewrite /double_word_prop Hs0.
     rewrite /rounded round_0 //. }
   have HDne : (FT2R xh + FT2R xl) / FT2R y <> 0.
   { apply Rmult_integral_contrapositive_currified;
       [ exact Hsne | apply Rinv_neq_0_compat; exact Hyne ]. }
-  pose proof (relative_errorDWDivFP3_from_cond xh xl y Hp4 COND Hdyn) as Hrel.
+  pose proof (relative_errorDWDivFP3_from_cond_acc xh xl y Hp4 COND Hdyn) as Hrel.
   unfold relative_error_DWDivFP in Hrel.
   set (E := FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
             - (FT2R xh + FT2R xl) / FT2R y) in *.
@@ -1770,17 +1889,60 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
   eapply Rle_trans; [ apply Rmult_le_compat_r; [ apply Rabs_pos | exact Hrel ] | ].
   have Hb := bpow_ge_0 radix2 emin. lra.
 - (* underflow leg: direct *)
-  exact (relative_errorDWDivFP3_from_cond_underflow xh xl y Hp4 COND Huf).
+  exact (relative_errorDWDivFP3_from_cond_underflow_acc xh xl y Hp4 COND Huf).
 Qed.
+
+(* Compatibility name.  Applied positionally at verif_dd_ops.v and named in
+   DDOpsASI.v, whose funspec POST spells this bound out literally, so neither
+   the name nor the statement may change.  This _acc form is the one the guarded
+   wrapper's proof uses, since dw_div_fp_check discharges DWDivFP_cond_acc. *)
+Theorem relative_errorDWDivFP3_from_cond_combined_acc :
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
+Proof. exact DWDivFP3_error_mixed_acc. Qed.
 
 End CondAccuracyDWDivFP_combined.
 
-(* Regime-independent pure relative bound.  The combined theorem above pays
-   one absolute underflow [2^emin] error.  [DWDivFP_cond] keeps the leading
-   quotient at least [2^(emin+2p-1)], while the double-word relation gives
-   |xl| <= u|xh|.  Hence the exact quotient is at least
-   (1-u)2^(emin+2p-1), and, for p >= 4, the absolute error is bounded by
-   3u^2 times the exact quotient. *)
+(* The same two statements under the strong cond, unchanged from what the public
+   interface has always advertised.  DWDivFP3_error_mixed in particular is
+   consumed by the pure-relative section below, which stays on DWDivFP_cond. *)
+Theorem DWDivFP3_error_mixed {NANS: Nans} {t : type} {STD: is_standard t}
+  (xh xl y : ftype t)
+  (Hp4 : (4 <= fprec t)%Z)
+  (COND : DWDivFP_cond xh xl y) :
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * (bpow radix2 (- fprec t)) ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y)
+       + bpow radix2 (@common.emin t).
+Proof.
+exact (DWDivFP3_error_mixed_acc xh xl y Hp4 (DWDivFP_cond_acc_of_cond xh xl y COND)).
+Qed.
+
+Theorem relative_errorDWDivFP3_from_cond_combined
+  {NANS: Nans} {t : type} {STD: is_standard t}
+  (xh xl y : ftype t)
+  (Hp4 : (4 <= fprec t)%Z)
+  (COND : DWDivFP_cond xh xl y) :
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * (bpow radix2 (- fprec t)) ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y)
+       + bpow radix2 (@common.emin t).
+Proof. exact (DWDivFP3_error_mixed xh xl y Hp4 COND). Qed.
+
+(* ==================================================================
+   Restricted refinement: the pure relative bound.
+
+   DWDivFP3_error_mixed above is the whole-range API.  This section spends
+   its absolute [2^emin] term against the guard, recovering a pure relative
+   bound at twice the constant.  The exchange rate is the content of
+   DWDivFP_cond_eta_le_3u2_quotient below: one floor ulp is worth 3u^2 on the
+   quotient scale, so 3u^2|Q| + eta <= 6u^2|Q|.
+
+   Note the direction of dependence -- the relative bound is DOWNSTREAM of the
+   mixed one, not the other way round.  DWDivFP_cond's quotient window is what
+   makes the exchange possible; without it no relative bound holds at all.
+   ================================================================== *)
 Section CondAccuracyDWDivFP_pure_relative.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1792,29 +1954,27 @@ Variables (xh xl y : ftype t).
 Hypothesis Hp4 : (4 <= fprec t)%Z.
 Hypothesis COND : DWDivFP_cond xh xl y.
 
-Theorem DWDivFP3_accuracy :
-  relative_error_DWDivFP xh xl y <= 6 * u ^ 2.
+(* The cond bounds the ROUNDED quotient |xh/y| below by 2^(emin+2p-1); the
+   double-word relation |xl| <= u|xh| carries that to the EXACT quotient at a
+   cost of one factor (1-u). *)
+Lemma DWDivFP_cond_quotient_lower :
+  (1 - u) * bpow radix2
+      (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
+    <= Rabs ((FT2R xh + FT2R xl) / FT2R y).
 Proof.
 move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hquot [Hxhb [Hqub Hxhlb]]]]]]].
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu16 : u <= /16.
+{ have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra).
+  apply bpow_le; lia. }
 have Hyne : FT2R y <> 0.
 { intro H0.
   have Hp := bpow_gt_0 radix2
     (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
-have Hxhne : FT2R xh <> 0.
-{ intro H0.
-  have Hp := bpow_gt_0 radix2
-    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
-  move: Hquot; rewrite H0 /Rdiv Rmult_0_l Rabs_R0 => Hc. lra. }
 have Hxl : Rabs (FT2R xl) <= u * Rabs (FT2R xh)
   by exact (DWMulFP_acc.aux_dwu_rel xh xl Hdwp).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu16 : u <= /16.
-{ have Hpow : u <= bpow radix2 (-4) by (apply bpow_le; lia).
-  have He : bpow radix2 (-4) = /16 by reflexivity.
-  rewrite He in Hpow. exact Hpow. }
-have Hsum : (1 - u) * Rabs (FT2R xh)
-              <= Rabs (FT2R xh + FT2R xl).
+have Hsum : (1 - u) * Rabs (FT2R xh) <= Rabs (FT2R xh + FT2R xl).
 { have Ht := Rabs_triang_inv (FT2R xh) (- FT2R xl).
   rewrite Rabs_Ropp in Ht.
   have He : (FT2R xh - - FT2R xl = FT2R xh + FT2R xl)%R by ring.
@@ -1830,12 +1990,23 @@ have HQscale : (1 - u) * Rabs (FT2R xh / FT2R y)
   rewrite -Rmult_assoc.
   apply Rmult_le_compat_r; [apply Rlt_le, Rinv_0_lt_compat; exact Hyabs|].
   exact Hsum. }
-have HQL : (1 - u) *
-              bpow radix2
-                (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
-             <= Rabs ((FT2R xh + FT2R xl) / FT2R y).
-{ eapply Rle_trans; [| exact HQscale].
-  apply Rmult_le_compat_l; [lra| exact Hquot]. }
+eapply Rle_trans; [| exact HQscale].
+apply Rmult_le_compat_l; [lra | exact Hquot].
+Qed.
+
+(* The exchange rate.  Since u^2 * 2^(emin+2p-1) = 2^emin / 2, the quotient
+   lower bound turns one floor ulp into 3u^2 on the quotient scale:
+   eta <= 3u^2 (1-u) 2^(emin+2p-1) needs only 2 <= 3(1-u), i.e. u <= 1/3.
+   This is the DWDivFP analogue of DWDivDW_eta_absorbed_by_quotient_tight. *)
+Lemma DWDivFP_cond_eta_le_3u2_quotient :
+  bpow radix2 emin
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y).
+Proof.
+have HQL := DWDivFP_cond_quotient_lower.
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu16 : u <= /16.
+{ have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra).
+  apply bpow_le; lia. }
 have Hpow :
     u ^ 2 * bpow radix2 (emin + 2 * fprec t - 1)
       = /2 * bpow radix2 emin.
@@ -1850,42 +2021,42 @@ have Hpow :
   rewrite bpow_plus.
   have He : bpow radix2 (-1) = /2 by (simpl; lra).
   rewrite He. ring. }
-have Hfloor : bpow radix2 emin
-                <= 3 * u ^ 2 *
-                     Rabs ((FT2R xh + FT2R xl) / FT2R y).
-{ have Hcoef : 2 <= 3 * (1 - u) by lra.
-  have HQL' := HQL.
-  unfold common.emin in HQL'.
-  have Hu2 : 0 <= u ^ 2 by apply pow2_ge_0.
-  have Hstep :
-      3 * u ^ 2 * ((1 - u) *
-        bpow radix2 (emin + 2 * fprec t - 1))
-      <= 3 * u ^ 2 *
-        Rabs ((FT2R xh + FT2R xl) / FT2R y).
-  { apply Rmult_le_compat_l; [nra| exact HQL']. }
-  have Hb := bpow_gt_0 radix2 emin.
-  have HB := bpow_ge_0 radix2 (emin + 2 * fprec t - 1).
-  have Habsorb : bpow radix2 emin <=
-      3 * u ^ 2 * ((1 - u) *
-        bpow radix2 (emin + 2 * fprec t - 1)) by nra.
-  exact (Rle_trans _ _ _ Habsorb Hstep). }
-have Habs := relative_errorDWDivFP3_from_cond_combined
+have Hu2 : 0 <= u ^ 2 by apply pow2_ge_0.
+have HQL' := HQL. unfold common.emin in HQL'.
+have Hstep :
+    3 * u ^ 2 * ((1 - u) * bpow radix2 (emin + 2 * fprec t - 1))
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y).
+{ apply Rmult_le_compat_l; [nra | exact HQL']. }
+have Hb := bpow_gt_0 radix2 emin.
+have HB := bpow_ge_0 radix2 (emin + 2 * fprec t - 1).
+have Habsorb : bpow radix2 emin <=
+    3 * u ^ 2 * ((1 - u) * bpow radix2 (emin + 2 * fprec t - 1)) by nra.
+exact (Rle_trans _ _ _ Habsorb Hstep).
+Qed.
+
+(* Three steps: invoke the mixed theorem, charge its floor term against the
+   quotient, divide by |Q| > 0. *)
+Theorem DWDivFP3_accuracy :
+  relative_error_DWDivFP xh xl y <= 6 * u ^ 2.
+Proof.
+have Habs := DWDivFP3_error_mixed
   (NANS:=NANS) (STD:=STD) xh xl y Hp4 COND.
+have Hfloor := DWDivFP_cond_eta_le_3u2_quotient.
+have HQL := DWDivFP_cond_quotient_lower.
 set (E := FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
            - (FT2R xh + FT2R xl) / FT2R y) in *.
 set (Q := (FT2R xh + FT2R xl) / FT2R y) in *.
 have HQpos : 0 < Rabs Q.
-{ apply Rlt_le_trans with
-    ((1 - u) * bpow radix2
-      (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)).
-  - have Hb := bpow_gt_0 radix2
-      (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
-    nra.
-  - exact HQL. }
+{ have Hu0 : 0 < u by apply bpow_gt_0.
+  have Hu16 : u <= /16.
+  { have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra).
+    apply bpow_le; lia. }
+  have Hb := bpow_gt_0 radix2
+    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
+  eapply Rlt_le_trans; [| exact HQL]. nra. }
 have Herr : Rabs E <= 6 * u ^ 2 * Rabs Q.
 { eapply Rle_trans; [exact Habs|].
-  eapply Rle_trans;
-    [apply Rplus_le_compat_l; exact Hfloor|].
+  eapply Rle_trans; [apply Rplus_le_compat_l; exact Hfloor|].
   ring_simplify. lra. }
 unfold relative_error_DWDivFP.
 fold E Q.
