@@ -23,6 +23,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc_helpers.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_subnormal.
 Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
@@ -492,11 +493,12 @@ forward_if Post_if.
 Qed.
 
 (* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
-   call the check, exit on failure, otherwise recover DWDivFP_cond_acc and call
+   call the check, exit on failure, otherwise recover DWDivFP_cond_min and call
    the unguarded op.  The exported accuracy postcondition is the
    regime-independent combined bound
-   (relative_errorDWDivFP3_from_cond_combined_acc), which the relaxed cond
-   discharges unconditionally -- see dw_div_fp15_guarded_spec. *)
+   (relative_errorDWDivFP3_from_cond_combined_min), which the minimal cond --
+   no quotient floor -- discharges unconditionally; see
+   dw_div_fp15_guarded_spec. *)
 Lemma body_dw_div_fp15_guarded :
   semax_body Vprog Gprog f_dw_div_fp15_guarded dw_div_fp15_guarded_spec.
 Proof.
@@ -504,7 +506,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivFP_cond_acc (fst xh) (snd xh) y)
+  PROP (DWDivFP_cond_min (fst xh) (snd xh) y)
   LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -515,13 +517,18 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivFP_cond_acc (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWDivFP_cond_min (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hp4 : (4 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (relative_errorDWDivFP3_from_cond_combined_acc (fst xh) (snd xh) y Hp4 HFC)
+    (relative_errorDWDivFP3_from_cond_combined_min (fst xh) (snd xh) y Hp4 HFC)
     as Hacc.
+  (* Output double-word closure, on the same minimal cond -- mirrors
+     body_dw_mult_fp9_guarded. *)
+  assert (Hdw : double_word_prop (fst (DWDivFP3 (fst xh) (snd xh) y))
+                                 (snd (DWDivFP3 (fst xh) (snd xh) y)))
+    by exact (DWDivFP3_is_DW_from_cond_min (fst xh) (snd xh) y Hp4 HFC).
   entailer!!.
 Qed.
 

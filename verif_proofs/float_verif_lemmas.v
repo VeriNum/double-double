@@ -650,25 +650,24 @@ Proof.
   apply round_abs_gt_bpow; assumption.
 Qed.
 
-(* Lower-bound constants for the division guards, all by the same
+(* Lower-bound constants for the division guards, both by the same
    Bldexp-of-1.0 construction as q_omega_val:
 
-     q_lo968_val  = 2^(-968)  = 2^(emin + 2p)     product-node lower bound
-                                (DWDivFP_cond / DWDivFP_cond_acc clause 8, and
-                                 DWDivDW_cond's divisor lower bound)
-     q_lo969_val  = 2^(-969)  = 2^(emin + 2p - 1) DWDivDW_cond's quotient lower
-                                bound (and the retired DWDivFP one)
-     q_lo1022_val = 2^(-1022) = 2^(emin + p - 1)  DWDivFP_cond_acc's quotient
-                                lower bound -- DBL_MIN, the smallest normal
-                                double.  This is the relaxed floor the runtime
-                                guard dw_div_fp_check now tests; it is exactly
-                                what Layer 1 needs (ulp v <= |v| 2^(1-p)), and
-                                it admits 53 more binades of quotient than
-                                q_lo969_val did.
+     q_lo968_val = 2^(-968) = 2^(emin + 2p)     product-node lower bound
+                              (clause 8 of DWDivFP_cond / _cond_acc / _cond_min,
+                               and DWDivDW_cond's divisor lower bound)
+     q_lo969_val = 2^(-969) = 2^(emin + 2p - 1) DWDivDW_cond's quotient lower
+                              bound
 
-   All three are representable powers of two in the NORMAL range, which is what
-   makes the strict rounded->exact transfer in BDIV_abs_gt_bpow sound at each of
-   them: RN is monotone and idempotent there. *)
+   Both are representable powers of two in the NORMAL range, which is what makes
+   the strict rounded->exact transfer in BDIV_abs_gt_bpow sound at each of them:
+   RN is monotone and idempotent there.
+
+   NOTE: dw_div_fp_check no longer has a quotient floor at all, so there is no
+   2^-1022 constant here.  It briefly did, during the intermediate step when the
+   DW/FP division guard tested 2^(emin+p-1); that clause is gone (see
+   DDModels.DWDivFP_cond_min and DWDivFP_subnormal.v), and with it the constant.
+   q_lo969_val survives only because dw_div_dw_check still uses it. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -708,30 +707,6 @@ Lemma q_lo969_val_FT2R :
   FT2R (ftype_of_float q_lo969_val) = bpow Zaux.radix2 (-969).
 Proof.
   cbv [q_lo969_val ftype_of_float Float.of_bits
-       Bits.b64_of_bits Binary.Bldexp]; simpl.
-  cbv [Binary.lift Binary.Bmult]; simpl.
-  cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
-    simpl.
-  cbv [FT2R]; simpl.
-  cbv [F2R]; simpl.
-  nra.
-Qed.
-
-Definition q_lo1022_val :=
-  Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
-    (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
-    (Float.of_bits (Int64.repr 4607182418800017408)) (-1022).
-
-Lemma q_lo1022_val_finite : is_finite (ftype_of_float q_lo1022_val) = true.
-Proof.
-  cbv [q_lo1022_val Binary.is_finite Float.of_bits
-       Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
-Qed.
-
-Lemma q_lo1022_val_FT2R :
-  FT2R (ftype_of_float q_lo1022_val) = bpow Zaux.radix2 (-1022).
-Proof.
-  cbv [q_lo1022_val ftype_of_float Float.of_bits
        Bits.b64_of_bits Binary.Bldexp]; simpl.
   cbv [Binary.lift Binary.Bmult]; simpl.
   cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];

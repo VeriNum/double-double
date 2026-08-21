@@ -4,26 +4,31 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_cond_acc holds:
-   xh, xl, y finite, (xh, xl) a double-word, |xh| within [2^(emin+2p), Omega/4],
-   and the quotient |xh/y| within [2^(emin+p-1), Omega/4].
+(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_cond_min holds:
+   xh, xl, y finite, (xh, xl) a double-word, RN(xh/y) finite, |xh| within
+   [2^(emin+2p), Omega/4], and |xh/y| <= Omega/4.
 
-   The quotient floor is 2^(emin+p-1) = 2^-1022 = DBL_MIN, not the 2^(emin+2p-1)
-   = 2^-969 this guard used to test: the extra strength bought only the pure
-   relative 6u^2 bound, while the mixed bound the guarded wrapper exports needs
-   just 2^(emin+p-1).  See dd_lib/fp_utils.c and DDModels.DWDivFP_cond_acc.  The
-   |xh| lower bound 2^(emin+2p) is UNCHANGED -- it is the product-node floor, a
-   different bound on a different node.
+   THERE IS NO QUOTIENT FLOOR.  The guard has shed it in two steps: first from
+   2^(emin+2p-1) = 2^-969 (the floor of DWDivFP_cond, which buys the pure
+   relative 6u^2 bound) to 2^(emin+p-1) = 2^-1022 (the floor Layer 1's
+   FLX->FLT bridge needs), and now entirely -- the region below 2^(emin+p-1),
+   where the leading quotient node is subnormal and Layer 1 does not apply, has
+   its own proof in DWDivFP_subnormal.v and yields the same mixed bound with
+   the same constant.  So this check now accepts every quotient magnitude the
+   format can represent.
+
+   WHAT REPLACES THE FLOOR.  The cond's fifth conjunct is `is_finite (BDIV xh y)`,
+   and the single STRICT ceiling test establishes it: a strict comparison against
+   a finite constant rejects NaN (unordered) and +Inf, so it forces RN(xh/y)
+   finite, which in turn forces FT2R y <> 0 (BDIV_denom_ne0).  That nonzero-ness
+   is exactly what the old floor was quietly providing.
 
    The finiteness + double-word (dwx) cascade is identical to body_dw_plus_fp_check;
-   the |xh| window is two magnitude comparisons on xh (via Float_cmp_Cle_bpow1022 for
-   the Omega/4 upper bound and Float_cmp_Cle_lo for the 2^(emin+2p) lower bound).
-   The quotient window is tested on the ROUNDED quotient q = RN(xh/y): the strict
-   upper bound (Float_cmp_Clt_bpow1022) also yields is_finite q, hence FT2R y <> 0
-   (BDIV_denom_ne0), so BDIV_abs_le_bpow / BDIV_abs_gt_bpow transfer the rounded
-   bounds to the exact quotient (rounded->exact soundness, one-directional).
-   Both transfers need the threshold to be a representable power of two in the
-   normal range, which 2^-1022 is. *)
+   the |xh| window is two magnitude comparisons on xh (via Float_cmp_Cle_bpow1022
+   for the Omega/4 upper bound and Float_cmp_Cle_lo for the 2^(emin+2p) lower
+   bound, the product-node floor, which is retained and is not removable).  The
+   quotient ceiling is tested on the ROUNDED quotient and transferred to the exact
+   one by BDIV_abs_le_bpow (rounded->exact soundness, one-directional). *)
 Lemma body_dw_div_fp_check :
   semax_body Vprog Gprog f_dw_div_fp_check dw_div_fp_check_spec.
 Proof.
@@ -94,20 +99,15 @@ Proof.
       forward.                          (* _dwx := t'5 *)
       forward_call.                     (* q_omega := ldexp(1.0, 1022) = q_omega_val (store absorbed) *)
       forward_call.                     (* q_plo   := ldexp(1.0, -968) = q_lo968_val (store absorbed) *)
-      forward_call.                     (* q_qlo   := ldexp(1.0, -1022) = q_lo1022_val (store absorbed) *)
-      (* Normalize the negated integer exponents and fold the threshold constants
-         so the temps read as q_omega_val / q_lo968_val / q_lo1022_val.  The
-         q_omega exponent is the positive 1022 and q_qlo's is the negated one, so
-         the two folds stay unambiguous despite sharing the magnitude. *)
+      (* Normalize the negated exponent and fold the two threshold constants.
+         There is no q_qlo any more: the guard has no quotient floor. *)
       replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
-      replace (- Int.unsigned (Int.repr 1022))%Z with (-1022)%Z by reflexivity.
-      fold q_omega_val q_lo968_val q_lo1022_val.
+      fold q_omega_val q_lo968_val.
       forward. forward_call (fst xh). forward.   (* xh_hi := fabs(x->s) <= q_omega *)
       forward. forward_call (fst xh). forward.   (* xh_lo := q_plo <= fabs(x->s) *)
-      forward.                          (* t'18 := x->s *)
+      forward.                          (* t'15 := x->s *)
       forward.                          (* q := t'18 / y *)
       forward_call (Float.div (fst xh) y). forward. (* qt_hi := fabs(q) < q_omega *)
-      forward_call (Float.div (fst xh) y). forward. (* qt_lo := q_qlo < fabs(q) *)
 
       set (bxh_hi := Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
@@ -117,16 +117,13 @@ Proof.
       set (bqt_hi := Float.cmp Clt
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) y)) q_omega_val).
-      set (bqt_lo := Float.cmp Clt q_lo1022_val
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                          (Float.div (fst xh) y))).
 
-      (* === return cascade: t'13 = dwx && fin_y; ... ; t'17 = t'16 && qt_lo === *)
-      set (Post_t13 :=
-        EX b13 : bool,
-        PROP (b13 = true -> b5 = true /\ vret_fy = true)
-        LOCAL (temp _t'13 (Vint (if b13 then Int.one else Int.zero));
-               temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+      (* === return cascade: t'11 = dwx && fin_y; ... ; t'14 = t'13 && qt_hi ===
+         One level shorter than before: the qt_lo conjunct is gone. *)
+      set (Post_t11 :=
+        EX b11 : bool,
+        PROP (b11 = true -> b5 = true /\ vret_fy = true)
+        LOCAL (temp _t'11 (Vint (if b11 then Int.one else Int.zero));
                temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
@@ -134,12 +131,12 @@ Proof.
                temp _fin_y (Vint (if vret_fy then Int.one else Int.zero));
                temp _x x; temp _y (Vfloat y))
         SEP (data_at Tsh dword (f2val xh) x)).
-      forward_if Post_t13.
+      forward_if Post_t11.
       * assert (b5 = true) as Hb5_eq by (destruct b5; auto; simpl in H; rep_lia).
-        forward. unfold Post_t13; Exists vret_fy; entailer!.
+        forward. unfold Post_t11; Exists vret_fy; entailer!.
         repeat split;
         try (now (let H := fresh in intros H; repeat split; assumption));
-        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
         try change (femax Tdouble) with 1024%Z;
         repeat first
           [ reflexivity
@@ -148,9 +145,9 @@ Proof.
             | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
             | |- context [if ?bb then Int.one else Int.zero] => destruct bb
             end ].
-      * forward. unfold Post_t13; Exists false; entailer!;
+      * forward. unfold Post_t11; Exists false; entailer!;
         repeat split;
-        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
         try change (femax Tdouble) with 1024%Z;
         repeat first
           [ reflexivity
@@ -159,26 +156,25 @@ Proof.
             | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
             | |- context [if ?bb then Int.one else Int.zero] => destruct bb
             end ].
-      * unfold Post_t13; clear Post_t13.
-        Intros b13; rename H into Hb13.
-        set (Post_t14 :=
-          EX b14 : bool,
-          PROP (b14 = true -> b5 = true /\ vret_fy = true /\ bxh_hi = true)
-          LOCAL (temp _t'14 (Vint (if b14 then Int.one else Int.zero));
-                 temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+      * unfold Post_t11; clear Post_t11.
+        Intros b11; rename H into Hb11.
+        set (Post_t12 :=
+          EX b12 : bool,
+          PROP (b12 = true -> b5 = true /\ vret_fy = true /\ bxh_hi = true)
+          LOCAL (temp _t'12 (Vint (if b12 then Int.one else Int.zero));
                  temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                  temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
-                 temp _t'13 (Vint (if b13 then Int.one else Int.zero));
+                 temp _t'11 (Vint (if b11 then Int.one else Int.zero));
                  temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                  temp _x x; temp _y (Vfloat y))
           SEP (data_at Tsh dword (f2val xh) x)).
-        forward_if Post_t14.
-        ** assert (b13 = true) as Hb13_eq by (destruct b13; auto; simpl in H; rep_lia).
-           forward. unfold Post_t14; Exists bxh_hi; entailer!.
+        forward_if Post_t12.
+        ** assert (b11 = true) as Hb13_eq by (destruct b11; auto; simpl in H; rep_lia).
+           forward. unfold Post_t12; Exists bxh_hi; entailer!.
            split.
-           { intros Hout. destruct (Hb13 eq_refl); auto. }
+           { intros Hout. destruct (Hb11 eq_refl); auto. }
            { repeat split;
-             try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+             try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
              try change (femax Tdouble) with 1024%Z;
              repeat first
                [ reflexivity
@@ -187,9 +183,9 @@ Proof.
                  | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                  | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                  end ]. }
-        ** forward. unfold Post_t14; Exists false; entailer!;
+        ** forward. unfold Post_t12; Exists false; entailer!;
            repeat split;
-           try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+           try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
            try change (femax Tdouble) with 1024%Z;
            repeat first
              [ reflexivity
@@ -198,26 +194,25 @@ Proof.
                | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                end ].
-        ** unfold Post_t14; clear Post_t14.
-           Intros b14; rename H into Hb14.
-           set (Post_t15 :=
-             EX b15 : bool,
-             PROP (b15 = true -> b5 = true /\ vret_fy = true /\
+        ** unfold Post_t12; clear Post_t12.
+           Intros b12; rename H into Hb12.
+           set (Post_t13 :=
+             EX b13 : bool,
+             PROP (b13 = true -> b5 = true /\ vret_fy = true /\
                                  bxh_hi = true /\ bxh_lo = true)
-             LOCAL (temp _t'15 (Vint (if b15 then Int.one else Int.zero));
-                    temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+             LOCAL (temp _t'13 (Vint (if b13 then Int.one else Int.zero));
                     temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                    temp _t'14 (Vint (if b14 then Int.one else Int.zero));
+                    temp _t'12 (Vint (if b12 then Int.one else Int.zero));
                     temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                     temp _x x; temp _y (Vfloat y))
              SEP (data_at Tsh dword (f2val xh) x)).
-           forward_if Post_t15.
-           *** assert (b14 = true) as Hb14_eq by (destruct b14; auto; simpl in H; rep_lia).
-               forward. unfold Post_t15; Exists bxh_lo; entailer!.
+           forward_if Post_t13.
+           *** assert (b12 = true) as Hb14_eq by (destruct b12; auto; simpl in H; rep_lia).
+               forward. unfold Post_t13; Exists bxh_lo; entailer!.
                split.
-               { intros Hout. destruct (Hb14 eq_refl) as [? [? ?]]; auto. }
+               { intros Hout. destruct (Hb12 eq_refl) as [? [? ?]]; auto. }
                { repeat split;
-                 try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+                 try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
                  try change (femax Tdouble) with 1024%Z;
                  repeat first
                    [ reflexivity
@@ -226,9 +221,9 @@ Proof.
                      | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                      | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                      end ]. }
-           *** forward. unfold Post_t15; Exists false; entailer!;
+           *** forward. unfold Post_t13; Exists false; entailer!;
                repeat split;
-               try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+               try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
                try change (femax Tdouble) with 1024%Z;
                repeat first
                  [ reflexivity
@@ -237,25 +232,24 @@ Proof.
                    | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                    | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                    end ].
-           *** unfold Post_t15; clear Post_t15.
-               Intros b15; rename H into Hb15.
-               set (Post_t16 :=
-                 EX b16 : bool,
-                 PROP (b16 = true -> b5 = true /\ vret_fy = true /\
+           *** unfold Post_t13; clear Post_t13.
+               Intros b13; rename H into Hb13.
+               set (Post_t14 :=
+                 EX b14 : bool,
+                 PROP (b14 = true -> b5 = true /\ vret_fy = true /\
                                      bxh_hi = true /\ bxh_lo = true /\ bqt_hi = true)
-                 LOCAL (temp _t'16 (Vint (if b16 then Int.one else Int.zero));
-                        temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
-                        temp _t'15 (Vint (if b15 then Int.one else Int.zero));
+                 LOCAL (temp _t'14 (Vint (if b14 then Int.one else Int.zero));
+                        temp _t'13 (Vint (if b13 then Int.one else Int.zero));
                         temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                         temp _x x; temp _y (Vfloat y))
                  SEP (data_at Tsh dword (f2val xh) x)).
-               forward_if Post_t16.
-               **** assert (b15 = true) as Hb15_eq by (destruct b15; auto; simpl in H; rep_lia).
-                    forward. unfold Post_t16; Exists bqt_hi; entailer!.
+               forward_if Post_t14.
+               **** assert (b13 = true) as Hb15_eq by (destruct b13; auto; simpl in H; rep_lia).
+                    forward. unfold Post_t14; Exists bqt_hi; entailer!.
                     split.
-                    { intros Hout. destruct (Hb15 eq_refl) as [? [? [? ?]]]; auto. }
+                    { intros Hout. destruct (Hb13 eq_refl) as [? [? [? ?]]]; auto. }
                     { repeat split;
-                      try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+                      try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
                       try change (femax Tdouble) with 1024%Z;
                       repeat first
                         [ reflexivity
@@ -264,9 +258,9 @@ Proof.
                           | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                           | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                           end ]. }
-               **** forward. unfold Post_t16; Exists false; entailer!;
+               **** forward. unfold Post_t14; Exists false; entailer!;
                     repeat split;
-                    try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+                    try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
                     try change (femax Tdouble) with 1024%Z;
                     repeat first
                       [ reflexivity
@@ -275,109 +269,56 @@ Proof.
                         | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
                         | |- context [if ?bb then Int.one else Int.zero] => destruct bb
                         end ].
-               **** unfold Post_t16; clear Post_t16.
-                    Intros b16; rename H into Hb16.
-                    set (Post_t17 :=
-                      EX b17 : bool,
-                      PROP (b17 = true -> b5 = true /\ vret_fy = true /\
-                                          bxh_hi = true /\ bxh_lo = true /\
-                                          bqt_hi = true /\ bqt_lo = true)
-                      LOCAL (temp _t'17 (Vint (if b17 then Int.one else Int.zero));
-                             temp _x x; temp _y (Vfloat y))
-                      SEP (data_at Tsh dword (f2val xh) x)).
-                    forward_if Post_t17.
-                    ***** assert (b16 = true) as Hb16_eq by (destruct b16; auto; simpl in H; rep_lia).
-                          forward. unfold Post_t17; Exists bqt_lo; entailer!.
-                          split.
-                          { intros Hout. destruct (Hb16 eq_refl) as [? [? [? [? ?]]]];
-                            repeat split; assumption. }
-                          { repeat split;
-                            try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
-                            try change (femax Tdouble) with 1024%Z;
-                            repeat first
-                              [ reflexivity
-                              | assumption
-                              | match goal with
-                                | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
-                                | |- context [if ?bb then Int.one else Int.zero] => destruct bb
-                                end ]. }
-                    ***** forward. unfold Post_t17; Exists false; entailer!;
-                          repeat split;
-                          try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi; try unfold bqt_lo;
+               **** unfold Post_t14; clear Post_t14.
+                    Intros b14; rename H into Hb14.
+                    forward.                 (* return t'16 *)
+                    Exists b14; entailer!.
+                    destruct (Hb14 eq_refl)
+                      as [Hb5t [Hfyt [Hbxhht [Hbxhlt Hbqtht]]]].
+                    destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
+                    assert (Hfin_y : is_finite y = true)
+                      by (apply (proj1 Hspec_fy); exact Hfyt).
+                    (* magnitude facts *)
+                    assert (Hxh_hi : Rabs (FT2R (fst xh)) <=
+                              /4 * bpow Zaux.radix2 (femax Tdouble))
+                      by (apply Float_cmp_Cle_bpow1022;
+                          [exact Hfin_xh | unfold bxh_hi in Hbxhht; exact Hbxhht]).
+                    assert (Hxh_lo : bpow Zaux.radix2 (-968) <= Rabs (FT2R (fst xh))).
+                    { apply (Float_cmp_Cle_lo q_lo968_val (fst xh)
+                               (bpow Zaux.radix2 (-968)) Hfin_xh
+                               q_lo968_val_finite q_lo968_val_FT2R).
+                      unfold bxh_lo in Hbxhlt; exact Hbxhlt. }
+                    (* The single strict ceiling test does BOTH jobs: it gives the
+                       quotient upper bound AND finiteness of RN(xh/y), which is
+                       the cond's fifth conjunct (and forces y <> 0). *)
+                    destruct (Float_cmp_Clt_bpow1022 (Float.div (fst xh) y))
+                      as [Hfin_q Hq_hi].
+                    { unfold bqt_hi in Hbqtht; exact Hbqtht. }
+                    change (Float.div (fst xh) y) with (BDIV (fst xh) y) in Hfin_q, Hq_hi.
+                    assert (Hyne : FT2R y <> 0%R)
+                      by (apply (BDIV_denom_ne0 (fst xh) y Hfin_y Hfin_q)).
+                    assert (Hfmt1022 : generic_format radix2 fexp (bpow Zaux.radix2 1022))
+                      by (apply generic_format_bpow;
+                          unfold fexp, SpecFloat.fexp, SpecFloat.emin;
+                          try change (fprec Tdouble) with 53%Z;
                           try change (femax Tdouble) with 1024%Z;
-                          repeat first
-                            [ reflexivity
-                            | assumption
-                            | match goal with
-                              | |- context [Float.cmp ?cc ?aa ?dd] => destruct (Float.cmp cc aa dd)
-                              | |- context [if ?bb then Int.one else Int.zero] => destruct bb
-                              end ].
-                    ***** unfold Post_t17; clear Post_t17.
-                          Intros b17; rename H into Hb17.
-                          forward.                 (* return t'17 *)
-                          Exists b17; entailer!.
-                          destruct (Hb17 eq_refl)
-                            as [Hb5t [Hfyt [Hbxhht [Hbxhlt [Hbqtht Hbqtlt]]]]].
-                          destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
-                          assert (Hfin_y : is_finite y = true)
-                            by (apply (proj1 Hspec_fy); exact Hfyt).
-                          (* magnitude facts *)
-                          assert (Hxh_hi : Rabs (FT2R (fst xh)) <=
-                                    /4 * bpow Zaux.radix2 (femax Tdouble))
-                            by (apply Float_cmp_Cle_bpow1022;
-                                [exact Hfin_xh | unfold bxh_hi in Hbxhht; exact Hbxhht]).
-                          assert (Hxh_lo : bpow Zaux.radix2 (-968) <= Rabs (FT2R (fst xh))).
-                          { apply (Float_cmp_Cle_lo q_lo968_val (fst xh)
-                                     (bpow Zaux.radix2 (-968)) Hfin_xh
-                                     q_lo968_val_finite q_lo968_val_FT2R).
-                            unfold bxh_lo in Hbxhlt; exact Hbxhlt. }
-                          destruct (Float_cmp_Clt_bpow1022 (Float.div (fst xh) y))
-                            as [Hfin_q Hq_hi].
-                          { unfold bqt_hi in Hbqtht; exact Hbqtht. }
-                          change (Float.div (fst xh) y) with (BDIV (fst xh) y) in Hfin_q, Hq_hi.
-                          assert (Hyne : FT2R y <> 0%R)
-                            by (apply (BDIV_denom_ne0 (fst xh) y Hfin_y Hfin_q)).
-                          assert (Hqt_lo0 : bpow Zaux.radix2 (-1022) <
-                                    Rabs (FT2R (BDIV (fst xh) y))).
-                          { apply (Float_cmp_Clt_lo q_lo1022_val (BDIV (fst xh) y)
-                                     (bpow Zaux.radix2 (-1022)) Hfin_q
-                                     q_lo1022_val_finite q_lo1022_val_FT2R).
-                            unfold bqt_lo in Hbqtlt; exact Hbqtlt. }
-                          (* generic_format of the thresholds *)
-                          assert (Hfmt1022 : generic_format radix2 fexp (bpow Zaux.radix2 1022))
-                            by (apply generic_format_bpow;
-                                unfold fexp, SpecFloat.fexp, SpecFloat.emin;
-                                try change (fprec Tdouble) with 53%Z;
-                                try change (femax Tdouble) with 1024%Z;
-                                apply Z.max_lub; lia).
-                          assert (Hfmt_m1022 : generic_format radix2 fexp (bpow Zaux.radix2 (-1022)))
-                            by (apply generic_format_bpow;
-                                unfold fexp, SpecFloat.fexp, SpecFloat.emin;
-                                try change (fprec Tdouble) with 53%Z;
-                                try change (femax Tdouble) with 1024%Z;
-                                apply Z.max_lub; lia).
-                          (* transfer quotient bounds to the exact quotient *)
-                          assert (Hquot_hi : Rabs (FT2R (fst xh) / FT2R y) <=
-                                    bpow Zaux.radix2 1022).
-                          { apply (BDIV_abs_le_bpow (fst xh) y 1022 Hyne Hfin_q Hfmt1022).
-                            exact Hq_hi. }
-                          assert (Hquot_lo : bpow Zaux.radix2 (-1022) <
-                                    Rabs (FT2R (fst xh) / FT2R y)).
-                          { apply (BDIV_abs_gt_bpow (fst xh) y (-1022) Hyne Hfin_q Hfmt_m1022).
-                            exact Hqt_lo0. }
-                          (* /4*Omega = bpow(femax-2) *)
-                          assert (Hq4 : (/4 * bpow Zaux.radix2 (femax Tdouble)
-                                        = bpow Zaux.radix2 (femax Tdouble - 2))%R).
-                          { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
-                            rewrite bpow_plus. simpl. lra. }
-                          unfold DDModels.DWDivFP_cond_acc.
-                          (* conjuncts 1-4 (finiteness/double-word) and, up to conversion,
-                             the |xh/y| upper bound and |xh| lower bound close by assumption;
-                             the two remaining bounds are the strict quotient lower bound and
-                             the /4*Omega = bpow(femax-2) rewrite for |xh|. *)
-                          repeat split; try assumption;
-                          try (apply Rlt_le; exact Hquot_lo);
-                          try (rewrite <- Hq4; exact Hxh_hi);
-                          try exact Hquot_hi;
-                          try exact Hxh_lo.
+                          apply Z.max_lub; lia).
+                    (* transfer the quotient ceiling to the exact quotient *)
+                    assert (Hquot_hi : Rabs (FT2R (fst xh) / FT2R y) <=
+                              bpow Zaux.radix2 1022).
+                    { apply (BDIV_abs_le_bpow (fst xh) y 1022 Hyne Hfin_q Hfmt1022).
+                      exact Hq_hi. }
+                    (* /4*Omega = bpow(femax-2) *)
+                    assert (Hq4 : (/4 * bpow Zaux.radix2 (femax Tdouble)
+                                  = bpow Zaux.radix2 (femax Tdouble - 2))%R).
+                    { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
+                      rewrite bpow_plus. simpl. lra. }
+                    unfold DDModels.DWDivFP_cond_min.
+                    (* conjuncts 1-4 (finiteness/double-word) and conjunct 5
+                       (finiteness of the quotient node) close by assumption; the
+                       remaining three are the two magnitude windows. *)
+                    repeat split; try assumption;
+                    try (rewrite <- Hq4; exact Hxh_hi);
+                    try exact Hquot_hi;
+                    try exact Hxh_lo.
 Qed.

@@ -417,6 +417,48 @@ Proof.
   apply bpow_le. pose proof (fprec_gt_one t). lia.
 Qed.
 
+(* DWDivFP_cond_min drops the quotient floor ENTIRELY, replacing it by
+   finiteness of the leading quotient node.  That conjunct is the division
+   analogue of Fast2Mult_cond_acc (which is likewise just
+   `is_finite (BMULT a b) = true`), and it does the same double duty:
+
+     - it forces FT2R y <> 0, which every proof in DWDivFP_acc previously got
+       from the quotient floor;
+     - it supplies the th-node finiteness that th_finite previously derived
+       from the quotient CEILING plus y <> 0.
+
+   Unlike DWDivFP_cond_acc, this cond admits a SUBNORMAL quotient.  The mixed
+   bound survives with the SAME constant,
+
+     |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
+
+   because once |xh/y| < 2^(emin+p-1) the whole computation sits on the
+   2^emin lattice: the correction tl rounds within half an ulp of the exact
+   one, and the closing Fast2Sum is exact because th + tl is again a lattice
+   point.  Proven, together with output double-word closure and finiteness, in
+   DWDivFP_subnormal.v (DWDivFP3_subnormal_leg); the normal branch is
+   unchanged and still routes through DWDivFP_cond_acc.
+
+   Clause 8, the product-node floor 2^(emin+2p) <= |xh|, is again UNCHANGED and
+   is NOT removable: it is what makes the division residual representable to
+   relative accuracy u, hence what makes DWDivFP3 a double-word algorithm at
+   all.  Dropping it costs the u^2 bound outright -- xh = 7*eta, y = 3*eta is a
+   double word with a perfectly normal quotient 7/3 on which the algorithm
+   returns zl = 0 and a relative error of u/2, violating 3u^2|Q| + c*eta for
+   every constant c.  It also, in this branch, is what forces |y| > 2^(p+1),
+   without which the closing division node has no bound.
+
+   This is the cond discharged by the runtime guard dw_div_fp_check. *)
+Definition DWDivFP_cond_min (xh xl y : ftype t) : Prop :=
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y  = true /\
+  double_word_prop xh xl /\
+  is_finite (BDIV xh y) = true /\
+  Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
+  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+
 End DWDivFPCond.
 
 Section DWDivDWCond.

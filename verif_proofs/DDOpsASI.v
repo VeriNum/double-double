@@ -20,6 +20,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_subnormal.
 Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 
@@ -341,14 +342,23 @@ Definition dw_mult_dw12_guarded_spec :=
    division d/y can be subnormal (0 for exact division), so the underflow regime
    contributes one 2^emin absolute term.  The exported bound is therefore the
    regime-independent combined bound proven as
-   relative_errorDWDivFP3_from_cond_combined_acc:
+   relative_errorDWDivFP3_from_cond_combined_min:
      |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
    which holds unconditionally once the runtime check discharges
-   DWDivFP_cond_acc.  Note the cond is the RELAXED one: its quotient floor is
-   2^(emin+p-1) = DBL_MIN, so the wrapper's accepted domain reaches 53 binades
-   further down than the strong DWDivFP_cond would allow.  The POST below is
-   unchanged by that relaxation -- the mixed bound was always what this wrapper
-   exported; only the set of inputs it accepts got wider. *)
+   DWDivFP_cond_min.  Note the cond is the MINIMAL one: it carries no quotient
+   floor at all, so the wrapper accepts every quotient magnitude the format can
+   represent -- subnormal quotients included.  The POST below is unchanged by
+   that relaxation, and the constant on the 2^emin term is unchanged too: the
+   mixed bound was always what this wrapper exported, and only the set of inputs
+   it accepts got wider.  (What the floor used to buy was the PURE relative
+   bound 6u^2, which is not exported here and remains on DWDivFP_cond.)
+
+   The POST also carries output double-word closure
+   (DWDivFP3_is_DW_from_cond_min), matching dw_mult_fp9_guarded_spec and
+   dw_mult_dw12_guarded_spec.  Closure holds in every regime the guard admits --
+   including a subnormal quotient, where the usual ordering |tl| <= |th| can
+   fail and exactness of the closing Fast2Sum comes instead from th + tl landing
+   back on the 2^emin lattice. *)
 Definition dw_div_fp15_guarded_spec :=
   DECLARE _dw_div_fp15_guarded
   WITH s: val, x: val,
@@ -365,7 +375,9 @@ Definition dw_div_fp15_guarded_spec :=
                 - (FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
           <= 3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2
                * Rabs ((FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
-             + bpow Zaux.radix2 (@common.emin Tdouble))%R)
+             + bpow Zaux.radix2 (@common.emin Tdouble))%R
+         /\ double_word_prop (fst (DWDivFP3 (fst xh) (snd xh) y))
+                             (snd (DWDivFP3 (fst xh) (snd xh) y)))
     RETURN()
     SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
@@ -524,9 +536,9 @@ Definition dw_mult_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-(* Accurate-only cond (relaxed quotient floor 2^(emin+p-1) = DBL_MIN); the
-   caller gets the mixed bound, not the pure 6u^2 one.  See
-   dw_div_fp15_guarded_spec above and DDModels.DWDivFP_cond_acc. *)
+(* Minimal cond: no quotient floor at all; the caller gets the mixed bound,
+   not the pure 6u^2 one.  See dw_div_fp15_guarded_spec above and
+   DDModels.DWDivFP_cond_min. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
@@ -536,7 +548,7 @@ Definition dw_div_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWDivFP_cond_acc (fst xh) (snd xh) y)
+    PROP(b = true -> DWDivFP_cond_min (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
