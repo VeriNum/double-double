@@ -382,25 +382,49 @@ Definition dw_div_fp15_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-(* DWDivDW (Algorithm 18) guarded wrapper.  The exported bound is the pure
-   relative form proven as relative_errorDWDivDW3_from_cond_combined, stated
-   through the model-level relative_error_DWDivDW (DWDivDW_acc.v) exactly as
-   dw_plus_dw2_guarded_spec states its bound through relative_error_DWPlusDW:
+(* DWDivDW (Algorithm 18) guarded wrapper.  The exported guarantee is
+   DWDivDW_acc.DWDivDW3_guarantee_acc: the WHOLE-RANGE mixed
+   relative/physical-floor bound TOGETHER WITH double-word closure of the
+   result,
 
-     |(zh+zl - Q)/Q| <= 16.5 u^2,   Q = (xh+xl)/(yh+yl).
+     |(zh+zl) - Q| <= 12.33 u^2 |Q| + 2.5 * 2^emin  /\  double_word_prop zh zl,
+
+   with Q = (xh+xl)/(yh+yl), proven as DWDivDW3_guarantee_from_cond_acc.  This
+   matches dw_mult_dw12_guarded_spec and dw_div_fp15_guarded_spec, which export
+   the same pair of facts.
+
+   WHY IT IS ONE NAMED Prop RATHER THAN TWO SPELLED-OUT CONJUNCTS, unlike those
+   two siblings: DWDivDW3 is by far the largest definition in the library
+   (reciprocal prologue + DWTimesFP3 + DWPlusFP + a closing DWTimesDW3), and the
+   two facts stated separately mention `fst (DWDivDW3 ...)` and
+   `snd (DWDivDW3 ...)` twice each -- four copies of that application in this
+   funspec, on top of the one in the SEP clause.  OpsVSU's solve_SF_dd
+   obligations are superlinear in that count.  Measured, compiling
+   verif_proofs/vsu/Ops_VSU.v on this machine:
+
+     two spelled-out conjuncts (5 copies)   killed at 2h17m, still running
+     bound only, no closure (3 copies)      16m01s
+     this bundled form (2 copies)           15m45s
+
+   DWDivDW3_guarantee_acc matches the result pair ONCE, so the whole PROP
+   carries a single occurrence -- fewer than the error bound alone used to
+   contribute, which is why exporting closure here costs nothing.  DWTimesDW3 and DWDivFP3 are small enough that
+   their specs pay nothing for the spelled-out form.
+
+   WHY NOT the pure relative 16.5 u^2 form (relative_errorDWDivDW3_from_cond_
+   combined) that this spec used to export: that theorem needs the full
+   DWDivDW_cond, whose quotient underflow floor 2^(emin+2p-1) <= |xh/yh| rejects
+   every quotient below 2^-969.  dw_div_dw_check no longer tests for it, and
+   establishes only DWDivDW_cond_acc; absorbing the 2.5*2^emin floor into
+   u^2|Q| would cost 2.5*2.0003 on top of 12.33, over 16.5.  The trade is
+   deliberate: the guard now admits the entire underflowing-quotient range, and
+   the mixed bound is strictly sharper than 16.5 u^2 wherever 2^emin sits below
+   its maximum -- i.e. everywhere the quotient is comfortably normal.
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
    condition rather than an input condition -- at Tdouble it is 14 <= 53 and the
-   body proof discharges it inline -- so the bound rests on DWDivDW_cond alone,
-   which is precisely what dw_div_dw_check establishes.
-
-   Unlike dw_mult_dw12_guarded_spec this does NOT also export double_word_prop of
-   the result: DWDivDW3_double_word needs finiteness, the input double-word props
-   AND double-word-ness of the internal reciprocal node (mh, ml) plus a normality
-   bound, and there is no from-cond version of it yet.
-
-   The canonical theorem proves this regime-independent coefficient directly,
-   including executions affected by underflow. *)
+   body proof discharges it inline -- so the guarantee rests on DWDivDW_cond_acc
+   alone, which is precisely what dw_div_dw_check establishes. *)
 Definition dw_div_dw18_guarded_spec :=
   DECLARE _dw_div_dw18_guarded
   WITH s: val, x: val, y: val,
@@ -413,8 +437,7 @@ Definition dw_div_dw18_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP((relative_error_DWDivDW (fst xh) (snd xh) (fst yh) (snd yh)
-          <= (165/10) * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+    PROP(DWDivDW3_guarantee_acc (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
@@ -565,7 +588,7 @@ Definition dw_div_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).

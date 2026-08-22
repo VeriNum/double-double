@@ -535,10 +535,13 @@ Qed.
 (* DWDivDW (Algorithm 18) guarded wrapper.  Same skeleton as
    body_dw_div_fp15_guarded, with a second dword operand: call the check, exit on
    failure (whose PROP(False) postcondition makes that branch vacuously satisfy
-   the accuracy claim), otherwise recover DWDivDW_cond from the check's boolean
-   and call the unguarded op.  Hp14 is the format side condition 14 <= fprec
-   Tdouble = 53, discharged here, so the exported 16.5u^2 bound rests on
-   DWDivDW_cond alone. *)
+   the accuracy claim), otherwise recover DWDivDW_cond_acc from the check's
+   boolean and call the unguarded op.  Hp14 is the format side condition
+   14 <= fprec Tdouble = 53, discharged here, so the exported mixed bound and the
+   closure both rest on DWDivDW_cond_acc alone -- the cond with no quotient
+   underflow floor, which is what dw_div_dw_check now establishes.  See
+   dw_div_dw18_guarded_spec for why the pure 16.5u^2 relative form is no longer
+   the exported one. *)
 Lemma body_dw_div_dw18_guarded :
   semax_body Vprog Gprog f_dw_div_dw18_guarded dw_div_dw18_guarded_spec.
 Proof.
@@ -546,7 +549,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -558,15 +561,17 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
+  assert_PROP (DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
     by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp14 : (14 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
+  (* Accuracy AND output double-word closure, bundled under a single match on
+     the result pair -- see dw_div_dw18_guarded_spec for why the two facts are
+     not stated separately here. *)
   pose proof
-    (relative_errorDWDivDW3_from_cond_combined
+    (DWDivDW3_guarantee_from_cond_acc
        (fst xh) (snd xh) (fst yh) (snd yh) Hp14 HFC)
-    as Hacc.
-  unfold relative_error_DWDivDW.
+    as Hg.
   entailer!!.
 Qed.

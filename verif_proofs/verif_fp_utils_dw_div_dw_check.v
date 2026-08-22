@@ -50,34 +50,47 @@ Ltac cascade_close :=
     | (intro; cascade_gather; repeat split; assumption)
     | (intro; cascade_gather; tauto) ].
 
-(* dw_div_dw_check(x, y) returns 1 only if DWDivDW_cond holds: xh, xl, yh, yl
-   finite, (xh,xl) and (yh,yl) double-words, 2^(emin+2p-1) <= |1/yh|,
-   2^(emin+2p) <= |yh|, |xh| and |yh| <= Omega/4, and the quotient |xh/yh| inside
-   the window [2^(emin+2p-1), Omega/4].
+(* dw_div_dw_check(x, y) returns 1 only if DWDivDW_cond_acc holds: xh, xl, yh,
+   yl finite, (xh,xl) and (yh,yl) double-words, 2^(emin+2p-1) <= |1/yh|,
+   2^(emin+2p) <= |yh|, and |xh/yh| <= Omega/4.
 
    Structure: body_dw_mult_dw_check's fin + dwx + dwy cascade, then the magnitude
    and quotient tail of body_dw_div_fp_check with the scalar divisor promoted to
    the leading component y->s.  Raw facts are threaded through each forward_if and
-   DWDivDW_cond is discharged only at the final return join.
+   DWDivDW_cond_acc is discharged only at the final return join.
 
-   Twelve conjuncts come out of seven clauses, because two of them are free:
+   Nine conjuncts come out of five clauses, because one of them is free:
 
    - yh_hi (|y->s| <= 2^969) discharges the reciprocal conjunct EXACTLY.  That
      conjunct constrains the exact real reciprocal 1/FT2R yh, so for yh <> 0 it is
      equivalent to |FT2R yh| <= 2^(-(emin+2p-1)) = 2^969 -- see
      recip_lower_from_bpow_upper.  No rounded reciprocal node and no
-     rounded->exact transfer are involved, so unlike the quotient bounds this test
-     is non-strict and exactly as strong as the conjunct.  Its yh <> 0 side
+     rounded->exact transfer are involved, so unlike the quotient ceiling this
+     test is non-strict and exactly as strong as the conjunct.  Its yh <> 0 side
      condition comes from yh_lo, not from the division node (BDIV_denom_ne0 would
      also supply it, but only by making the reciprocal bound depend on the
      quotient node).
-   - The same clause also gives |yh| <= Omega/4 by bpow_le (969 <= 1022), so the
-     check has no separate q_omega test on y->s.
+     The same clause also gives |yh| <= Omega/4 by bpow_le (969 <= 1022); that
+     used to be a separate conjunct discharged for free here, and is now simply
+     absent from DWDivDW_cond (recoverable as DWDivDW_cond_yh_upper), so the
+     check has no q_omega test on y->s either.
 
-   Only the quotient window needs the rounded->exact transfer, at the same two
-   exponents body_dw_div_fp_check uses: the strict upper bound
-   (Float_cmp_Clt_bpow1022) also yields is_finite q, so BDIV_abs_le_bpow /
-   BDIV_abs_gt_bpow apply (one-directional soundness). *)
+   Two tests this check used to have and no longer does, because their conjuncts
+   are gone from the cond:
+
+   - xh_hi (|x->s| <= 2^1022).  DWDivDW_cond bounds no node by |xh|: xh only ever
+     enters Algorithm 18 multiplied by mh ~ 1/yh, so the quotient ceiling already
+     covers every node it reaches.
+   - qt_lo (2^(-969) < |q|), the quotient underflow floor.  That is conjunct 8 of
+     the full DWDivDW_cond, which DWDivDW_cond_acc drops; it bought the sharper
+     2*eta closing floor and the pure 16.5u^2 relative bound, at the cost of
+     rejecting every quotient below 2^-969.  The guarded spec now exports the
+     whole-range mixed bound instead -- see dw_div_dw18_guarded_spec.
+
+   Only the quotient ceiling needs the rounded->exact transfer, at the same
+   exponent body_dw_div_fp_check uses: the strict upper bound
+   (Float_cmp_Clt_bpow1022) also yields is_finite q, so BDIV_abs_le_bpow applies
+   (one-directional soundness).  A non-strict `<=` there would be UNSOUND. *)
 Lemma body_dw_div_dw_check :
   semax_body Vprog Gprog f_dw_div_dw_check dw_div_dw_check_spec.
 Proof.
@@ -205,27 +218,20 @@ Proof.
            forward.                       (* store _dwy *)
 
            (* thresholds: q_omega = 2^1022, q_yhi = 2^969,
-              q_ylo = 2^(-968), q_qlo = 2^(-969)  (stores absorbed) *)
-           forward_call.
+              q_ylo = 2^(-968)  (stores absorbed) *)
            forward_call.
            forward_call.
            forward_call.
            replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
-           replace (- Int.unsigned (Int.repr 969))%Z with (-969)%Z by reflexivity.
-           fold q_omega_val q_hi969_val q_lo968_val q_lo969_val.
-           forward. forward_call (fst xh). forward.  (* xh_hi := fabs(x->s) <= q_omega *)
+           fold q_omega_val q_hi969_val q_lo968_val.
            forward. forward_call (fst yh). forward.  (* yh_hi := fabs(y->s) <= q_yhi *)
            forward. forward_call (fst yh). forward.  (* yh_lo := q_ylo <= fabs(y->s) *)
-           forward.                                  (* t'24 := x->s *)
-           forward.                                  (* t'25 := y->s *)
-           forward.                                  (* q := t'24 / t'25 *)
+           forward.                                  (* t'19 := x->s *)
+           forward.                                  (* t'20 := y->s *)
+           forward.                                  (* q := t'19 / t'20 *)
            forward_call (Float.div (fst xh) (fst yh)). forward. (* qt_hi *)
-           forward_call (Float.div (fst xh) (fst yh)). forward. (* qt_lo *)
 
-           (* Abstract the five comparisons so the cascade below is name-opaque. *)
-           remember (Float.cmp Cle
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
-                       q_omega_val) as bxh_hi eqn:Ebxh_hi.
+           (* Abstract the three comparisons so the cascade below is name-opaque. *)
            remember (Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh))
                        q_hi969_val) as byh_hi eqn:Ebyh_hi.
@@ -236,158 +242,97 @@ Proof.
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) (fst yh))) q_omega_val)
                      as bqt_hi eqn:Ebqt_hi.
-           remember (Float.cmp Clt q_lo969_val
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                          (Float.div (fst xh) (fst yh))))
-                     as bqt_lo eqn:Ebqt_lo.
 
            (* === return cascade ===
-              t'18 = dwx && dwy;  t'19 = t'18 && xh_hi;  t'20 = t'19 && yh_hi;
-              t'21 = t'20 && yh_lo; t'22 = t'21 && qt_hi; t'23 = t'22 && qt_lo *)
-           set (Post_t18 :=
-             EX b18 : bool,
-             PROP (b18 = true -> b6 = true /\ b8 = true)
-             LOCAL (temp _t'18 (Vint (if b18 then Int.one else Int.zero));
-                    temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+              t'15 = dwx && dwy;  t'16 = t'15 && yh_hi;
+              t'17 = t'16 && yh_lo; t'18 = t'17 && qt_hi *)
+           set (Post_t15 :=
+             EX b15 : bool,
+             PROP (b15 = true -> b6 = true /\ b8 = true)
+             LOCAL (temp _t'15 (Vint (if b15 then Int.one else Int.zero));
                     temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                     temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
                     temp _yh_hi (Vint (if byh_hi then Int.one else Int.zero));
-                    temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                     temp _dwx (Vint (if b6 then Int.one else Int.zero));
                     temp _dwy (Vint (if b8 then Int.one else Int.zero));
                     temp _x x; temp _y y)
              SEP (data_at Tsh dword (f2val xh) x;
                   data_at Tsh dword (f2val yh) y)).
-           forward_if Post_t18.
+           forward_if Post_t15.
            ++ assert (b6 = true) as Hb6_eq by (destruct b6; auto; simpl in H; rep_lia).
-              forward. unfold Post_t18; Exists b8; entailer!.
+              forward. unfold Post_t15; Exists b8; entailer!.
               cascade_close.
-           ++ forward. unfold Post_t18; Exists false; entailer!; cascade_close.
-           ++ unfold Post_t18; clear Post_t18.
-              Intros b18; rename H into Hb18.
-              set (Post_t19 :=
-                EX b19 : bool,
-                PROP (b19 = true -> b6 = true /\ b8 = true /\ bxh_hi = true)
-                LOCAL (temp _t'19 (Vint (if b19 then Int.one else Int.zero));
-                       temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+           ++ forward. unfold Post_t15; Exists false; entailer!; cascade_close.
+           ++ unfold Post_t15; clear Post_t15.
+              Intros b15; rename H into Hb15.
+              set (Post_t16 :=
+                EX b16 : bool,
+                PROP (b16 = true -> b6 = true /\ b8 = true /\ byh_hi = true)
+                LOCAL (temp _t'16 (Vint (if b16 then Int.one else Int.zero));
                        temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                        temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
+                       temp _t'15 (Vint (if b15 then Int.one else Int.zero));
                        temp _yh_hi (Vint (if byh_hi then Int.one else Int.zero));
-                       temp _t'18 (Vint (if b18 then Int.one else Int.zero));
-                       temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                        temp _x x; temp _y y)
                 SEP (data_at Tsh dword (f2val xh) x;
                      data_at Tsh dword (f2val yh) y)).
-              forward_if Post_t19.
-              --- assert (b18 = true) as Hb18_eq by (destruct b18; auto; simpl in H; rep_lia).
-                  forward. unfold Post_t19; Exists bxh_hi; entailer!.
+              forward_if Post_t16.
+              --- assert (b15 = true) as Hb15_eq by (destruct b15; auto; simpl in H; rep_lia).
+                  forward. unfold Post_t16; Exists byh_hi; entailer!.
                   cascade_close.
-              --- forward. unfold Post_t19; Exists false; entailer!; cascade_close.
-              --- unfold Post_t19; clear Post_t19.
-                  Intros b19; rename H into Hb19.
-                  set (Post_t20 :=
-                    EX b20 : bool,
-                    PROP (b20 = true -> b6 = true /\ b8 = true /\
-                                        bxh_hi = true /\ byh_hi = true)
-                    LOCAL (temp _t'20 (Vint (if b20 then Int.one else Int.zero));
-                           temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
+              --- forward. unfold Post_t16; Exists false; entailer!; cascade_close.
+              --- unfold Post_t16; clear Post_t16.
+                  Intros b16; rename H into Hb16.
+                  set (Post_t17 :=
+                    EX b17 : bool,
+                    PROP (b17 = true -> b6 = true /\ b8 = true /\
+                                        byh_hi = true /\ byh_lo = true)
+                    LOCAL (temp _t'17 (Vint (if b17 then Int.one else Int.zero));
                            temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+                           temp _t'16 (Vint (if b16 then Int.one else Int.zero));
                            temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
-                           temp _t'19 (Vint (if b19 then Int.one else Int.zero));
-                           temp _yh_hi (Vint (if byh_hi then Int.one else Int.zero));
                            temp _x x; temp _y y)
                     SEP (data_at Tsh dword (f2val xh) x;
                          data_at Tsh dword (f2val yh) y)).
-                  forward_if Post_t20.
-                  ---- assert (b19 = true) as Hb19_eq
-                         by (destruct b19; auto; simpl in H; rep_lia).
-                       forward. unfold Post_t20; Exists byh_hi; entailer!.
+                  forward_if Post_t17.
+                  ---- assert (b16 = true) as Hb16_eq
+                         by (destruct b16; auto; simpl in H; rep_lia).
+                       forward. unfold Post_t17; Exists byh_lo; entailer!.
                        cascade_close.
-                  ---- forward. unfold Post_t20; Exists false; entailer!; cascade_close.
-                  ---- unfold Post_t20; clear Post_t20.
-                       Intros b20; rename H into Hb20.
-                       set (Post_t21 :=
-                         EX b21 : bool,
-                         PROP (b21 = true -> b6 = true /\ b8 = true /\
-                                             bxh_hi = true /\ byh_hi = true /\
-                                             byh_lo = true)
-                         LOCAL (temp _t'21 (Vint (if b21 then Int.one else Int.zero));
-                                temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
-                                temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                                temp _t'20 (Vint (if b20 then Int.one else Int.zero));
-                                temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
+                  ---- forward. unfold Post_t17; Exists false; entailer!; cascade_close.
+                  ---- unfold Post_t17; clear Post_t17.
+                       Intros b17; rename H into Hb17.
+                       set (Post_t18 :=
+                         EX b18 : bool,
+                         PROP (b18 = true -> b6 = true /\ b8 = true /\
+                                             byh_hi = true /\ byh_lo = true /\
+                                             bqt_hi = true)
+                         LOCAL (temp _t'18 (Vint (if b18 then Int.one else Int.zero));
                                 temp _x x; temp _y y)
                          SEP (data_at Tsh dword (f2val xh) x;
                               data_at Tsh dword (f2val yh) y)).
-                       forward_if Post_t21.
-                       ***** assert (b20 = true) as Hb20_eq
-                               by (destruct b20; auto; simpl in H; rep_lia).
-                             forward. unfold Post_t21; Exists byh_lo; entailer!.
+                       forward_if Post_t18.
+                       ***** assert (b17 = true) as Hb17_eq
+                               by (destruct b17; auto; simpl in H; rep_lia).
+                             forward. unfold Post_t18; Exists bqt_hi; entailer!.
                              cascade_close.
-                       ***** forward. unfold Post_t21; Exists false; entailer!;
+                       ***** forward. unfold Post_t18; Exists false; entailer!;
                              cascade_close.
-                       ***** unfold Post_t21; clear Post_t21.
-                             Intros b21; rename H into Hb21.
-                             set (Post_t22 :=
-                               EX b22 : bool,
-                               PROP (b22 = true -> b6 = true /\ b8 = true /\
-                                                   bxh_hi = true /\ byh_hi = true /\
-                                                   byh_lo = true /\ bqt_hi = true)
-                               LOCAL (temp _t'22 (Vint (if b22 then Int.one else Int.zero));
-                                      temp _qt_lo (Vint (if bqt_lo then Int.one else Int.zero));
-                                      temp _t'21 (Vint (if b21 then Int.one else Int.zero));
-                                      temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                                      temp _x x; temp _y y)
-                               SEP (data_at Tsh dword (f2val xh) x;
-                                    data_at Tsh dword (f2val yh) y)).
-                             forward_if Post_t22.
-                             { assert (b21 = true) as Hb21_eq
-                                 by (destruct b21; auto; simpl in H; rep_lia).
-                               forward. unfold Post_t22; Exists bqt_hi; entailer!.
-                               cascade_close. }
-                             { forward. unfold Post_t22; Exists false; entailer!;
-                               cascade_close. }
-                             unfold Post_t22; clear Post_t22.
-                             Intros b22; rename H into Hb22.
-                             set (Post_t23 :=
-                               EX b23 : bool,
-                               PROP (b23 = true -> b6 = true /\ b8 = true /\
-                                                   bxh_hi = true /\ byh_hi = true /\
-                                                   byh_lo = true /\ bqt_hi = true /\
-                                                   bqt_lo = true)
-                               LOCAL (temp _t'23 (Vint (if b23 then Int.one else Int.zero));
-                                      temp _x x; temp _y y)
-                               SEP (data_at Tsh dword (f2val xh) x;
-                                    data_at Tsh dword (f2val yh) y)).
-                             forward_if Post_t23.
-                             { assert (b22 = true) as Hb22_eq
-                                 by (destruct b22; auto; simpl in H; rep_lia).
-                               forward. unfold Post_t23; Exists bqt_lo; entailer!.
-                               cascade_close. }
-                             { forward. unfold Post_t23; Exists false; entailer!;
-                               cascade_close. }
-                             unfold Post_t23; clear Post_t23.
-                             Intros b23; rename H into Hb23.
-                             forward.                    (* return t'23 *)
-                             Exists b23; entailer!.
+                       ***** unfold Post_t18; clear Post_t18.
+                             Intros b18; rename H into Hb18.
+                             forward.                    (* return t'18 *)
+                             Exists b18; entailer!.
 
-                             (* ===== discharge DWDivDW_cond ===== *)
-                             destruct (Hb23 eq_refl)
-                               as [Hb6t [Hb8t [Hxhht [Hyhht [Hyhlt [Hqtht Hqtlt]]]]]].
+                             (* ===== discharge DWDivDW_cond_acc ===== *)
+                             destruct (Hb18 eq_refl)
+                               as [Hb6t [Hb8t [Hyhht [Hyhlt Hqtht]]]].
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                              destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
                              (* No `rewrite Eb..` is needed here: entailer! has
-                                already substituted the five remember-equations
-                                away, so Hxhht .. Hqtlt arrive as the concrete
+                                already substituted the three remember-equations
+                                away, so Hyhht .. Hqtht arrive as the concrete
                                 Float.cmp facts the magnitude lemmas expect. *)
 
-                             (* |xh| <= 2^1022 *)
-                             assert (Hxh_hi : Rabs (FT2R (fst xh)) <=
-                                       bpow Zaux.radix2 1022)
-                               by (apply (Float_cmp_Cle_hi q_omega_val (fst xh)
-                                            (bpow Zaux.radix2 1022) Hfin_xh
-                                            q_omega_val_finite q_omega_val_FT2R);
-                                   exact Hxhht).
                              (* |yh| <= 2^969  (the reciprocal-node bound) *)
                              assert (Hyh_hi : Rabs (FT2R (fst yh)) <=
                                        bpow Zaux.radix2 969)
@@ -411,32 +356,14 @@ Proof.
                                        Rabs (1 / FT2R (fst yh)))
                                by (apply (recip_lower_from_bpow_upper
                                             (FT2R (fst yh)) 969 Hyhne Hyh_hi)).
-                             (* |yh| <= 2^1022, free from the 2^969 bound *)
-                             assert (Hyh_om : Rabs (FT2R (fst yh)) <=
-                                       bpow Zaux.radix2 1022).
-                             { eapply Rle_trans; [exact Hyh_hi | apply bpow_le; lia]. }
-                             (* quotient window on the rounded quotient *)
+                             (* quotient ceiling on the rounded quotient *)
                              destruct (Float_cmp_Clt_bpow1022
                                          (Float.div (fst xh) (fst yh)))
                                as [Hfin_q Hq_hi]; [exact Hqtht |].
                              change (Float.div (fst xh) (fst yh))
                                with (BDIV (fst xh) (fst yh)) in Hfin_q, Hq_hi.
-                             assert (Hqt_lo0 : bpow Zaux.radix2 (-969) <
-                                       Rabs (FT2R (BDIV (fst xh) (fst yh))))
-                               by (apply (Float_cmp_Clt_lo q_lo969_val
-                                            (BDIV (fst xh) (fst yh))
-                                            (bpow Zaux.radix2 (-969)) Hfin_q
-                                            q_lo969_val_finite q_lo969_val_FT2R);
-                                   exact Hqtlt).
                              assert (Hfmt1022 : generic_format radix2 fexp
                                        (bpow Zaux.radix2 1022))
-                               by (apply generic_format_bpow;
-                                   unfold fexp, SpecFloat.fexp, SpecFloat.emin;
-                                   try change (fprec Tdouble) with 53%Z;
-                                   try change (femax Tdouble) with 1024%Z;
-                                   apply Z.max_lub; lia).
-                             assert (Hfmt969 : generic_format radix2 fexp
-                                       (bpow Zaux.radix2 (-969)))
                                by (apply generic_format_bpow;
                                    unfold fexp, SpecFloat.fexp, SpecFloat.emin;
                                    try change (fprec Tdouble) with 53%Z;
@@ -447,16 +374,9 @@ Proof.
                                        bpow Zaux.radix2 1022)
                                by (apply (BDIV_abs_le_bpow (fst xh) (fst yh) 1022
                                             Hyhne Hfin_q Hfmt1022); exact Hq_hi).
-                             assert (Hquot_lo : bpow Zaux.radix2 (-969) <
-                                       Rabs (FT2R (fst xh) / FT2R (fst yh)))
-                               by (apply (BDIV_abs_gt_bpow (fst xh) (fst yh) (-969)
-                                            Hyhne Hfin_q Hfmt969); exact Hqt_lo0).
-                             unfold DDModels.DWDivDW_cond.
+                             unfold DDModels.DWDivDW_cond_acc.
                              repeat split; try assumption;
-                             try (apply Rlt_le; exact Hquot_lo);
                              try exact Hrecip;
                              try exact Hyh_lo;
-                             try exact Hxh_hi;
-                             try exact Hyh_om;
                              try exact Hquot_hi.
 Qed.
