@@ -14,7 +14,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
 Require Import VSTlib.spec_math.   (* fma_spec *)
-Require Import DDModels common real_extras.
+Require Import DDConds common real_extras.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
@@ -418,7 +418,7 @@ Definition dw_div_fp15_guarded_spec :=
    eta*|yh| <= u^2/4, which is exactly what pays for the reciprocal
    reconstruction's own underflow floor once the closing multiply by X scales it
    up.  Three binades looser and the charge is 8x larger and the constant is
-   12.33 -- see the DWDivDW_cond doc comment in DDModels.v.
+   12.33 -- see the DWDivDW_cond doc comment in DDConds.v.
 
    WHY NOT the pure relative 13.9 u^2 form (relative_errorDWDivDW3_from_cond_
    combined) that this spec used to export: that theorem needs the full
@@ -570,7 +570,7 @@ Definition dw_mult_dw_check_spec :=
 
 (* Minimal cond: no quotient floor at all; the caller gets the mixed bound,
    not the pure 6u^2 one.  See dw_div_fp15_guarded_spec above and
-   DDModels.DWDivFP_cond_min. *)
+   DDConds.DWDivFP_cond_min. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,

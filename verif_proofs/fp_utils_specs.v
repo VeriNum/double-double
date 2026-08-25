@@ -5,7 +5,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import fp_utils op_defs DDModels.
+Require Import fp_utils op_defs DDConds.
 
 (* CompSpecs is needed because dw_plus_dw_check_spec uses data_at on the
    dword struct; the other specs in this file are pure scalar and don't need it. *)

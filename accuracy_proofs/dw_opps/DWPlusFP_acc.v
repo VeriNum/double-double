@@ -6,7 +6,7 @@ plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import DWPlus DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DWPlus DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 

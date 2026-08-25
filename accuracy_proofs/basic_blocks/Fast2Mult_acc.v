@@ -6,7 +6,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common dd_tactics.
-Require Import DDModels.
+Require Import DDConds.
 Require Export Fast2Mult_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.

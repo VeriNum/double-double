@@ -63,7 +63,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DWTimesDW DWDivFP DDModels DWord_defs
+Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
                Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 (* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
    bound DWDivDW.DWDDW3_correct is available and instantiated below.  DWDivDW.v
@@ -5255,7 +5255,7 @@ End CondAccuracyDWDivDW.
    [2^(emin+2p-1) <= |xh/yh|] (conjunct 8).  Dropping that conjunct admits
    every underflowing quotient -- for Tdouble, everything below 2^-969, i.e.
    exactly the regime the mixed bound exists to describe and the old guard
-   rejected.  See the doc comment on [DWDivDW_cond_acc] in DDModels.v for why
+   rejected.  See the doc comment on [DWDivDW_cond_acc] in DDConds.v for why
    conjuncts 7 and 9 are NOT removable in turn, and hence why there is no
    further [DWDivDW_cond_min] tier.
 

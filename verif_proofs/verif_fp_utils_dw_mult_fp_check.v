@@ -191,6 +191,6 @@ Proof.
            destruct (prod_bnd_facts (fst xh) y)
              as [Hbmul_fin Hprodb].
            { unfold bpb in Hbpbt; exact Hbpbt. }
-           unfold DDModels.DWTimesFP_cond_acc, DDModels.Fast2Mult_cond_acc.
+           unfold DDConds.DWTimesFP_cond_acc, DDConds.Fast2Mult_cond_acc.
            repeat (split; try assumption).
 Qed.

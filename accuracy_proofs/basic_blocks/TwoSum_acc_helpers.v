@@ -13,7 +13,7 @@
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
 Require Import float_acc_lems op_defs dd_tactics FLT_helpers.
-Require Import DWPlus DDModels common.
+Require Import DWPlus DDConds common.
 Require Import F2SumFLT F2SumFLX.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.

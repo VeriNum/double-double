@@ -72,7 +72,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DWTimesDW DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DWTimesFP DWTimesDW DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers.
 (* DWMulFP_acc supplies the four operation-independent underflow-floor lemmas
    reused by the Algorithm-12 gap block below: Fast2Sum_sum_exact_of_sum_small,
@@ -2010,7 +2010,7 @@ Qed.
 
 (* Componentwise projections, and the original strong-cond forms retained for
    the relative (8u^2) tier and its clients: DWTimesDW_cond is strictly stronger
-   than DWTimesDW_cond_acc (DDModels.DWTimesDW_cond_acc_of_cond).  The three
+   than DWTimesDW_cond_acc (DDConds.DWTimesDW_cond_acc_of_cond).  The three
    statements below are unchanged -- verif_dd_ops.v applies them positionally. *)
 Lemma DWTimesDW3_fst_finite_acc (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->

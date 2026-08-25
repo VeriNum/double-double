@@ -71,7 +71,7 @@ Proof.
       entailer!.
       split.
       { intro Hcmp_true.
-        unfold DDModels.TwoSum_cond.
+        unfold DDConds.TwoSum_cond.
         split; [exact Hfin_plus | split; [exact Hfin_minus |]].
         apply Float_cmp_Clt_dbl_max; [exact Hy_fin | exact Hcmp_true]. }
       { change (femax Tdouble) with 1024%Z;

@@ -217,7 +217,7 @@ Proof.
                destruct (Hb11 eq_refl) as [Hb5t [Hfyt [Hbxht Hbybt]]].
                destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
                assert (Hfin_y : is_finite y = true) by (apply (proj1 Hspec_fy); exact Hfyt).
-               unfold DDModels.DWPlusFP_cond.
+               unfold DDConds.DWPlusFP_cond.
                repeat (split; try assumption).
                { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                  unfold bxh, q_omega_val in Hbxht. exact Hbxht. }

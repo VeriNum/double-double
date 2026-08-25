@@ -14,7 +14,7 @@ Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
-Require Import DDModels common real_extras op_defs.
+Require Import DDConds common real_extras op_defs.
 Require Import DD.verif_proofs.dd_float_reconcile.
 Require Import TwoSum_acc Fast2Sum_acc Fast2Mult_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.

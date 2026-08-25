@@ -373,7 +373,7 @@ Proof.
                                        bpow Zaux.radix2 1022)
                                by (apply (BDIV_abs_le_bpow (fst xh) (fst yh) 1022
                                             Hyhne Hfin_q Hfmt1022); exact Hq_hi).
-                             unfold DDModels.DWDivDW_cond_acc.
+                             unfold DDConds.DWDivDW_cond_acc.
                              repeat split; try assumption;
                              try exact Hyh_hi;
                              try exact Hyh_lo;

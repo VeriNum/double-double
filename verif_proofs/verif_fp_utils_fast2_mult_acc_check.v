@@ -20,6 +20,6 @@ Proof.
      unconditional Fast2Mult_cond_acc x y.  H is the isfinite_double spec
      iff (vret = true <-> is_finite (BMULT x y) = true); its forward
      direction closes the goal. *)
-  unfold DDModels.Fast2Mult_cond_acc.
+  unfold DDConds.Fast2Mult_cond_acc.
   apply H; reflexivity.
 Qed.

@@ -313,7 +313,7 @@ Proof.
                                   = bpow Zaux.radix2 (femax Tdouble - 2))%R).
                     { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
                       rewrite bpow_plus. simpl. lra. }
-                    unfold DDModels.DWDivFP_cond_min.
+                    unfold DDConds.DWDivFP_cond_min.
                     (* conjuncts 1-4 (finiteness/double-word) and conjunct 5
                        (finiteness of the quotient node) close by assumption; the
                        remaining three are the two magnitude windows. *)

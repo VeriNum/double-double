@@ -7,7 +7,7 @@
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
 Require Import float_acc_lems op_defs dd_tactics.
-Require Import DDModels common.
+Require Import DDConds common.
 Require Export TwoSum_acc_helpers.
 From Flocq Require Import Core.
 Require Import mathcomp.ssreflect.ssreflect.

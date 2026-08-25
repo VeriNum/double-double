@@ -2,7 +2,7 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (** The SUBNORMAL-QUOTIENT leg of DWDivFP3 (Algorithm 15), and with it the
-    public API on DDModels.DWDivFP_cond_min -- the weakest of the three DW/FP
+    public API on DDConds.DWDivFP_cond_min -- the weakest of the three DW/FP
     division conds, and the one the runtime guard dw_div_fp_check discharges.
 
     WHY A SEPARATE LEG.  DWDivFP_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
@@ -24,10 +24,10 @@
 
     The exported constant is unchanged: 3u^2|Q| + 2^emin, the same as on
     DWDivFP_cond_acc.  Clause 8 is retained and is not removable; see the
-    DWDivFP_cond_min comment in DDModels.v for the counterexample.
+    DWDivFP_cond_min comment in DDConds.v for the counterexample.
 
     ============================================================================
-    PUBLIC INTERFACE (all on DDModels.DWDivFP_cond_min)
+    PUBLIC INTERFACE (all on DDConds.DWDivFP_cond_min)
 
       DWDivFP3_error_mixed_min             |Qhat - Q| <= 3u^2|Q| + eta
       relative_errorDWDivFP3_from_cond_combined_min
@@ -45,7 +45,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DWDivFP DDModels DWord_defs Fast2Mult_acc
+Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc
         Fast2Mult_acc_helpers TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
@@ -1208,7 +1208,7 @@ End SubFin.
 
 
 (* ==========================================================================
-   PUBLIC API on DDModels.DWDivFP_cond_min
+   PUBLIC API on DDConds.DWDivFP_cond_min
    ========================================================================== *)
 Section CondMin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.

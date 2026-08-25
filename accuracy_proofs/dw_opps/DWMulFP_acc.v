@@ -26,7 +26,7 @@
       theorems above assume is_finite_p (DWTimesFP3 ...) -- a fact about the
       RESULT, which a runtime guard cannot test -- so these Layer-2 corollaries
       derive it from the accurate-only, input-only, runtime-checkable cond:
-        DWTimesFP_cond_acc            (DDModels.v) DWTimesFP_cond MINUS the
+        DWTimesFP_cond_acc             (DDConds.v) DWTimesFP_cond MINUS the
                                       underflow disjunct: double-word relation
                                       plus overflow headroom, nothing else
         DWTimesFP3_finite_acc         is_finite_p from that cond, every regime
@@ -66,7 +66,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DWTimesFP DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 
@@ -736,7 +736,7 @@ Qed.
 
 (* Componentwise projections, and the original strong-cond forms retained for the
    relative (2u^2) tier and its clients: DWTimesFP_cond is strictly stronger than
-   DWTimesFP_cond_acc (DDModels.DWTimesFP_cond_acc_of_cond). *)
+   DWTimesFP_cond_acc (DDConds.DWTimesFP_cond_acc_of_cond). *)
 Lemma DWTimesFP3_fst_finite_acc (xh xl y : ftype t) :
   DWTimesFP_cond_acc xh xl y ->
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
@@ -1232,7 +1232,7 @@ Qed.
    ------------------------------------------------------------------ *)
 
 (* The cond forbids the nonzero underflow gap.  This is literally the
-   third field of DWTimesFP_cond (DDModels.v), projecting the underflow
+   third field of DWTimesFP_cond (DDConds.v), projecting the underflow
    disjunct of Fast2Mult_cond: under the cond the leading product is
    either exactly zero or at least the TwoProd exactness threshold.  So
    the gap arm of DWTimesFP3_error_mixed is unreachable and its
@@ -1966,7 +1966,7 @@ Qed.
 
 (* ------------------------------------------------------------------
    PUBLIC VST INTERFACE (Layer 2): the whole-range mixed bound from the
-   runtime-checkable accurate-only cond DWTimesFP_cond_acc (DDModels.v).
+   runtime-checkable accurate-only cond DWTimesFP_cond_acc (DDConds.v).
 
    This is the pair of results carried by the exported funspec
    dw_mult_fp9_guarded_spec and discharged by the runtime guard

@@ -16,11 +16,11 @@
     PUBLIC INTERFACE
 
       TWO CONDS.  Everything below comes in a pair.  The _acc names take the
-      RELAXED DDModels.DWDivFP_cond_acc, whose quotient floor is 2^(emin+p-1) --
+      RELAXED DDConds.DWDivFP_cond_acc, whose quotient floor is 2^(emin+p-1) --
       the floor Layer 1 actually needs, and the one the runtime guard
       dw_div_fp_check discharges.  The unsuffixed names take the strong
       DWDivFP_cond (quotient floor 2^(emin+2p-1)) and are re-derived from the
-      _acc ones through DDModels.DWDivFP_cond_acc_of_cond, so their statements
+      _acc ones through DDConds.DWDivFP_cond_acc_of_cond, so their statements
       are unchanged.  For Tdouble the relaxation widens the admitted quotient
       range by 53 binades, from 2^-969 down to 2^-1022 = DBL_MIN.
 
@@ -65,7 +65,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DWDivFP DDModels DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.

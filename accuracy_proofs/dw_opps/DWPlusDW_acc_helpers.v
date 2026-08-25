@@ -4,7 +4,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
-Require Import DDModels DWord_defs.
+Require Import DDConds DWord_defs.
 Require DWPlus.
 From Flocq Require Import Pff2Flocq Core.
 
@@ -1781,4 +1781,3 @@ eapply Fast2Sum_cond_vh_w_inner; first [eassumption | cbv; intros; discriminate]
 Qed.
 
 End DWPlusDWCondBridge.
-

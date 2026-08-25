@@ -240,7 +240,7 @@ Proof.
         Exists b_lb.
         entailer!.
         destruct (H_lb eq_refl) as [Hvf Hdisj].
-        unfold DDModels.Fast2Mult_cond.
+        unfold DDConds.Fast2Mult_cond.
         split.
         { apply Hfin_spec; exact Hvf. }
         { destruct Hdisj as [Hpx | [Hpy | Hpuf]].

@@ -16,7 +16,7 @@ Require Export VSTlib.spec_math.
 Require Export float_acc_lems common real_extras.
 From Flocq Require Export Pff2Flocq Core.
 
-Require Export DDModels.
+Require Export DDConds.
 Require Export fp_utils fp_utils_specs.
 Require Export float_verif_lemmas.
 

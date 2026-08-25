@@ -19,6 +19,7 @@ common/FLT_lemmas.v
 common/FLT_helpers.v
 
 DDModels.v
+DDConds.v
 DWord_defs.v
 
 accuracy_proofs/basic_blocks/TwoSum_acc_helpers.v
