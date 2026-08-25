@@ -30,21 +30,6 @@ Notation emin := (@common.emin t).
 (* 1. Zero-case helpers                                                    *)
 (* ===================================================================== *)
 
-Lemma Fast2Sum_2sum0 (xl: ftype t):
-F2Sum.Fast2Sum (fprec t) choice 0
-  (round radix2 (FLX_exp (fprec t)) (Znearest choice)
-     (FT2R xl)) = (FT2R xl, 0).
-Proof.
-rewrite /F2Sum.Fast2Sum/Fast2Sum
-  Rplus_0_l Rminus_0_r !round_generic.
-f_equal; nra.
-all: apply (generic_format_FLX_FLT radix2 emin);
-try rewrite -B2R_float_of_ftype;
-try apply Binary.generic_format_B2R.
-rewrite Rminus_diag;
-  apply generic_format_0.
-Qed.
-
 Lemma Fast2Sum_2sum0' (xl a b: ftype t):
 FT2R a = 0 -> FT2R b = 0 ->
 is_finite_p (DDModels.Fast2Sum a (BPLUS xl b)) ->

@@ -242,16 +242,6 @@ Proof.
   lra.
 Qed.
 
-Lemma no_overflow_2Sum_a_small (a b : ftype t):
-  Rabs (FT2R b) <= /4 * Omega ->
-  is_finite (BPLUS a b) = true ->
-  Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) < Omega .
-Proof.
-  move => Hb Hfin.
-  have H := round_2Sum_a_bnd_small a b Hb Hfin.
-  have HO : 0 < Omega by apply bpow_gt_0. lra.
-Qed.
-
 Lemma no_overflow_2Sum_b_1 (a b : ftype t) :
   Rabs (FT2R a) <= Rabs (FT2R b) ->
   is_finite (BPLUS a b) = true ->
@@ -398,17 +388,6 @@ Proof.
   apply no_overflow_2Sum_a => //.
 Qed.
 
-Lemma is_finite_2Sum_b_1 (a b : ftype t) :
-  Rabs (FT2R a) <= Rabs (FT2R b) ->
-  is_finite (BPLUS a b) = true ->
-  is_finite (BMINUS (BPLUS a b) b) = true.
-Proof.
-  move=> Hab Hfin.
-  apply no_overflow_minus_is_finite => //.
-  destruct (BPLUS_finite_e t a b Hfin) as [_  Hfinb] => //.
-  apply no_overflow_2Sum_b_1 => //.
-Qed.
-
 Lemma is_finite_FastSum (a b : ftype t):
   Rabs (FT2R b) <= Rabs (FT2R a) ->
   is_finite (BPLUS a b) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
@@ -445,20 +424,7 @@ Proof.
   eapply Rle_lt_trans.
   apply Plus_error.plus_error_le_l; FLT_basics.
   exact Hfinlt.
-  -
-  suff: Rabs (rnd (FT2R (BPLUS a b) - FT2R a)) < Omega.
-  --
-  move => Hbnd.
-  rewrite !is_finite_Binary in Hfin, Hfina.
-  rewrite -!B2R_float_of_ftype in Hbnd.
-  pose proof Binary.Bminus_correct (fprec t) (femax t) (fprec_gt_0 t) (fprec_lt_femax t)
-  (plus_nan (fprec t) (femax t) (fprec_gt_one t)) BinarySingleNaN.mode_NE
-  (float_of_ftype (BPLUS a b)) (float_of_ftype a) Hfin Hfina as Hc.
-  apply Rlt_bool_true in Hbnd; rewrite Hbnd in Hc; clear Hbnd.
-  destruct Hc as [_ [HB _]].
-  move: HB; rewrite /BMINUS/BINOP !is_finite_Binary !float_of_ftype_of_float => //.
-  --
-  apply no_overflow_2Sum_a => //.
+  - apply is_finite_2Sum_a => //.
 Qed.
 
 (* Same finiteness result as is_finite_FastSum, but under the Fast2Sum_cond
@@ -564,18 +530,6 @@ Proof.
   apply no_overflow_minus_is_finite => //.
 Qed.
 
-Lemma is_finite_2Sum_b_2 (a b : ftype t):
-  is_finite (BMINUS a b) = true ->
-  is_finite (BPLUS a b) = true ->
-  Rabs (FT2R b) <= Rabs (FT2R a) ->
-  is_finite (BMINUS (BPLUS a b) b) = true.
-Proof.
-  move=> Hfin1 Hfin2 Hab.
-  apply no_overflow_minus_is_finite => //.
-  destruct (BPLUS_finite_e t a b Hfin2) as [_  Hfinb] => //.
-  apply no_overflow_2Sum_b_2 => //.
-Qed.
-
 Lemma is_finite_2Sum_b (a b : ftype t):
   is_finite (BMINUS a b) = true ->
   is_finite (BPLUS a b) = true ->
@@ -585,46 +539,6 @@ Proof.
   apply no_overflow_minus_is_finite => //.
   destruct (BPLUS_finite_e t a b Hfin2) as [_  Hfinb] => //.
   apply no_overflow_2Sum_b => //.
-Qed.
-
-Lemma is_finite_2Sum_b_opp (a b : ftype t):
-  is_finite (BMINUS a b) = true ->
-  is_finite (BPLUS a b) = true ->
-  is_finite (BPLUS b (BOPP (BPLUS a b))) = true.
-Proof.
-  move=> Hfin1 Hfin2.
-  apply no_overflow_sum_is_finite => //.
-  destruct (BPLUS_finite_e t a b Hfin2) as [_  Hfinb] => //.
-  apply BOPP_is_finite => //.
-  rewrite -BOPP_binary; [ | right => //].
-  rewrite /Bplus_no_overflow -Rabs_Ropp -round_NE_opp.
-  rewrite Ropp_plus_distr Ropp_involutive Rplus_comm -Rminus_def.
-  apply no_overflow_2Sum_b => //.
-Qed.
-
-Lemma is_finite_TwoSum_left_aux_0 (a b : ftype t):
-  FT2R a = 0 ->
-  is_finite (BPLUS a b) = true ->
-  Rabs (rnd (FT2R a - FT2R (BMINUS (BPLUS a b) b))) = 0 .
-Proof.
-  move => H0 Hfin1.
-  destruct (BPLUS_finite_e _ _ _  Hfin1) => //.
-  rewrite -BMINUS_round_correct.
-  rewrite -BPLUS_round_correct => //.
-  rewrite H0.
-  rewrite Rplus_0_l Rminus_0_l.
-  rewrite !round_generic; FLT_basics.
-  all: try rewrite Rminus_diag; try rewrite Ropp_0; FLT_basics.
-  rewrite Rabs_R0 => //.
-  apply no_overflow_minus_is_finite => //.
-  destruct (BPLUS_finite_e _ _ _  Hfin1) => //.
-  apply no_overflow_2Sum_b => //.
-  apply no_overflow_minus_is_finite => //.
-  rewrite H0.
-  rewrite /Bminus_no_overflow Rminus_0_l.
-  rewrite round_NE_opp Rabs_Ropp.
-  rewrite round_generic; FLT_basics.
-  apply is_finite_no_overflow => //.
 Qed.
 
 Lemma is_finite_2Sum_right_aux (a b : ftype t):
@@ -1361,55 +1275,6 @@ try apply (generic_format_FLX_FLT _ emin);
 try apply: Binary.generic_format_B2R;
 try apply: generic_format_0) => //. }
 by apply TwoSumEq_no_underflow.
-Qed.
-
-Lemma TwoSum0 :
-FT2R a = 0 ->
-F2Rp (TwoSumF a b) = (FT2R b,0).
-Proof.
-move: FIN.
-rewrite /TwoSumF_err/F2Rp/TwoSumF/is_finite_p/fst/snd.
-move => [] FIN1 FIN2 H.
-f_equal. BPLUS_correct t a b. clear H5.
-fold (FT2R (t:=t)); rewrite H Rplus_0_l.
-rewrite -!B2R_float_of_ftype.
-apply round_generic.
-apply BinarySingleNaN.valid_rnd_round_mode.
-try apply Binary.generic_format_B2R.
-set (y3:= (BMINUS (BPLUS a b) b)) in *.
-set (y1:= (BMINUS a y3)) in *.
-set (y2:= (BMINUS b (BMINUS (BPLUS a b) y3))) in *.
-BPLUS_correct t y1 y2; clear H5; subst y1 y2.
-rewrite -is_finite_Binary in H3.
-BMINUS_correct t a y3; clear H7.
- rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
-rewrite H Rminus_0_l round_NE_opp.
-rewrite -(round_0
-radix2 (SpecFloat.fexp (fprec t) (femax t))
-        (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)).
-f_equal.
-set (y5:= (BMINUS (BPLUS a b) y3)) in *.
-rewrite -is_finite_Binary in H4.
-BMINUS_correct t b y5. clear H9.
-rewrite Rplus_comm Rplus_opp.
-apply Rminus_diag_eq. f_equal; subst y5.
-rewrite -is_finite_Binary in H8.
-BMINUS_correct t (BPLUS a b) y3. clear H11.
-BPLUS_correct t a b.
- rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype.
-  rewrite H Rplus_0_l; clear H13.
-subst y3.
-rewrite -is_finite_Binary in H10.
-BMINUS_correct t (BPLUS a b) b; clear H15.
-BPLUS_correct t a b.
- rewrite -!FT2R_ftype_of_float !ftype_of_float_of_ftype;
-rewrite H Rplus_0_l.
-rewrite !round_generic; try nra;
-match goal with |-context [generic_format _ _ ?a] =>
-  field_simplify a
-end; try rewrite -B2R_float_of_ftype;
-    try apply Binary.generic_format_B2R;
-    try apply:generic_format_0.
 Qed.
 
 End TwoSumCorrect.
