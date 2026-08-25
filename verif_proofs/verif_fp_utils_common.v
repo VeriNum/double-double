@@ -42,7 +42,7 @@ Definition ldexp_val :=
    Bit pattern 4503599627370496 = 0x0010000000000000 is the encoding of
    DBL_MIN (smallest normal double, 2^(-1022)).  The product 2^(-1022) * 2^53
    equals 2^(-969) = bpow 2 (emin + 2*p - 1), the Fast2Mult underflow bound
-   from Fast2Mult_cond. *)
+   from Fast2Mult_exact_cond. *)
 Definition thresh_val :=
   Float.mul (Float.of_bits (Int64.repr 4503599627370496)) ldexp_val.
 
@@ -56,7 +56,7 @@ Qed.
 
 (* The real value of thresh_val equals the Fast2Mult underflow bound
    bpow 2 (emin + 2*p - 1).  This links the concrete C constant to the
-   abstract bound in Fast2Mult_cond, allowing Float_cmp_Cle_mul to fire. *)
+   abstract bound in Fast2Mult_exact_cond, allowing Float_cmp_Cle_mul to fire. *)
 Lemma thresh_val_FT2R :
   FT2R (ftype_of_float thresh_val) =
   bpow Zaux.radix2 (SpecFloat.emin (fprec Tdouble) (femax Tdouble) + 2 * fprec Tdouble - 1).

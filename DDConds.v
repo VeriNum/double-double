@@ -15,7 +15,9 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation fexp  := (SpecFloat.fexp (fprec t) (femax t)).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-Definition TwoSum_cond (a b : ftype t) : Prop :=
+(* Sufficient conditions for the two returned components to reconstruct a+b
+   exactly and form a valid double word. *)
+Definition TwoSum_exact_cond (a b : ftype t) : Prop :=
   is_finite (BPLUS a b) = true /\
   is_finite (BMINUS a b) = true /\
   Rabs (FT2R b) < Ulp.pred Zaux.radix2 fexp Omega.
@@ -36,7 +38,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
      - a = 0            (Fast2Sum0f: fast_2sum(0,b) is exact).
    The old `|b| <= |a|` precondition implies `ulp b <= ulp a` by ulp_le, so
    any caller that established it still discharges this by `left; ulp_le`. *)
-Definition Fast2Sum_cond (a b : ftype t) : Prop :=
+Definition Fast2Sum_exact_cond (a b : ftype t) : Prop :=
   is_finite (BPLUS a b) = true /\
   ((Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
     Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%R \/
@@ -48,26 +50,28 @@ End Fast2SumCond.
 Section Fast2MultCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Definition Fast2Mult_cond (a b : ftype t) : Prop :=
+(* Sufficient conditions for the two returned components to reconstruct a*b
+   exactly and form a valid double word. *)
+Definition Fast2Mult_exact_cond (a b : ftype t) : Prop :=
   is_finite (BMULT a b) = true /\
   (FT2R a * FT2R b = 0 \/
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).
 
-(* Fast2Mult_cond_acc requires only that the rounded product be finite.  Compared
-   with Fast2Mult_cond, it drops the underflow condition (the `a*b = 0 \/
+(* Fast2Mult_acc_only_cond requires only that the rounded product be finite.
+   Compared with Fast2Mult_exact_cond, it drops the underflow condition (the `a*b = 0 \/
    threshold <= |a*b|` disjunction).  By itself it suffices for the bound
    |Fast2Mult_err a b| <= 1/2 ulp(a*b) — which holds in every regime — but does
-   NOT prove that mul + err = a*b or that (mul, err) is a valid double word.
-   Those conclusions need the underflow disjunct of the full Fast2Mult_cond.
+   not prove that mul + err = a*b or that (mul, err) is a valid double word.
+   Those conclusions need the underflow disjunct of the full Fast2Mult_exact_cond.
    See Fast2Mult_acc.v:
-   Fast2Mult_accuracy_from_cond_acc (this cond) vs Fast2Mult_correct_from_cond
+   Fast2Mult_accuracy_from_acc_only_cond (this cond) vs Fast2Mult_correct_from_exact_cond
    (the full cond). *)
-Definition Fast2Mult_cond_acc (a b : ftype t) : Prop :=
+Definition Fast2Mult_acc_only_cond (a b : ftype t) : Prop :=
   is_finite (BMULT a b) = true.
 
-Lemma Fast2Mult_cond_acc_of_cond (a b : ftype t) :
-  Fast2Mult_cond a b -> Fast2Mult_cond_acc a b.
+Lemma Fast2Mult_acc_only_cond_of_exact_cond (a b : ftype t) :
+  Fast2Mult_exact_cond a b -> Fast2Mult_acc_only_cond a b.
 Proof. intros [Hfin _]; exact Hfin. Qed.
 
 End Fast2MultCond.
@@ -118,15 +122,16 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Precondition for DWTimesFP3 (Algorithm 9).  Minimal, non-redundant form:
-     - Fast2Mult_cond xh y : the leading product satisfies the leaf condition
+     - Fast2Mult_exact_cond xh y : the leading product satisfies the leaf condition
        (finiteness of BMULT xh y + the underflow disjunction) needed to make the
-       internal Fast2Mult error-free and obtain the relative accuracy bound.  Via
+       two components returned by Fast2Mult reconstruct xh*y exactly and to obtain
+       the relative accuracy bound.  Via
        BMULT_finite_e this ALSO supplies is_finite xh and is_finite y, so those
        are not listed separately;
      - is_finite xl and the double-word relation on (xh, xl);
      - the product-magnitude bound |xh*y| <= Omega/2 = 2^(femax-1).  This is the
        overflow headroom that keeps the cross term and the closing Fast2Sum
-       finite (Fast2Mult_cond alone only gives |xh*y| < Omega, under which the
+       finite (Fast2Mult_exact_cond alone only gives |xh*y| < Omega, under which the
        closing Fast2Sum can still overflow).  Omega/2 is the largest clean
        power-of-two that is provably sufficient: at |xh*y| ~ Omega the closing
        correction (a few ulp) tips RN(ch.s + c3) over Omega.  A caller may
@@ -135,16 +140,16 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
 Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
   double_word_prop xh xl /\
-  Fast2Mult_cond xh y /\
+  Fast2Mult_exact_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
 (* DWTimesFP_mixed_error_input_cond is used to prove, throughout the admitted
    floating-point range, both the mixed error bound for DWTimesFP3 and that its
-   output is a valid double word.  It weakens Fast2Mult_cond to
-   Fast2Mult_cond_acc, i.e. it drops the underflow disjunct
+   output is a valid double word.  It weakens Fast2Mult_exact_cond to
+   Fast2Mult_acc_only_cond, i.e. it drops the underflow disjunct
    (FT2R xh * FT2R y = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R y|) and keeps
    only overflow safety.  Exactly the DWTimesFP analogue of
-   Fast2Mult_cond_acc vs Fast2Mult_cond above.
+   Fast2Mult_acc_only_cond vs Fast2Mult_exact_cond above.
 
    It suffices for the whole-range MIXED bound
 
@@ -164,7 +169,7 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 Definition DWTimesFP_mixed_error_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
   double_word_prop xh xl /\
-  Fast2Mult_cond_acc xh y /\
+  Fast2Mult_acc_only_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
 Lemma DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond
@@ -174,7 +179,7 @@ Lemma DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond
 Proof.
   intros (Hfxl & Hdwp & Hf2m & Hreal).
   repeat split; try assumption.
-  exact (Fast2Mult_cond_acc_of_cond xh y Hf2m).
+  exact (Fast2Mult_acc_only_cond_of_exact_cond xh y Hf2m).
 Qed.
 
 End DWTimesFPCond.
@@ -187,7 +192,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Precondition for DWTimesDW3 (Algorithm 12).  Double-word analog of
    DWTimesFP_relative_error_input_cond, in the same minimal form:
-     - Fast2Mult_cond xh yh : leaf condition on the high product (also supplies
+     - Fast2Mult_exact_cond xh yh : leaf condition on the high product (also supplies
        is_finite xh and is_finite yh via BMULT_finite_e, so those are not listed);
      - is_finite xl, is_finite yl and the double-word relations on both pairs;
      - the product-magnitude bound |xh*yh| <= Omega/2 = 2^(femax-1) for overflow
@@ -199,14 +204,14 @@ Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  Fast2Mult_cond xh yh /\
+  Fast2Mult_exact_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
 (* DWTimesDW_mixed_error_input_cond is used to prove, throughout the admitted
    floating-point range, both the mixed error bound for DWTimesDW3 and that its
    output is a valid double word.  It is the exact analogue of
-   DWTimesFP_mixed_error_input_cond above.  It weakens Fast2Mult_cond to
-   Fast2Mult_cond_acc, dropping the underflow disjunct
+   DWTimesFP_mixed_error_input_cond above.  It weakens Fast2Mult_exact_cond to
+   Fast2Mult_acc_only_cond, dropping the underflow disjunct
    (FT2R xh * FT2R yh = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R yh|) and keeping
    only overflow safety.
 
@@ -234,7 +239,7 @@ Definition DWTimesDW_mixed_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  Fast2Mult_cond_acc xh yh /\
+  Fast2Mult_acc_only_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
 Lemma DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond
@@ -244,7 +249,7 @@ Lemma DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond
 Proof.
   intros (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hreal).
   repeat split; try assumption.
-  exact (Fast2Mult_cond_acc_of_cond xh yh Hf2m).
+  exact (Fast2Mult_acc_only_cond_of_exact_cond xh yh Hf2m).
 Qed.
 
 End DWTimesDWCond.
@@ -293,7 +298,7 @@ Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 
 (* DWDivFP_mixed_error_input_cond drops the quotient floor ENTIRELY, replacing
    it by finiteness of the leading quotient node.  That conjunct is the division
-   analogue of Fast2Mult_cond_acc (which is likewise just
+   analogue of Fast2Mult_acc_only_cond (which is likewise just
    `is_finite (BMULT a b) = true`), and it does the same double duty:
 
      - it forces FT2R y <> 0, which every proof in DWDivFP_acc previously got

@@ -40,13 +40,13 @@ Definition fast2_mult_check_spec :=
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_cond x y)
+    PROP(b = true -> Fast2Mult_exact_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
 
 (* This Tier B check confirms that the rounded product is finite and therefore
-   certifies Fast2Mult_cond_acc.  That condition suffices for the bound on the
+   certifies Fast2Mult_acc_only_cond.  That condition suffices for the bound on the
    returned error component, but not for exact reconstruction or for proving
    that the output is a valid double word.  Mirrors fast2_mult_check_spec. *)
 Definition fast2_mult_acc_check_spec :=
@@ -58,7 +58,7 @@ Definition fast2_mult_acc_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_cond_acc x y)
+    PROP(b = true -> Fast2Mult_acc_only_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
@@ -72,14 +72,14 @@ Definition two_sum_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> TwoSum_cond x y)
+    PROP(b = true -> TwoSum_exact_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
 (* The C check fast2_sum_check verifies fin && |b| <= |a|.  We expose the
    magnitude form directly (rather than weakening to the ulp/zero disjunction
-   of Fast2Sum_cond) so callers can derive both Fast2Sum_cond (via ulp_le_abs)
-   and FastTwoSum_accuracy_from_cond. *)
+   of Fast2Sum_exact_cond) so callers can derive both Fast2Sum_exact_cond (via ulp_le_abs)
+   and FastTwoSum_accuracy_from_magnitude_order. *)
 Definition SumResultIsSafeForFast2Sum (a b : ftype Tdouble) : Prop :=
   is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R.
 

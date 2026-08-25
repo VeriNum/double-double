@@ -1342,7 +1342,7 @@ have Hthpred : Rabs (FT2R th) <
     Ulp.pred radix2 (SpecFloat.fexp (fprec t) (femax t)) (bpow radix2 (femax t)).
 { eapply Rle_lt_trans; [exact Hthq |].
   apply (@DWPlusDW_acc_helpers.Omega4_lt_predOmega t); lia. }
-have Tcond : TwoSum_cond dh th := conj Fsh (conj Fminus Hthpred).
+have Tcond : TwoSum_exact_cond dh th := conj Fsh (conj Fminus Hthpred).
 have Fts : is_finite_p ts.
 { fold ts. split; [exact Fsh |].
   apply TwoSum_acc_helpers.is_finite_TwoSum;
@@ -3891,7 +3891,8 @@ Qed.
 (** Tight distance from the runtime residual pair to the exact Newton
     residual.
 
-    There is no floor term.  The closing Fast2Sum is error-free
+    There is no floor term.  The two components returned by the closing Fast2Sum
+    reconstruct its input sum exactly
     ([DWDivDW_residual_fast2sum_exact_from_cond]) and the high residual is
     exact ([DWDivDW_rh_exact_from_cond]), so the entire distance IS the single
     FLT rounding of [yl*th] -- an identity, not an estimate.  Charging that one

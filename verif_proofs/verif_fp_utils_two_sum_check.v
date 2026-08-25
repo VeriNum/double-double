@@ -3,7 +3,7 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* two_sum_check(x,y) returns 1 only if TwoSum_cond x y holds:
+(* two_sum_check(x,y) returns 1 only if TwoSum_exact_cond x y holds:
    (x+y) finite, (x-y) finite, and |y| < pred(2^1024) = DBL_MAX.
    Short-circuit && ensures fabs(b) is called only after both fin checks pass,
    at which point is_finite y follows from is_finite (BPLUS x y). *)
@@ -48,7 +48,7 @@ Proof.
     rename H into H_b_fd.
     set (Post_final :=
       EX b_fin : bool,
-      PROP(b_fin = true -> TwoSum_cond x y)
+      PROP(b_fin = true -> TwoSum_exact_cond x y)
       LOCAL(temp _t'4 (Vint (if b_fin then Int.one else Int.zero));
             temp _a (Vfloat (float_of_ftype x));
             temp _b (Vfloat (float_of_ftype y)))
@@ -71,7 +71,7 @@ Proof.
       entailer!.
       split.
       { intro Hcmp_true.
-        unfold DDConds.TwoSum_cond.
+        unfold DDConds.TwoSum_exact_cond.
         split; [exact Hfin_plus | split; [exact Hfin_minus |]].
         apply Float_cmp_Clt_dbl_max; [exact Hy_fin | exact Hcmp_true]. }
       { change (femax Tdouble) with 1024%Z;

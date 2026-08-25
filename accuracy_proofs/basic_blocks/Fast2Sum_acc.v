@@ -48,11 +48,11 @@ Variables (a b : ftype t).
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 (* Accuracy of the Fast2Sum error term, from the Dekker condition |b| <= |a|.
-   (Fast2Sum_cond was generalized to an ulp/a=0 disjunction; this accuracy
+   (Fast2Sum_exact_cond was generalized to an ulp/a=0 disjunction; this accuracy
    bound is stated directly from |b| <= |a|, which is the case the bound is
    used for.  The disjunction's other legs give correctness via the paper's
    cexp / Fast2Sum0f lemmas, handled at the DWPlusDW use sites.) *)
-Corollary FastTwoSum_accuracy_from_cond :
+Corollary FastTwoSum_accuracy_from_magnitude_order :
   is_finite (BPLUS a b) = true ->
   Rabs (FT2R b) <= Rabs (FT2R a) ->
   Rabs (FT2R (Fast2Sum_err a b)) <= /2 * ulp (FT2R a + FT2R b).

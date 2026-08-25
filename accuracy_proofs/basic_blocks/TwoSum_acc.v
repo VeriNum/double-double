@@ -46,8 +46,8 @@ Variables (a b : ftype t).
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
-Corollary TwoSum_accuracy_from_cond :
-  TwoSum_cond a b ->
+Corollary TwoSum_accuracy_from_exact_cond :
+  TwoSum_exact_cond a b ->
   Rabs (FT2R (TwoSumF_err a b)) <= /2 * ulp (FT2R a + FT2R b).
 Proof.
   intros [Hfin_plus [Hfin_minus HbFmax]].

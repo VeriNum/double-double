@@ -266,7 +266,7 @@ start_function.
 forward_call (a, b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (TwoSum_cond a b)
+  PROP (TwoSum_exact_cond a b)
   LOCAL (temp _st p; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at_ Tsh dword p)).
 forward_if Post_if.
@@ -276,10 +276,10 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (TwoSum_cond a b) as HFC by entailer!.
+  assert_PROP (TwoSum_exact_cond a b) as HFC by entailer!.
   forward_call (p, a, b).
   entailer!!.
-  apply TwoSum_accuracy_from_cond, HFC.
+  apply TwoSum_accuracy_from_exact_cond, HFC.
 Qed.
 
 Lemma body_fast_2sum_guarded: semax_body Vprog Gprog f_fast_2sum_guarded fast_2sum_guarded_spec.
@@ -302,7 +302,7 @@ forward_if Post_if.
   assert_PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)
     as Hsafe by entailer!.
   destruct Hsafe as [Hfin Hle].
-  assert (HFC : Fast2Sum_cond a b).
+  assert (HFC : Fast2Sum_exact_cond a b).
   { split; [exact Hfin |].
     left. apply Ulp.ulp_le.
     - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
@@ -310,7 +310,7 @@ forward_if Post_if.
     - exact Hle. }
   forward_call (p, a, b).
   entailer!!.
-  apply FastTwoSum_accuracy_from_cond; assumption.
+  apply FastTwoSum_accuracy_from_magnitude_order; assumption.
 Qed.
 
 Lemma body_fast_2mult_guarded: semax_body Vprog Gprog f_fast_2mult_guarded fast_2mult_guarded_spec.
@@ -319,7 +319,7 @@ start_function.
 forward_call (a,b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (Fast2Mult_cond a b)
+  PROP (Fast2Mult_exact_cond a b)
   LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at_ Tsh dword st)).
 forward_if Post_if.
@@ -329,11 +329,11 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (Fast2Mult_cond a b) as HFC by entailer!.
+  assert_PROP (Fast2Mult_exact_cond a b) as HFC by entailer!.
   forward_call (st, a, b).
   entailer!!.
-  pose proof (Fast2Mult_correct_from_cond a b HFC) as [Heq Hdw].
-  split; [ apply Fast2Mult_accuracy_from_safety, HFC | split; assumption ].
+  pose proof (Fast2Mult_correct_from_exact_cond a b HFC) as [Heq Hdw].
+  split; [ apply Fast2Mult_accuracy_from_exact_cond, HFC | split; assumption ].
 Qed.
 
 Lemma body_fast_2mult_acc_guarded: semax_body Vprog Gprog f_fast_2mult_acc_guarded fast_2mult_acc_guarded_spec.
@@ -342,7 +342,7 @@ start_function.
 forward_call (a,b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (Fast2Mult_cond_acc a b)
+  PROP (Fast2Mult_acc_only_cond a b)
   LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at_ Tsh dword st)).
 forward_if Post_if.
@@ -352,10 +352,10 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (Fast2Mult_cond_acc a b) as HFC by entailer!.
+  assert_PROP (Fast2Mult_acc_only_cond a b) as HFC by entailer!.
   forward_call (st, a, b).
   entailer!!.
-  apply Fast2Mult_accuracy_from_cond_acc, HFC.
+  apply Fast2Mult_accuracy_from_acc_only_cond, HFC.
 Qed.
 
 Lemma body_dw_plus_fp_guarded :

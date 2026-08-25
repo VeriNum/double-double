@@ -641,7 +641,7 @@ Lemma DWTimesFP3_finite_acc (xh xl y : ftype t) :
   is_finite_p (DWTimesFP3 xh xl y).
 Proof.
 intros (Hfxl & Hdwp & Hfmul & Hreal).
-unfold Fast2Mult_cond_acc in Hfmul.
+unfold Fast2Mult_acc_only_cond in Hfmul.
 have [Hfxh Hfy] := BMULT_finite_e t xh y Hfmul.
 have HyΩ : Rabs (FT2R y) <= Omega
   by (apply Rlt_le; exact (is_finite_no_overflow t y Hfy)).
@@ -1235,7 +1235,7 @@ Qed.
 
 (* The cond forbids the nonzero underflow gap.  This is literally the
    third field of DWTimesFP_relative_error_input_cond (DDConds.v), projecting the underflow
-   disjunct of Fast2Mult_cond: under the cond the leading product is
+   disjunct of Fast2Mult_exact_cond: under the cond the leading product is
    either exactly zero or at least the TwoProd exactness threshold.  So
    the gap arm of DWTimesFP3_error_mixed is unreachable and its
    C_FP * 2^emin floor term is never paid -- which is precisely why the
@@ -1275,7 +1275,7 @@ End DWTimesFP_Accuracy.
 
    Everything above assumes the leading product is either zero or at
    least the TwoProd exactness threshold 2^(emin+2p-1) -- the underflow
-   disjunct of Fast2Mult_cond -- because below it the product residual
+   disjunct of Fast2Mult_exact_cond -- because below it the product residual
    cl1 = xh*y - ch is not representable and no relative bound can hold.
    This part removes that assumption.  In the complementary "gap" the
    error is instead governed by the physical underflow floor
@@ -1867,7 +1867,7 @@ Qed.
 (* ------------------------------------------------------------------
    PRIMARY API: branch-aware whole-range Algorithm-9 error.
 
-   The two arms are the two sides of Fast2Mult_cond's underflow
+   The two arms are the two sides of Fast2Mult_exact_cond's underflow
    disjunct (DDModels.v), so every input falls in exactly one:
 
      - normal arm  |xh*y| >= 2^(emin+2p-1) : purely relative, 2u^2;

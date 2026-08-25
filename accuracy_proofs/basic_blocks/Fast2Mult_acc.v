@@ -119,10 +119,10 @@ Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 Variables (a b : ftype t).
 
-(* Fast2Mult_cond is the single pre-condition shared with the verif spec
+(* Fast2Mult_exact_cond is the single pre-condition shared with the verif spec
    (fast2_mult_check_spec at Tdouble). *)
-Corollary Fast2Mult_accuracy_from_safety :
-  Fast2Mult_cond a b ->
+Corollary Fast2Mult_accuracy_from_exact_cond :
+  Fast2Mult_exact_cond a b ->
   Rabs (FT2R (Fast2Mult_err a b)) <= /2 * ulp (FT2R a * FT2R b).
 Proof.
   intros [Hfin _].
@@ -130,23 +130,23 @@ Proof.
 Qed.
 
 (* The accuracy bound needs ONLY overflow-safety (finiteness of the rounded
-   product): Fast2Mult_cond_acc = is_finite (BMULT a b) = true. *)
-Corollary Fast2Mult_accuracy_from_cond_acc :
-  Fast2Mult_cond_acc a b ->
+   product): Fast2Mult_acc_only_cond = is_finite (BMULT a b) = true. *)
+Corollary Fast2Mult_accuracy_from_acc_only_cond :
+  Fast2Mult_acc_only_cond a b ->
   Rabs (FT2R (Fast2Mult_err a b)) <= /2 * ulp (FT2R a * FT2R b).
 Proof.
-  unfold Fast2Mult_cond_acc; intros Hfin.
+  unfold Fast2Mult_acc_only_cond; intros Hfin.
   now apply Fast2Mult_accuracy_norm.
 Qed.
 
-(* The error-free / double-word correctness bundle needs the FULL condition
-   (both overflow-safety and the underflow disjunct). *)
+(* Exact reconstruction and the double-word property need the full condition:
+   both a finite rounded product and the underflow disjunct. *)
 (* Stated as a Prop-level conjunction (/\) using double_word_prop, so it is
    usable in VST PROP clauses.  double_word_prop is definitionally the same
    equality as double_word (just : Prop instead of : Type), so the equality
    from TwoMult_is_DW closes the double_word_prop goal. *)
-Corollary Fast2Mult_correct_from_cond :
-  Fast2Mult_cond a b ->
+Corollary Fast2Mult_correct_from_exact_cond :
+  Fast2Mult_exact_cond a b ->
   FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) = FT2R a * FT2R b
   /\ double_word_prop (Fast2Mult_mul a b) (Fast2Mult_err a b).
 Proof.

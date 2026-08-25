@@ -5374,7 +5374,8 @@ Qed.
 
    Both arms of the closing Fast2Sum deliver SUM PRESERVATION, which is what
    closure needs -- ordering is not required:
-     - ordered   -> FastTwoSum_correct (error-free in FLT, subnormals included);
+     - ordered   -> FastTwoSum_correct (the returned pair reconstructs the sum
+                    exactly in FLT, including for subnormal values);
      - unordered -> |cl3| > |ch| forces the leading product into the tiny
        regime (P < 6*eta), where the exact sum ch+cl3 still lies on the shared
        FLT/FIX lattice at exponent emin and Fast2Sum is exact anyway
@@ -5427,7 +5428,8 @@ have Fe : is_finite_p (Fast2Sum ch cl3).
 { unfold d, DWTimesDW3 in FIN. fold ch cl1 tl0 tl1 cl2 cl3 in FIN.
   exact FIN. }
 destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
-- (* ordered: the closing Fast2Sum is error-free in FLT, subnormals included *)
+- (* ordered: the closing Fast2Sum pair reconstructs the sum exactly in FLT,
+     including for subnormal values *)
   have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
   change (FT2R (snd d)=FT2R ch+FT2R cl3-FT2R (fst d)) in Hsum.
   have HsumE : FT2R (fst d)+FT2R (snd d)=FT2R ch+FT2R cl3
@@ -5833,7 +5835,7 @@ Qed.
    Assembly.  DWTimesDW_accuracy_pre splits the leading product into
    xh*yh = 0 (all four partial products vanish, so the result is exactly
    zero) and 2^(emin+2p-1) <= |xh*yh|; the intermediate gap is excluded by
-   Fast2Mult_cond, exactly as for Algorithm 9.  On the second branch the
+   Fast2Mult_exact_cond, exactly as for Algorithm 9.  On the second branch the
    regime lemmas above are exhaustive, split first on the leading product
    against 9/8 of the threshold and then on which of the low-order nodes
    are normal.

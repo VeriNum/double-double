@@ -474,7 +474,7 @@ Definition two_sum_check_spec :=
     PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> TwoSum_cond x y)
+    PROP(b = true -> TwoSum_exact_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
@@ -496,12 +496,12 @@ Definition fast2_mult_check_spec :=
     PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_cond x y)
+    PROP(b = true -> Fast2Mult_exact_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
 (* This Tier B check confirms that the rounded product is finite and therefore
-   certifies the weaker Fast2Mult_cond_acc.  Mirrors
+   certifies the weaker Fast2Mult_acc_only_cond.  Mirrors
    fp_utils_specs.fast2_mult_acc_check_spec. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
@@ -510,7 +510,7 @@ Definition fast2_mult_acc_check_spec :=
     PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_cond_acc x y)
+    PROP(b = true -> Fast2Mult_acc_only_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 

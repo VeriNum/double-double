@@ -908,7 +908,7 @@ apply Ulp.ulp_le;
 Qed.
 
 (* The (sh, c) Fast2Sum precondition, in ulp form: ulp c <= ulp sh \/ sh = 0.
-This is exactly the shape Fast2Sum_cond consumes.  The substantive content is
+This is exactly the shape Fast2Sum_exact_cond consumes.  The substantive content is
 the FLX-level DWPlusDW_sh_c_cexp_or_zero, bridged via TwoSumEq_FLT +
 rnd_plus_FLT_FLX_eq' and converted cexp -> ulp by ulp_neq_0 + bpow_le. *)
 Lemma DWPlusDW_sh_c_disjunction :
@@ -1198,7 +1198,7 @@ Qed.
    rnd_plus_FLT_FLX_eq', and lifts Rabs <= to cexp <= via mag_le_abs +
    Z.max_le_compat_r. *)
 (* The (vh, w) Fast2Sum precondition in ulp form: ulp w <= ulp vh \/ vh = 0.
-   This is exactly the shape Fast2Sum_cond consumes; no separate `w = 0`
+   This is exactly the shape Fast2Sum_exact_cond consumes; no separate `w = 0`
    disjunct is needed because w = 0 folds into `ulp w <= ulp vh` via
    ulp_le_abs (0 <= |vh|).  The substantive content is DWPlus's
    DWPlusDW_w_le_vh_aux, bridged via TwoSumEq_FLT/FastTwoSumEq_FLT/
@@ -1511,7 +1511,7 @@ apply Rmult_le_compat; try apply Rabs_pos.
 Qed.
 
 (* Final Fast2Sum vh w.  Key fact: Fast2Sum(sh,c) is exact under the cexp
-   disjunction (FastTwoSum_correct_ulp), i.e. vh + vl = sh + c, hence
+   disjunction (FastTwoSum_correct_from_exact_cond), i.e. vh + vl = sh + c, hence
    vl = -(sh+c)*dvh.  Then vh + w = (sh+c) + tl + (tl - (sh+c)*dvh)*dw, which
    is bounded by 13/16*Omega; with the outer rounding (1+d5) this is
    117/128*Omega < Omega.  No concrete precision needed (fprec >= 3). *)
@@ -1529,13 +1529,13 @@ destruct (BPLUS_accurate' t tl vl HFIN_BPLUS_tl_vl) as (dw & Hdw & Bw).
 have Hw_eq : FT2R w = (FT2R tl + FT2R vl) * (1 + dw).
 { change (FT2R w) with (FT2R (BPLUS tl vl)). exact Bw. }
 (* Fast2Sum exactness at (sh,c) under the disjunction. *)
-have Hcond_sh_c : Fast2Sum_cond sh c.
-{ unfold Fast2Sum_cond; split.
+have Hcond_sh_c : Fast2Sum_exact_cond sh c.
+{ unfold Fast2Sum_exact_cond; split.
   - change (is_finite (BPLUS sh c) = true).
     change (is_finite vh = true). exact FIN_vh.
   - exact DWPlusDW_sh_c_disjunction. }
 have Hexact : FT2R vh + FT2R vl = FT2R sh + FT2R c.
-{ have HH := FastTwoSum_correct_ulp sh c Hcond_sh_c.
+{ have HH := FastTwoSum_correct_from_exact_cond sh c Hcond_sh_c.
   change (FT2R vl) with (FT2R (Fast2Sum_err sh c)).
   change (FT2R vh) with (FT2R (Fast2Sum_sum sh c)).
   rewrite HH. ring. }
@@ -1660,38 +1660,38 @@ Qed.
 (* Bridge lemmas exposed for VST verification of dw_plus_dw2:
    each forward_call to two_sum / fast_2sum needs the appropriate cond. *)
 
-Lemma TwoSum_cond_xh_yh_inner : TwoSum_cond xh yh.
+Lemma TwoSum_exact_cond_xh_yh_inner : TwoSum_exact_cond xh yh.
 Proof.
-  unfold TwoSum_cond; split; [|split].
+  unfold TwoSum_exact_cond; split; [|split].
   - exact FIN_sh.
   - exact (no_overflow_minus_is_finite t xh yh HFINxh HFINyh no_ov_minus_xhyh).
   - apply (Rle_lt_trans _ (/4 * Omega));
       [exact Hyh_tight_bnd | exact Omega4_lt_predOmega].
 Qed.
 
-Lemma TwoSum_cond_xl_yl_inner : TwoSum_cond xl yl.
+Lemma TwoSum_exact_cond_xl_yl_inner : TwoSum_exact_cond xl yl.
 Proof.
-  unfold TwoSum_cond; split; [|split].
+  unfold TwoSum_exact_cond; split; [|split].
   - exact FIN_th.
   - exact (no_overflow_minus_is_finite t xl yl HFINxl HFINyl no_ov_minus_xlyl).
   - apply (Rle_lt_trans _ (/4 * Omega));
       [exact yl_le_qOmega | exact Omega4_lt_predOmega].
 Qed.
 
-(* Fast2Sum_cond is the generalized ulp/zero disjunction (not the magnitude
+(* Fast2Sum_exact_cond is the generalized ulp/zero disjunction (not the magnitude
    ordering |b| <= |a|, which is false here in the cancellation regime); it is
    discharged by DWPlusDW_sh_c_disjunction / DWPlusDW_vh_w_disjunction. *)
-Lemma Fast2Sum_cond_sh_c_inner : Fast2Sum_cond sh c.
+Lemma Fast2Sum_exact_cond_sh_c_inner : Fast2Sum_exact_cond sh c.
 Proof.
-  unfold Fast2Sum_cond; split.
+  unfold Fast2Sum_exact_cond; split.
   - change (is_finite (BPLUS sh c) = true).
     change (is_finite vh = true). exact FIN_vh.
   - exact DWPlusDW_sh_c_disjunction.
 Qed.
 
-Lemma Fast2Sum_cond_vh_w_inner : Fast2Sum_cond vh w.
+Lemma Fast2Sum_exact_cond_vh_w_inner : Fast2Sum_exact_cond vh w.
 Proof.
-  unfold Fast2Sum_cond; split.
+  unfold Fast2Sum_exact_cond; split.
   - change (is_finite (BPLUS vh w) = true).
     exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
   - exact DWPlusDW_vh_w_disjunction.
@@ -1734,42 +1734,42 @@ eapply AccurateDWPlusDW_finite; first [eassumption | cbv; intros; try discrimina
 Qed.
 
 (* Forwarders for the C-level VST forward_calls inside body_dw_plus_dw2:
-   - two_sum(&sh, x->s, y->s) needs TwoSum_cond xh yh
-   - two_sum(&th, x->t, y->t) needs TwoSum_cond xl yl
-   - fast_2sum(&vh, sh.s, c) needs Fast2Sum_cond (BPLUS xh yh) (BPLUS sl th)
-   - fast_2sum(st,  vh.s, w) needs Fast2Sum_cond vh w
+   - two_sum(&sh, x->s, y->s) needs TwoSum_exact_cond xh yh
+   - two_sum(&th, x->t, y->t) needs TwoSum_exact_cond xl yl
+   - fast_2sum(&vh, sh.s, c) needs Fast2Sum_exact_cond (BPLUS xh yh) (BPLUS sl th)
+   - fast_2sum(st,  vh.s, w) needs Fast2Sum_exact_cond vh w
 *)
-Theorem TwoSum_cond_from_DWPlusDW_cond_xh_yh :
+Theorem TwoSum_exact_cond_from_DWPlusDW_cond_xh_yh :
   (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_cond xh yh.
+  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_exact_cond xh yh.
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_cond_xh_yh_inner; first [eassumption | cbv; intros; discriminate].
+eapply TwoSum_exact_cond_xh_yh_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
-Theorem TwoSum_cond_from_DWPlusDW_cond_xl_yl :
+Theorem TwoSum_exact_cond_from_DWPlusDW_cond_xl_yl :
   (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_cond xl yl.
+  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_exact_cond xl yl.
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_cond_xl_yl_inner; first [eassumption | cbv; intros; discriminate].
+eapply TwoSum_exact_cond_xl_yl_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
-(* These two discharge the Fast2Sum_cond disjunction via the *_disjunction lemmas. *)
-Theorem Fast2Sum_cond_from_DWPlusDW_cond_sh_c :
+(* These two discharge the Fast2Sum_exact_cond disjunction via the *_disjunction lemmas. *)
+Theorem Fast2Sum_exact_cond_from_DWPlusDW_cond_sh_c :
   (3 <= fprec t)%Z ->
   DWPlusDW_relative_error_input_cond xh xl yh yl ->
-  Fast2Sum_cond (TwoSumF_sum xh yh)
+  Fast2Sum_exact_cond (TwoSumF_sum xh yh)
                 (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)).
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_cond_sh_c_inner; first [eassumption | cbv; intros; discriminate].
+eapply Fast2Sum_exact_cond_sh_c_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
-Theorem Fast2Sum_cond_from_DWPlusDW_cond_vh_w :
+Theorem Fast2Sum_exact_cond_from_DWPlusDW_cond_vh_w :
   (3 <= fprec t)%Z ->
   DWPlusDW_relative_error_input_cond xh xl yh yl ->
-  Fast2Sum_cond
+  Fast2Sum_exact_cond
     (Fast2Sum_sum (TwoSumF_sum xh yh)
                   (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))
     (BPLUS (TwoSumF_err xl yl)
@@ -1777,7 +1777,7 @@ Theorem Fast2Sum_cond_from_DWPlusDW_cond_vh_w :
                          (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))).
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_cond_vh_w_inner; first [eassumption | cbv; intros; discriminate].
+eapply Fast2Sum_exact_cond_vh_w_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
 End DWPlusDWCondBridge.

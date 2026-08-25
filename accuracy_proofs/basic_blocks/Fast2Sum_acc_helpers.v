@@ -115,11 +115,11 @@ rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
   rewrite /BPLUS/BINOP float_of_ftype_of_float => //.
 Qed.
 
-(* Same exactness as FastTwoSum_correct, but under the weaker Fast2Sum_cond
+(* Same exactness as FastTwoSum_correct, but under the weaker Fast2Sum_exact_cond
    disjunction (ulp b <= ulp a, or a = 0) instead of the magnitude ordering
    |b| <= |a|.  Needed at the (sh, c) Fast2Sum site of DWPlusDW, where the
    magnitude ordering is false in the cancellation regime. *)
-Theorem FastTwoSum_correct_ulp (Hcond : Fast2Sum_cond a b) :
+Theorem FastTwoSum_correct_from_exact_cond (Hcond : Fast2Sum_exact_cond a b) :
   FT2R (Fast2Sum_err a b) = FT2R a + FT2R b - FT2R (Fast2Sum_sum a b).
 Proof.
 destruct Hcond as [Hfin_plus Hdisj].

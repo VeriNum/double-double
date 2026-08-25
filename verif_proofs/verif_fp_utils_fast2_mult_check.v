@@ -3,7 +3,7 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* fast2_mult_check(x, y) returns 1 only if Fast2Mult_cond x y holds, i.e.,
+(* fast2_mult_check(x, y) returns 1 only if Fast2Mult_exact_cond x y holds, i.e.,
    x*y is finite and either the real product is zero or it is at least
    bpow 2 (emin + 2*p - 1) (the Fast2Mult underflow safety threshold).
 
@@ -13,7 +13,7 @@ Require Import DD.verif_proofs.verif_fp_utils_common.
      Post_if  : captures C variable `zx = (x == 0.0) && isfinite(y)`.
      Post_if2 : captures C variable `zy = (y == 0.0) && isfinite(x)`.
      Post_t7  : captures the final return value after the threshold check.
-   At the join point Post_t7 discharges Fast2Mult_cond using
+   At the join point Post_t7 discharges Fast2Mult_exact_cond using
    Hfin_spec (finiteness of x*y), Float_cmp_Ceq_zero_mul_FT2R_{l,r} (zero
    product from the C zero-checks), and no_underflow_real_from_round_mul
    (above-threshold product from the fabs comparison). *)
@@ -228,7 +228,7 @@ Proof.
         Exists false.
         entailer!.
 
-      * (* Join: discharge Fast2Mult_cond from Post_t7.
+      * (* Join: discharge Fast2Mult_exact_cond from Post_t7.
            b_lb = true gives finiteness and the disjunction of safety witnesses.
            - px: Float_cmp_Ceq_zero_mul_FT2R_l gives FT2R x * FT2R y = 0.
            - py: Float_cmp_Ceq_zero_mul_FT2R_r gives FT2R x * FT2R y = 0.
@@ -240,7 +240,7 @@ Proof.
         Exists b_lb.
         entailer!.
         destruct (H_lb eq_refl) as [Hvf Hdisj].
-        unfold DDConds.Fast2Mult_cond.
+        unfold DDConds.Fast2Mult_exact_cond.
         split.
         { apply Hfin_spec; exact Hvf. }
         { destruct Hdisj as [Hpx | [Hpy | Hpuf]].
