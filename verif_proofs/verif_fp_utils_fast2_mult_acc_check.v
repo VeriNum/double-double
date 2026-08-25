@@ -3,10 +3,13 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* fast2_mult_acc_check(x, y) is the Tier-B "accurate-only" check: it returns 1
-   iff x*y is finite, certifying the weaker Fast2Mult_cond_acc (finiteness only).
-   The C body is just `t'1 = isfinite_double(x*y); return t'1;`, so the proof
-   simply forwards through the isfinite_double call and reads off its spec iff. *)
+(* fast2_mult_acc_check(x, y) is the Tier B check that confirms the rounded
+   product is finite: it returns 1 iff x*y is finite, certifying the weaker
+   Fast2Mult_cond_acc.  This condition supports the bound on the returned error
+   component, but not exact reconstruction or a proof that the output is a
+   valid double word.  The C body is just
+   `t'1 = isfinite_double(x*y); return t'1;`, so the proof simply forwards
+   through the isfinite_double call and reads off its spec iff. *)
 Lemma body_fast2_mult_acc_check:
   semax_body Vprog Gprog f_fast2_mult_acc_check fast2_mult_acc_check_spec.
 Proof.

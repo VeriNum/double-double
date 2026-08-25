@@ -45,9 +45,10 @@ Definition fast2_mult_check_spec :=
     SEP().
 
 
-(* Tier-B "accurate-only" check: certifies the weaker Fast2Mult_cond_acc
-   (finiteness only), which suffices for the accuracy bound but not for the
-   error-free / double-word property.  Mirrors fast2_mult_check_spec. *)
+(* This Tier B check confirms that the rounded product is finite and therefore
+   certifies Fast2Mult_cond_acc.  That condition suffices for the bound on the
+   returned error component, but not for exact reconstruction or for proving
+   that the output is a valid double word.  Mirrors fast2_mult_check_spec. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
   WITH x : ftype Tdouble, y : ftype Tdouble
@@ -158,10 +159,11 @@ Definition dw_div_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-(* Accurate-only cond: no underflow disjunct, so the guard accepts the Fast2Mult
-   underflow gap.  What that buys the caller is the whole-range MIXED bound
-   (DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc) rather than the pure
-   2u^2 relative bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
+(* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
+   underflow gap.  It gives the caller the mixed bound
+   (DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc) and proves that the
+   output is a valid double word.  It does not give the pure 2u^2 relative
+   bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check
   WITH x : val,

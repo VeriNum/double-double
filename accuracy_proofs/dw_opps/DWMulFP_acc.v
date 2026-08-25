@@ -25,7 +25,8 @@
       VST INTERFACE (end of file; what the C contract states).  The mixed
       theorems above assume is_finite_p (DWTimesFP3 ...) -- a fact about the
       RESULT, which a runtime guard cannot test -- so these Layer-2 corollaries
-      derive it from the accurate-only, input-only, runtime-checkable cond:
+      derive it from the weaker, input-only, runtime-checkable whole-range
+      condition:
         DWTimesFP_cond_acc             (DDConds.v) DWTimesFP_cond MINUS the
                                       underflow disjunct: double-word relation
                                       plus overflow headroom, nothing else
@@ -617,9 +618,10 @@ have Hpb : Rabs (FT2R (BMULT a b)) <= /4 * Omega.
 by repeat split.
 Qed.
 
-(* MAIN: BOTH components of DWTimesFP3 stay finite under the ACCURATE-ONLY cond
-   DWTimesFP_cond_acc, i.e. with NO underflow hypothesis on the leading product.
-   Two places in the argument used to need the underflow disjunct; neither does:
+(* MAIN: BOTH components of DWTimesFP3 stay finite under the weaker whole-range
+   condition DWTimesFP_cond_acc, i.e. with NO underflow hypothesis on the
+   leading product.  Two places in the argument used to need the underflow
+   disjunct; neither does:
 
      - finiteness of cl1 = Fast2Mult_err xh y is unconditional
        (Fast2Mult_finite_unconditional): the FMA's rounded result is at most
@@ -1965,8 +1967,9 @@ destruct (Rle_dec
 Qed.
 
 (* ------------------------------------------------------------------
-   PUBLIC VST INTERFACE (Layer 2): the whole-range mixed bound from the
-   runtime-checkable accurate-only cond DWTimesFP_cond_acc (DDConds.v).
+   PUBLIC VST INTERFACE (Layer 2): the whole-range mixed bound and output
+   double-word closure from the runtime-checkable DWTimesFP_cond_acc
+   (DDConds.v).
 
    This is the pair of results carried by the exported funspec
    dw_mult_fp9_guarded_spec and discharged by the runtime guard

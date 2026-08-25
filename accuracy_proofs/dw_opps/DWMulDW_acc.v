@@ -1842,10 +1842,11 @@ all: try exact valid_fexp_inst.
 all: try apply generic_format_half_Omega.
 Qed.
 
-(* MAIN: BOTH components of DWTimesDW3 stay finite under the ACCURATE-ONLY cond
-   DWTimesDW_cond_acc, i.e. with NO underflow hypothesis on the leading product.
-   Two places in the argument used to need the underflow disjunct; neither does
-   -- exactly as for Algorithm 9 (DWMulFP_acc.DWTimesFP3_finite_acc):
+(* MAIN: BOTH components of DWTimesDW3 stay finite under the weaker whole-range
+   condition DWTimesDW_cond_acc, i.e. with NO underflow hypothesis on the
+   leading product.  Two places in the argument used to need the underflow
+   disjunct; neither does -- exactly as for Algorithm 9
+   (DWMulFP_acc.DWTimesFP3_finite_acc):
 
      - finiteness of cl1 = Fast2Mult_err xh yh is unconditional: the FMA's
        rounded result is at most /2 ulp(xh*yh), so it cannot overflow whatever
@@ -4936,8 +4937,8 @@ Qed.
    the regime lemmas above does not apply and the error is governed by an
    absolute floor instead.  The lemmas here bound that floor with NO
    hypothesis on the leading product beyond finiteness, and show that the
-   output double-word property survives, so the gap is a full double-word
-   tier rather than an accurate-only one.
+   output double-word property survives, so the gap supplies both its mixed
+   error guarantee and representation closure.
 
    Mirrors DWMulFP_acc's Algorithm-9 block (DWTimesFP_core_error_floor_gap
    / DWTimesFP3_error_floor_gap) node for node; Algorithm 12 just has five
@@ -5378,7 +5379,8 @@ Qed.
        regime (P < 6*eta), where the exact sum ch+cl3 still lies on the shared
        FLT/FIX lattice at exponent emin and Fast2Sum is exact anyway
        (Fast2Sum_sum_exact_of_sum_small).
-   So this is a full double-word tier in the gap, not an accurate-only one. *)
+   Thus the gap theorem establishes both the mixed error bound and output
+   double-word closure. *)
 Lemma DWTimesDW3_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
@@ -6198,9 +6200,11 @@ Qed.
 Definition absolute_error_DWTimesDW : R := Rabs ((zh+zl)-xr*yr).
 
 (* The DW x DW analogue of DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc:
-   the whole-range bound from the runtime-checkable accurate-only cond.  NOT
-   yet wired to dw_mult_dw12_guarded, whose check still establishes the full
-   DWTimesDW_cond and whose spec still exports the pure 8u^2 bound. *)
+   the whole-range mixed bound from the runtime-checkable
+   DWTimesDW_cond_acc.  Its companion theorem below establishes output
+   double-word closure under the same condition.  These are the two guarantees
+   carried by dw_mult_dw12_guarded_spec after dw_mult_dw_check establishes this
+   weaker condition. *)
 Corollary DWTimesDW_mixed_accuracy_from_cond_acc :
   (5 <= fprec t)%Z ->
   DWTimesDW_cond_acc xh xl yh yl ->

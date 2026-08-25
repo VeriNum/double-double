@@ -37,12 +37,12 @@ int fast2_mult_check(double x, double y) {
 }
 
 int fast2_mult_acc_check(double x, double y) {
-    /* "Accurate-only" guard for Fast2Mult: it certifies just enough for the
-       accuracy bound |err| <= 1/2 ulp(x*y), which holds in every regime, so
-       it only tests overflow-safety (finiteness of the rounded product) and
-       omits fast2_mult_check's underflow zero/threshold test.  It does NOT
-       certify the error-free / double-word property (mul + err == x*y); use
-       fast2_mult_check for that.  Discharges DDModels.Fast2Mult_cond_acc. */
+    /* This Fast2Mult guard checks that the rounded product is finite.  That is
+       exactly what the bound |err| <= 1/2 ulp(x*y) needs in every regime, so the
+       check omits fast2_mult_check's underflow zero/threshold test.  It does
+       NOT certify that mul + err == x*y or that the result is a valid double
+       word; use fast2_mult_check for those guarantees.
+       Discharges DDConds.Fast2Mult_cond_acc. */
     return isfinite_double(x * y);
 }
 
@@ -198,7 +198,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_div_fp_check(struct dword *x, double y) {
-    /* Verifies DWDivFP_cond_min (DDModels.v): xh, xl, y finite; (x->s, x->t) a
+    /* Verifies DWDivFP_cond_min (DDConds.v): xh, xl, y finite; (x->s, x->t) a
        double-word; RN(x->s / y) finite; |x->s| in [2^(emin+2p), Omega/4]; and
        |x->s / y| <= Omega/4.  There is NO quotient lower bound.
 
@@ -207,9 +207,11 @@ int dw_div_fp_check(struct dword *x, double y) {
 
          2^(emin+2p-1) = 2^-969   the floor of the full DWDivFP_cond, which
                                   buys the PURE relative bound 6u^2;
-         2^(emin+p-1)  = 2^-1022  the floor of DWDivFP_cond_acc, which is what
-                                  Layer 1's FLX->FLT bridge for the leading
-                                  quotient node needs;
+         2^(emin+p-1)  = 2^-1022  the floor of the internal
+                                  DWDivFP_normal_quotient_input_cond in
+                                  DWDivFP_acc.v, which is what Layer 1's
+                                  FLX->FLT bridge for the leading quotient
+                                  node needs;
          (none)                   DWDivFP_cond_min, this guard.
 
        The last step is not a bridge relaxation but a separate proof: below

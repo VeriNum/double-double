@@ -195,7 +195,8 @@ Definition fast_2sum_guarded_spec :=
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 
-(* Tier A guarded wrapper: accurate AND correct (error-free / double-word). *)
+(* Tier A full Fast2Mult wrapper: error-term bound, exact reconstruction, and
+   output double-word property. *)
 Definition fast_2mult_guarded_spec :=
   DECLARE _fast_2mult_guarded
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
@@ -208,7 +209,9 @@ Definition fast_2mult_guarded_spec :=
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 
-(* Tier B guarded wrapper: accuracy-only (bound), guarded by the acc check. *)
+(* The Tier B wrapper exposes a bound on the returned error component.  Its
+   finiteness guard does not support exact reconstruction or prove that the
+   output is a valid double word. *)
 Definition fast_2mult_acc_guarded_spec :=
   DECLARE _fast_2mult_acc_guarded
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
@@ -497,8 +500,9 @@ Definition fast2_mult_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
-(* Tier-B "accurate-only" check: certifies the weaker Fast2Mult_cond_acc
-   (finiteness only).  Mirrors fp_utils_specs.fast2_mult_acc_check_spec. *)
+(* This Tier B check confirms that the rounded product is finite and therefore
+   certifies the weaker Fast2Mult_cond_acc.  Mirrors
+   fp_utils_specs.fast2_mult_acc_check_spec. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
   WITH x : ftype Tdouble, y : ftype Tdouble
@@ -639,7 +643,7 @@ Definition Ops_Internal : funspecs :=
     dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
 
 (* Public API exported by the ops VSU: the nine guarded wrappers plus the
-   Tier-B accurate-only Fast2Mult. *)
+   Tier B Fast2Mult wrapper whose contract contains only the error bound. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;

@@ -54,10 +54,10 @@ Definition Fast2Mult_cond (a b : ftype t) : Prop :=
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).
 
-(* Fast2Mult_cond_acc is the "accurate-only" precondition: it drops the
-   underflow-safety conjunct of Fast2Mult_cond (the `a*b = 0 \/ threshold <=
-   |a*b|` disjunction) and keeps only overflow-safety (finiteness of the
-   rounded product).  It suffices for the accuracy bound
+(* Fast2Mult_cond_acc is the rounded-product-finiteness precondition: it drops
+   the underflow-safety conjunct of Fast2Mult_cond (the `a*b = 0 \/ threshold
+   <= |a*b|` disjunction) and keeps only overflow-safety (finiteness of the
+   rounded product).  By itself it suffices for the error-term bound
    |Fast2Mult_err a b| <= 1/2 ulp(a*b) — which holds in every regime — but NOT
    for the error-free / double-word properties (mul + err = a*b), which need
    the underflow disjunct of the full Fast2Mult_cond.  See Fast2Mult_acc.v:
@@ -137,10 +137,11 @@ Definition DWTimesFP_cond (xh xl y : ftype t) : Prop :=
   Fast2Mult_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
-(* DWTimesFP_cond_acc is the "accurate-only" precondition for DWTimesFP3: it
-   weakens Fast2Mult_cond to Fast2Mult_cond_acc, i.e. it drops the underflow
-   disjunct (FT2R xh * FT2R y = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R y|) and
-   keeps only overflow safety.  Exactly the DWTimesFP analogue of
+(* DWTimesFP_cond_acc is the whole-range mixed-error-and-closure precondition
+   for DWTimesFP3.  It weakens Fast2Mult_cond to Fast2Mult_cond_acc, i.e. it
+   drops the underflow disjunct
+   (FT2R xh * FT2R y = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R y|) and keeps
+   only overflow safety.  Exactly the DWTimesFP analogue of
    Fast2Mult_cond_acc vs Fast2Mult_cond above.
 
    It suffices for the whole-range MIXED bound
@@ -196,9 +197,9 @@ Definition DWTimesDW_cond (xh xl yh yl : ftype t) : Prop :=
   Fast2Mult_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-(* DWTimesDW_cond_acc is the "accurate-only" precondition for DWTimesDW3, the
-   exact analogue of DWTimesFP_cond_acc above: it weakens Fast2Mult_cond to
-   Fast2Mult_cond_acc, dropping the underflow disjunct
+(* DWTimesDW_cond_acc is the whole-range mixed-error-and-closure precondition
+   for DWTimesDW3, the exact analogue of DWTimesFP_cond_acc above.  It weakens
+   Fast2Mult_cond to Fast2Mult_cond_acc, dropping the underflow disjunct
    (FT2R xh * FT2R yh = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R yh|) and keeping
    only overflow safety.
 
@@ -373,8 +374,9 @@ Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
   Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
 
-(** [DWDivDW_cond_acc] is the "accurate-only" precondition for [DWDivDW3], the
-    DW/DW analogue of [DWDivFP_cond_min] above.  It DROPS conjunct 8 of
+(** [DWDivDW_cond_acc] is the whole-range mixed-error-and-closure precondition
+    for [DWDivDW3], the DW/DW analogue of [DWDivFP_cond_min] above.  It DROPS
+    conjunct 8 of
     [DWDivDW_cond], the quotient underflow floor
 
       2^(emin+2p-1) <= |xh/yh|,
