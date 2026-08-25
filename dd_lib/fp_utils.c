@@ -224,9 +224,9 @@ int dw_div_fp_check(struct dword *x, double y) {
 
        (DWDivFP_acc / DWDivFP_subnormal: relative_errorDWDivFP3_from_cond_combined_min),
        plus output double-word closure (DWDivFP3_is_DW_from_cond_min) and
-       finiteness of the computed pair (DWDivFP3_finite_min).  So the guard now
-       admits EVERY quotient magnitude the format can represent, and the
-       exported postcondition did not weaken.
+       finiteness of the computed pair (bundled into DWDivFP3_subnormal_leg).
+       So the guard now admits EVERY quotient magnitude the format can
+       represent, and the exported postcondition did not weaken.
 
        WHAT REPLACES THE FLOOR.  The cond's fifth conjunct is now
        `is_finite (BDIV x->s y)` -- the division analogue of Fast2Mult_cond_acc,
