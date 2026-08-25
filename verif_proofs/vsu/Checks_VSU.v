@@ -23,7 +23,6 @@ Require Import DD.verif_proofs.verif_fp_utils_two_sum_check.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_sum_check.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_check.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_acc_check.
-Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_check2.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_mult_dw_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_check.
@@ -41,7 +40,6 @@ Proof.
   1:{ solve_SF_dd body_fast2_mult_acc_check. }
   1:{ solve_SF_dd body_fast2_sum_check. }
   1:{ solve_SF_dd body_two_sum_check. }
-  1:{ solve_SF_dd body_fast2_mult_check2. }
   1:{ solve_SF_dd body_dw_plus_dw_check. }
   1:{ solve_SF_dd body_dw_mult_fp_check. }
   1:{ solve_SF_dd body_dw_mult_dw_check. }

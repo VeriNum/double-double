@@ -50,7 +50,6 @@ verif_proofs/verif_fp_utils_short_circuit.v
 verif_proofs/verif_fp_utils_isfinite_double.v
 verif_proofs/verif_fp_utils_fast2_mult_check.v
 verif_proofs/verif_fp_utils_fast2_mult_acc_check.v
-verif_proofs/verif_fp_utils_fast2_mult_check2.v
 verif_proofs/verif_fp_utils_fast2_sum_check.v
 verif_proofs/verif_fp_utils_two_sum_check.v
 verif_proofs/verif_fp_utils_dw_plus_dw_check.v

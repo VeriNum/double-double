@@ -14,8 +14,6 @@ int fast2_mult_check(double x, double y);
 
 int fast2_mult_acc_check(double x, double y);
 
-int fast2_mult_check2(double x, double y, double z);
-
 int dw_plus_dw_check(struct dword *x, struct dword *y);
 
 int dw_plus_fp_check(struct dword *x, double y);

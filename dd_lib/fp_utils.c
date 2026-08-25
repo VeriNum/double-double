@@ -61,22 +61,6 @@ int two_sum_check(double a, double b) {
     return fin_sum && fin_diff && (fabs(b) < DBL_MAX);
 }
 
-int fast2_mult_check2(double x, double y, double z) {
-    // 2 ^ (emin + 2 * p - 1)
-    double thresh = DBL_MIN * ldexp(1.0, 53);
-    // checking if result z is zero is not sufficient
-    // if z is zero we can't prove the
-    // real product is zero
-    int zx = x == 0.0 && isfinite_double(y);
-    int zy = y == 0.0 && isfinite_double(x);
-    // checking if result z ge thresh is not sufficient
-    // if z is ge thresh we can't to prove the
-    // real product is ge thresh
-    // accuracy bound also requires finite
-    int fin = isfinite_double(x * y + z);
-    return fin && ((zx || zy) || thresh < fabs(x * y));
-}
-
 int dw_plus_dw_check(struct dword *x, struct dword *y) {
     /* Verifies DWPlusDW_cond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),

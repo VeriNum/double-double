@@ -29,8 +29,8 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-(* ldexp_val  defines the IEEE-754 float for ldexp(1.0, 53) = 2^53.
-   Used by body_fast2_mult_check and body_fast2_mult_check2.
+(* ldexp_val defines the IEEE-754 float for ldexp(1.0, 53) = 2^53.
+   Used by body_fast2_mult_check.
    Bit pattern 4607182418800017408 = 0x3FF0000000000000 is the encoding
    of 1.0 as a 64-bit double; Bldexp then scales it by 2^53. *)
 Definition ldexp_val :=
@@ -75,7 +75,7 @@ Definition tbool (b : bool) : int :=
   if b then Int.one else Int.zero.
 
 (* VSU spec groupings for the checks translation unit (fp_utils).
-   Imports are the two libm functions the checks call (fabs, ldexp); the eight
+   Imports are the two libm functions the checks call (fabs, ldexp); the
    internal check functions are listed in fp_utils prog order.  Gprog is exactly
    the checks VSU's G = Imports ++ internal specs, so these body proofs feed
    directly into solve_SF_internal in Checks_VSU.v. *)
@@ -84,7 +84,7 @@ Definition Checks_Imports : funspecs := [ fabs_spec; ldexp_spec ].
 Definition Checks_Internal : funspecs :=
   [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_acc_check_spec;
     fast2_sum_check_spec;
-    two_sum_check_spec; fast2_mult_check2_spec; dw_plus_dw_check_spec;
+    two_sum_check_spec; dw_plus_dw_check_spec;
     dw_mult_fp_check_spec; dw_mult_dw_check_spec; dw_plus_fp_check_spec;
     dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
