@@ -13,7 +13,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 
 Set Bullet Behavior "Strict Subproofs".
 
-Section TwoMultAcc.
+Section FastTwoMultAcc.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin := (@common.emin t).
@@ -23,12 +23,6 @@ Notation u   := (bpow Zaux.radix2 (- fprec t)).
 Variables (a b : ftype t).
 
 Hypothesis (Fast2Mult_overflow_condition : is_finite (BMULT a b) = true).
-(* No underflow hypothesis here: the ACCURACY bound follows from finiteness
-   alone.  (The double-word property does NOT — it can fail in the underflow
-   regime, e.g. mul=9/32, err=1/64 with RN(mul+err)=5/16<>mul at p=4,emin=-6;
-   see Fast2Mult_correct_from_cond, which keeps the full Fast2Mult_cond.)
-   Keeping this section free of the underflow condition makes accuracy's
-   independence structural — a stray tactic cannot reintroduce a dependency. *)
 
 Theorem Fast2Mult_accuracy_norm:
     Rabs (FT2R (Fast2Mult_err a b))  <= /2 * ulp (FT2R a * FT2R b).
@@ -116,9 +110,9 @@ Proof.
     rewrite Hround0. apply bpow_ge_0.
 Qed.
 
-End TwoMultAcc.
+End FastTwoMultAcc.
 
-Section TwoMultCheckImplies.
+Section FastTwoMultCheckImplies.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
@@ -169,4 +163,4 @@ Proof.
     unfold double_word_prop. unfold double_word in *. exact HDW.
 Qed.
 
-End TwoMultCheckImplies.
+End FastTwoMultCheckImplies.
