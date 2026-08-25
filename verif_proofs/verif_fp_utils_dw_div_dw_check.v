@@ -50,14 +50,14 @@ Ltac cascade_close :=
     | (intro; cascade_gather; repeat split; assumption)
     | (intro; cascade_gather; tauto) ].
 
-(* dw_div_dw_check(x, y) returns 1 only if DWDivDW_mixed_error_input_cond holds: xh, xl, yh,
+(* dw_div_dw_check(x, y) returns 1 only if DWDivDW_mixed_safe_input_cond holds: xh, xl, yh,
    yl finite, (xh,xl) and (yh,yl) double-words, |yh| <= 2^(femax-p-5),
    2^(emin+2p) <= |yh|, and |xh/yh| <= Omega/4.
 
    Structure: body_dw_mult_dw_check's fin + dwx + dwy cascade, then the magnitude
    and quotient tail of body_dw_div_fp_check with the scalar divisor promoted to
    the leading component y->s.  Raw facts are threaded through each forward_if and
-   DWDivDW_mixed_error_input_cond is discharged only at the final return join.
+   DWDivDW_mixed_safe_input_cond is discharged only at the final return join.
 
    Nine conjuncts come out of five clauses, because one of them is free:
 
@@ -86,7 +86,7 @@ Ltac cascade_close :=
      enters Algorithm 18 multiplied by mh ~ 1/yh, so the quotient ceiling already
      covers every node it reaches.
    - qt_lo (2^(-969) < |q|), the quotient underflow floor.  That is conjunct 8 of
-     the full DWDivDW_relative_error_input_cond, which DWDivDW_mixed_error_input_cond drops; it bought the sharper
+     the full DWDivDW_relative_error_input_cond, which DWDivDW_mixed_safe_input_cond drops; it bought the sharper
      2*eta closing floor and the pure 13.9u^2 relative bound, at the cost of
      rejecting every quotient below 2^-969.  The guarded spec now exports the
      whole-range mixed bound instead -- see dw_div_dw18_guarded_spec.
@@ -327,7 +327,7 @@ Proof.
                              forward.                    (* return t'18 *)
                              Exists b18; entailer!.
 
-                             (* ===== discharge DWDivDW_mixed_error_input_cond ===== *)
+                             (* ===== discharge DWDivDW_mixed_safe_input_cond ===== *)
                              destruct (Hb18 eq_refl)
                                as [Hb6t [Hb8t [Hyhht [Hyhlt Hqtht]]]].
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
@@ -373,7 +373,7 @@ Proof.
                                        bpow Zaux.radix2 1022)
                                by (apply (BDIV_abs_le_bpow (fst xh) (fst yh) 1022
                                             Hyhne Hfin_q Hfmt1022); exact Hq_hi).
-                             unfold DDConds.DWDivDW_mixed_error_input_cond.
+                             unfold DDConds.DWDivDW_mixed_safe_input_cond.
                              repeat split; try assumption;
                              try exact Hyh_hi;
                              try exact Hyh_lo;

@@ -21,7 +21,7 @@
       The unsuffixed names take the strong DWDivFP_relative_error_input_cond (quotient floor
       2^(emin+2p-1)) and are re-derived through
       DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond.  The runtime guard instead
-      discharges the canonical whole-range DWDivFP_mixed_error_input_cond; its mixed-error
+      discharges the canonical whole-range DWDivFP_mixed_safe_input_cond; its mixed-error
       and output-closure API lives in DWDivFP_subnormal.v and case-splits into
       this file's normal helper and the subnormal-leading-quotient proof.
 
@@ -698,7 +698,7 @@ Notation ulp   := (Ulp.ulp Zaux.radix2 fexp).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Internal normal-leading-quotient proof condition for DWDivFP3.  This is not
-   a runtime guard or a public accuracy tier: DWDivFP_mixed_error_input_cond is the canonical
+   a runtime guard or a public accuracy tier: DWDivFP_mixed_safe_input_cond is the canonical
    whole-range mixed-error condition, while DWDivFP_relative_error_input_cond is the pure-relative
    condition.  The helper records the normal-quotient branch used to reuse the
    FLX proof when |xh/y| is at least 2^(emin+p-1).  Its final lower bound is on
@@ -1888,7 +1888,7 @@ Hypothesis COND : DWDivFP_normal_quotient_input_cond xh xl y.
 (** Normal-leading-quotient helper API.  The mixed relative/absolute error is
     valid in every closing-correction regime under the internal helper.  The
     strong-cond versions below are re-derived from it, while the runtime API
-    uses DWDivFP_mixed_error_input_cond in DWDivFP_subnormal.v. *)
+    uses DWDivFP_mixed_safe_input_cond in DWDivFP_subnormal.v. *)
 Theorem DWDivFP3_error_mixed_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
@@ -1928,7 +1928,7 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
 Qed.
 
 (* Legacy compatibility name for the same internal-helper theorem.  The runtime
-   wrapper now uses the weaker DWDivFP_mixed_error_input_cond theorem in
+   wrapper now uses the weaker DWDivFP_mixed_safe_input_cond theorem in
    DWDivFP_subnormal.v. *)
 Theorem relative_errorDWDivFP3_from_cond_combined_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))

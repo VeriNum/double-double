@@ -92,6 +92,26 @@ Definition DWPlusDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   Rabs (FT2R xh) <= /4 * Omega /\
   Rabs (FT2R yh) <= /4 * Omega.
 
+(* Input-only sufficient condition retained by the existing guarded interface. *)
+Definition DWPlusDW_mixed_safe_input_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  DWPlusDW_relative_error_input_cond xh xl yh yl.
+
+(* Mathematical assumptions that must hold before the kernel is called. *)
+Definition DWPlusDW_mixed_input_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  double_word_prop xh xl /\
+  double_word_prop yh yl.
+
+Definition DWPlusDW_result_finite
+    (xh xl yh yl : ftype t) : Prop :=
+  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+
+Definition DWPlusDW_mixed_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  DWPlusDW_mixed_input_cond xh xl yh yl /\
+  DWPlusDW_result_finite xh xl yh yl.
+
 End DWPlusDWCond.
 
 
@@ -112,6 +132,25 @@ Definition DWPlusFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   double_word_prop xh xl /\
   Rabs (FT2R xh) <= /4 * Omega /\
   Rabs (FT2R y)  <= /4 * Omega.
+
+(* Input-only sufficient condition retained by the existing guarded interface. *)
+Definition DWPlusFP_mixed_safe_input_cond
+    (xh xl y : ftype t) : Prop :=
+  DWPlusFP_relative_error_input_cond xh xl y.
+
+(* Mathematical assumptions that must hold before the kernel is called. *)
+Definition DWPlusFP_mixed_input_cond
+    (xh xl y : ftype t) : Prop :=
+  double_word_prop xh xl.
+
+Definition DWPlusFP_result_finite
+    (xh xl y : ftype t) : Prop :=
+  is_finite_p (DWPlusFP xh xl y).
+
+Definition DWPlusFP_mixed_cond
+    (xh xl y : ftype t) : Prop :=
+  DWPlusFP_mixed_input_cond xh xl y /\
+  DWPlusFP_result_finite xh xl y.
 
 End DWPlusFPCond.
 
@@ -143,7 +182,7 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   Fast2Mult_exact_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
-(* DWTimesFP_mixed_error_input_cond is used to prove, throughout the admitted
+(* DWTimesFP_mixed_safe_input_cond is used to prove, throughout the admitted
    floating-point range, both the mixed error bound for DWTimesFP3 and that its
    output is a valid double word.  It weakens Fast2Mult_exact_cond to
    Fast2Mult_acc_only_cond, i.e. it drops the underflow disjunct
@@ -166,16 +205,29 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 
    This is the cond discharged by the runtime guard dw_mult_fp_check and carried
    by the exported funspec dw_mult_fp9_guarded_spec. *)
-Definition DWTimesFP_mixed_error_input_cond (xh xl y : ftype t) : Prop :=
+Definition DWTimesFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
   double_word_prop xh xl /\
   Fast2Mult_acc_only_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
-Lemma DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond
+Definition DWTimesFP_mixed_input_cond
+    (xh xl y : ftype t) : Prop :=
+  double_word_prop xh xl.
+
+Definition DWTimesFP_result_finite
+    (xh xl y : ftype t) : Prop :=
+  is_finite_p (DWTimesFP3 xh xl y).
+
+Definition DWTimesFP_mixed_cond
+    (xh xl y : ftype t) : Prop :=
+  DWTimesFP_mixed_input_cond xh xl y /\
+  DWTimesFP_result_finite xh xl y.
+
+Lemma DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond
     (xh xl y : ftype t) :
   DWTimesFP_relative_error_input_cond xh xl y ->
-  DWTimesFP_mixed_error_input_cond xh xl y.
+  DWTimesFP_mixed_safe_input_cond xh xl y.
 Proof.
   intros (Hfxl & Hdwp & Hf2m & Hreal).
   repeat split; try assumption.
@@ -207,10 +259,10 @@ Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   Fast2Mult_exact_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-(* DWTimesDW_mixed_error_input_cond is used to prove, throughout the admitted
+(* DWTimesDW_mixed_safe_input_cond is used to prove, throughout the admitted
    floating-point range, both the mixed error bound for DWTimesDW3 and that its
    output is a valid double word.  It is the exact analogue of
-   DWTimesFP_mixed_error_input_cond above.  It weakens Fast2Mult_exact_cond to
+   DWTimesFP_mixed_safe_input_cond above.  It weakens Fast2Mult_exact_cond to
    Fast2Mult_acc_only_cond, dropping the underflow disjunct
    (FT2R xh * FT2R yh = 0 \/ 2^(emin+2*p-1) <= |FT2R xh * FT2R yh|) and keeping
    only overflow safety.
@@ -230,11 +282,11 @@ Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
 
    This is the cond discharged by the runtime guard dw_mult_dw_check and carried
    by the exported funspec dw_mult_dw12_guarded_spec, exactly as
-   DWTimesFP_mixed_error_input_cond is for dw_mult_fp_check and
+   DWTimesFP_mixed_safe_input_cond is for dw_mult_fp_check and
    dw_mult_fp9_guarded_spec.  DWTimesDW_relative_error_input_cond remains in use
    inside DWDivDW_acc, whose reciprocal refinement needs the underflow disjunct
    for the exact product step. *)
-Definition DWTimesDW_mixed_error_input_cond (xh xl yh yl : ftype t) : Prop :=
+Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xl = true /\
   is_finite yl = true /\
   double_word_prop xh xl /\
@@ -242,10 +294,24 @@ Definition DWTimesDW_mixed_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   Fast2Mult_acc_only_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-Lemma DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond
+Definition DWTimesDW_mixed_input_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  double_word_prop xh xl /\
+  double_word_prop yh yl.
+
+Definition DWTimesDW_result_finite
+    (xh xl yh yl : ftype t) : Prop :=
+  is_finite_p (DWTimesDW3 xh xl yh yl).
+
+Definition DWTimesDW_mixed_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  DWTimesDW_mixed_input_cond xh xl yh yl /\
+  DWTimesDW_result_finite xh xl yh yl.
+
+Lemma DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond
     (xh xl yh yl : ftype t) :
   DWTimesDW_relative_error_input_cond xh xl yh yl ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl.
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl.
 Proof.
   intros (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hreal).
   repeat split; try assumption.
@@ -276,7 +342,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
 
    This is the STRONG cond: its quotient floor 2^(emin+2p-1) is what buys the
    pure relative 6u^2 bound (DWDivFP_acc.DWDivFP3_accuracy).  The runtime guard
-   discharges only DWDivFP_mixed_error_input_cond below.  That condition has no
+   discharges only DWDivFP_mixed_safe_input_cond below.  That condition has no
    quotient floor and proves the mixed bound throughout the admitted range.  A
    helper for the branch where the leading quotient is normal lives in
    DWDivFP_acc.v as DWDivFP_normal_quotient_input_cond. *)
@@ -296,7 +362,7 @@ Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
      the (1-u) factor in |th*y| >= |xh|(1-u) from thy_residual. *)
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 
-(* DWDivFP_mixed_error_input_cond drops the quotient floor ENTIRELY, replacing
+(* DWDivFP_mixed_safe_input_cond drops the quotient floor ENTIRELY, replacing
    it by finiteness of the leading quotient node.  That conjunct is the division
    analogue of Fast2Mult_acc_only_cond (which is likewise just
    `is_finite (BMULT a b) = true`), and it does the same double duty:
@@ -329,7 +395,7 @@ Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
    without which the closing division node has no bound.
 
    This is the cond discharged by the runtime guard dw_div_fp_check. *)
-Definition DWDivFP_mixed_error_input_cond (xh xl y : ftype t) : Prop :=
+Definition DWDivFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y  = true /\
@@ -338,6 +404,20 @@ Definition DWDivFP_mixed_error_input_cond (xh xl y : ftype t) : Prop :=
   Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
   Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+
+Definition DWDivFP_mixed_input_cond
+    (xh xl y : ftype t) : Prop :=
+  double_word_prop xh xl /\
+  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+
+Definition DWDivFP_result_finite
+    (xh xl y : ftype t) : Prop :=
+  is_finite_p (DWDivFP3 xh xl y).
+
+Definition DWDivFP_mixed_cond
+    (xh xl y : ftype t) : Prop :=
+  DWDivFP_mixed_input_cond xh xl y /\
+  DWDivFP_result_finite xh xl y.
 
 End DWDivFPCond.
 
@@ -393,17 +473,17 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
   Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
 
-(** [DWDivDW_mixed_error_input_cond] is used to prove, throughout the admitted
+(** [DWDivDW_mixed_safe_input_cond] is used to prove, throughout the admitted
     floating-point range, both the mixed error bound for [DWDivDW3] and that its
     output is a valid double word.  It is the DW/DW analogue of
-    [DWDivFP_mixed_error_input_cond] above.  It DROPS conjunct 8 of
+    [DWDivFP_mixed_safe_input_cond] above.  It DROPS conjunct 8 of
     [DWDivDW_relative_error_input_cond], the quotient underflow floor
 
       2^(emin+2p-1) <= |xh/yh|,
 
     outright.  Every remaining conjunct keeps its position, so a destructuring
     pattern for [DWDivDW_relative_error_input_cond] applies to
-    [DWDivDW_mixed_error_input_cond] verbatim up to conjunct 7, and shifts by
+    [DWDivDW_mixed_safe_input_cond] verbatim up to conjunct 7, and shifts by
     one from conjunct 8 on.  (The conditions are ten and
     nine conjuncts long respectively, not twelve and eleven: the separate |yh|
     and |xh| upper bounds were removed as redundant and unused -- see the note
@@ -480,7 +560,7 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
     The price is 3 binades off the TOP of the divisor range, an overflow-side
     restriction.  Underflow whole-range coverage is untouched: there is still
     no floor on the quotient (that is conjunct 8, dropped by
-    [DWDivDW_mixed_error_input_cond] below).
+    [DWDivDW_mixed_safe_input_cond] below).
 
     Conjunct 9, [2^(emin+2p) <= |yh|], is likewise not an underflow floor.
     Since emin = 3 - femax - p it is literally
@@ -511,16 +591,16 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
     the lower bound never enters the error budget either way.
 
     Replacing conjunct 9 by finiteness of th in the style of
-    [DWDivFP_mixed_error_input_cond] would recover yh <> 0 and th-finiteness but none of
-    those uses -- and unlike DW/FP division, which forms th = BDIV xh y and is
-    therefore covered by its quotient ceiling, DW/DW has an explicit
-    reciprocal node, so SOME lower bound on |yh| is structural here.  There is
-    consequently no separate weaker condition analogous to
-    [DWDivFP_mixed_error_input_cond]: [DWDivDW_mixed_error_input_cond] is already
-    the minimum.
+    [DWDivFP_mixed_safe_input_cond] would recover yh <> 0 and th-finiteness but
+    none of those uses -- and unlike DW/FP division, which forms
+    th = BDIV xh y and is therefore covered by its quotient ceiling, DW/DW has
+    an explicit reciprocal node.  Thus the lower bound on |yh| remains in
+    [DWDivDW_mixed_input_cond].  The quotient ceiling is omitted there because
+    [DWDivDW_result_finite], checked after the kernel, supplies the required
+    overflow information.
 
     This is the cond the runtime guard [dw_div_dw_check] should discharge. *)
-Definition DWDivDW_mixed_error_input_cond (xh xl yh yl : ftype t) : Prop :=
+Definition DWDivDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite yh = true /\
@@ -531,10 +611,26 @@ Definition DWDivDW_mixed_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
   Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
 
-Lemma DWDivDW_mixed_error_input_cond_of_relative_error_input_cond
+Definition DWDivDW_mixed_input_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  double_word_prop xh xl /\
+  double_word_prop yh yl /\
+  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - fprec t - 5) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh).
+
+Definition DWDivDW_result_finite
+    (xh xl yh yl : ftype t) : Prop :=
+  is_finite_p (DWDivDW3 xh xl yh yl).
+
+Definition DWDivDW_mixed_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  DWDivDW_mixed_input_cond xh xl yh yl /\
+  DWDivDW_result_finite xh xl yh yl.
+
+Lemma DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond
     (xh xl yh yl : ftype t) :
   DWDivDW_relative_error_input_cond xh xl yh yl ->
-  DWDivDW_mixed_error_input_cond xh xl yh yl.
+  DWDivDW_mixed_safe_input_cond xh xl yh yl.
 Proof.
   intros (Fxh & Fxl & Fyh & Fyl & DWx & DWy & Hyhhi & _ & Hylo &
           Hratiohi).

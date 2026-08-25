@@ -666,7 +666,7 @@ Qed.
    NOTE: dw_div_fp_check no longer has a quotient floor at all, so there is no
    2^-1022 constant here.  It briefly did, during the intermediate step when the
    DW/FP division guard tested 2^(emin+p-1); that clause is gone (see
-   DDConds.DWDivFP_mixed_error_input_cond and DWDivFP_subnormal.v), and with it the constant.
+   DDConds.DWDivFP_mixed_safe_input_cond and DWDivFP_subnormal.v), and with it the constant.
    q_lo969_val survives only because dw_div_dw_check still uses it. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)

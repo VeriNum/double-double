@@ -27,7 +27,7 @@
       RESULT, which a runtime guard cannot test -- so these Layer-2 corollaries
       derive it from the weaker condition below, which is stated only in terms
       of the inputs and can be checked at run time:
-        DWTimesFP_mixed_error_input_cond             (DDConds.v) DWTimesFP_relative_error_input_cond MINUS the
+        DWTimesFP_mixed_safe_input_cond             (DDConds.v) DWTimesFP_relative_error_input_cond MINUS the
                                       underflow disjunct: double-word relation
                                       plus overflow headroom, nothing else
         DWTimesFP3_finite_acc         is_finite_p from that cond, every regime
@@ -57,7 +57,7 @@
     normal regime, so no algebra recovers the missing eta.  The arm is the
     mixed API's normal-regime content, and that is what the cond-level
     corollary invokes.  Conversely the flat form is the only one available in
-    the gap, which is why weakening the guard to DWTimesFP_mixed_error_input_cond means the
+    the gap, which is why weakening the guard to DWTimesFP_mixed_safe_input_cond means the
     exported contract must be the flat bound rather than the pure 2u^2 one.
 
     The Algorithm-9 underflow-floor block at the end of this file (previously
@@ -618,7 +618,7 @@ have Hpb : Rabs (FT2R (BMULT a b)) <= /4 * Omega.
 by repeat split.
 Qed.
 
-(* MAIN: BOTH components of DWTimesFP3 stay finite under DWTimesFP_mixed_error_input_cond,
+(* MAIN: BOTH components of DWTimesFP3 stay finite under DWTimesFP_mixed_safe_input_cond,
    the weaker condition that has NO underflow hypothesis on the leading
    product.  Two places in the argument used to need the underflow disjunct;
    neither does:
@@ -634,10 +634,10 @@ Qed.
        (is_finite_FastSum_small): |cl3| <= 2^(femax-p) <= Omega/4 already bounds
        both Fast2Sum subtractions, with no ordering and hence no regime split.
 
-   So overflow headroom -- which is all DWTimesFP_mixed_error_input_cond asserts beyond the
+   So overflow headroom -- which is all DWTimesFP_mixed_safe_input_cond asserts beyond the
    double-word relation -- is exactly what finiteness costs. *)
 Lemma DWTimesFP3_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_mixed_error_input_cond xh xl y ->
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
   is_finite_p (DWTimesFP3 xh xl y).
 Proof.
 intros (Hfxl & Hdwp & Hfmul & Hreal).
@@ -738,14 +738,14 @@ Qed.
 
 (* Componentwise projections, and the original strong-cond forms retained for the
    relative (2u^2) tier and its clients: DWTimesFP_relative_error_input_cond is strictly stronger than
-   DWTimesFP_mixed_error_input_cond (DDConds.DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond). *)
+   DWTimesFP_mixed_safe_input_cond (DDConds.DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond). *)
 Lemma DWTimesFP3_fst_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_mixed_error_input_cond xh xl y ->
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
 Proof. move => H; exact (proj1 (DWTimesFP3_finite_acc xh xl y H)). Qed.
 
 Lemma DWTimesFP3_snd_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_mixed_error_input_cond xh xl y ->
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
   is_finite (snd (DWTimesFP3 xh xl y)) = true.
 Proof. move => H; exact (proj2 (DWTimesFP3_finite_acc xh xl y H)). Qed.
 
@@ -754,7 +754,7 @@ Lemma DWTimesFP3_fst_finite (xh xl y : ftype t) :
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
 Proof.
 move => H.
-exact (DWTimesFP3_fst_finite_acc xh xl y (DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond xh xl y H)).
+exact (DWTimesFP3_fst_finite_acc xh xl y (DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* Relative double-word bound: |xl| <= 2^-p |xh| (the low word is at most an
@@ -875,7 +875,7 @@ Lemma DWTimesFP3_snd_finite (xh xl y : ftype t) :
   is_finite (snd (DWTimesFP3 xh xl y)) = true.
 Proof.
 move => H.
-exact (DWTimesFP3_snd_finite_acc xh xl y (DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond xh xl y H)).
+exact (DWTimesFP3_snd_finite_acc xh xl y (DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* The output pair of DWTimesFP3 (Algorithm 9) is itself a double word.  The
@@ -1967,7 +1967,7 @@ destruct (Rle_dec
 Qed.
 
 (* ------------------------------------------------------------------
-   PUBLIC VST INTERFACE (Layer 2): DWTimesFP_mixed_error_input_cond can be checked at run time
+   PUBLIC VST INTERFACE (Layer 2): DWTimesFP_mixed_safe_input_cond can be checked at run time
    and proves both the mixed bound throughout the admitted range and that the
    output is a valid double word.
 
@@ -1995,7 +1995,7 @@ Definition absolute_error_DWTimesFP {NANS : Nans} {t : type}
 Corollary DWTimesFP_mixed_accuracy_from_cond_acc {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_error_input_cond xh xl y ->
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
   absolute_error_DWTimesFP xh xl y
     <= 2 * bpow radix2 (- fprec t) ^ 2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
@@ -2010,7 +2010,7 @@ Qed.
 Corollary DWTimesFP3_double_word_from_cond_acc {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_error_input_cond xh xl y ->
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
   double_word_prop (fst (DWTimesFP3 xh xl y))
                    (snd (DWTimesFP3 xh xl y)).
 Proof.
@@ -2018,4 +2018,30 @@ move => Hp3 Hcond.
 have FIN := DWTimesFP3_finite_acc xh xl y Hcond.
 have DWa : double_word_prop xh xl by (move: Hcond => [_ [H _]]; exact H).
 exact (DWTimesFP3_double_word_mixed xh xl y Hp3 DWa FIN).
+Qed.
+
+Lemma DWTimesFP_mixed_cond_of_safe_input_cond {NANS : Nans} {t : type}
+    {STD : is_standard t} (xh xl y : ftype t) :
+  DWTimesFP_mixed_safe_input_cond xh xl y ->
+  DWTimesFP_mixed_cond xh xl y.
+Proof.
+move => Hsafe.
+have Hfin := DWTimesFP3_finite_acc xh xl y Hsafe.
+move: Hsafe => [_ [Hdw _]].
+unfold DWTimesFP_mixed_cond, DWTimesFP_mixed_input_cond,
+       DWTimesFP_result_finite.
+exact (conj Hdw Hfin).
+Qed.
+
+Lemma DWTimesFP_inputs_finite_of_result_finite {NANS : Nans} {t : type}
+    {STD : is_standard t} (xh xl y : ftype t) :
+  DWTimesFP_result_finite xh xl y ->
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y = true.
+Proof.
+unfold DWTimesFP_result_finite.
+move => Hfin.
+have [Hfxh Hfy] := BMULT_finite_e t xh y (FIN3 xh xl y Hfin).
+exact (conj Hfxh (conj (FINxl xh xl y Hfin) Hfy)).
 Qed.

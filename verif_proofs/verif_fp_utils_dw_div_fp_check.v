@@ -4,7 +4,7 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_mixed_error_input_cond holds:
+(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_mixed_safe_input_cond holds:
    xh, xl, y finite, (xh, xl) a double-word, RN(xh/y) finite, |xh| within
    [2^(emin+2p), Omega/4], and |xh/y| <= Omega/4.
 
@@ -313,7 +313,7 @@ Proof.
                                   = bpow Zaux.radix2 (femax Tdouble - 2))%R).
                     { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
                       rewrite bpow_plus. simpl. lra. }
-                    unfold DDConds.DWDivFP_mixed_error_input_cond.
+                    unfold DDConds.DWDivFP_mixed_safe_input_cond.
                     (* conjuncts 1-4 (finiteness/double-word) and conjunct 5
                        (finiteness of the quotient node) close by assumption; the
                        remaining three are the two magnitude windows. *)

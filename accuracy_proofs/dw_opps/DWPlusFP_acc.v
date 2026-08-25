@@ -114,3 +114,37 @@ rewrite -is_finite_Binary => //.
 Qed.
 
 End CondAccuracyDWPlusFP.
+
+Section MixedCondBridgeDWPlusFP.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Lemma DWPlusFP_inputs_finite_of_result_finite (xh xl y : ftype t) :
+  DWPlusFP_result_finite xh xl y ->
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite y = true.
+Proof.
+unfold DWPlusFP_result_finite.
+move => Hfin.
+have Hsum := DWPlusFP_acc_helpers.FIN3 xh xl y Hfin.
+have [_ Hfy] := BPLUS_finite_e t xh y Hsum.
+exact (conj (DWPlusFP_acc_helpers.FINxh xh xl y Hfin)
+       (conj (DWPlusFP_acc_helpers.FINxl xh xl y Hfin) Hfy)).
+Qed.
+
+Lemma DWPlusFP_mixed_cond_of_safe_input_cond (xh xl y : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWPlusFP_mixed_safe_input_cond xh xl y ->
+  DWPlusFP_mixed_cond xh xl y.
+Proof.
+intros Hp3 Hsafe.
+unfold DWPlusFP_mixed_safe_input_cond in Hsafe.
+destruct Hsafe as (Hfxh & Hfxl & Hfy & Hdw & Hxh & Hy).
+unfold DWPlusFP_mixed_cond, DWPlusFP_mixed_input_cond,
+       DWPlusFP_result_finite.
+split; [exact Hdw|].
+apply (DWPlusFP_finite xh xl) => //;
+rewrite -is_finite_Binary => //.
+Qed.
+
+End MixedCondBridgeDWPlusFP.

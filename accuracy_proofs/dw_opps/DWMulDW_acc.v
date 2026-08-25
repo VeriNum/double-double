@@ -1842,7 +1842,7 @@ all: try exact valid_fexp_inst.
 all: try apply generic_format_half_Omega.
 Qed.
 
-(* MAIN: BOTH components of DWTimesDW3 stay finite under DWTimesDW_mixed_error_input_cond,
+(* MAIN: BOTH components of DWTimesDW3 stay finite under DWTimesDW_mixed_safe_input_cond,
    the weaker condition that has NO underflow hypothesis on the leading
    product.  Two places in the argument used to need the underflow disjunct;
    neither does -- exactly as for Algorithm 9
@@ -1861,11 +1861,11 @@ Qed.
        already bounds both Fast2Sum subtractions, with no ordering and hence no
        regime split.
 
-   So overflow headroom -- all that DWTimesDW_mixed_error_input_cond asserts beyond the two
+   So overflow headroom -- all that DWTimesDW_mixed_safe_input_cond asserts beyond the two
    double-word relations -- is exactly what finiteness costs. *)
 Lemma DWTimesDW3_finite_acc (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   is_finite_p (DWTimesDW3 xh xl yh yl).
 Proof.
 intros Hp4 (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hxhy4).
@@ -2011,17 +2011,17 @@ Qed.
 
 (* Componentwise projections, and the original strong-cond forms retained for
    the relative (8u^2) tier and its clients: DWTimesDW_relative_error_input_cond is strictly stronger
-   than DWTimesDW_mixed_error_input_cond (DDConds.DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond).  The three
+   than DWTimesDW_mixed_safe_input_cond (DDConds.DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond).  The three
    statements below are unchanged -- verif_dd_ops.v applies them positionally. *)
 Lemma DWTimesDW3_fst_finite_acc (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   is_finite (fst (DWTimesDW3 xh xl yh yl)) = true.
 Proof. move => Hp4 H; exact (proj1 (DWTimesDW3_finite_acc xh xl yh yl Hp4 H)). Qed.
 
 Lemma DWTimesDW3_snd_finite_acc (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   is_finite (snd (DWTimesDW3 xh xl yh yl)) = true.
 Proof. move => Hp4 H; exact (proj2 (DWTimesDW3_finite_acc xh xl yh yl Hp4 H)). Qed.
 
@@ -2032,7 +2032,7 @@ Lemma DWTimesDW3_fst_finite (xh xl yh yl : ftype t) :
 Proof.
 move => Hp4 H.
 exact (DWTimesDW3_fst_finite_acc xh xl yh yl Hp4
-         (DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond xh xl yh yl H)).
+         (DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl H)).
 Qed.
 
 Lemma DWTimesDW3_snd_finite (xh xl yh yl : ftype t) :
@@ -2042,7 +2042,7 @@ Lemma DWTimesDW3_snd_finite (xh xl yh yl : ftype t) :
 Proof.
 move => Hp4 H.
 exact (DWTimesDW3_snd_finite_acc xh xl yh yl Hp4
-         (DWTimesDW_mixed_error_input_cond_of_relative_error_input_cond xh xl yh yl H)).
+         (DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl H)).
 Qed.
 
 (* The output pair of DWTimesDW3 (Algorithm 12) is itself a double word.  The
@@ -6109,7 +6109,7 @@ Qed.
 
 Lemma DWTimesDW_accuracy_pre_acc_of_cond_acc :
   (4 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   DWTimesDW_accuracy_pre_acc.
 Proof.
 move => Hp4 Hcond.
@@ -6202,14 +6202,14 @@ Qed.
 Definition absolute_error_DWTimesDW : R := Rabs ((zh+zl)-xr*yr).
 
 (* The DW x DW analogue of DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc:
-   DWTimesDW_mixed_error_input_cond can be checked at run time and proves the mixed bound
+   DWTimesDW_mixed_safe_input_cond can be checked at run time and proves the mixed bound
    throughout the admitted range.  Its companion theorem below proves that the
    output is a valid double word under the same condition.  These are the two
    guarantees carried by dw_mult_dw12_guarded_spec after dw_mult_dw_check
    establishes this weaker condition. *)
 Corollary DWTimesDW_mixed_accuracy_from_cond_acc :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   absolute_error_DWTimesDW <=
     4*u^2*Rabs (xr*yr)+5/2*bpow radix2 eminA.
 Proof.
@@ -6221,7 +6221,7 @@ Qed.
 
 Corollary DWTimesDW3_double_word_from_cond_acc :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   double_word_prop (fst (DWTimesDW3 xh xl yh yl))
                    (snd (DWTimesDW3 xh xl yh yl)).
 Proof.
@@ -6246,3 +6246,38 @@ exact (DWTimesDW3_error_mixed Hp8
 Qed.
 
 End DWMulDW_Division_Helpers.
+
+Section MixedCondBridgeDWTimesDW.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Lemma DWTimesDW_mixed_cond_of_safe_input_cond
+    (xh xl yh yl : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_cond xh xl yh yl.
+Proof.
+move => Hp4 Hsafe.
+have Hfin := DWTimesDW3_finite_acc xh xl yh yl Hp4 Hsafe.
+move: Hsafe => [_ [_ [Hdx [Hdy _]]]].
+unfold DWTimesDW_mixed_cond, DWTimesDW_mixed_input_cond,
+       DWTimesDW_result_finite.
+exact (conj (conj Hdx Hdy) Hfin).
+Qed.
+
+Lemma DWTimesDW_inputs_finite_of_result_finite
+    (xh xl yh yl : ftype t) :
+  DWTimesDW_result_finite xh xl yh yl ->
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite yh = true /\
+  is_finite yl = true.
+Proof.
+unfold DWTimesDW_result_finite.
+move => Hfin.
+exact (conj (FINxh xh xl yh yl Hfin)
+       (conj (FINxl xh xl yh yl Hfin)
+       (conj (FINyh xh xl yh yl Hfin)
+             (FINyl xh xl yh yl Hfin)))).
+Qed.
+
+End MixedCondBridgeDWTimesDW.

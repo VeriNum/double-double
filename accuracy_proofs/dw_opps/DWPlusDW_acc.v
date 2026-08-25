@@ -298,3 +298,42 @@ Qed.
 
 
 End AccuracyDWPlusDW.
+
+Section MixedCondBridgeDWPlusDW.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Lemma DWPlusDW_inputs_finite_of_result_finite
+    (xh xl yh yl : ftype t) :
+  DWPlusDW_result_finite xh xl yh yl ->
+  is_finite xh = true /\
+  is_finite xl = true /\
+  is_finite yh = true /\
+  is_finite yl = true.
+Proof.
+unfold DWPlusDW_result_finite.
+move => [Hzh Hzl].
+unfold AccurateDWPlusDW, TwoSumF, Fast2Sum in Hzh.
+cbn in Hzh.
+match type of Hzh with
+| is_finite ?e = true => subexpr_finite_H0 e Hzh
+end.
+repeat split; assumption.
+Qed.
+
+Lemma DWPlusDW_mixed_cond_of_safe_input_cond
+    (xh xl yh yl : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWPlusDW_mixed_safe_input_cond xh xl yh yl ->
+  DWPlusDW_mixed_cond xh xl yh yl.
+Proof.
+intros Hp3 Hsafe.
+unfold DWPlusDW_mixed_safe_input_cond in Hsafe.
+have Hfin := AccurateDWPlusDW_finite_from_cond xh xl yh yl Hp3 Hsafe.
+specialize (Hfin NANS STD).
+destruct Hsafe as (Hfxh & Hfxl & Hfyh & Hfyl & Hdx & Hdy & Hxh & Hyh).
+unfold DWPlusDW_mixed_cond, DWPlusDW_mixed_input_cond,
+       DWPlusDW_result_finite.
+exact (conj (conj Hdx Hdy) Hfin).
+Qed.
+
+End MixedCondBridgeDWPlusDW.
