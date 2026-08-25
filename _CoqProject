@@ -60,6 +60,11 @@ verif_proofs/verif_fp_utils_dw_div_fp_check.v
 verif_proofs/verif_fp_utils_dw_div_dw_check.v
 verif_proofs/dd_float_reconcile.v
 verif_proofs/DDOpsASI.v
+verif_proofs/verif_dd_ops_common.v
+verif_proofs/verif_dd_ops_basic.v
+verif_proofs/verif_dd_ops_plus.v
+verif_proofs/verif_dd_ops_mult.v
+verif_proofs/verif_dd_ops_div.v
 verif_proofs/verif_dd_ops.v
 verif_proofs/vsu/VSU_tactics.v
 verif_proofs/vsu/Ops_VSU.v

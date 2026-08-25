@@ -16,7 +16,11 @@ Require Import VSTlib.spec_math.
 Require Import DDModels.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
-Require Import DD.verif_proofs.verif_dd_ops.
+Require Import DD.verif_proofs.verif_dd_ops_common.
+Require Import DD.verif_proofs.verif_dd_ops_basic.
+Require Import DD.verif_proofs.verif_dd_ops_plus.
+Require Import DD.verif_proofs.verif_dd_ops_mult.
+Require Import DD.verif_proofs.verif_dd_ops_div.
 Require Import DD.verif_proofs.vsu.VSU_tactics.
 
 Definition OpsVSU: @VSU NullExtension.Espec
