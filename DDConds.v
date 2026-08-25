@@ -258,8 +258,9 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
 
    This is the STRONG cond: its quotient floor 2^(emin+2p-1) is what buys the
    pure relative 6u^2 bound (DWDivFP_acc.DWDivFP3_accuracy).  The runtime guard
-   discharges only the relaxed DWDivFP_cond_acc below, whose quotient floor is
-   2^(emin+p-1); see that definition for the division of labour. *)
+   discharges only DWDivFP_cond_min below, which has no quotient floor and buys
+   the whole-range mixed bound; the normal-quotient proof helper now lives in
+   DWDivFP_acc.v as DWDivFP_normal_quotient_input_cond. *)
 Definition DWDivFP_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -276,63 +277,6 @@ Definition DWDivFP_cond (xh xl y : ftype t) : Prop :=
      the (1-u) factor in |th*y| >= |xh|(1-u) from thy_residual. *)
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 
-(* DWDivFP_cond_acc is the "accurate-only" precondition for DWDivFP3, the
-   division analogue of DWTimesFP_cond_acc above: it relaxes the QUOTIENT
-   underflow floor from emin+2p-1 to emin+p-1, which is exactly what Layer 1
-   asks for -- UF_th, and thy_residual's ulp v <= |v| * 2^(1-p), both of which
-   need |xh/y| >= 2^(emin+p-1) and no more.  Below that the leading quotient
-   node th = BDIV xh y is subnormal and the FLX->FLT bridge for it fails, so
-   this is the floor of the proof architecture, not a tuning knob.
-
-   Clause 8, the product-node floor 2^(emin+2p) <= |xh|, is UNCHANGED: it is a
-   different bound, on the internal node pih = round(th*y) ~ xh, and it is what
-   makes that node TwoProd-exact (DWDivFP_acc.cond_UF_prod).  A normal quotient
-   can coexist with a subnormal product when y is tiny, so neither floor
-   implies the other.
-
-   It suffices for the whole-range MIXED bound
-
-     |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin
-
-   (DWDivFP_acc.relative_errorDWDivFP3_from_cond_combined_acc) and for output
-   double-word closure (DWDivFP3_is_DW_from_cond_acc), because the closing
-   division d/y is unconstrained by either cond -- it is 0 for exact division --
-   so the underflow leg is paid for by a single-node perturbation either way.
-   It does NOT suffice for the pure 6u^2 relative bound
-   (DWDivFP_acc.DWDivFP3_accuracy), which needs the quotient held clear of the
-   underflow floor so that one floor ulp can be charged against it at 3u^2
-   (DWDivFP_cond_eta_le_3u2_quotient); that remains the province of the full
-   DWDivFP_cond.
-
-   For Tdouble the relaxation moves the quotient floor from 2^-969 to
-   2^-1022 = DBL_MIN, the smallest normal double, widening the runtime-admitted
-   quotient range by 53 binades.  This is the cond discharged by the runtime
-   guard dw_div_fp_check and carried by the exported funspec
-   dw_div_fp15_guarded_spec, exactly as DWTimesFP_cond_acc is for
-   dw_mult_fp_check / dw_mult_fp9_guarded_spec.
-
-   The conjunct order and count deliberately match DWDivFP_cond, so that the
-   destructuring pattern used throughout DWDivFP_acc.v applies unchanged to
-   both. *)
-Definition DWDivFP_cond_acc (xh xl y : ftype t) : Prop :=
-  is_finite xh = true /\
-  is_finite xl = true /\
-  is_finite y  = true /\
-  double_word_prop xh xl /\
-  bpow Zaux.radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) /\
-  Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
-  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
-  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
-
-Lemma DWDivFP_cond_acc_of_cond (xh xl y : ftype t) :
-  DWDivFP_cond xh xl y -> DWDivFP_cond_acc xh xl y.
-Proof.
-  intros (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & Hxhlb).
-  repeat split; try assumption.
-  eapply Rle_trans; [| exact Hquot].
-  apply bpow_le. pose proof (fprec_gt_one t). lia.
-Qed.
-
 (* DWDivFP_cond_min drops the quotient floor ENTIRELY, replacing it by
    finiteness of the leading quotient node.  That conjunct is the division
    analogue of Fast2Mult_cond_acc (which is likewise just
@@ -343,8 +287,8 @@ Qed.
      - it supplies the th-node finiteness that th_finite previously derived
        from the quotient CEILING plus y <> 0.
 
-   Unlike DWDivFP_cond_acc, this cond admits a SUBNORMAL quotient.  The mixed
-   bound survives with the SAME constant,
+   Unlike DWDivFP_normal_quotient_input_cond in DWDivFP_acc.v, this cond admits
+   a SUBNORMAL quotient.  The mixed bound survives with the SAME constant,
 
      |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
 
@@ -353,7 +297,7 @@ Qed.
    one, and the closing Fast2Sum is exact because th + tl is again a lattice
    point.  Proven, together with output double-word closure and finiteness, in
    DWDivFP_subnormal.v (DWDivFP3_subnormal_leg); the normal branch is
-   unchanged and still routes through DWDivFP_cond_acc.
+   unchanged and still routes through DWDivFP_normal_quotient_input_cond.
 
    Clause 8, the product-node floor 2^(emin+2p) <= |xh|, is again UNCHANGED and
    is NOT removable: it is what makes the division residual representable to
@@ -430,7 +374,7 @@ Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
   Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
 
 (** [DWDivDW_cond_acc] is the "accurate-only" precondition for [DWDivDW3], the
-    DW/DW analogue of [DWDivFP_cond_acc] above.  It DROPS conjunct 8 of
+    DW/DW analogue of [DWDivFP_cond_min] above.  It DROPS conjunct 8 of
     [DWDivDW_cond], the quotient underflow floor
 
       2^(emin+2p-1) <= |xh/yh|,

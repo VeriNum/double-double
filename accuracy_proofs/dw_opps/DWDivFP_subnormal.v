@@ -23,7 +23,8 @@
         the usual ordering |tl| <= |th| fails (it does fail, at th = 0).
 
     The exported constant is unchanged: 3u^2|Q| + 2^emin, the same as on
-    DWDivFP_cond_acc.  Clause 8 is retained and is not removable; see the
+    DWDivFP_normal_quotient_input_cond.  Clause 8 is retained and is not
+    removable; see the
     DWDivFP_cond_min comment in DDConds.v for the counterexample.
 
     ============================================================================
@@ -35,7 +36,9 @@
                                            client uses
       DWDivFP3_is_DW_from_cond_min         output is a double word
 
-      DWDivFP_cond_acc_of_min_normal       min + normal quotient recovers acc
+      DWDivFP_normal_quotient_input_cond_of_min
+                                           min + normal quotient recovers the
+                                           normal-quotient helper
 
     ADMIT-FREE.
     ============================================================================ *)
@@ -1226,13 +1229,14 @@ split; [| split ].
 - exact FIN.
 Qed.
 
-(* min + a normal quotient recovers DWDivFP_cond_acc EXACTLY: the two conds
-   differ only in the clause-5 slot, so this is one [repeat split].  This is
-   what lets the normal branch reuse DWDivFP_acc's shipped theorems verbatim. *)
-Lemma DWDivFP_cond_acc_of_min_normal (xh xl y : ftype t) :
+(* The minimum condition plus a normal quotient recovers the internal
+   normal-quotient helper exactly: the two predicates differ only in the
+   clause-5 slot, so this is one [repeat split].  This lets the normal branch
+   reuse DWDivFP_acc's normal-range theorems verbatim. *)
+Lemma DWDivFP_normal_quotient_input_cond_of_min (xh xl y : ftype t) :
   DWDivFP_cond_min xh xl y ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
-  DWDivFP_cond_acc xh xl y.
+  DWDivFP_normal_quotient_input_cond xh xl y.
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb) Hnorm.
 repeat split; try assumption.
@@ -1249,9 +1253,9 @@ Proof.
 intros Hp4 COND.
 destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
                     (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
-- (* normal branch: recover acc, reuse the shipped theorem verbatim *)
+- (* normal branch: recover the internal helper and reuse the theorem *)
   exact (DWDivFP3_error_mixed_acc xh xl y Hp4
-           (DWDivFP_cond_acc_of_min_normal xh xl y COND Hn)).
+           (DWDivFP_normal_quotient_input_cond_of_min xh xl y COND Hn)).
 - exact (proj1 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs)).
 Qed.
 
@@ -1275,7 +1279,7 @@ intros Hp4 COND.
 destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
                     (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
 - exact (DWDivFP3_is_DW_from_cond_acc xh xl y Hp4
-           (DWDivFP_cond_acc_of_min_normal xh xl y COND Hn)).
+           (DWDivFP_normal_quotient_input_cond_of_min xh xl y COND Hn)).
 - exact (proj1 (proj2 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs))).
 Qed.
 
