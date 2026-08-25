@@ -51,7 +51,7 @@ Ltac cascade_close :=
     | (intro; cascade_gather; tauto) ].
 
 (* dw_div_dw_check(x, y) returns 1 only if DWDivDW_cond_acc holds: xh, xl, yh,
-   yl finite, (xh,xl) and (yh,yl) double-words, 2^(emin+2p-1) <= |1/yh|,
+   yl finite, (xh,xl) and (yh,yl) double-words, |yh| <= 2^(femax-p-5),
    2^(emin+2p) <= |yh|, and |xh/yh| <= Omega/4.
 
    Structure: body_dw_mult_dw_check's fin + dwx + dwy cascade, then the magnitude
@@ -61,16 +61,20 @@ Ltac cascade_close :=
 
    Nine conjuncts come out of five clauses, because one of them is free:
 
-   - yh_hi (|y->s| <= 2^969) discharges the reciprocal conjunct EXACTLY.  That
-     conjunct constrains the exact real reciprocal 1/FT2R yh, so for yh <> 0 it is
-     equivalent to |FT2R yh| <= 2^(-(emin+2p-1)) = 2^969 -- see
-     recip_lower_from_bpow_upper.  No rounded reciprocal node and no
-     rounded->exact transfer are involved, so unlike the quotient ceiling this
-     test is non-strict and exactly as strong as the conjunct.  Its yh <> 0 side
-     condition comes from yh_lo, not from the division node (BDIV_denom_ne0 would
-     also supply it, but only by making the reciprocal bound depend on the
-     quotient node).
-     The same clause also gives |yh| <= Omega/4 by bpow_le (969 <= 1022); that
+   - yh_hi (|y->s| <= 2^966) IS conjunct 7, verbatim.  The cond states that
+     conjunct directly on |FT2R yh| -- 2^(femax-p-5), i.e. 2^966 for Tdouble --
+     so this is a plain non-strict comparison on an input: no rounded reciprocal
+     node, no rounded->exact transfer, and the test is exactly as strong as the
+     conjunct rather than stronger.  (The equivalent reciprocal form, for
+     yh <> 0, is 2^(emin+2p+2) <= |1/FT2R yh|; recip_lower_from_bpow_upper
+     states that equivalence and DWDivDW_acc.DWDivDW_cond_recip_lower is the
+     Coq-side bridge, but neither is needed here.)
+     The exponent is load-bearing for the exported CONSTANT, not just for
+     soundness: conjunct 7 says eta*|yh| <= u^2/4, which is what pays for the
+     reciprocal reconstruction's underflow floor after the closing multiply by
+     X, and loosening 966 by k binades multiplies that charge by 2^k -- taking
+     the exported bound from 9.8u^2|Q| back toward 12.33u^2|Q|.
+     The same clause also gives |yh| <= Omega/4 by bpow_le (966 <= 1022); that
      used to be a separate conjunct discharged for free here, and is now simply
      absent from DWDivDW_cond (recoverable as DWDivDW_cond_yh_upper), so the
      check has no q_omega test on y->s either.
@@ -83,7 +87,7 @@ Ltac cascade_close :=
      covers every node it reaches.
    - qt_lo (2^(-969) < |q|), the quotient underflow floor.  That is conjunct 8 of
      the full DWDivDW_cond, which DWDivDW_cond_acc drops; it bought the sharper
-     2*eta closing floor and the pure 16.5u^2 relative bound, at the cost of
+     2*eta closing floor and the pure 13.9u^2 relative bound, at the cost of
      rejecting every quotient below 2^-969.  The guarded spec now exports the
      whole-range mixed bound instead -- see dw_div_dw18_guarded_spec.
 
@@ -217,13 +221,13 @@ Proof.
            Intros b8; rename H into Hb8.
            forward.                       (* store _dwy *)
 
-           (* thresholds: q_omega = 2^1022, q_yhi = 2^969,
+           (* thresholds: q_omega = 2^1022, q_yhi = 2^966,
               q_ylo = 2^(-968)  (stores absorbed) *)
            forward_call.
            forward_call.
            forward_call.
            replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
-           fold q_omega_val q_hi969_val q_lo968_val.
+           fold q_omega_val q_hi966_val q_lo968_val.
            forward. forward_call (fst yh). forward.  (* yh_hi := fabs(y->s) <= q_yhi *)
            forward. forward_call (fst yh). forward.  (* yh_lo := q_ylo <= fabs(y->s) *)
            forward.                                  (* t'19 := x->s *)
@@ -234,7 +238,7 @@ Proof.
            (* Abstract the three comparisons so the cascade below is name-opaque. *)
            remember (Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh))
-                       q_hi969_val) as byh_hi eqn:Ebyh_hi.
+                       q_hi966_val) as byh_hi eqn:Ebyh_hi.
            remember (Float.cmp Cle q_lo968_val
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh)))
                      as byh_lo eqn:Ebyh_lo.
@@ -333,12 +337,12 @@ Proof.
                                 away, so Hyhht .. Hqtht arrive as the concrete
                                 Float.cmp facts the magnitude lemmas expect. *)
 
-                             (* |yh| <= 2^969  (the reciprocal-node bound) *)
+                             (* |yh| <= 2^966 = 2^(femax-p-5), conjunct 7 *)
                              assert (Hyh_hi : Rabs (FT2R (fst yh)) <=
-                                       bpow Zaux.radix2 969)
-                               by (apply (Float_cmp_Cle_hi q_hi969_val (fst yh)
-                                            (bpow Zaux.radix2 969) Hfin_yh
-                                            q_hi969_val_finite q_hi969_val_FT2R);
+                                       bpow Zaux.radix2 966)
+                               by (apply (Float_cmp_Cle_hi q_hi966_val (fst yh)
+                                            (bpow Zaux.radix2 966) Hfin_yh
+                                            q_hi966_val_finite q_hi966_val_FT2R);
                                    exact Hyhht).
                              (* 2^(-968) <= |yh| *)
                              assert (Hyh_lo : bpow Zaux.radix2 (-968) <=
@@ -351,11 +355,6 @@ Proof.
                              assert (Hyhne : FT2R (fst yh) <> 0%R).
                              { intro Hz. rewrite Hz, Rabs_R0 in Hyh_lo.
                                pose proof (bpow_gt_0 Zaux.radix2 (-968)). lra. }
-                             (* reciprocal conjunct: 2^(-969) <= |1/yh| *)
-                             assert (Hrecip : bpow Zaux.radix2 (-969) <=
-                                       Rabs (1 / FT2R (fst yh)))
-                               by (apply (recip_lower_from_bpow_upper
-                                            (FT2R (fst yh)) 969 Hyhne Hyh_hi)).
                              (* quotient ceiling on the rounded quotient *)
                              destruct (Float_cmp_Clt_bpow1022
                                          (Float.div (fst xh) (fst yh)))
@@ -376,7 +375,7 @@ Proof.
                                             Hyhne Hfin_q Hfmt1022); exact Hq_hi).
                              unfold DDModels.DWDivDW_cond_acc.
                              repeat split; try assumption;
-                             try exact Hrecip;
+                             try exact Hyh_hi;
                              try exact Hyh_lo;
                              try exact Hquot_hi.
 Qed.

@@ -311,7 +311,7 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
     /* Verifies DWDivDW_cond_acc (DDModels.v), the guard for the
        reciprocal-bootstrap double-word division dw_div_dw18.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
-       (y->s, y->t) double-words; 2^(emin+2p-1) <= |1/y->s|;
+       (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
        2^(emin+2p) <= |y->s|; and |x->s/y->s| <= Omega/4.
 
        The quotient CEILING is the same construction as dw_div_fp_check's: it is
@@ -324,9 +324,10 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
        Three clauses this check does NOT have, each because it would make the
        guard stronger than the condition it discharges:
 
-       - No test on a rounded reciprocal 1.0/y->s.  The cond's conjunct
-         2^(emin+2p-1) <= |1/y->s| is a statement about the EXACT real reciprocal,
-         so for y->s != 0 it is *equivalent* to |y->s| <= 2^(-(emin+2p-1)) = 2^969
+       - No test on a rounded reciprocal 1.0/y->s.  The cond's conjunct 7 is
+         stated directly as |y->s| <= 2^(femax-p-5); its reciprocal form
+         2^(emin+2p+2) <= |1/y->s| is a statement about the EXACT reciprocal,
+         so for y->s != 0 it is *equivalent* to |y->s| <= 2^(femax-p-5) = 2^966
          -- a direct, non-strict comparison on the input with no rounding and no
          transfer lemma.  (y->s != 0 comes from yh_lo below; at y->s == 0 the Coq
          model has 1/0 = 0, so the conjunct is false there and yh_lo is what rules
@@ -340,9 +341,9 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
 
        - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_cond's conjunct 8,
          which DWDivDW_cond_acc drops; it bought the sharper 2*eta closing floor
-         (and with it the pure 16.5u^2 relative bound), at the cost of rejecting
+         (and with it the pure 13.9u^2 relative bound), at the cost of rejecting
          every quotient below 2^-969.  The exported guarantee here is the
-         whole-range mixed bound 12.33u^2|Q| + 2.5*eta plus double-word closure,
+         whole-range mixed bound 9.8u^2|Q| + 2.5*eta plus double-word closure,
          which needs no such floor.
 
        The DW prop alone does not pin down finiteness of x->t / y->t in R (FT2R
@@ -356,11 +357,20 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
     int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
 
     double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
-    double q_yhi   = ldexp(1.0, 969);    /* 2^(-(emin+2*p-1)) reciprocal-node upper bound */
+    double q_yhi   = ldexp(1.0, 966);    /* 2^(femax-p-5) divisor upper bound */
     double q_ylo   = ldexp(1.0, -968);   /* 2^(emin+2*p)   divisor lower bound */
 
-    /* |y->s| window: 2^(emin+2p) <= |y->s| <= 2^969.  yh_hi is the reciprocal
-       lower bound 2^(emin+2p-1) <= |1/y->s|; yh_lo forces y->s != 0. */
+    /* |y->s| window: 2^(emin+2p) <= |y->s| <= 2^966.  Both sides are direct
+       non-strict comparisons on the input -- the cond states conjunct 7 on
+       |y->s| rather than on 1/y->s, so there is no rounded->exact transfer
+       here.  yh_lo also forces y->s != 0.
+
+       The upper exponent IS the exported u^2 coefficient: conjunct 7 says
+       eta*|y->s| <= u^2/4, which is what pays for the reciprocal
+       reconstruction's own underflow floor when the closing multiply by X
+       scales it up.  Loosening 966 by k binades multiplies that charge by 2^k
+       and takes the exported constant from 9.8 back toward 12.33 -- see the
+       DWDivDW_cond doc comment in DDModels.v. */
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
 

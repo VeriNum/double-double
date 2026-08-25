@@ -540,7 +540,7 @@ Qed.
    14 <= fprec Tdouble = 53, discharged here, so the exported mixed bound and the
    closure both rest on DWDivDW_cond_acc alone -- the cond with no quotient
    underflow floor, which is what dw_div_dw_check now establishes.  See
-   dw_div_dw18_guarded_spec for why the pure 16.5u^2 relative form is no longer
+   dw_div_dw18_guarded_spec for why the pure 13.9u^2 relative form is no longer
    the exported one. *)
 Lemma body_dw_div_dw18_guarded :
   semax_body Vprog Gprog f_dw_div_dw18_guarded dw_div_dw18_guarded_spec.

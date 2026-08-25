@@ -387,7 +387,7 @@ Definition dw_div_fp15_guarded_spec :=
    relative/physical-floor bound TOGETHER WITH double-word closure of the
    result,
 
-     |(zh+zl) - Q| <= 12.33 u^2 |Q| + 2.5 * 2^emin  /\  double_word_prop zh zl,
+     |(zh+zl) - Q| <= 9.8 u^2 |Q| + 2.5 * 2^emin  /\  double_word_prop zh zl,
 
    with Q = (xh+xl)/(yh+yl), proven as DWDivDW3_guarantee_from_cond_acc.  This
    matches dw_mult_dw12_guarded_spec and dw_div_fp15_guarded_spec, which export
@@ -411,14 +411,23 @@ Definition dw_div_fp15_guarded_spec :=
    contribute, which is why exporting closure here costs nothing.  DWTimesDW3 and DWDivFP3 are small enough that
    their specs pay nothing for the spelled-out form.
 
-   WHY NOT the pure relative 16.5 u^2 form (relative_errorDWDivDW3_from_cond_
+   The 9.8 is the paper's own FLX coefficient (DWDivDW.DWDDW3_correct), so this
+   guarantee has the same shape and the same constant as its three siblings:
+   2u^2|P| for DW x FP, 4u^2|P| for DW x DW, 3u^2|Q| for DW/FP.  What buys it is
+   conjunct 7 of DWDivDW_cond_acc, |yh| <= 2^(femax-p-5): that says
+   eta*|yh| <= u^2/4, which is exactly what pays for the reciprocal
+   reconstruction's own underflow floor once the closing multiply by X scales it
+   up.  Three binades looser and the charge is 8x larger and the constant is
+   12.33 -- see the DWDivDW_cond doc comment in DDModels.v.
+
+   WHY NOT the pure relative 13.9 u^2 form (relative_errorDWDivDW3_from_cond_
    combined) that this spec used to export: that theorem needs the full
    DWDivDW_cond, whose quotient underflow floor 2^(emin+2p-1) <= |xh/yh| rejects
    every quotient below 2^-969.  dw_div_dw_check no longer tests for it, and
    establishes only DWDivDW_cond_acc; absorbing the 2.5*2^emin floor into
-   u^2|Q| would cost 2.5*2.0003 on top of 12.33, over 16.5.  The trade is
+   u^2|Q| would cost 2.5*2.0003 on top of 9.8, over 13.9.  The trade is
    deliberate: the guard now admits the entire underflowing-quotient range, and
-   the mixed bound is strictly sharper than 16.5 u^2 wherever 2^emin sits below
+   the mixed bound is strictly sharper than 13.9 u^2 wherever 2^emin sits below
    its maximum -- i.e. everywhere the quotient is comfortably normal.
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side

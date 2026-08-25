@@ -813,31 +813,37 @@ Qed.
 (*  DW-division-check helpers (dw_div_dw_check / DWDivDW_cond)          *)
 (* ==================================================================== *)
 
-(* q_hi969_val: IEEE-754 double for 2^969 = 2^(-(emin + 2p - 1)), the
-   reciprocal-node upper bound on |yh| in DWDivDW_cond.  Same Bldexp-of-1.0
-   construction as q_omega_val / q_lo968_val.
+(* q_hi966_val: IEEE-754 double for 2^966 = 2^(femax - p - 5), the divisor
+   upper bound (conjunct 7) of DWDivDW_cond.  Same Bldexp-of-1.0 construction
+   as q_omega_val / q_lo968_val.
 
-   Why this exponent: DWDivDW_cond's conjunct 2^(emin+2p-1) <= |1/FT2R yh| is a
-   statement about the EXACT real reciprocal, so for FT2R yh <> 0 it is
-   *equivalent* to Rabs (FT2R yh) <= 2^969 (see recip_lower_from_upper below).
-   The check therefore tests |y->s| directly with a non-strict comparison -- no
-   rounded reciprocal node and no rounded->exact transfer are needed, and the
-   test is exactly as strong as the conjunct rather than stronger. *)
-Definition q_hi969_val :=
+   Why this exponent: conjunct 7 is stated directly on |FT2R yh|, and it says
+   exactly eta*|yh| <= u^2/4.  That inequality IS the exported u^2 coefficient
+   of DWDivDW3_error_mixed_acc -- it pays for the reciprocal reconstruction's
+   own underflow floor once the closing multiply by X scales it up, at a charge
+   of fr/4 rather than 2*fr.  Loosening 966 by k binades multiplies the charge
+   by 2^k and takes the exported constant from 9.8 back toward 12.33.
+
+   The check tests |y->s| directly with a non-strict comparison -- no rounded
+   reciprocal node and no rounded->exact transfer are needed, so the test is
+   exactly as strong as the conjunct rather than stronger.  (The equivalent
+   reciprocal form is 2^(emin+2p+2) <= |1/FT2R yh|; see
+   recip_lower_from_bpow_upper, still used to state that equivalence.) *)
+Definition q_hi966_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
-    (Float.of_bits (Int64.repr 4607182418800017408)) 969.
+    (Float.of_bits (Int64.repr 4607182418800017408)) 966.
 
-Lemma q_hi969_val_finite : is_finite (ftype_of_float q_hi969_val) = true.
+Lemma q_hi966_val_finite : is_finite (ftype_of_float q_hi966_val) = true.
 Proof.
-  cbv [q_hi969_val Binary.is_finite Float.of_bits
+  cbv [q_hi966_val Binary.is_finite Float.of_bits
        Bits.b64_of_bits Binary.Bldexp Binary.lift Binary.Bmult]; auto.
 Qed.
 
-Lemma q_hi969_val_FT2R :
-  FT2R (ftype_of_float q_hi969_val) = bpow Zaux.radix2 969.
+Lemma q_hi966_val_FT2R :
+  FT2R (ftype_of_float q_hi966_val) = bpow Zaux.radix2 966.
 Proof.
-  cbv [q_hi969_val ftype_of_float Float.of_bits
+  cbv [q_hi966_val ftype_of_float Float.of_bits
        Bits.b64_of_bits Binary.Bldexp]; simpl.
   cbv [Binary.lift Binary.Bmult]; simpl.
   cbv [BinarySingleNaN.binary_round_correct BinarySingleNaN.Bmult_correct_aux];
@@ -850,7 +856,7 @@ Qed.
 (* Upper-bound mirror of Float_cmp_Cle_lo: lifts the C test `fabs b <= v` into
    the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
    Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
-   the /4*Omega form), so the same lemma serves both the 2^969 bound on |yh| and
+   the /4*Omega form), so the same lemma serves both the 2^966 bound on |yh| and
    the 2^(femax-2) bounds that DWDivDW_cond states as bpow (femax t - 2). *)
 Lemma Float_cmp_Cle_hi :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),

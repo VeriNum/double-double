@@ -507,7 +507,7 @@ Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (1 / FT2R yh) /\
+  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - fprec t - 5) /\
   bpow Zaux.radix2 (emin + 2 * fprec t - 1)
     <= Rabs (FT2R xh / FT2R yh) /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
@@ -535,53 +535,72 @@ Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
     closing block's floor rising from [2*eta] to [5/2*eta], hence the exported
     mixed bound
 
-      |(zh+zl) - (xh+xl)/(yh+yl)| <= 12.33 u^2 |Q| + 5/2 eta
+      |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
 
     ([DWDivDW_acc.DWDivDW3_error_mixed_acc]) together with output double-word
     closure ([DWDivDW3_double_word_from_cond_acc]).  For Tdouble this admits
     every quotient below 2^-969 -- i.e. the entire underflowing-quotient range
     the mixed bound was built to cover, which the old guard rejected.
 
-    The [u^2] coefficient is unchanged at 12.33: conjunct 8 never entered the
-    two arm budgets (12.32401 ordered, 12.13802 unordered), only the trailing
-    physical-floor constant.  The pure relative bound
-    [relative_errorDWDivDW3_from_cond_combined] (16.5 u^2) still needs the full
-    [DWDivDW_cond]: absorbing [5/2*eta] into [u^2|Q|] costs 2.5*2.0003 = 5.001
-    on top of 12.33, over the exported 16.5, so that theorem keeps the old
-    [2*eta] closing route, which conjunct 8 pays for.
+    The [u^2] coefficient does not depend on conjunct 8: that conjunct never
+    entered the two arm budgets, only the trailing physical-floor constant.
+    The pure relative bound [relative_errorDWDivDW3_from_cond_combined]
+    (16.5 u^2) still needs the full [DWDivDW_cond]: absorbing [5/2*eta] into
+    [u^2|Q|] costs 2.5*2.0003 on top of the mixed coefficient, so that theorem
+    keeps the old [2*eta] closing route, which conjunct 8 pays for.
 
-    WHY CONJUNCTS 7 AND 9 STAY -- neither is a removable underflow floor.
+    WHY CONJUNCTS 7 AND 9 STAY, AND WHERE CONJUNCT 7's EXPONENT COMES FROM.
 
-    Conjunct 7, [2^(emin+2p-1) <= |1/yh|], is an UPPER bound on |yh| in
-    disguise: since eta = 2^emin and u = 2^-p, it says exactly
+    Conjuncts 7 and 9 are the two sides of one window on the divisor,
 
-      eta * |yh| <= 2 u^2
+      2^(emin+2p) <= |yh| <= 2^(femax-p-5)        (Tdouble: 2^-968 .. 2^966),
 
-    (for Tdouble: |yh| <= 2^969, a divisor-magnitude restriction, not a
-    quotient one; the runtime guard already tests it in that form).  That is,
-    verbatim, the scale conversion the mixed bound needs.  The reciprocal
-    reconstruction (mh,ml) carries an absolute underflow floor of its own,
-    |M - 1/Y| <= a u^2/|Y| + bx*eta ([DWDivDW_reciprocal_error_scaled_floor_param]),
-    so the closing multiplication by X contributes bx*eta*|X| to the error;
-    and since |X| = |Q|*|Y| identically,
+    and neither is an underflow floor on a residual node.  Conjunct 7 used to
+    be written as [2^(emin+2p-1) <= |1/yh|], which for yh <> 0 is the same
+    kind of statement one exponent looser; it is now stated directly on |yh|,
+    so the cond never mentions 1/FT2R yh and the guard needs no rounded-to-
+    exact reciprocal transfer.  Nonzero-ness comes from conjunct 9.
+
+    CONJUNCT 7 IS THE EXPORTED COEFFICIENT.  Since eta = 2^emin and u = 2^-p,
+    conjunct 7 says exactly
+
+      eta * |yh| <= u^2 / 4.
+
+    The reciprocal reconstruction (mh,ml) carries an absolute underflow floor
+    of its own, |M - 1/Y| <= a u^2/|Y| + fr*eta
+    ([DWDivDW_reciprocal_error_scaled_floor_param]), so the closing
+    multiplication by X contributes fr*eta*|X|; and since |X| = |Q|*|Y|
+    identically,
 
       eta*|X| <= c u^2 |Q|   <->   eta*|Y| <= c u^2
 
-    whenever Q <> 0, with |Y| = |yh|(1+O(u)).  Conjunct 7 IS that inequality
-    at c = 2, not merely a sufficient condition for it.  Relaxing its exponent
-    by k binades multiplies c by 2^k, and c enters the exported coefficient
-    linearly (weight bx, which is 1 on the ordered arm and 2 on the unordered
-    one), so the coefficient grows like 2^k: one binade already takes 12.33 to
-    about 16.2, and the "architectural floor" emin+p-1 -- p-1 binades down --
-    takes it to O(1/u).  Conjunct 7 therefore delimits the regime in which
-    Algorithm 18 is a u^2-accurate algorithm at all; it is not a tunable guard
-    clause.  (What could in principle remove it is a re-proof of the
-    reciprocal block with NO absolute floor term, i.e. one that charges the
-    prologue's underflow losses against 1/|Y| rather than against eta.  That
-    is a different theorem, not a weakening of this cond.)
+    whenever Q <> 0, with |Y| = |yh|(1+O(u)).  Conjunct 7 IS that inequality,
+    not merely a sufficient condition for it, so its exponent and the exported
+    u^2 coefficient move together:
 
-    Conjunct 9, [2^(emin+2p) <= |yh|], is likewise not an underflow floor on a
-    residual node.  Since emin = 3 - femax - p it is literally
+      |yh| <= 2^(femax-p-2-k)  ==>  charge = fr * 2^(1-k),   fr = 1 or 2.
+
+    At k = 0 -- where this cond sat until now -- the charge is 2.0 on the
+    ordered arm and 4.0 on the unordered one, and the exported coefficient was
+    12.33.  Nothing rearranges that away: the floor fr is REPRESENTATIONAL,
+    not algorithmic.  At the window's edge |th| ~ 2^(emin+2p-1), so the
+    refinement product eh*th sits one binade above the smallest normal and its
+    exact value needs bits below 2^emin -- ANY double-word D misses E*th by up
+    to eta/2, whatever algorithm produces it.  With the paper's own FLX budget
+    assembled from 5 (closing DWTimesDW12, relaxed from its actual <4u^2)
+    + 2.298 (Newton residual) + 0.5 (rl rounding) + 2 (DWPlusFP) = 9.798, the
+    only slack a runtime proof has over 9.8 is the 5 -> 4 closing gain, i.e.
+    1.0 -- less than the charge.  So 9.8 is out of reach at k <= 1 however the
+    analysis is arranged, and k = 3 is what this cond takes: charge 0.25,
+    arm budgets 9.56 (ordered) and 7.60 (unordered), exported 9.8 with slack.
+
+    The price is 3 binades off the TOP of the divisor range, an overflow-side
+    restriction.  Underflow whole-range coverage is untouched: there is still
+    no floor on the quotient (that is conjunct 8, dropped by
+    [DWDivDW_cond_acc] below).
+
+    Conjunct 9, [2^(emin+2p) <= |yh|], is likewise not an underflow floor.
+    Since emin = 3 - femax - p it is literally
 
       |1/yh| <= 2^(femax-p-3),
 
@@ -590,21 +609,31 @@ Definition DWDivDW_cond (xh xl yh yl : ftype t) : Prop :=
     [DWDivDW_cond_reciprocal_upper_tight] uses it at exactly that strength.
     It does double duty twice more:
 
-      - together with conjunct 7 it forces 2*(emin+2p) <= 1, hence
-        [emin+2p <= 0] by parity, hence [eta <= u^2]
-        ([DWDivDW_cond_eta_le_u2]).  That is what lets one floor ulp be
-        charged at 1*u^2 rather than the format-generic 4*u^2 (only
-        [p < femax] is available otherwise, giving emin+2p <= 2); the arm
-        budgets have 0.006 of slack, so the generic version does not fit.
-        Relaxing conjunct 9 by k binades costs a factor 2^k here too.
+      - together with conjunct 7 it forces emin+2p <= femax-p-5, hence
+        p <= femax-4 and so [emin+2p <= 0], hence [eta <= u^2]
+        ([DWDivDW_cond_eta_le_u2]).  That is what lets the reciprocal
+        residual's one rounding be charged at 1.001*u^2 with no floor ulp at
+        all (only [p < femax] is available otherwise, giving eta <= 4u^2,
+        which does not fit).
       - it is what makes the FMA residual rh = 1 - yh*th exactly
         representable ([DWDivDW_rh_exact_from_cond], via
         [DWDivDW_cond_emin_le]).
 
+    Only ~3 of those p+3 binades of headroom are structurally needed (mh is
+    th*(1+3u), and every other th-scaled node is far smaller), so conjunct 9
+    could in principle come down to "yh is normal", 2^(emin+p-1) -- 54 binades
+    lower for Tdouble.  What blocks it is the eta <= u^2 derivation above,
+    which would then have to become an explicit format side condition
+    p + 3 <= femax on every theorem in the chain.  That is a separate change;
+    the lower bound never enters the error budget either way.
+
     Replacing conjunct 9 by finiteness of th in the style of
     [DWDivFP_cond_min] would recover yh <> 0 and th-finiteness but none of
-    those three uses; there is therefore no separate [DWDivDW_cond_min] tier
-    -- [DWDivDW_cond_acc] is the minimum.
+    those uses -- and unlike DW/FP division, which forms th = BDIV xh y and is
+    therefore covered by its quotient ceiling, DW/DW has an explicit
+    reciprocal node, so SOME lower bound on |yh| is structural here.  There is
+    consequently no separate [DWDivDW_cond_min] tier: [DWDivDW_cond_acc] is
+    the minimum.
 
     This is the cond the runtime guard [dw_div_dw_check] should discharge. *)
 Definition DWDivDW_cond_acc (xh xl yh yl : ftype t) : Prop :=
@@ -614,14 +643,14 @@ Definition DWDivDW_cond_acc (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (1 / FT2R yh) /\
+  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - fprec t - 5) /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
   Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
 
 Lemma DWDivDW_cond_acc_of_cond (xh xl yh yl : ftype t) :
   DWDivDW_cond xh xl yh yl -> DWDivDW_cond_acc xh xl yh yl.
 Proof.
-  intros (Fxh & Fxl & Fyh & Fyl & DWx & DWy & Hrecip & _ & Hylo &
+  intros (Fxh & Fxl & Fyh & Fyl & DWx & DWy & Hyhhi & _ & Hylo &
           Hratiohi).
   repeat split; assumption.
 Qed.

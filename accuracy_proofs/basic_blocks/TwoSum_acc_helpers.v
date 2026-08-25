@@ -37,6 +37,17 @@ Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 (* 1. No-overflow lemmas                                                   *)
 (* ===================================================================== *)
 
+(* Generic ulp ceiling: a finite float's ulp cannot exceed 2^(femax - p), since
+   its magnitude is below the overflow threshold.  This is just
+   FLT_helpers.ulp_below_overflow composed with is_finite_no_overflow; it is
+   hoisted here because no_overflow_2Sum_a_ulp and is_finite_TwoSum each used to
+   carry a verbatim inline copy of the same 18-line argument. *)
+Lemma ulp_le_top (x : ftype t) :
+  is_finite x = true -> ulp (FT2R x) <= bpow radix2 (femax t - fprec t).
+Proof.
+  move => Hx. apply ulp_below_overflow; apply is_finite_no_overflow => //.
+Qed.
+
 Lemma no_overflow_2Sum_a (a b : ftype t):
   Rabs (FT2R b) <= Rabs (FT2R a) ->
   is_finite (BPLUS a b) = true ->
@@ -150,27 +161,9 @@ Proof.
   have Herr : Rabs (FT2R (BPLUS a b) - (FT2R a + FT2R b))
               <= /2 * ulp (FT2R (BPLUS a b)).
   { rewrite -!BPLUS_round_correct //. apply Ulp.error_le_half_ulp_round; FLT_basics. }
-  (* ulp bound (verbatim from the is_finite_2Sum_right_aux helper) *)
-  have Hulp_le : forall (x : ftype t), is_finite x = true ->
-      ulp (FT2R x) <= bpow radix2 (femax t - fprec t).
-  { intros x Hx.
-    have Hlt : Rabs (FT2R x) < Omega by apply is_finite_no_overflow.
-    destruct (Req_dec (FT2R x) 0) as [Hx0 | Hx0].
-    - rewrite Hx0.
-      change (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 0) with
-        (Ulp.ulp radix2 (FLT.FLT_exp (3 - femax t - fprec t) (fprec t)) 0).
-      rewrite FLT.ulp_FLT_0.
-      apply bpow_le.
-      pose proof femax_lb t. pose proof fprec_lb t. lia.
-    - rewrite (Ulp.ulp_neq_0 radix2 fexp _ Hx0).
-      apply bpow_le.
-      unfold cexp, SpecFloat.fexp, SpecFloat.emin.
-      apply Z.max_lub.
-      + apply Zplus_le_compat_r.
-        exact (mag_le_bpow radix2 (FT2R x) (femax t) Hx0 Hlt).
-      + pose proof femax_lb t. pose proof fprec_lb t. lia. }
+  (* ulp bound *)
   have Hulps : ulp (FT2R (BPLUS a b)) <= bpow radix2 (femax t - fprec t)
-    by apply Hulp_le.
+    by apply ulp_le_top.
   (* |b| <= pred Omega = Omega - bpow(femax - fprec) *)
   have Hbmax : Rabs (FT2R b)
                <= bpow radix2 (femax t) - bpow radix2 (femax t - fprec t).
@@ -1016,24 +1009,7 @@ have Hb'_fin : is_finite b' = true.
   - exact Ha'_fin.
   - exact Hb'_ov. }
 (* ulp bound helper *)
-have Hulp_le : forall (x : ftype t), is_finite x = true ->
-    ulp (FT2R x) <= bpow radix2 (femax t - fprec t).
-{ intros x Hx.
-  have Hlt : Rabs (FT2R x) < Omega by apply is_finite_no_overflow.
-  destruct (Req_dec (FT2R x) 0) as [Hx0 | Hx0].
-  - rewrite Hx0.
-    change (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) 0) with
-      (Ulp.ulp radix2 (FLT.FLT_exp (3 - femax t - fprec t) (fprec t)) 0).
-    rewrite FLT.ulp_FLT_0.
-    apply bpow_le.
-    pose proof femax_lb t. pose proof fprec_lb t. lia.
-  - rewrite (Ulp.ulp_neq_0 radix2 fexp _ Hx0).
-    apply bpow_le.
-    unfold cexp, SpecFloat.fexp, SpecFloat.emin.
-    apply Z.max_lub.
-    + apply Zplus_le_compat_r.
-      exact (mag_le_bpow radix2 (FT2R x) (femax t) Hx0 Hlt).
-    + pose proof femax_lb t. pose proof fprec_lb t. lia. }
+have Hulp_le := ulp_le_top.
 (* generic_format for bpow(femax t - fprec t) *)
 have HFbp : generic_format radix2 fexp (bpow radix2 (femax t - fprec t)).
 { apply Generic_fmt.generic_format_bpow.
