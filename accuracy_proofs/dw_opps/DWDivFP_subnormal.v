@@ -34,11 +34,8 @@
                                            the same, under the name the VST
                                            client uses
       DWDivFP3_is_DW_from_cond_min         output is a double word
-      DWDivFP3_finite_min                  is_finite_p of the computed pair
-      DWDivFP3_{fst,snd}_finite_min        its components
 
       DWDivFP_cond_acc_of_min_normal       min + normal quotient recovers acc
-      DWDivFP_cond_min_of_acc              acc is stronger than min
 
     ADMIT-FREE.
     ============================================================================ *)
@@ -148,17 +145,6 @@ rewrite Heq in H3.
 have Hpos : 0 < bpow radix2 (emin + fprec t - 1) by apply bpow_gt_0.
 apply (Rmult_lt_reg_l (bpow radix2 (emin + fprec t - 1))); [ exact Hpos |].
 rewrite (Rmult_comm _ (bpow radix2 (fprec t + 1))) in H3. lra.
-Qed.
-
-(* eta is negligible against M = eta*|y| : 32*eta <= M *)
-Lemma sub_eta_small : 32 * eta <= eta * Rabs (FT2R y).
-Proof.
-have He : 0 < eta by apply bpow_gt_0.
-have Hy := sub_y_big.
-have H32 : (32:R) <= bpow radix2 (fprec t + 1).
-{ have -> : (32:R) = bpow radix2 5 by (simpl; lra).
-  apply bpow_le. lia. }
-nra.
 Qed.
 
 Lemma sub_u_small : u <= /16.
@@ -1251,51 +1237,6 @@ Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb) Hnorm.
 repeat split; try assumption.
 Qed.
-
-(* and min really is the weaker cond *)
-Lemma DWDivFP_cond_min_of_acc (xh xl y : ftype t) :
-  DWDivFP_cond_acc xh xl y -> DWDivFP_cond_min xh xl y.
-Proof.
-intros (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & Hxhlb).
-have Hyne : FT2R y <> 0.
-{ intro H0.
-  have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
-  move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
-repeat split; try assumption.
-exact (th_finite xh y Hfxh Hyne Hqub).
-Qed.
-
-Lemma DWDivFP_cond_min_of_cond (xh xl y : ftype t) :
-  DWDivFP_cond xh xl y -> DWDivFP_cond_min xh xl y.
-Proof.
-intro H.
-exact (DWDivFP_cond_min_of_acc xh xl y (DWDivFP_cond_acc_of_cond xh xl y H)).
-Qed.
-
-(* ---------- finiteness ---------- *)
-Lemma DWDivFP3_finite_min (xh xl y : ftype t) :
-  (4 <= fprec t)%Z ->
-  DWDivFP_cond_min xh xl y ->
-  is_finite_p (DWDivFP3 xh xl y).
-Proof.
-intros Hp4 COND.
-destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
-                    (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
-- have CA := DWDivFP_cond_acc_of_min_normal xh xl y COND Hn.
-  split; [ exact (DWDivFP3_fst_finite_acc xh xl y Hp4 CA)
-         | exact (DWDivFP3_snd_finite_acc xh xl y Hp4 CA) ].
-- exact (proj2 (proj2 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs))).
-Qed.
-
-Lemma DWDivFP3_fst_finite_min (xh xl y : ftype t) :
-  (4 <= fprec t)%Z -> DWDivFP_cond_min xh xl y ->
-  is_finite (fst (DWDivFP3 xh xl y)) = true.
-Proof. intros Hp4 C. exact (proj1 (DWDivFP3_finite_min xh xl y Hp4 C)). Qed.
-
-Lemma DWDivFP3_snd_finite_min (xh xl y : ftype t) :
-  (4 <= fprec t)%Z -> DWDivFP_cond_min xh xl y ->
-  is_finite (snd (DWDivFP3 xh xl y)) = true.
-Proof. intros Hp4 C. exact (proj2 (DWDivFP3_finite_min xh xl y Hp4 C)). Qed.
 
 (* ---------- the mixed bound: PRIMARY API ---------- *)
 Theorem DWDivFP3_error_mixed_min (xh xl y : ftype t) :
