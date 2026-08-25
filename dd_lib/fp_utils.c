@@ -62,7 +62,7 @@ int two_sum_check(double a, double b) {
 }
 
 int dw_plus_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWPlusDW_cond: each component is finite, both pairs satisfy the
+    /* Verifies DWPlusDW_relative_error_input_cond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),
        and the high parts are bounded by Omega/4 = 2^1022.
        The DW relation (x->s + x->t == x->s) is well-defined as a comparison
@@ -80,7 +80,7 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_mult_fp_check(struct dword *x, double y) {
-    /* Verifies DWTimesFP_cond_acc: x->t, y finite; (x->s, x->t) is a double-word;
+    /* Verifies DWTimesFP_mixed_error_input_cond: x->t, y finite; (x->s, x->t) is a double-word;
        round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
        Omega/2 = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down
        finiteness of x->t in R (FT2R sends NaN/Inf to 0), so fin_xl is asserted,
@@ -143,7 +143,7 @@ int dw_mult_fp_check(struct dword *x, double y) {
 }
 
 int dw_mult_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWTimesDW_cond_acc: x->t, y->t finite; (x->s, x->t) and
+    /* Verifies DWTimesDW_mixed_error_input_cond: x->t, y->t finite; (x->s, x->t) and
        (y->s, y->t) are each a double-word; round(x->s * y->s) finite; and the
        real product |FT2R x->s * FT2R y->s| <= Omega/2 = 2^(femax-1) = 2^1023.
 
@@ -198,21 +198,21 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_div_fp_check(struct dword *x, double y) {
-    /* Verifies DWDivFP_cond_min (DDConds.v): xh, xl, y finite; (x->s, x->t) a
+    /* Verifies DWDivFP_mixed_error_input_cond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
        double-word; RN(x->s / y) finite; |x->s| in [2^(emin+2p), Omega/4]; and
        |x->s / y| <= Omega/4.  There is NO quotient lower bound.
 
        HISTORY, and why the floor is gone.  This test carried a quotient floor
        through two rounds of relaxation:
 
-         2^(emin+2p-1) = 2^-969   the floor of the full DWDivFP_cond, which
+         2^(emin+2p-1) = 2^-969   the floor of the full DWDivFP_relative_error_input_cond, which
                                   buys the PURE relative bound 6u^2;
          2^(emin+p-1)  = 2^-1022  the floor of the internal
                                   DWDivFP_normal_quotient_input_cond in
                                   DWDivFP_acc.v, which is what Layer 1's
                                   FLX->FLT bridge for the leading quotient
                                   node needs;
-         (none)                   DWDivFP_cond_min, this guard.
+         (none)                   DWDivFP_mixed_error_input_cond, this guard.
 
        The last step is not a bridge relaxation but a separate proof: below
        2^(emin+p-1) the leading node RN(x->s/y) is subnormal and Layer 1 does
@@ -278,7 +278,7 @@ int dw_div_fp_check(struct dword *x, double y) {
 }
 
 int dw_plus_fp_check(struct dword *x, double y) {
-    /* Verifies DWPlusFP_cond: xh, xl, y are finite, (x->s, x->t) is a
+    /* Verifies DWPlusFP_relative_error_input_cond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
        does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
        so fin_xl is asserted, even though x->s + x->t == x->s implies it
@@ -294,7 +294,7 @@ int dw_plus_fp_check(struct dword *x, double y) {
 }
 
 int dw_div_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWDivDW_cond_acc (DDModels.v), the guard for the
+    /* Verifies DWDivDW_mixed_error_input_cond (DDModels.v), the guard for the
        reciprocal-bootstrap double-word division dw_div_dw18.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
        (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
@@ -325,8 +325,8 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
          x->s only ever enters the algorithm multiplied by m ~ 1/y->s, so the
          quotient ceiling already covers every node it reaches.
 
-       - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_cond's conjunct 8,
-         which DWDivDW_cond_acc drops; it bought the sharper 2*eta closing floor
+       - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_relative_error_input_cond's conjunct 8,
+         which DWDivDW_mixed_error_input_cond drops; it bought the sharper 2*eta closing floor
          (and with it the pure 13.9u^2 relative bound), at the cost of rejecting
          every quotient below 2^-969.  The exported guarantee here is the
          whole-range mixed bound 9.8u^2|Q| + 2.5*eta plus double-word closure,
@@ -356,7 +356,7 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
        reconstruction's own underflow floor when the closing multiply by X
        scales it up.  Loosening 966 by k binades multiplies that charge by 2^k
        and takes the exported constant from 9.8 back toward 12.33 -- see the
-       DWDivDW_cond doc comment in DDModels.v. */
+       DWDivDW_relative_error_input_cond doc comment in DDModels.v. */
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
 

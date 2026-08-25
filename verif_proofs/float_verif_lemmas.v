@@ -302,7 +302,7 @@ Proof.
 Qed.
 
 (* q_sqrt_val: IEEE-754 double for 2^(femax/2 - 1) = 2^511 in Tdouble, the
-   *factor* (square-root-scale) bound used by DWTimesFP_cond / DWTimesDW_cond.
+   *factor* (square-root-scale) bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_relative_error_input_cond.
    Same construction as q_omega_val but scaling 1.0 by 2^511 instead of 2^1022.
    Used by Float_cmp_Cle_bpow511 to lift the C runtime check
    `fabs(a) <= ldexp(1.0, 511)` into the abstract bound
@@ -333,7 +333,7 @@ Qed.
 
 (* Float.cmp Cle (fabs b) q_sqrt_val = true → Rabs (FT2R b) <= 2^(femax/2 - 1).
    The factor-bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
-   is bpow (femax/2 - 1) itself, matching DWTimesFP_cond directly). *)
+   is bpow (femax/2 - 1) itself, matching DWTimesFP_relative_error_input_cond directly). *)
 Lemma Float_cmp_Cle_bpow511 :
   forall (b : ftype Tdouble),
   is_finite b = true ->
@@ -364,7 +364,7 @@ Proof.
 Qed.
 
 (* q_prod_val: IEEE-754 double for 2^1023 = Omega/2 = 2^(femax-1) in Tdouble, the
-   *product* magnitude bound used by DWTimesFP_cond / DWTimesDW_cond.  Same
+   *product* magnitude bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_relative_error_input_cond.  Same
    construction as q_omega_val / q_sqrt_val but scaling 1.0 by 2^1023.  Used by
    Float_cmp_Clt_bpow1023 to lift the C runtime check `fabs(z) < ldexp(1.0, 1023)`
    into the abstract bound Rabs (FT2R z) < bpow radix2 1023 together with
@@ -561,7 +561,7 @@ Proof.
 Qed.
 
 (* ==================================================================== *)
-(*  Division-check helpers (dw_div_fp_check / DWDivFP_cond)             *)
+(*  Division-check helpers (dw_div_fp_check / DWDivFP_relative_error_input_cond)             *)
 (* ==================================================================== *)
 
 (* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
@@ -654,9 +654,9 @@ Qed.
    Bldexp-of-1.0 construction as q_omega_val:
 
      q_lo968_val = 2^(-968) = 2^(emin + 2p)     product-node lower bound
-                              (clause 8 of DWDivFP_cond / _cond_acc / _cond_min,
-                               and DWDivDW_cond's divisor lower bound)
-     q_lo969_val = 2^(-969) = 2^(emin + 2p - 1) DWDivDW_cond's quotient lower
+                              (clause 8 of DWDivFP_relative_error_input_cond / _cond_acc / _cond_min,
+                               and DWDivDW_relative_error_input_cond's divisor lower bound)
+     q_lo969_val = 2^(-969) = 2^(emin + 2p - 1) DWDivDW_relative_error_input_cond's quotient lower
                               bound
 
    Both are representable powers of two in the NORMAL range, which is what makes
@@ -666,7 +666,7 @@ Qed.
    NOTE: dw_div_fp_check no longer has a quotient floor at all, so there is no
    2^-1022 constant here.  It briefly did, during the intermediate step when the
    DW/FP division guard tested 2^(emin+p-1); that clause is gone (see
-   DDConds.DWDivFP_cond_min and DWDivFP_subnormal.v), and with it the constant.
+   DDConds.DWDivFP_mixed_error_input_cond and DWDivFP_subnormal.v), and with it the constant.
    q_lo969_val survives only because dw_div_dw_check still uses it. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
@@ -810,11 +810,11 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 (* ==================================================================== *)
-(*  DW-division-check helpers (dw_div_dw_check / DWDivDW_cond)          *)
+(*  DW-division-check helpers (dw_div_dw_check / DWDivDW_relative_error_input_cond)          *)
 (* ==================================================================== *)
 
 (* q_hi966_val: IEEE-754 double for 2^966 = 2^(femax - p - 5), the divisor
-   upper bound (conjunct 7) of DWDivDW_cond.  Same Bldexp-of-1.0 construction
+   upper bound (conjunct 7) of DWDivDW_relative_error_input_cond.  Same Bldexp-of-1.0 construction
    as q_omega_val / q_lo968_val.
 
    Why this exponent: conjunct 7 is stated directly on |FT2R yh|, and it says
@@ -857,7 +857,7 @@ Qed.
    the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
    Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
    the /4*Omega form), so the same lemma serves both the 2^966 bound on |yh| and
-   the 2^(femax-2) bounds that DWDivDW_cond states as bpow (femax t - 2). *)
+   the 2^(femax-2) bounds that DWDivDW_relative_error_input_cond states as bpow (femax t - 2). *)
 Lemma Float_cmp_Cle_hi :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),
   is_finite b = true ->
@@ -887,7 +887,7 @@ Proof.
 Qed.
 
 (* An upper bound on |r| is a lower bound on |1/r|, for r <> 0.  This is what
-   makes the check's direct non-strict test on |y->s| discharge DWDivDW_cond's
+   makes the check's direct non-strict test on |y->s| discharge DWDivDW_relative_error_input_cond's
    reciprocal conjunct exactly (no rounding, no strictness slop).  The r <> 0
    side condition is essential and not cosmetic: at r = 0 the Coq convention
    1/0 = 0 makes the conclusion false while the hypothesis Rabs 0 <= C holds.
@@ -903,7 +903,7 @@ Proof.
   apply Rinv_le_contravar; [exact Hra | exact H].
 Qed.
 
-(* bpow-shaped instance of recip_lower_from_upper, which is the form DWDivDW_cond
+(* bpow-shaped instance of recip_lower_from_upper, which is the form DWDivDW_relative_error_input_cond
    states its reciprocal conjunct in: a non-strict upper bound |r| <= 2^k on the
    divisor is exactly the lower bound 2^(-k) <= |1/r| on the reciprocal.  At
    k = -(emin + 2p - 1) = 969 for Tdouble this is what yh_hi discharges. *)

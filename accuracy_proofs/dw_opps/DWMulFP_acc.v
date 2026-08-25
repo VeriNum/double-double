@@ -25,9 +25,9 @@
       VST INTERFACE (end of file; what the C contract states).  The mixed
       theorems above assume is_finite_p (DWTimesFP3 ...) -- a fact about the
       RESULT, which a runtime guard cannot test -- so these Layer-2 corollaries
-      derive it from the weaker, input-only, runtime-checkable whole-range
-      condition:
-        DWTimesFP_cond_acc             (DDConds.v) DWTimesFP_cond MINUS the
+      derive it from the weaker condition below, which is stated only in terms
+      of the inputs and can be checked at run time:
+        DWTimesFP_mixed_error_input_cond             (DDConds.v) DWTimesFP_relative_error_input_cond MINUS the
                                       underflow disjunct: double-word relation
                                       plus overflow headroom, nothing else
         DWTimesFP3_finite_acc         is_finite_p from that cond, every regime
@@ -41,7 +41,7 @@
 
       RELATIVE API (corollaries of the mixed normal arm; needs the gap excluded,
       so it is a proof-level interface, NOT what any funspec states):
-        DWTimesFP_accuracy_from_cond  relerr <= 2u^2 from DWTimesFP_cond
+        DWTimesFP_accuracy_from_cond  relerr <= 2u^2 from DWTimesFP_relative_error_input_cond
         DWTimesFP3_double_word        output is a double word from the cond
 
       Proof developments that already have decomposed hypotheses may use:
@@ -57,7 +57,7 @@
     normal regime, so no algebra recovers the missing eta.  The arm is the
     mixed API's normal-regime content, and that is what the cond-level
     corollary invokes.  Conversely the flat form is the only one available in
-    the gap, which is why weakening the guard to DWTimesFP_cond_acc means the
+    the gap, which is why weakening the guard to DWTimesFP_mixed_error_input_cond means the
     exported contract must be the flat bound rather than the pure 2u^2 one.
 
     The Algorithm-9 underflow-floor block at the end of this file (previously
@@ -141,7 +141,7 @@ Section  CorrectDWMulFP'.
      bound is forced by Flocq's Pff2Flocq.format_dq (used at the end of this
      proof), whose section underflow hypothesis instantiates to emin + 3*fprec.
      Hence DWTimesFP3_FLX_FLT below must also assume emin + 3*fprec, which is
-     STRONGER than DWTimesFP_cond's emin + 2*fprec - 1 disjunct. *)
+     STRONGER than DWTimesFP_relative_error_input_cond's emin + 2*fprec - 1 disjunct. *)
   Hypothesis (Fast2Mult_underflow_condition_strict : (FT2R a * FT2R b) <> 0 ->
     bpow Zaux.radix2 (emin + 3 * fprec t) <= Rabs (FT2R a * FT2R b)).
 
@@ -269,7 +269,7 @@ Hypothesis  xE : double_word xh xl.
    used to live here.  It is superseded by the cond-driven development in the
    DWTimesFP_Finite section below (aux_cl3_le_ch + DWTimesFP3_fst_finite /
    DWTimesFP3_snd_finite), which establishes the same finiteness from
-   DWTimesFP_cond's underflow disjunction.  The standalone underflow-free form
+   DWTimesFP_relative_error_input_cond's underflow disjunction.  The standalone underflow-free form
    was unused, so it has been dropped to keep this file admit-free; the only
    delicate case it required (a subnormal product whose round-to-nearest-even
    tie collapses cl1 to 0) is avoided entirely on the cond path. *)
@@ -402,7 +402,7 @@ End CorrectDWMul_weak_bridge.
 
 
 (* ============================================================
-   Finiteness of fst (DWTimesFP3 xh xl y) from DWTimesFP_cond.
+   Finiteness of fst (DWTimesFP3 xh xl y) from DWTimesFP_relative_error_input_cond.
    fst (DWTimesFP3 xh xl y) = BPLUS ch cl3, where
      ch  = Fast2Mult_mul xh y   (= BMULT xh y),
      cl3 = BFMA xl y (Fast2Mult_err xh y).
@@ -475,7 +475,7 @@ Qed.
 
 (* From the real product bound |a*b| <= Omega/4 and finiteness of BMULT a b,
    the rounded product |round(a*b)| <= Omega/4.  This is the fragment the new
-   DWTimesFP_cond leaves us to re-derive: the cond now supplies the real product
+   DWTimesFP_relative_error_input_cond leaves us to re-derive: the cond now supplies the real product
    bound directly (formerly obtained from the two factor bounds via
    sqrt_cond_facts). *)
 Lemma aux_round_prod_bnd (a b : ftype t) :
@@ -553,7 +553,7 @@ Qed.
    proof bodies' legacy facts are DERIVED: |a|,|b| <= Omega/4, the real product
    |a*b| <= Omega/4, is_finite (BMULT a b), and |round(a*b)| <= Omega/4.  This
    is the multiplication analog of the addition case deriving its intermediate
-   finiteness from the component bounds (see DWPlusFP_cond). *)
+   finiteness from the component bounds (see DWPlusFP_relative_error_input_cond). *)
 Lemma sqrt_cond_facts (a b : ftype t) :
   is_finite a = true -> is_finite b = true ->
   Rabs (FT2R a) <= bpow radix2 (femax t / 2 - 1) ->
@@ -618,10 +618,10 @@ have Hpb : Rabs (FT2R (BMULT a b)) <= /4 * Omega.
 by repeat split.
 Qed.
 
-(* MAIN: BOTH components of DWTimesFP3 stay finite under the weaker whole-range
-   condition DWTimesFP_cond_acc, i.e. with NO underflow hypothesis on the
-   leading product.  Two places in the argument used to need the underflow
-   disjunct; neither does:
+(* MAIN: BOTH components of DWTimesFP3 stay finite under DWTimesFP_mixed_error_input_cond,
+   the weaker condition that has NO underflow hypothesis on the leading
+   product.  Two places in the argument used to need the underflow disjunct;
+   neither does:
 
      - finiteness of cl1 = Fast2Mult_err xh y is unconditional
        (Fast2Mult_finite_unconditional): the FMA's rounded result is at most
@@ -634,10 +634,10 @@ Qed.
        (is_finite_FastSum_small): |cl3| <= 2^(femax-p) <= Omega/4 already bounds
        both Fast2Sum subtractions, with no ordering and hence no regime split.
 
-   So overflow headroom -- which is all DWTimesFP_cond_acc asserts beyond the
+   So overflow headroom -- which is all DWTimesFP_mixed_error_input_cond asserts beyond the
    double-word relation -- is exactly what finiteness costs. *)
 Lemma DWTimesFP3_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_cond_acc xh xl y ->
+  DWTimesFP_mixed_error_input_cond xh xl y ->
   is_finite_p (DWTimesFP3 xh xl y).
 Proof.
 intros (Hfxl & Hdwp & Hfmul & Hreal).
@@ -737,24 +737,24 @@ split.
 Qed.
 
 (* Componentwise projections, and the original strong-cond forms retained for the
-   relative (2u^2) tier and its clients: DWTimesFP_cond is strictly stronger than
-   DWTimesFP_cond_acc (DDConds.DWTimesFP_cond_acc_of_cond). *)
+   relative (2u^2) tier and its clients: DWTimesFP_relative_error_input_cond is strictly stronger than
+   DWTimesFP_mixed_error_input_cond (DDConds.DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond). *)
 Lemma DWTimesFP3_fst_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_cond_acc xh xl y ->
+  DWTimesFP_mixed_error_input_cond xh xl y ->
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
 Proof. move => H; exact (proj1 (DWTimesFP3_finite_acc xh xl y H)). Qed.
 
 Lemma DWTimesFP3_snd_finite_acc (xh xl y : ftype t) :
-  DWTimesFP_cond_acc xh xl y ->
+  DWTimesFP_mixed_error_input_cond xh xl y ->
   is_finite (snd (DWTimesFP3 xh xl y)) = true.
 Proof. move => H; exact (proj2 (DWTimesFP3_finite_acc xh xl y H)). Qed.
 
 Lemma DWTimesFP3_fst_finite (xh xl y : ftype t) :
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   is_finite (fst (DWTimesFP3 xh xl y)) = true.
 Proof.
 move => H.
-exact (DWTimesFP3_fst_finite_acc xh xl y (DWTimesFP_cond_acc_of_cond xh xl y H)).
+exact (DWTimesFP3_fst_finite_acc xh xl y (DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* Relative double-word bound: |xl| <= 2^-p |xh| (the low word is at most an
@@ -871,11 +871,11 @@ Qed.
    specialization.  aux_cl3_le_ch is still needed for the double-word property,
    which genuinely does depend on the ordering. *)
 Lemma DWTimesFP3_snd_finite (xh xl y : ftype t) :
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   is_finite (snd (DWTimesFP3 xh xl y)) = true.
 Proof.
 move => H.
-exact (DWTimesFP3_snd_finite_acc xh xl y (DWTimesFP_cond_acc_of_cond xh xl y H)).
+exact (DWTimesFP3_snd_finite_acc xh xl y (DWTimesFP_mixed_error_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* The output pair of DWTimesFP3 (Algorithm 9) is itself a double word.  The
@@ -906,7 +906,7 @@ Qed.
        cond's underflow leg (xh*y = 0) both ch and cl3 collapse to 0, so the
        ordering is 0 <= 0. *)
 Lemma DWTimesFP3_double_word_pre_of_cond (xh xl y : ftype t) :
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   is_finite (BPLUS (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y))) = true
   /\ Rabs (FT2R (BFMA xl y (Fast2Mult_err xh y)))
        <= Rabs (FT2R (Fast2Mult_mul xh y)).
@@ -947,7 +947,7 @@ Qed.
 
 (* (3) cond-level corollary used by the VST guarded spec. *)
 Lemma DWTimesFP3_double_word (xh xl y : ftype t) :
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   double_word (fst (DWTimesFP3 xh xl y)) (snd (DWTimesFP3 xh xl y)).
 Proof.
 move => Hcond.
@@ -1102,7 +1102,7 @@ rewrite Hcl1_eq. ring.
 Qed.
 
 (* Load-bearing Layer-1 theorem.  Carries the underflow disjunction (the same
-   shape as DWTimesFP_cond's) and dispatches on it:
+   shape as DWTimesFP_relative_error_input_cond's) and dispatches on it:
      - underflow leg (xh*y = 0): the exact product xr*yr is 0, so relerr = 0
        (PROVEN here via relerr_0_of_xryr0 + xryr0_of_prod0);
      - normal leg (|xh*y| >= bpow(emin+2*fprec-1)): the bridge from
@@ -1227,21 +1227,21 @@ Qed.
 (* ------------------------------------------------------------------
    Layer 2: the cond-level relative bound.
 
-   DWTimesFP_cond's job here is to supply the underflow disjunction that
+   DWTimesFP_relative_error_input_cond's job here is to supply the underflow disjunction that
    Layer 1 needs; DWTimesFP_cond_no_gap isolates that step, and is also
    what tells the whole-range theory below (DWTimesFP3_error_mixed) that
    its eta term is unreachable under the cond.
    ------------------------------------------------------------------ *)
 
 (* The cond forbids the nonzero underflow gap.  This is literally the
-   third field of DWTimesFP_cond (DDConds.v), projecting the underflow
+   third field of DWTimesFP_relative_error_input_cond (DDConds.v), projecting the underflow
    disjunct of Fast2Mult_cond: under the cond the leading product is
    either exactly zero or at least the TwoProd exactness threshold.  So
    the gap arm of DWTimesFP3_error_mixed is unreachable and its
    C_FP * 2^emin floor term is never paid -- which is precisely why the
    cond-level bound below is a pure 2u^2 relative bound. *)
 Lemma DWTimesFP_cond_no_gap :
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   FT2R xh * FT2R y = 0 \/
   bpow Zaux.radix2 (eminA + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R y).
 Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
@@ -1255,7 +1255,7 @@ Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
    Tdouble). *)
 Corollary DWTimesFP_accuracy_from_cond :
   (3 <= fprec t)%Z ->
-  DWTimesFP_cond xh xl y ->
+  DWTimesFP_relative_error_input_cond xh xl y ->
   relative_error_DWTimesFP <= 2 * u ^ 2.
 Proof.
 intros Hp3 Hcond.
@@ -1967,9 +1967,9 @@ destruct (Rle_dec
 Qed.
 
 (* ------------------------------------------------------------------
-   PUBLIC VST INTERFACE (Layer 2): the whole-range mixed bound and output
-   double-word closure from the runtime-checkable DWTimesFP_cond_acc
-   (DDConds.v).
+   PUBLIC VST INTERFACE (Layer 2): DWTimesFP_mixed_error_input_cond can be checked at run time
+   and proves both the mixed bound throughout the admitted range and that the
+   output is a valid double word.
 
    This is the pair of results carried by the exported funspec
    dw_mult_fp9_guarded_spec and discharged by the runtime guard
@@ -1995,7 +1995,7 @@ Definition absolute_error_DWTimesFP {NANS : Nans} {t : type}
 Corollary DWTimesFP_mixed_accuracy_from_cond_acc {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_cond_acc xh xl y ->
+  DWTimesFP_mixed_error_input_cond xh xl y ->
   absolute_error_DWTimesFP xh xl y
     <= 2 * bpow radix2 (- fprec t) ^ 2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
@@ -2010,7 +2010,7 @@ Qed.
 Corollary DWTimesFP3_double_word_from_cond_acc {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_cond_acc xh xl y ->
+  DWTimesFP_mixed_error_input_cond xh xl y ->
   double_word_prop (fst (DWTimesFP3 xh xl y))
                    (snd (DWTimesFP3 xh xl y)).
 Proof.

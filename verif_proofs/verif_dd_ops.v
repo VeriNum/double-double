@@ -365,7 +365,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWPlusFP_cond (fst xh) (snd xh) y)
+  PROP (DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -376,7 +376,7 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWPlusFP_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
@@ -393,7 +393,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -406,7 +406,7 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+    (DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
@@ -423,7 +423,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesFP_cond_acc (fst xh) (snd xh) y)
+  PROP (DWTimesFP_mixed_error_input_cond (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -434,12 +434,12 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWTimesFP_cond_acc (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWTimesFP_mixed_error_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   (* The whole-range mixed bound is the public API for DW x FP: the guard only
-     establishes DWTimesFP_cond_acc (no underflow disjunct), which is exactly
+     establishes DWTimesFP_mixed_error_input_cond (no underflow disjunct), which is exactly
      what DWTimesFP3_error_mixed_flat needs once finiteness is derived. *)
   pose proof
     (@DWTimesFP_mixed_accuracy_from_cond_acc _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
@@ -459,7 +459,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWTimesDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -472,12 +472,12 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+    (DWTimesDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp5 : (5 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   (* The whole-range mixed bound is the public API for DW x DW: the guard only
-     establishes DWTimesDW_cond_acc (no underflow disjunct), which is exactly
+     establishes DWTimesDW_mixed_error_input_cond (no underflow disjunct), which is exactly
      what DWTimesDW3_error_mixed_floor_acc needs once finiteness is derived. *)
   pose proof
     (@DWTimesDW_mixed_accuracy_from_cond_acc _ Tdouble _
@@ -493,7 +493,7 @@ forward_if Post_if.
 Qed.
 
 (* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
-   call the check, exit on failure, otherwise recover DWDivFP_cond_min and call
+   call the check, exit on failure, otherwise recover DWDivFP_mixed_error_input_cond and call
    the unguarded op.  The exported accuracy postcondition is the
    regime-independent combined bound
    (relative_errorDWDivFP3_from_cond_combined_min), which the minimal cond --
@@ -506,7 +506,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivFP_cond_min (fst xh) (snd xh) y)
+  PROP (DWDivFP_mixed_error_input_cond (fst xh) (snd xh) y)
   LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -517,7 +517,7 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivFP_cond_min (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWDivFP_mixed_error_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hp4 : (4 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
@@ -535,10 +535,10 @@ Qed.
 (* DWDivDW (Algorithm 18) guarded wrapper.  Same skeleton as
    body_dw_div_fp15_guarded, with a second dword operand: call the check, exit on
    failure (whose PROP(False) postcondition makes that branch vacuously satisfy
-   the accuracy claim), otherwise recover DWDivDW_cond_acc from the check's
+   the accuracy claim), otherwise recover DWDivDW_mixed_error_input_cond from the check's
    boolean and call the unguarded op.  Hp14 is the format side condition
    14 <= fprec Tdouble = 53, discharged here, so the exported mixed bound and the
-   closure both rest on DWDivDW_cond_acc alone -- the cond with no quotient
+   closure both rest on DWDivDW_mixed_error_input_cond alone -- the cond with no quotient
    underflow floor, which is what dw_div_dw_check now establishes.  See
    dw_div_dw18_guarded_spec for why the pure 13.9u^2 relative form is no longer
    the exported one. *)
@@ -549,7 +549,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWDivDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -561,7 +561,7 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
+  assert_PROP (DWDivDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
     by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp14 : (14 <= fprec Tdouble)%Z)

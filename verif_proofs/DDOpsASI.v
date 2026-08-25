@@ -267,7 +267,7 @@ Definition dw_plus_dw2_guarded_spec :=
    i.e. DWMulFP_acc.DWTimesFP3_error_mixed_flat, reached here through its
    cond-level form DWTimesFP_mixed_accuracy_from_cond_acc.  The PRE is empty:
    dw_mult_fp9_guarded's runtime check makes the POST unconditional, and the
-   check now tests only DWTimesFP_cond_acc -- no underflow disjunct -- so inputs
+   check now tests only DWTimesFP_mixed_error_input_cond -- no underflow disjunct -- so inputs
    whose leading product falls in the Fast2Mult underflow gap are computed rather
    than rejected.  The price is stated in the bound: the 2.51*eta floor term is
    carried in every regime, including the normal one where the sharper pure 2u^2
@@ -302,7 +302,7 @@ Definition dw_mult_fp9_guarded_spec :=
    i.e. DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc, reached here through its
    cond-level form DWTimesDW_mixed_accuracy_from_cond_acc.  The PRE is empty:
    dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
-   check now tests only DWTimesDW_cond_acc -- no underflow disjunct -- so inputs
+   check now tests only DWTimesDW_mixed_error_input_cond -- no underflow disjunct -- so inputs
    whose leading product falls in the Fast2Mult underflow gap are computed rather
    than rejected.  The price is stated in the bound: the 2.5*eta floor term is
    carried in every regime, including the normal one where the sharper pure 8u^2
@@ -348,13 +348,13 @@ Definition dw_mult_dw12_guarded_spec :=
    relative_errorDWDivFP3_from_cond_combined_min:
      |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
    which holds unconditionally once the runtime check discharges
-   DWDivFP_cond_min.  Note the cond is the MINIMAL one: it carries no quotient
+   DWDivFP_mixed_error_input_cond.  Note the cond is the MINIMAL one: it carries no quotient
    floor at all, so the wrapper accepts every quotient magnitude the format can
    represent -- subnormal quotients included.  The POST below is unchanged by
    that relaxation, and the constant on the 2^emin term is unchanged too: the
    mixed bound was always what this wrapper exported, and only the set of inputs
    it accepts got wider.  (What the floor used to buy was the PURE relative
-   bound 6u^2, which is not exported here and remains on DWDivFP_cond.)
+   bound 6u^2, which is not exported here and remains on DWDivFP_relative_error_input_cond.)
 
    The POST also carries output double-word closure
    (DWDivFP3_is_DW_from_cond_min), matching dw_mult_fp9_guarded_spec and
@@ -417,17 +417,17 @@ Definition dw_div_fp15_guarded_spec :=
    The 9.8 is the paper's own FLX coefficient (DWDivDW.DWDDW3_correct), so this
    guarantee has the same shape and the same constant as its three siblings:
    2u^2|P| for DW x FP, 4u^2|P| for DW x DW, 3u^2|Q| for DW/FP.  What buys it is
-   conjunct 7 of DWDivDW_cond_acc, |yh| <= 2^(femax-p-5): that says
+   conjunct 7 of DWDivDW_mixed_error_input_cond, |yh| <= 2^(femax-p-5): that says
    eta*|yh| <= u^2/4, which is exactly what pays for the reciprocal
    reconstruction's own underflow floor once the closing multiply by X scales it
    up.  Three binades looser and the charge is 8x larger and the constant is
-   12.33 -- see the DWDivDW_cond doc comment in DDConds.v.
+   12.33 -- see the DWDivDW_relative_error_input_cond doc comment in DDConds.v.
 
    WHY NOT the pure relative 13.9 u^2 form (relative_errorDWDivDW3_from_cond_
    combined) that this spec used to export: that theorem needs the full
-   DWDivDW_cond, whose quotient underflow floor 2^(emin+2p-1) <= |xh/yh| rejects
+   DWDivDW_relative_error_input_cond, whose quotient underflow floor 2^(emin+2p-1) <= |xh/yh| rejects
    every quotient below 2^-969.  dw_div_dw_check no longer tests for it, and
-   establishes only DWDivDW_cond_acc; absorbing the 2.5*2^emin floor into
+   establishes only DWDivDW_mixed_error_input_cond; absorbing the 2.5*2^emin floor into
    u^2|Q| would cost 2.5*2.0003 on top of 9.8, over 13.9.  The trade is
    deliberate: the guard now admits the entire underflowing-quotient range, and
    the mixed bound is strictly sharper than 13.9 u^2 wherever 2^emin sits below
@@ -435,7 +435,7 @@ Definition dw_div_fp15_guarded_spec :=
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
    condition rather than an input condition -- at Tdouble it is 14 <= 53 and the
-   body proof discharges it inline -- so the guarantee rests on DWDivDW_cond_acc
+   body proof discharges it inline -- so the guarantee rests on DWDivDW_mixed_error_input_cond
    alone, which is precisely what dw_div_dw_check establishes. *)
 Definition dw_div_dw18_guarded_spec :=
   DECLARE _dw_div_dw18_guarded
@@ -523,7 +523,7 @@ Definition dw_plus_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWPlusFP_cond (fst xh) (snd xh) y)
+    PROP(b = true -> DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -538,7 +538,7 @@ Definition dw_plus_dw_check_spec :=
          data_at Tsh dword (f2val yh) y )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(b = true -> DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
@@ -552,7 +552,7 @@ Definition dw_mult_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWTimesFP_cond_acc (fst xh) (snd xh) y)
+    PROP(b = true -> DWTimesFP_mixed_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -567,14 +567,14 @@ Definition dw_mult_dw_check_spec :=
          data_at Tsh dword (f2val yh) y )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(b = true -> DWTimesDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
 (* Minimal cond: no quotient floor at all; the caller gets the mixed bound,
    not the pure 6u^2 one.  See dw_div_fp15_guarded_spec above and
-   DDConds.DWDivFP_cond_min. *)
+   DDConds.DWDivFP_mixed_error_input_cond. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
@@ -584,7 +584,7 @@ Definition dw_div_fp_check_spec :=
     PROP() PARAMS ( x; Vfloat y ) SEP( data_at Tsh dword (f2val xh) x )
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWDivFP_cond_min (fst xh) (snd xh) y)
+    PROP(b = true -> DWDivFP_mixed_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -601,7 +601,7 @@ Definition dw_div_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+         DWDivDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).

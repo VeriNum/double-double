@@ -116,7 +116,7 @@ Definition dw_plus_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
@@ -133,7 +133,7 @@ Definition dw_plus_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusFP_cond (fst xh) (snd xh) y)
+         DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -155,7 +155,7 @@ Definition dw_div_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivFP_cond_min (fst xh) (snd xh) y)
+         DWDivFP_mixed_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -176,7 +176,7 @@ Definition dw_mult_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesFP_cond_acc (fst xh) (snd xh) y)
+         DWTimesFP_mixed_error_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
@@ -193,7 +193,7 @@ Definition dw_mult_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+         DWTimesDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
@@ -211,7 +211,7 @@ Definition dw_div_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivDW_cond_acc (fst xh) (snd xh) (fst yh) (snd yh))
+         DWDivDW_mixed_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).

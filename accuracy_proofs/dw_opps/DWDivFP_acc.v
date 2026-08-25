@@ -7,7 +7,7 @@
     FLT runtime model [DDModels.DWDivFP3] onto the paper's real-valued FLX
     model [DWDivFP.DWDivFP3], then the Layer-1 relative-error theorem obtained
     from the paper's tight 3u^2 bound (DWDivFP.DWDFP3_correct), and finally a
-    Layer-2 corollary discharging finiteness/underflow from DWDivFP_cond.
+    Layer-2 corollary discharging finiteness/underflow from DWDivFP_relative_error_input_cond.
 
     Notation: u = 2^(-p) is the relative rounding unit and eta = 2^emin is the
     smallest positive subnormal, the physical underflow floor.  ADMIT-FREE.
@@ -18,10 +18,10 @@
       PROOF INTERFACES.  The legacy _acc theorem names take the internal
       DWDivFP_normal_quotient_input_cond, whose quotient floor is
       2^(emin+p-1), exactly the floor the normal-leading-quotient proof needs.
-      The unsuffixed names take the strong DWDivFP_cond (quotient floor
+      The unsuffixed names take the strong DWDivFP_relative_error_input_cond (quotient floor
       2^(emin+2p-1)) and are re-derived through
-      DWDivFP_normal_quotient_input_cond_of_cond.  The runtime guard instead
-      discharges the canonical whole-range DWDivFP_cond_min; its mixed-error
+      DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond.  The runtime guard instead
+      discharges the canonical whole-range DWDivFP_mixed_error_input_cond; its mixed-error
       and output-closure API lives in DWDivFP_subnormal.v and case-splits into
       this file's normal helper and the subnormal-leading-quotient proof.
 
@@ -36,7 +36,7 @@
       RELATIVE API (a restricted refinement of the above, at twice the
       constant -- see the banner above its section).  This one has NO _acc
       form: the relaxed cond cannot support a pure relative bound at all.
-        DWDivFP3_accuracy              relerr <= 6u^2 from DWDivFP_cond
+        DWDivFP3_accuracy              relerr <= 6u^2 from DWDivFP_relative_error_input_cond
 
       The exchange rate that buys it, reusable on its own (strong cond only):
         DWDivFP_cond_quotient_lower    (1-u)*2^(emin+2p-1) <= |Q|
@@ -56,7 +56,7 @@
     derived from it, because 3u^2|Q| + eta is what the algorithm actually
     satisfies unconditionally; the pure 3u^2 holds only when the closing
     correction is normal, and the 6u^2 whole-range form is bought by charging
-    the floor against DWDivFP_cond's quotient window -- which is precisely the
+    the floor against DWDivFP_relative_error_input_cond's quotient window -- which is precisely the
     strength DWDivFP_normal_quotient_input_cond gives up, and precisely why the
     6u^2 bound is not
     runtime-reachable through dw_div_fp_check.
@@ -682,7 +682,7 @@ Qed.
 End FiniteAccuracyDWDivFP.
 
 (* ============================================================
-   Layer-2: finiteness + underflow-discipline facts derived from DWDivFP_cond.
+   Layer-2: finiteness + underflow-discipline facts derived from DWDivFP_relative_error_input_cond.
 
    The cond bounds only the components (|xh| <= bpow(femax/2-1), |y| >=
    bpow(1-femax/2)) plus the quotient underflow bound; from these the QUOTIENT
@@ -698,8 +698,8 @@ Notation ulp   := (Ulp.ulp Zaux.radix2 fexp).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Internal normal-leading-quotient proof condition for DWDivFP3.  This is not
-   a runtime guard or a public accuracy tier: DWDivFP_cond_min is the canonical
-   whole-range mixed-error condition, while DWDivFP_cond is the pure-relative
+   a runtime guard or a public accuracy tier: DWDivFP_mixed_error_input_cond is the canonical
+   whole-range mixed-error condition, while DWDivFP_relative_error_input_cond is the pure-relative
    condition.  The helper records the normal-quotient branch used to reuse the
    FLX proof when |xh/y| is at least 2^(emin+p-1).  Its final lower bound is on
    the distinct product node th*y and remains necessary in this branch. *)
@@ -718,8 +718,8 @@ Definition DWDivFP_normal_quotient_input_cond
     (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t)
     <= Rabs (FT2R xh).
 
-Lemma DWDivFP_normal_quotient_input_cond_of_cond (xh xl y : ftype t) :
-  DWDivFP_cond xh xl y -> DWDivFP_normal_quotient_input_cond xh xl y.
+Lemma DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond (xh xl y : ftype t) :
+  DWDivFP_relative_error_input_cond xh xl y -> DWDivFP_normal_quotient_input_cond xh xl y.
 Proof.
   intros (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & Hxhlb).
   repeat split; try assumption.
@@ -1485,27 +1485,27 @@ apply (abst_snd _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMIN
 Qed.
 
 (* The strong cond implies the normal-quotient helper
-   (DWDivFP_normal_quotient_input_cond_of_cond), so the
+   (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond), so the
    finiteness results hold under it too.  These keep the names the file's public
    interface advertises; the widened-domain versions are the _acc ones above. *)
 Lemma DWDivFP3_fst_finite (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_relative_error_input_cond xh xl y ->
   is_finite (fst (DWDivFP3 xh xl y)) = true.
 Proof.
 intros Hp4 H.
 exact (DWDivFP3_fst_finite_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y H)).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 Lemma DWDivFP3_snd_finite (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_relative_error_input_cond xh xl y ->
   is_finite (snd (DWDivFP3 xh xl y)) = true.
 Proof.
 intros Hp4 H.
 exact (DWDivFP3_snd_finite_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y H)).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* DWDivFP_normal_quotient_input_cond proves the ordering |tl| <= |th|:
@@ -1552,12 +1552,12 @@ Qed.
 
 Corollary DWDivFP3_is_DW_from_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond xh xl y ->
+  DWDivFP_relative_error_input_cond xh xl y ->
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
 Proof.
 intros Hp4 H.
 exact (DWDivFP3_is_DW_from_cond_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y H)).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y H)).
 Qed.
 
 (* The intermediate normal-range (strong-underflow) facts consumed by the
@@ -1625,7 +1625,7 @@ Qed.
 
 End DWDivFP_Finite.
 
-(* Layer-2, NORMAL leg: the 3u^2 bound under DWDivFP_cond, in the normal regime
+(* Layer-2, NORMAL leg: the 3u^2 bound under DWDivFP_relative_error_input_cond, in the normal regime
    where the closing quotient d/y stays in the FLT normal range.  double_word,
    y <> 0, the top-level quotient normal-range bound (UF_th) and the product node
    (UF_prod) are derived here from the cond; is_finite_p from the DWDivFP_Finite
@@ -1672,14 +1672,14 @@ End CondAccuracyDWDivFP.
 Theorem relative_errorDWDivFP3_from_cond {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_cond xh xl y)
+  (COND : DWDivFP_relative_error_input_cond xh xl y)
   (Hdyn : bpow radix2 (@common.emin t + fprec t - 1)
           <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                        (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)) :
   relative_error_DWDivFP xh xl y <= 3 * (bpow radix2 (- fprec t)) ^ 2.
 Proof.
 exact (relative_errorDWDivFP3_from_cond_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y COND) Hdyn).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y COND) Hdyn).
 Qed.
 
 (* Layer-2, UNDERFLOW leg: when the closing quotient d/y is subnormal, the runtime
@@ -1688,7 +1688,7 @@ Qed.
    product via cond_UF_prod, dt exact, d via the underflow-insensitive BPLUS).  So
    the result carries the paper's 3u^2 relative error plus one 2^emin absolute term.
    Combined with the normal leg above, DWDivFP3 satisfies |zh+zl - X/y| <=
-   3u^2|X/y| + 2^emin under DWDivFP_cond in every regime. *)
+   3u^2|X/y| + 2^emin under DWDivFP_relative_error_input_cond in every regime. *)
 Section CondAccuracyDWDivFP_underflow.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1851,7 +1851,7 @@ Theorem relative_errorDWDivFP3_from_cond_underflow
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_cond xh xl y)
+  (COND : DWDivFP_relative_error_input_cond xh xl y)
   (Huf : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                    (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
          < bpow radix2 (@common.emin t + fprec t - 1)) :
@@ -1861,10 +1861,10 @@ Theorem relative_errorDWDivFP3_from_cond_underflow
        + bpow radix2 (@common.emin t).
 Proof.
 exact (relative_errorDWDivFP3_from_cond_underflow_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y COND) Huf).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y COND) Huf).
 Qed.
 
-(* Layer-2, COMBINED: the regime-independent bound under DWDivFP_cond alone.  The
+(* Layer-2, COMBINED: the regime-independent bound under DWDivFP_relative_error_input_cond alone.  The
    split point |d/y| vs 2^(emin+fprec-1) is decidable, so a case-split feeds the
    normal leg (relative_errorDWDivFP3_from_cond, whose extra Hdyn is exactly the
    >= side) or the underflow leg (relative_errorDWDivFP3_from_cond_underflow, the
@@ -1872,7 +1872,7 @@ Qed.
    3u^2|X/y| + 2^emin (the normal leg's clean 3u^2 relative bound is scaled to
    absolute and weakened by the non-negative 2^emin term), so DWDivFP3 carries it
    in EVERY regime from just Hp4 and the cond.  This is the fact the guarded
-   wrapper's funspec exports: the runtime check discharges DWDivFP_cond, and this
+   wrapper's funspec exports: the runtime check discharges DWDivFP_relative_error_input_cond, and this
    theorem turns it into the unconditional accuracy postcondition. *)
 Section CondAccuracyDWDivFP_combined.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1888,7 +1888,7 @@ Hypothesis COND : DWDivFP_normal_quotient_input_cond xh xl y.
 (** Normal-leading-quotient helper API.  The mixed relative/absolute error is
     valid in every closing-correction regime under the internal helper.  The
     strong-cond versions below are re-derived from it, while the runtime API
-    uses DWDivFP_cond_min in DWDivFP_subnormal.v. *)
+    uses DWDivFP_mixed_error_input_cond in DWDivFP_subnormal.v. *)
 Theorem DWDivFP3_error_mixed_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
@@ -1928,7 +1928,7 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
 Qed.
 
 (* Legacy compatibility name for the same internal-helper theorem.  The runtime
-   wrapper now uses the weaker DWDivFP_cond_min theorem in
+   wrapper now uses the weaker DWDivFP_mixed_error_input_cond theorem in
    DWDivFP_subnormal.v. *)
 Theorem relative_errorDWDivFP3_from_cond_combined_acc :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
@@ -1940,25 +1940,25 @@ End CondAccuracyDWDivFP_combined.
 
 (* The same two statements under the strong cond, unchanged from what the public
    interface has always advertised.  DWDivFP3_error_mixed in particular is
-   consumed by the pure-relative section below, which stays on DWDivFP_cond. *)
+   consumed by the pure-relative section below, which stays on DWDivFP_relative_error_input_cond. *)
 Theorem DWDivFP3_error_mixed {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_cond xh xl y) :
+  (COND : DWDivFP_relative_error_input_cond xh xl y) :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * (bpow radix2 (- fprec t)) ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y)
        + bpow radix2 (@common.emin t).
 Proof.
 exact (DWDivFP3_error_mixed_acc xh xl y Hp4
-         (DWDivFP_normal_quotient_input_cond_of_cond xh xl y COND)).
+         (DWDivFP_normal_quotient_input_cond_of_relative_error_input_cond xh xl y COND)).
 Qed.
 
 Theorem relative_errorDWDivFP3_from_cond_combined
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_cond xh xl y) :
+  (COND : DWDivFP_relative_error_input_cond xh xl y) :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * (bpow radix2 (- fprec t)) ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y)
@@ -1975,7 +1975,7 @@ Proof. exact (DWDivFP3_error_mixed xh xl y Hp4 COND). Qed.
    quotient scale, so 3u^2|Q| + eta <= 6u^2|Q|.
 
    Note the direction of dependence -- the relative bound is DOWNSTREAM of the
-   mixed one, not the other way round.  DWDivFP_cond's quotient window is what
+   mixed one, not the other way round.  DWDivFP_relative_error_input_cond's quotient window is what
    makes the exchange possible; without it no relative bound holds at all.
    ================================================================== *)
 Section CondAccuracyDWDivFP_pure_relative.
@@ -1987,7 +1987,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_cond xh xl y.
+Hypothesis COND : DWDivFP_relative_error_input_cond xh xl y.
 
 (* The cond bounds the ROUNDED quotient |xh/y| below by 2^(emin+2p-1); the
    double-word relation |xl| <= u|xh| carries that to the EXACT quotient at a

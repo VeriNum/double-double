@@ -49,7 +49,7 @@ Definition DWPlusDW :=
 
 
 (* start section hypotheses *)
-Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
+Hypothesis Hcond: DWPlusDW_relative_error_input_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 (* end section hypotheses *)
 

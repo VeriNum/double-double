@@ -4,7 +4,7 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_plus_fp_check(x, y) returns 1 only if DWPlusFP_cond holds:
+(* dw_plus_fp_check(x, y) returns 1 only if DWPlusFP_relative_error_input_cond holds:
    xh, xl, y are finite, (xh, xl) is a double-word, and |xh|, |y| <= Omega/4.
 
    This is the single-double-word specialization of body_dw_plus_dw_check:
@@ -217,7 +217,7 @@ Proof.
                destruct (Hb11 eq_refl) as [Hb5t [Hfyt [Hbxht Hbybt]]].
                destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
                assert (Hfin_y : is_finite y = true) by (apply (proj1 Hspec_fy); exact Hfyt).
-               unfold DDConds.DWPlusFP_cond.
+               unfold DDConds.DWPlusFP_relative_error_input_cond.
                repeat (split; try assumption).
                { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                  unfold bxh, q_omega_val in Hbxht. exact Hbxht. }

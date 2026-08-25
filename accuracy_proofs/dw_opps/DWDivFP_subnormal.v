@@ -2,7 +2,7 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (** The SUBNORMAL-QUOTIENT leg of DWDivFP3 (Algorithm 15), and with it the
-    public API on DDConds.DWDivFP_cond_min -- the weakest of the three DW/FP
+    public API on DDConds.DWDivFP_mixed_error_input_cond -- the weakest of the three DW/FP
     division conds, and the one the runtime guard dw_div_fp_check discharges.
 
     WHY A SEPARATE LEG.  DWDivFP_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
@@ -25,10 +25,10 @@
     The exported constant is unchanged: 3u^2|Q| + 2^emin, the same as on
     DWDivFP_normal_quotient_input_cond.  Clause 8 is retained and is not
     removable; see the
-    DWDivFP_cond_min comment in DDConds.v for the counterexample.
+    DWDivFP_mixed_error_input_cond comment in DDConds.v for the counterexample.
 
     ============================================================================
-    PUBLIC INTERFACE (all on DDConds.DWDivFP_cond_min)
+    PUBLIC INTERFACE (all on DDConds.DWDivFP_mixed_error_input_cond)
 
       DWDivFP3_error_mixed_min             |Qhat - Q| <= 3u^2|Q| + eta
       relative_errorDWDivFP3_from_cond_combined_min
@@ -36,7 +36,7 @@
                                            client uses
       DWDivFP3_is_DW_from_cond_min         output is a double word
 
-      DWDivFP_normal_quotient_input_cond_of_min
+      DWDivFP_normal_quotient_input_cond_of_mixed_error_input_cond
                                            min + normal quotient recovers the
                                            normal-quotient helper
 
@@ -1197,7 +1197,7 @@ End SubFin.
 
 
 (* ==========================================================================
-   PUBLIC API on DDConds.DWDivFP_cond_min
+   PUBLIC API on DDConds.DWDivFP_mixed_error_input_cond
    ========================================================================== *)
 Section CondMin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1212,7 +1212,7 @@ Notation u    := (bpow radix2 (- fprec t)).
    Section Sub the accuracy and closure. *)
 Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond_min xh xl y ->
+  DWDivFP_mixed_error_input_cond xh xl y ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
@@ -1233,8 +1233,8 @@ Qed.
    normal-quotient helper exactly: the two predicates differ only in the
    clause-5 slot, so this is one [repeat split].  This lets the normal branch
    reuse DWDivFP_acc's normal-range theorems verbatim. *)
-Lemma DWDivFP_normal_quotient_input_cond_of_min (xh xl y : ftype t) :
-  DWDivFP_cond_min xh xl y ->
+Lemma DWDivFP_normal_quotient_input_cond_of_mixed_error_input_cond (xh xl y : ftype t) :
+  DWDivFP_mixed_error_input_cond xh xl y ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   DWDivFP_normal_quotient_input_cond xh xl y.
 Proof.
@@ -1245,7 +1245,7 @@ Qed.
 (* ---------- the mixed bound: PRIMARY API ---------- *)
 Theorem DWDivFP3_error_mixed_min (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond_min xh xl y ->
+  DWDivFP_mixed_error_input_cond xh xl y ->
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
@@ -1255,7 +1255,7 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
                     (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
 - (* normal branch: recover the internal helper and reuse the theorem *)
   exact (DWDivFP3_error_mixed_acc xh xl y Hp4
-           (DWDivFP_normal_quotient_input_cond_of_min xh xl y COND Hn)).
+           (DWDivFP_normal_quotient_input_cond_of_mixed_error_input_cond xh xl y COND Hn)).
 - exact (proj1 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs)).
 Qed.
 
@@ -1263,7 +1263,7 @@ Qed.
    This is the form body_dw_div_fp15_guarded applies. *)
 Theorem relative_errorDWDivFP3_from_cond_combined_min (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond_min xh xl y ->
+  DWDivFP_mixed_error_input_cond xh xl y ->
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
@@ -1272,14 +1272,14 @@ Proof. exact (DWDivFP3_error_mixed_min xh xl y). Qed.
 (* ---------- output double-word closure ---------- *)
 Corollary DWDivFP3_is_DW_from_cond_min (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_cond_min xh xl y ->
+  DWDivFP_mixed_error_input_cond xh xl y ->
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
 Proof.
 intros Hp4 COND.
 destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
                     (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
 - exact (DWDivFP3_is_DW_from_cond_acc xh xl y Hp4
-           (DWDivFP_normal_quotient_input_cond_of_min xh xl y COND Hn)).
+           (DWDivFP_normal_quotient_input_cond_of_mixed_error_input_cond xh xl y COND Hn)).
 - exact (proj1 (proj2 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs))).
 Qed.
 

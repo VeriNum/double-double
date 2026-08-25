@@ -25,7 +25,7 @@ Hypothesis HFINxl : is_finite xl = true.
 Hypothesis HFINyh : is_finite yh = true.
 Hypothesis HFINyl : is_finite yl = true.
 
-(* Tight magnitude bounds on the high words, matching DWPlusDW_cond.
+(* Tight magnitude bounds on the high words, matching DWPlusDW_relative_error_input_cond.
    These are weaker than the older `|xh + xl| < Omega/4` form (which is
    used in the paper) but suffice for every downstream use here. *)
 Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
@@ -1699,7 +1699,7 @@ Qed.
 
 End DWPlusDWFinite.
 
-(* Bridge: DWPlusDW_cond directly implies finiteness of the fst component.
+(* Bridge: DWPlusDW_relative_error_input_cond directly implies finiteness of the fst component.
    This packages the DWPlusDWFinite section's hypotheses as a single Prop
    suitable for use as a VST PRE-condition. *)
 Section DWPlusDWCondBridge.
@@ -1712,7 +1712,7 @@ Variables (xh xl yh yl : ftype t).
    fprec = 11) it is discharged by computation. *)
 Theorem AccurateDWPlusDW_sum_finite_from_cond :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_relative_error_input_cond xh xl yh yl ->
   is_finite (fst (AccurateDWPlusDW xh xl yh yl)) = true.
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
@@ -1721,7 +1721,7 @@ Qed.
 
 Theorem AccurateDWPlusDW_finite_from_cond :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_relative_error_input_cond xh xl yh yl ->
   is_finite_p (AccurateDWPlusDW xh xl yh yl).
 Proof.
 intros Hp3 Hcond.
@@ -1741,7 +1741,7 @@ Qed.
 *)
 Theorem TwoSum_cond_from_DWPlusDW_cond_xh_yh :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl -> TwoSum_cond xh yh.
+  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_cond xh yh.
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
 eapply TwoSum_cond_xh_yh_inner; first [eassumption | cbv; intros; discriminate].
@@ -1749,7 +1749,7 @@ Qed.
 
 Theorem TwoSum_cond_from_DWPlusDW_cond_xl_yl :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl -> TwoSum_cond xl yl.
+  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_cond xl yl.
 Proof.
 intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
 eapply TwoSum_cond_xl_yl_inner; first [eassumption | cbv; intros; discriminate].
@@ -1758,7 +1758,7 @@ Qed.
 (* These two discharge the Fast2Sum_cond disjunction via the *_disjunction lemmas. *)
 Theorem Fast2Sum_cond_from_DWPlusDW_cond_sh_c :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_relative_error_input_cond xh xl yh yl ->
   Fast2Sum_cond (TwoSumF_sum xh yh)
                 (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)).
 Proof.
@@ -1768,7 +1768,7 @@ Qed.
 
 Theorem Fast2Sum_cond_from_DWPlusDW_cond_vh_w :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_relative_error_input_cond xh xl yh yl ->
   Fast2Sum_cond
     (Fast2Sum_sum (TwoSumF_sum xh yh)
                   (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))

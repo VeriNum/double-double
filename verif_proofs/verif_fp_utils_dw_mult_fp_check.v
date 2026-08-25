@@ -25,14 +25,14 @@ Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* dw_mult_fp_check(x, y) returns 1 only if DWTimesFP_cond_acc holds:
+(* dw_mult_fp_check(x, y) returns 1 only if DWTimesFP_mixed_error_input_cond holds:
    xh, xl, y finite, (xh, xl) a double-word, and the STRICT rounded-product test
    |RN(xh*y)| < 2^1023, which supplies both is_finite (BMULT xh y) and the real
    product bound |FT2R xh * FT2R y| <= Omega/2 (prod_bnd_facts).
 
    The check does NOT test Fast2Mult's underflow disjunction (the `mult_safe`
    short-circuit it used to carry, still present in fast2_mult_check and
-   dw_mult_dw_check).  DWTimesFP_cond_acc is all the exported contract needs:
+   dw_mult_dw_check).  DWTimesFP_mixed_error_input_cond is all the exported contract needs:
    dw_mult_fp9_guarded_spec states the whole-range mixed bound
    2u^2|P| + 2.51*eta (DWMulFP_acc.DWTimesFP3_error_mixed_flat) rather than the
    pure 2u^2 relative bound, and that holds in the Fast2Mult underflow gap too.
@@ -41,7 +41,7 @@ Ltac fix_cmp_locals :=
    Structure mirrors body_dw_plus_fp_check: the dwx cascade, the ldexp bound
    constant, the fabs comparison, and a final return cascade that is a pure
    conjunction with no disjunctive arm.  Raw facts are carried through each
-   forward_if and DWTimesFP_cond_acc is discharged only at the final return
+   forward_if and DWTimesFP_mixed_error_input_cond is discharged only at the final return
    join. *)
 Lemma body_dw_mult_fp_check :
   semax_body Vprog Gprog f_dw_mult_fp_check dw_mult_fp_check_spec.
@@ -179,7 +179,7 @@ Proof.
            Intros b9; rename H into Hb9.
            forward.  (* return t'9 *)
            Exists b9; entailer!.
-           (* FINAL discharge: the three conjuncts of DWTimesFP_cond_acc.
+           (* FINAL discharge: the three conjuncts of DWTimesFP_mixed_error_input_cond.
               No underflow disjunct to prove -- that is the whole point of the
               weakening -- so prod_bnd_facts closes both remaining goals
               (Fast2Mult finiteness AND the product-magnitude bound) in one
@@ -191,6 +191,6 @@ Proof.
            destruct (prod_bnd_facts (fst xh) y)
              as [Hbmul_fin Hprodb].
            { unfold bpb in Hbpbt; exact Hbpbt. }
-           unfold DDConds.DWTimesFP_cond_acc, DDConds.Fast2Mult_cond_acc.
+           unfold DDConds.DWTimesFP_mixed_error_input_cond, DDConds.Fast2Mult_cond_acc.
            repeat (split; try assumption).
 Qed.

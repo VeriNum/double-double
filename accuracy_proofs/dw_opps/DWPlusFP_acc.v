@@ -99,7 +99,7 @@ Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R y).
 
 (* start section hyps *)
-Hypothesis COND : DWPlusFP_cond xh xl y.
+Hypothesis COND : DWPlusFP_relative_error_input_cond xh xl y.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 (* end section hyps *)
 

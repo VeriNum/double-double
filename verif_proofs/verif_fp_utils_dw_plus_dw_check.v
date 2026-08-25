@@ -4,7 +4,7 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_plus_dw_check(x, y) returns 1 only if DWPlusDW_cond holds:
+(* dw_plus_dw_check(x, y) returns 1 only if DWPlusDW_relative_error_input_cond holds:
    each component is finite, both (xh, xl) and (yh, yl) are double-words,
    and |xh|, |yh| <= Omega/4 = 2^1022.
 
@@ -288,7 +288,7 @@ Proof.
                        destruct (Hb14 eq_refl) as [Hb6t [Hb8t [Hbxht Hbyht]]].
                        destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                        destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
-                       unfold DDConds.DWPlusDW_cond.
+                       unfold DDConds.DWPlusDW_relative_error_input_cond.
                        repeat (split; try assumption).
                        { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                          unfold bxh, q_omega_val in Hbxht.
