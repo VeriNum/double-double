@@ -65,7 +65,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
-Require Import DWPlusFP_acc_helpers DWMulFP_acc.
+Require Import DWPlusFP_acc_helpers DWMulFP_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 From Flocq Require Relative Sterbenz.
@@ -1234,7 +1234,7 @@ have Hdt_b : Rabs (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err
   - apply Req_le; ring. }
 (* ---- xl ---- *)
 have Hxl_b : Rabs (FT2R xl) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) + bpow radix2 emin.
-{ have Hdwu := DWMulFP_acc.aux_dwu xh xl Hdwp.
+{ have Hdwu := DW_acc_lemmas.dw_low_le_half_ulp xh xl Hdwp.
   have Hul := ulp_le_lin (FT2R xh).
   have Hb1p : bpow radix2 (1 - fprec t) = 2 * (bpow radix2 (- fprec t)).
   { replace (1 - fprec t)%Z with (1 + - fprec t)%Z by lia.
@@ -2008,7 +2008,7 @@ have Hyne : FT2R y <> 0.
     (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
 have Hxl : Rabs (FT2R xl) <= u * Rabs (FT2R xh)
-  by exact (DWMulFP_acc.aux_dwu_rel xh xl Hdwp).
+  by exact (@DW_acc_lemmas.dw_low_le_u_high t STD xh xl Hdwp).
 have Hsum : (1 - u) * Rabs (FT2R xh) <= Rabs (FT2R xh + FT2R xl).
 { have Ht := Rabs_triang_inv (FT2R xh) (- FT2R xl).
   rewrite Rabs_Ropp in Ht.

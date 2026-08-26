@@ -203,10 +203,10 @@ Section CorrectDWDivDW.
   (** The Fast2Sum components of the reciprocal residual are finite, obtained
       by projecting backward through [DWTimesFP3]. *)
   Fact FIN_eh : is_finite eh = true.
-  Proof. exact (DWMulFP_acc.FINxh eh el th FIN_timesfp). Qed.
+  Proof. exact (DWMulFP_acc.DWTimesFP3_xh_finite eh el th FIN_timesfp). Qed.
 
   Fact FIN_el : is_finite el = true.
-  Proof. exact (DWMulFP_acc.FINxl eh el th FIN_timesfp). Qed.
+  Proof. exact (DWMulFP_acc.DWTimesFP3_xl_finite eh el th FIN_timesfp). Qed.
 
   Fact FIN_fast2sum : is_finite_p (Fast2Sum rh rl).
   Proof. split; [exact FIN_eh | exact FIN_el]. Qed.
@@ -394,21 +394,17 @@ Qed.
 (* The generic Algorithm-9 / Fast2Mult / Fast2Sum underflow-floor lemmas that
    used to sit here now live in DWMulFP_acc.v, where they belong: they are
    statements about DWTimesFP3 (Algorithm 9), they were already built on top of
-   DWMulFP_acc.DWTimesFP_relerr_bound, and nothing about them is division
+   the corresponding multiplication accuracy proof, and nothing about them is division
    specific.  Moving them upstream removed a layering inversion and relaxed
    their p >= 14 hypothesis to p >= 3.  The operation-independent rounding
    lemmas arrive through FLT_helpers; the Algorithm-9 lemmas arrive unqualified
    through the Require Import DWMulFP_acc above:
 
      round_FLT_error_rel_emin        round_abs_le_relative_plus_half_emin
-     Fast2Mult_sum_error_floor       DWTimesFP_core_error_floor_gap
      Fast2Sum_sum_exact_of_sum_small (replaces Fast2Sum_sum_exact_floor_small)
      DWTimesFP3_sum_exact_of_ord     DWTimesFP3_double_word_of_sum
-     Fast2Sum_double_word_of_sum     DWTimesFP3_error_floor_gap
-     DWTimesFP3_error_mixed          DWTimesFP3_error_mixed_flat
-     DWTimesFP3_double_word_mixed
-
-   DWMulFP_acc also exports the assembled public form DWTimesFP3_error_mixed. *)
+     Fast2Sum_double_word_of_sum
+     DWTimesFP_mixed_guarantee_from_cond *)
 
 (** Absolute form of the paper-tight DWPlusFP theorem, including the zero-sum
     case through its multiplicative-error witness. *)
@@ -741,7 +737,7 @@ set th := BDIV (Zconst t 1) yh.
 have Hres := DWDivDW_th_yh_residual_from_cond xh xl yh yl COND.
 fold th in Hres.
 have Hyl : Rabs (FT2R yl) <= bpow radix2 (- fprec t) * Rabs (FT2R yh) :=
-  @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
+  @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
 have Hu0 : 0 <= bpow radix2 (- fprec t) by apply bpow_ge_0.
 have Hthy : Rabs (FT2R th * FT2R yh)
              <= 1 + bpow radix2 (- fprec t).
@@ -848,7 +844,7 @@ specialize (Hres UFth).
 rewrite Rabs_R1 Rmult_1_l in Hres.
 fold th in Hres.
 have Hyl : Rabs (FT2R yl) <= bpow radix2 (- fprec t) * Rabs (FT2R yh) :=
-  @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
+  @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
 have Hu0 : 0 <= bpow radix2 (- fprec t) by apply bpow_ge_0.
 have Hu16 : bpow radix2 (- fprec t) <= /16.
 { have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra).
@@ -1604,10 +1600,10 @@ have Hel : Rabs (FT2R el) <= 12*u.
 set ch := BMULT eh th.
 set cl1 := Fast2Mult_err eh th.
 set cl3 := BFMA el th cl1.
-have Fch := DWMulFP_acc.FIN3 eh el th (conj Fdh Fdl); fold ch in Fch.
-have Ffast := DWMulFP_acc.FIN1 eh el th (conj Fdh Fdl).
+have Fch := DWMulFP_acc.DWTimesFP3_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
+have Ffast := DWMulFP_acc.DWTimesFP3_fast2mult_finite eh el th (conj Fdh Fdl).
 have Fcl1 : is_finite cl1 = true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_acc.FIN2 eh el th (conj Fdh Fdl); fold cl1 cl3 in Fcl3.
+have Fcl3 := DWMulFP_acc.DWTimesFP3_correction_finite eh el th (conj Fdh Fdl); fold cl1 cl3 in Fcl3.
 have Hch : Rabs (FT2R ch) <= 6*u*T.
 { unfold ch. rewrite -(BMULT_round_correct t eh th Fch).
   eapply Rle_trans; [apply Hround_uT with (C := 5) | nra].
@@ -2000,8 +1996,8 @@ have Hxhne : FT2R xh <> 0.
 { intro H0. move: Hq; rewrite H0 /Rdiv Rmult_0_l Rabs_R0.
   have := bpow_gt_0 radix2
     (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1); lra. }
-have Hxl := @DWMulFP_acc.aux_dwu_rel t STD xh xl DWx.
-have Hyl := @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
+have Hxl := @DW_acc_lemmas.dw_low_le_u_high t STD xh xl DWx.
+have Hyl := @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
 fold u in Hxl, Hyl.
 have HXlo : (1-u)*Rabs (FT2R xh) <= Rabs X.
 { unfold X. have H := Rabs_triang_inv (FT2R xh) (-FT2R xl).
@@ -2356,10 +2352,10 @@ fold th e d in Fd. destruct Fd as [[Fdh Fdl] _].
 fold eh el dh dl in Fdh, Fdl.
 set ch := BMULT eh th; set cl1 := Fast2Mult_err eh th.
 set cl3 := BFMA el th cl1; set z := BMINUS dh ch.
-have Fch := DWMulFP_acc.FIN3 eh el th (conj Fdh Fdl); fold ch in Fch.
-have Ffast := DWMulFP_acc.FIN1 eh el th (conj Fdh Fdl).
+have Fch := DWMulFP_acc.DWTimesFP3_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
+have Ffast := DWMulFP_acc.DWTimesFP3_fast2mult_finite eh el th (conj Fdh Fdl).
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_acc.FIN2 eh el th (conj Fdh Fdl);
+have Fcl3 := DWMulFP_acc.DWTimesFP3_correction_finite eh el th (conj Fdh Fdl);
   fold cl1 cl3 in Fcl3.
 have Fz : is_finite z=true.
 { move: Fdl. unfold dl,d,DWTimesFP3,Fast2Sum,snd,
@@ -2706,8 +2702,8 @@ have Hthreshold :
   apply bpow_le. unfold common.emin, SpecFloat.emin.
   pose proof (fprec_lt_femax t); lia. }
 have HP : Rabs (FT2R xh * FT2R mh) <= 2 by lra.
-have Hxl := @DWMulFP_acc.aux_dwu_rel t STD xh xl DWx.
-have Hmlr := @DWMulFP_acc.aux_dwu_rel t STD mh ml DWm.
+have Hxl := @DW_acc_lemmas.dw_low_le_u_high t STD xh xl DWx.
+have Hmlr := @DW_acc_lemmas.dw_low_le_u_high t STD mh ml DWm.
 fold u in Hxl, Hmlr.
 have HPabs : Rabs (FT2R xh) * Rabs (FT2R mh) <= 2.
 { rewrite -Rabs_mult; exact HP. }
@@ -3706,12 +3702,13 @@ have Hex := DWDivDW_residual_fast2sum_exact_from_cond
 fold th rh rl e in Hex. cbv zeta in Hex.
 have DWe := Fast2Sum_double_word_of_sum rh rl Fe Hex.
 fold e in DWe.
-split.
-- have H := DWTimesFP3_error_mixed_flat
-    (fst e) (snd e) th ltac:(lia) DWe Fd.
-  fold d in H. exact H.
-- exact (DWTimesFP3_double_word_mixed
-    (fst e) (snd e) th ltac:(lia) DWe Fd).
+have H := DWTimesFP_mixed_guarantee_from_cond
+  (fst e) (snd e) th ltac:(lia) (conj DWe Fd).
+fold d in H.
+unfold DWTimesFP_mixed_guarantee in H.
+destruct d as [dh dl].
+cbn [fst snd] in H |- *.
+exact H.
 Qed.
 
 Lemma DWDivDW_reciprocal_plus_error_paper_tight
@@ -4008,7 +4005,7 @@ have Hu : u <= /16384.
 { unfold u. have -> : (/16384:R) = bpow radix2 (-14) by (simpl; lra).
   apply bpow_le; lia. }
 move: (COND) => [_ [_ [_ [_ [_ [DWy _]]]]]].
-have Hyl := @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
+have Hyl := @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
 fold u in Hyl.
 have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
 have HYne : Y <> 0.
@@ -4205,7 +4202,7 @@ have HYne : Y<>0.
 { move: (COND) => [_ [_ [_ [_ [_ [DWy _]]]]]].
   have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
   intro HY0; apply Hyhne.
-  have Hyl := @DWMulFP_acc.aux_dwu_rel t STD yh yl DWy.
+  have Hyl := @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
   fold u in Hyl.
   have Hrev := Rabs_triang_inv (FT2R yh) (-FT2R yl).
   rewrite Rabs_Ropp in Hrev.
@@ -4493,7 +4490,7 @@ Qed.
     Same shape as [DWDivDW3_closing_mixed_error_from_cond], but with no lower
     bound on the closing product [xh*mh] anywhere in its proof -- hence no
     quotient floor, hence [DWDivDW_mixed_safe_input_cond] instead of [DWDivDW_relative_error_input_cond].  The
-    entire regime tree is [DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc]
+    entire regime tree is [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond]
     instantiated at the two double words [(xh,xl)] and [(mh,ml)]: nothing in it
     was ever division-specific, and Algorithm 12's own whole-range theorem
     covers the sub-threshold gap through the tiny-sum lattice argument rather
@@ -4538,8 +4535,8 @@ destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m mh ml in DWm.
 have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 COND.
 specialize (FIN NANS STD). fold th rh rl e d m mh ml in FIN.
 change (is_finite_p (DWTimesDW3 xh xl mh ml)) in FIN.
-have Hmul := DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc
-  xh xl mh ml ltac:(lia) (conj DWx (conj DWm FIN)).
+have Hmul := DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond
+  xh xl mh ml ltac:(lia) (conj (conj DWx DWm) FIN).
 exact Hmul.
 Qed.
 
@@ -5281,8 +5278,7 @@ Let Q := X / (FT2R yh + FT2R yl).
 Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
           FT2R (snd (DWDivDW3 xh xl yh yl)).
 
-(** Compact name for the absolute error, the DW/DW-division analogue of
-    [DWMulDW_acc.absolute_error_DWTimesDW].  It exists for the VST layer, so
+(** Compact name for the absolute error.  It exists for the VST layer, so
     that [dw_div_dw18_guarded_spec]'s postcondition can name the bound instead
     of spelling the [Rabs (... - .../...)] term out literally: funspec size is
     load-bearing for OpsVSU's assembly time, since [DWDivDW3] is the largest
@@ -5326,7 +5322,7 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
     [DWDivDW3_finite_from_cond] for [FIN], and
     [DWDivDW_reciprocal_relative_from_cond] for [DWm] -- and neither reads the
     quotient floor.  The closing multiplication was never at risk: since
-    Algorithm 12 went whole-range, [DWMulDW_acc.DWTimesDW3_double_word_mixed]
+    Algorithm 12 went whole-range, [DWMulDW_acc.DWTimesDW_double_word_from_cond]
     needs only the two input double words and finiteness. *)
 Theorem DWDivDW_double_word_from_safe_input_cond :
   double_word_prop (fst (DWDivDW3 xh xl yh yl))
@@ -5342,8 +5338,8 @@ destruct Hrec as [_ [_ [_ [DWm _]]]].
 move: (CONDA) => [_ [_ [_ [_ [DWx _]]]]].
 have Hdw : double_word_prop (fst (DWTimesDW3 xh xl mh ml))
                             (snd (DWTimesDW3 xh xl mh ml))
-  by exact (DWMulDW_acc.DWTimesDW3_double_word_mixed xh xl mh ml
-              ltac:(lia) (conj DWx (conj DWm FINmul))).
+  by exact (DWMulDW_acc.DWTimesDW_double_word_from_cond xh xl mh ml
+              ltac:(lia) (conj (conj DWx DWm) FINmul)).
 exact Hdw.
 Qed.
 
@@ -5469,7 +5465,7 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
     product [xh*mh] avoids deep underflow (see [DWDivDW3_double_word] and the
     banner over Section ResultDWDivDW).  The first is supplied by
     [DWDivDW_reciprocal_relative_from_cond]; the second is no longer needed at
-    all, because [DWMulDW_acc.DWTimesDW3_double_word_mixed] establishes
+    all, because [DWMulDW_acc.DWTimesDW_double_word_from_cond] establishes
     Algorithm 12's closure over the WHOLE range -- below the TwoProd threshold
     it routes through the gap arm of [DWTimesDW3_error_floor_gap] rather than
     the magnitude-ordering argument that needed the normal-range bound.

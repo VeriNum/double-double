@@ -94,8 +94,9 @@ forward_if Post_if.
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (@relative_errorDWPlusFP_from_cond _ Tdouble _ (fst xh) (snd xh) y HFC Hfp)
-    as Hacc.
+    (@DWPlusFP_mixed_guarantee_from_safe_input_cond
+       _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
+    as Hg.
   entailer!!.
 Qed.
 
@@ -124,7 +125,8 @@ forward_if Post_if.
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (relative_errorDWPlusDW_correct (fst xh) (snd xh) (fst yh) (snd yh) HFC Hfp)
-    as Hacc.
+    (DWPlusDW_mixed_guarantee_from_safe_input_cond
+       (fst xh) (snd xh) (fst yh) (snd yh) Hfp HFC)
+    as Hg.
   entailer!!.
 Qed.

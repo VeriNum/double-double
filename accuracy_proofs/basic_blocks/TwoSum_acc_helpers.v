@@ -498,7 +498,7 @@ Qed.
    exactly what is wanted in the Fast2Mult underflow gap, where the closing
    Fast2Sum of DWTimesFP3 may be unordered: the value is then recovered
    separately from the shared FLT/FIX lattice (see
-   DWMulFP_acc.Fast2Sum_sum_exact_of_sum_small). *)
+   Fast2Sum_acc_helpers.Fast2Sum_sum_exact_of_sum_small). *)
 Lemma is_finite_FastSum_small (a b : ftype t):
   Rabs (FT2R b) <= /4 * Omega ->
   is_finite (BPLUS a b) = true ->

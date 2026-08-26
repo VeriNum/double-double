@@ -233,8 +233,7 @@ Definition dw_plus_fp_guarded_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP((relative_error_DWPlusFP (fst xh) (snd xh) y
-           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)%R)
+    PROP(DWPlusFP_mixed_guarantee (fst xh) (snd xh) y)
     RETURN()
     SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
@@ -251,9 +250,8 @@ Definition dw_plus_dw2_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP((relative_error_DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)
-           <= (3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2)
-              / (1 - 4 * (bpow Zaux.radix2 (- fprec Tdouble))))%R)
+    PROP(DWPlusDW_mixed_guarantee
+           (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
           (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
@@ -264,14 +262,15 @@ Definition dw_plus_dw2_guarded_spec :=
 
      |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta,   eta = 2^emin,
 
-   i.e. DWMulFP_acc.DWTimesFP3_error_mixed_flat, reached here through its
-   cond-level form DWTimesFP_mixed_accuracy_from_cond_acc.  The PRE is empty:
+   i.e. DWMulFP_acc.DWTimesFP_mixed_guarantee_from_cond, reached here through its
+   safe-input form DWTimesFP_mixed_guarantee_from_safe_input_cond.  The PRE is
+   empty:
    dw_mult_fp9_guarded's runtime check makes the POST unconditional, and the
    check now tests only DWTimesFP_mixed_safe_input_cond -- no underflow disjunct -- so inputs
    whose leading product falls in the Fast2Mult underflow gap are computed rather
    than rejected.  The price is stated in the bound: the 2.51*eta floor term is
    carried in every regime, including the normal one where the sharper pure 2u^2
-   relative bound (DWTimesFP_accuracy_from_cond, which needs the gap excluded)
+   relative bound (DWTimesFP_relative_accuracy, which needs the gap excluded)
    would hold. *)
 Definition dw_mult_fp9_guarded_spec :=
   DECLARE _dw_mult_fp9_guarded
@@ -284,12 +283,7 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP((absolute_error_DWTimesFP (fst xh) (snd xh) y
-           <= 2 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2 *
-                Rabs ((FT2R (fst xh) + FT2R (snd xh)) * FT2R y)
-              + 251/100 * bpow Zaux.radix2 (@common.emin Tdouble))%R
-         /\ double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
-                             (snd (DWTimesFP3 (fst xh) (snd xh) y)))
+    PROP(DWTimesFP_mixed_guarantee (fst xh) (snd xh) y)
     RETURN()
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
@@ -299,21 +293,22 @@ Definition dw_mult_fp9_guarded_spec :=
      |(zh+zl) - (xh+xl)*(yh+yl)|
         <= 4u^2 |(xh+xl)*(yh+yl)| + 2.5*eta,   eta = 2^emin,
 
-   i.e. DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc, reached here through its
-   cond-level form DWTimesDW_mixed_accuracy_from_cond_acc.  The PRE is empty:
+   i.e. DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond, reached here through its
+   safe-input form DWTimesDW_mixed_guarantee_from_safe_input_cond.  The PRE is
+   empty:
    dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
    check now tests only DWTimesDW_mixed_safe_input_cond -- no underflow disjunct -- so inputs
    whose leading product falls in the Fast2Mult underflow gap are computed rather
    than rejected.  The price is stated in the bound: the 2.5*eta floor term is
    carried in every regime, including the normal one where the sharper pure 8u^2
-   relative bound (DWTimesDW_accuracy_from_cond, which needs the gap excluded)
+   relative bound (DWTimesDW_relative_accuracy, which needs the gap excluded)
    would hold.
 
    Output double-word closure survives the weakening: it needs only that the
    closing Fast2Sum preserves its sum, which holds above the threshold via the
    ordering |cl3| <= |ch| and inside the gap because failure of that ordering
    forces the exact sum onto the FLT/FIX lattice at emin, where Fast2Sum is
-   exact anyway (DWTimesDW3_double_word_from_cond_acc). *)
+   exact anyway (DWTimesDW_double_word_from_cond). *)
 Definition dw_mult_dw12_guarded_spec :=
   DECLARE _dw_mult_dw12_guarded
   WITH s: val, x: val, y: val,
@@ -326,14 +321,8 @@ Definition dw_mult_dw12_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP((absolute_error_DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)
-           <= 4 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2 *
-                Rabs ((FT2R (fst xh) + FT2R (snd xh)) *
-                      (FT2R (fst yh) + FT2R (snd yh)))
-              + 5/2 * bpow Zaux.radix2 (@common.emin Tdouble))%R
-         /\ double_word_prop
-              (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
-              (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
+    PROP(DWTimesDW_mixed_guarantee
+           (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;

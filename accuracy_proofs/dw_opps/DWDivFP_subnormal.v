@@ -48,7 +48,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc
         Fast2Mult_acc_helpers TwoSum_acc Fast2Sum_acc.
-Require Import DWPlusFP_acc_helpers DWMulFP_acc.
+Require Import DWPlusFP_acc_helpers DWMulFP_acc DW_acc_lemmas.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
@@ -317,7 +317,8 @@ Qed.
 
 Lemma sub_L : Rabs L <= /2 * M.
 Proof.
-have Hrel : Rabs L <= u * Rabs X by apply (aux_dwu_rel xh xl Hdwp).
+have Hrel : Rabs L <= u * Rabs X
+  by exact (@dw_low_le_u_high t STD xh xl Hdwp).
 have H := sub_u_xh. lra.
 Qed.
 
@@ -467,7 +468,8 @@ have HY : 0 < Rabs Y by (apply Rabs_pos_lt; exact Hyne).
 have HL := sub_L. have HT := sub_th_close. have Huq := sub_u_q.
 have HQq : Rabs (Q - X / Y) <= u * Rabs (X / Y).
 { have Heq : Q - X / Y = L / Y by (field; exact Hyne).
-  have Hrel : Rabs L <= u * Rabs X by apply (aux_dwu_rel xh xl Hdwp).
+  have Hrel : Rabs L <= u * Rabs X
+    by exact (@dw_low_le_u_high t STD xh xl Hdwp).
   rewrite Heq /Rdiv !Rabs_mult Rabs_inv.
   have Hexp : u * (Rabs X * / Rabs Y) = (u * Rabs X) * / Rabs Y by ring.
   rewrite Hexp.
@@ -967,7 +969,8 @@ Qed.
 
 Lemma fin_L_bnd : Rabs (FT2R xl) <= /64 * Om.
 Proof.
-have Hrel : Rabs (FT2R xl) <= u * Rabs (FT2R xh) by apply (aux_dwu_rel xh xl Hdwp).
+have Hrel : Rabs (FT2R xl) <= u * Rabs (FT2R xh)
+  by exact (@dw_low_le_u_high t STD xh xl Hdwp).
 have HX := fin_X4. have HO := fin_Om32.
 have Hu : u <= /16.
 { have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra). apply bpow_le; lia. }

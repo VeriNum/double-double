@@ -160,7 +160,7 @@ Definition dw_div_fp_check_spec :=
 
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
-   (DWMulFP_acc.DWTimesFP_mixed_accuracy_from_cond_acc) and proves that the
+   (DWMulFP_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
    output is a valid double word.  It does not give the pure 2u^2 relative
    bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=

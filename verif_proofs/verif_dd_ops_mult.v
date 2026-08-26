@@ -81,15 +81,11 @@ forward_if Post_if.
     by (unfold fprec, Tdouble; simpl; lia).
   (* The whole-range mixed bound is the public API for DW x FP: the guard only
      establishes DWTimesFP_mixed_safe_input_cond (no underflow disjunct), which is exactly
-     what DWTimesFP3_error_mixed_flat needs once finiteness is derived. *)
+     what DWTimesFP_mixed_guarantee_from_cond needs once finiteness is derived. *)
   pose proof
-    (@DWTimesFP_mixed_accuracy_from_cond_acc _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
-    as Hacc.
-  unfold absolute_error_DWTimesFP in Hacc.
-  assert (Hdw : double_word_prop (fst (DWTimesFP3 (fst xh) (snd xh) y))
-                                 (snd (DWTimesFP3 (fst xh) (snd xh) y)))
-    by exact (@DWTimesFP3_double_word_from_cond_acc _ Tdouble _
-                (fst xh) (snd xh) y Hfp HFC).
+    (@DWTimesFP_mixed_guarantee_from_safe_input_cond
+       _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
+    as Hg.
   entailer!!.
 Qed.
 
@@ -119,16 +115,10 @@ forward_if Post_if.
     by (unfold fprec, Tdouble; simpl; lia).
   (* The whole-range mixed bound is the public API for DW x DW: the guard only
      establishes DWTimesDW_mixed_safe_input_cond (no underflow disjunct), which is exactly
-     what DWTimesDW3_error_mixed_floor_acc needs once finiteness is derived. *)
+     what DWTimesDW_mixed_accuracy_from_cond needs once finiteness is derived. *)
   pose proof
-    (@DWTimesDW_mixed_accuracy_from_cond_acc _ Tdouble _
-        (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
-    as Hacc.
-  unfold absolute_error_DWTimesDW in Hacc.
-  assert (Hdw : double_word_prop
-                  (fst (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)))
-                  (snd (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))))
-    by exact (@DWTimesDW3_double_word_from_cond_acc _ Tdouble _
-                (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC).
+    (@DWTimesDW_mixed_guarantee_from_safe_input_cond
+       _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
+    as Hg.
   entailer!!.
 Qed.

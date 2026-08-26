@@ -434,9 +434,8 @@ Qed.
    `fabs(x->s * y) < ldexp(1.0, 1023)` establishes BOTH the Fast2Mult finiteness
    requirement (is_finite (BMULT a b)) and the cond's product-magnitude bound
    (Rabs (FT2R a * FT2R b) <= /2 * Omega).  Combines Float_cmp_Clt_bpow1023 (which
-   also derives z finite) with no_overflow_real_from_round_mul.  This is the
-   product-form replacement for sqrt_cond_facts (which derived the same two facts
-   from the old per-factor bounds). *)
+   also derives z finite) with no_overflow_real_from_round_mul.  It derives
+   both facts directly from the product bound. *)
 Lemma prod_bnd_facts :
   forall (a b : ftype Tdouble),
   Float.cmp Clt

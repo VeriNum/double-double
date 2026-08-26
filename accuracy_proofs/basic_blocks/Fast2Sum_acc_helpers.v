@@ -11,7 +11,7 @@
 
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
-Require Import float_acc_lems op_defs dd_tactics.
+Require Import float_acc_lems op_defs dd_tactics FLT_helpers.
 Require Import DDConds common TwoSum_acc.
 Require Import F2SumFLT F2SumFLX.
 From Flocq Require Import Pff2Flocq Core.
@@ -433,3 +433,95 @@ rewrite round_FLT_FLX => //.
 Qed.
 
 End FastTwoSumCorrect.
+
+Section FastTwoSumSmallExact.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(** Runtime Fast2Sum is exact when its exact sum remains on the shared
+    FLT/FIX lattice at exponent [emin]. *)
+Lemma Fast2Sum_sum_exact_of_sum_small (a b : ftype t) :
+  is_finite_p (DDModels.Fast2Sum a b) ->
+  Rabs (FT2R a + FT2R b) <=
+    bpow radix2 (@common.emin t + fprec t) ->
+  FT2R (fst (DDModels.Fast2Sum a b)) +
+    FT2R (snd (DDModels.Fast2Sum a b)) =
+    FT2R a + FT2R b.
+Proof.
+move => FIN Hsumabs.
+have Fa : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)
+  by apply generic_format_FLT_FT2R.
+have Fb : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R b)
+  by apply generic_format_FLT_FT2R.
+have Faf := generic_format_FIX_FLT radix2 (@common.emin t)
+  (fprec t) (FT2R a) Fa.
+have Fbf := generic_format_FIX_FLT radix2 (@common.emin t)
+  (fprec t) (FT2R b) Fb.
+have Fsumfix : generic_format radix2 (FIX_exp (@common.emin t))
+    (FT2R a + FT2R b).
+{ destruct (FIX_format_generic radix2 (@common.emin t) (FT2R a) Faf)
+    as [fa Hfa Hefa].
+  destruct (FIX_format_generic radix2 (@common.emin t) (FT2R b) Fbf)
+    as [fb Hfb Hefb].
+  pose fs := Float radix2 (Fnum fa + Fnum fb) (@common.emin t).
+  apply generic_format_FIX.
+  apply (FIX_spec radix2 (@common.emin t) (FT2R a + FT2R b) fs).
+  - unfold fs, F2R. simpl.
+    rewrite Hfa Hfb /F2R Hefa Hefb plus_IZR. ring.
+  - reflexivity. }
+have Fsum : generic_format radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (FT2R a + FT2R b).
+{ apply generic_format_FLT_FIX.
+  - apply fprec_gt_0.
+  - exact Hsumabs.
+  - exact Fsumfix. }
+have Fsumx : generic_format radix2 (FLX_exp (fprec t))
+    (FT2R a + FT2R b).
+{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)).
+  exact Fsum. }
+have Fbx : generic_format radix2 (FLX_exp (fprec t)) (FT2R b).
+{ apply (generic_format_FLX_FLT radix2 (@common.emin t) (fprec t)).
+  exact Fb. }
+have Heq := FastTwoSumEq_FLT a b FIN.
+have Hsumr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
+    (FT2R a + FT2R b) = FT2R a + FT2R b.
+{ apply round_generic; [apply valid_rnd_N | exact Fsumx]. }
+have Hbr : round radix2 (FLX_exp (fprec t)) (Znearest choice)
+    (FT2R b) = FT2R b.
+{ apply round_generic; [apply valid_rnd_N | exact Fbx]. }
+have Hpaper : F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) =
+    (FT2R a + FT2R b, 0).
+{ unfold F2Sum.Fast2Sum, F2SumFLX.Fast2Sum.
+  rewrite Hsumr.
+  replace (FT2R a + FT2R b - FT2R a)%R with (FT2R b) by ring.
+  rewrite Hbr.
+  replace (FT2R b - FT2R b)%R with 0 by ring.
+  rewrite round_0. reflexivity. }
+rewrite Hpaper /F2Rp /= in Heq.
+have Hh := f_equal fst Heq.
+have Hl := f_equal snd Heq.
+simpl in Hh, Hl. rewrite -Hh -Hl. ring.
+Qed.
+
+(** If Fast2Sum preserves the exact sum, its returned pair is a double word. *)
+Lemma Fast2Sum_double_word_of_sum (a b : ftype t) :
+  is_finite_p (DDModels.Fast2Sum a b) ->
+  FT2R (fst (DDModels.Fast2Sum a b)) +
+    FT2R (snd (DDModels.Fast2Sum a b)) =
+    FT2R a + FT2R b ->
+  double_word_prop (fst (DDModels.Fast2Sum a b))
+    (snd (DDModels.Fast2Sum a b)).
+Proof.
+move => FIN Hsum.
+set e := DDModels.Fast2Sum a b.
+fold e in Hsum.
+unfold double_word_prop, rounded. fold e. rewrite Hsum.
+change (FT2R (fst e) = round radix2
+  (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
+  (FT2R a + FT2R b)).
+have Hfst : fst e = BPLUS a b by reflexivity.
+rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
+Qed.
+
+End FastTwoSumSmallExact.

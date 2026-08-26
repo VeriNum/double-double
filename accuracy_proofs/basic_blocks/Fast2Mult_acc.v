@@ -5,7 +5,7 @@
    Helper lemmas live in Fast2Mult_acc_helpers.v. *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs common dd_tactics.
+Require Import float_acc_lems op_defs common dd_tactics FLT_helpers.
 Require Import DDConds.
 Require Export Fast2Mult_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
@@ -111,6 +111,101 @@ Proof.
 Qed.
 
 End FastTwoMultAcc.
+
+Section FastTwoMultFloor.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(** Even below the exact-reconstruction threshold, the compensated product
+    loses at most half a physical underflow ulp. *)
+Lemma Fast2Mult_sum_error_floor (a b : ftype t) :
+  (3 <= fprec t)%Z ->
+  is_finite_p (Fast2Mult a b) ->
+  Rabs (FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) -
+        FT2R a * FT2R b) <=
+    /2 * bpow radix2 (@common.emin t).
+Proof.
+move => Hp3 FIN.
+set x := (FT2R a * FT2R b)%R.
+set ch := Fast2Mult_mul a b.
+set cl := Fast2Mult_err a b.
+set r := (x - FT2R ch)%R.
+set u := bpow radix2 (- fprec t).
+set eta := bpow radix2 (@common.emin t).
+have Hu0 : 0 < u by apply bpow_gt_0.
+have Hu : u <= /8.
+{ unfold u. have -> : (/8:R) = bpow radix2 (-3) by (simpl; lra).
+  apply bpow_le; lia. }
+have Heta0 : 0 < eta by apply bpow_gt_0.
+have Fch : is_finite ch = true by exact (proj1 FIN).
+have Fcl : is_finite cl = true by exact (proj2 FIN).
+have Hchr : FT2R ch = round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) x.
+{ unfold ch, Fast2Mult_mul, Fast2Mult. symmetry.
+  apply BMULT_round_correct. exact Fch. }
+have Hop : FT2R (BOPP ch) = - FT2R ch.
+{ symmetry. apply BOPP_binary. right; exact Fch. }
+have Hclr : FT2R cl = round radix2
+    (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice) r.
+{ unfold cl, Fast2Mult_err, Fast2Mult.
+  rewrite -(BFMA_round_correct t a b (BOPP ch) Fcl) Hop.
+  unfold r, x. f_equal; ring. }
+destruct (Req_dec x 0) as [Hx0 | Hx0].
+- have Hch0 : FT2R ch = 0 by rewrite Hchr Hx0 round_0.
+  have Hr0 : r = 0 by unfold r; rewrite Hx0 Hch0; ring.
+  rewrite Hx0 Hch0 Hclr Hr0 round_0.
+  rewrite Rminus_0_r Rplus_0_l Rabs_R0. nra.
+- destruct (Rle_dec
+    (bpow radix2 (@common.emin t + 2 * fprec t - 1)) (Rabs x))
+    as [Hbig | Hsmall].
+  + have Hex := Fast2MultModel_correct a b Fch.
+    specialize (Hex ltac:(move => _; exact Hbig)).
+    fold x ch cl in Hex.
+    rewrite Hex. replace (FT2R ch + (x - FT2R ch) - x)%R with 0 by ring.
+    rewrite Rabs_R0. nra.
+  + have Hxe := round_FLT_error_rel_emin (t:=t) x.
+    fold u eta in Hxe. rewrite -Hchr in Hxe.
+    have Hrabs : Rabs r <= u * Rabs x + /2 * eta.
+    { unfold r. rewrite Rabs_minus_sym. exact Hxe. }
+    have HxB : Rabs x <
+        bpow radix2 (@common.emin t + 2 * fprec t - 1)
+      by apply Rnot_le_lt.
+    have Hux := Rmult_lt_compat_l u _ _ Hu0 HxB.
+    have Hscale : u * bpow radix2
+        (@common.emin t + 2 * fprec t - 1) =
+        bpow radix2 (@common.emin t + fprec t - 1).
+    { unfold u. rewrite -bpow_plus. f_equal; ring. }
+    rewrite Hscale in Hux.
+    have Hetahalf : /2 * eta = bpow radix2 (@common.emin t - 1).
+    { unfold eta. rewrite (bpow_plus radix2 (@common.emin t) (-1)).
+      change (bpow radix2 (-1)) with (/2:R). ring. }
+    have Hetasmall : /2 * eta <
+        bpow radix2 (@common.emin t + fprec t - 1).
+    { rewrite Hetahalf. apply bpow_lt. lia. }
+    have Hrsmall : Rabs r < bpow radix2 (@common.emin t + fprec t).
+    { have Hnext : bpow radix2 (@common.emin t + fprec t) =
+          2 * bpow radix2 (@common.emin t + fprec t - 1).
+      { transitivity
+          (bpow radix2 (@common.emin t + fprec t - 1) * bpow radix2 1).
+        - rewrite -bpow_plus. f_equal; ring.
+        - change (bpow radix2 1) with (2:R). ring. }
+      rewrite Hnext. nra. }
+    have Hvalid : Generic_fmt.Valid_exp
+        (SpecFloat.fexp (fprec t) (femax t)).
+    { apply FLT.FLT_exp_valid, fprec_gt_0. }
+    have Hre := @Ulp.error_le_half_ulp radix2
+      (SpecFloat.fexp (fprec t) (femax t)) Hvalid choice r.
+    have Hulp : Ulp.ulp radix2
+        (SpecFloat.fexp (fprec t) (femax t)) r = eta.
+    { unfold SpecFloat.fexp, common.emin.
+      apply ulp_FLT_small; [apply fprec_gt_0 | exact Hrsmall]. }
+    rewrite Hulp in Hre. rewrite -Hclr in Hre.
+    change (Rabs (FT2R ch + FT2R cl - x) <= /2 * eta).
+    replace (FT2R ch + FT2R cl - x)%R with (FT2R cl - r)%R
+      by (unfold r; ring).
+    exact Hre.
+Qed.
+
+End FastTwoMultFloor.
 
 Section FastTwoMultCheckImplies.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
