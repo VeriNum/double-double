@@ -194,8 +194,8 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 
      |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta
 
-   (DWMulFP_acc.DWTimesFP3_error_mixed_flat) and proves that the output is a
-   valid double word (DWTimesFP3_double_word_mixed).  Both conclusions hold in
+   (DWMulFP_acc.DWTimesFP_mixed_guarantee_from_cond), together with output
+   double-word closure.  Both conclusions hold in
    every regime given only the input double-word relation and finiteness of the
    computed pair.  The three conjuncts below are what a runtime guard needs to
    establish that finiteness.
@@ -276,7 +276,7 @@ Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
    the computed pair.  The conjuncts below are what a runtime guard needs to
    establish that finiteness (DWMulDW_acc.DWTimesDW3_finite_acc).  It does NOT
    suffice for the
-   pure 8u^2 relative bound (DWTimesDW_accuracy_from_cond), which is available
+   pure 8u^2 relative bound (DWTimesDW_relative_accuracy), which is available
    only when the nonzero underflow gap is excluded; that remains the province of
    the full DWTimesDW_relative_error_input_cond.
 
@@ -493,7 +493,7 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
     [DWTimesDW3 xh xl mh ml] block, whose old proof had to establish the
     magnitude ordering |cl3| <= |ch| by hand, and paid for it with a lower
     bound on the closing product |xh*mh| >= |xh/yh|/2.  That whole argument is
-    now [DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc], which covers the WHOLE
+    now [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
     range from double-word inputs and finiteness alone.  The price is the
     closing block's floor rising from [2*eta] to [5/2*eta], hence the exported
     mixed bound
