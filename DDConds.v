@@ -500,8 +500,9 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
 
       |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
 
-    ([DWDivDW_acc.DWDivDW3_error_mixed_acc]) together with output double-word
-    closure ([DWDivDW3_double_word_from_cond_acc]).  For Tdouble this admits
+    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_safe_input_cond]) together with
+    output double-word closure
+    ([DWDivDW_double_word_from_safe_input_cond]).  For Tdouble this admits
     every quotient below 2^-969 -- i.e. the entire underflowing-quotient range
     the mixed bound was built to cover, which the old guard rejected.
 

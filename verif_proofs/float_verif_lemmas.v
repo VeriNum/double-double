@@ -654,8 +654,8 @@ Qed.
    Bldexp-of-1.0 construction as q_omega_val:
 
      q_lo968_val = 2^(-968) = 2^(emin + 2p)     product-node lower bound
-                              (clause 8 of DWDivFP_relative_error_input_cond / _cond_acc / _cond_min,
-                               and DWDivDW_relative_error_input_cond's divisor lower bound)
+                              (used by the DW/FP safe and mixed input conditions,
+                               and by the DW/DW divisor lower bound)
      q_lo969_val = 2^(-969) = 2^(emin + 2p - 1) DWDivDW_relative_error_input_cond's quotient lower
                               bound
 
@@ -819,10 +819,11 @@ Qed.
 
    Why this exponent: conjunct 7 is stated directly on |FT2R yh|, and it says
    exactly eta*|yh| <= u^2/4.  That inequality IS the exported u^2 coefficient
-   of DWDivDW3_error_mixed_acc -- it pays for the reciprocal reconstruction's
-   own underflow floor once the closing multiply by X scales it up, at a charge
-   of fr/4 rather than 2*fr.  Loosening 966 by k binades multiplies the charge
-   by 2^k and takes the exported constant from 9.8 back toward 12.33.
+   of DWDivDW_mixed_accuracy_from_safe_input_cond -- it pays for the reciprocal
+   reconstruction's own underflow floor once the closing multiply by X scales
+   it up, at a charge of fr/4 rather than 2*fr.  Loosening 966 by k binades
+   multiplies the charge by 2^k and takes the exported constant from 9.8 back
+   toward 12.33.
 
    The check tests |y->s| directly with a non-strict comparison -- no rounded
    reciprocal node and no rounded->exact transfer are needed, so the test is

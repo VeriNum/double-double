@@ -2,8 +2,8 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (** The SUBNORMAL-QUOTIENT leg of DWDivFP3 (Algorithm 15), and with it the
-    public API on DDConds.DWDivFP_mixed_safe_input_cond -- the weakest of the three DW/FP
-    division conds, and the one the runtime guard dw_div_fp_check discharges.
+    public API on DDConds.DWDivFP_mixed_safe_input_cond -- the input-only
+    sufficient condition discharged by the existing runtime guard.
 
     WHY A SEPARATE LEG.  DWDivFP_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
     leading quotient (|xh/y| >= 2^(emin+p-1)); below that the node th is
@@ -30,14 +30,15 @@
     ============================================================================
     PUBLIC INTERFACE (all on DDConds.DWDivFP_mixed_safe_input_cond)
 
-      DWDivFP3_error_mixed_min             |Qhat - Q| <= 3u^2|Q| + eta
-      relative_errorDWDivFP3_from_cond_combined_min
-                                           the same, under the name the VST
-                                           client uses
-      DWDivFP3_is_DW_from_cond_min         output is a double word
+      DWDivFP_mixed_accuracy_from_safe_input_cond
+                                           |Qhat - Q| <= 3u^2|Q| + eta
+      DWDivFP_double_word_from_safe_input_cond
+                                           output is a double word
+      DWDivFP_mixed_guarantee_from_safe_input_cond
+                                           both results, bundled
 
       DWDivFP_normal_quotient_input_cond_of_mixed_safe_input_cond
-                                           min + normal quotient recovers the
+                                           safe input + normal quotient recovers the
                                            normal-quotient helper
 
     ADMIT-FREE.
@@ -1205,6 +1206,14 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (@common.emin t).
 Notation u    := (bpow radix2 (- fprec t)).
 
+Definition DWDivFP_mixed_guarantee (xh xl y : ftype t) : Prop :=
+  let '(zh, zl) := DWDivFP3 xh xl y in
+  Rabs
+    (FT2R zh + FT2R zl - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) +
+       bpow radix2 emin /\
+  double_word_prop zh zl.
+
 
 (* ============ the subnormal-quotient leg, discharged from the cond ============
    All three deliverables at once: the mixed bound, output closure, and
@@ -1229,7 +1238,7 @@ split; [| split ].
 - exact FIN.
 Qed.
 
-(* The minimum condition plus a normal quotient recovers the internal
+(* The safe input condition plus a normal quotient recovers the internal
    normal-quotient helper exactly: the two predicates differ only in the
    clause-5 slot, so this is one [repeat split].  This lets the normal branch
    reuse DWDivFP_acc's normal-range theorems verbatim. *)
@@ -1243,7 +1252,8 @@ repeat split; try assumption.
 Qed.
 
 (* ---------- the mixed bound: PRIMARY API ---------- *)
-Theorem DWDivFP3_error_mixed_min (xh xl y : ftype t) :
+Theorem DWDivFP_mixed_accuracy_from_safe_input_cond
+    (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
@@ -1259,18 +1269,9 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
 - exact (proj1 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs)).
 Qed.
 
-(* Compatibility name, matching relative_errorDWDivFP3_from_cond_combined{,_acc}.
-   This is the form body_dw_div_fp15_guarded applies. *)
-Theorem relative_errorDWDivFP3_from_cond_combined_min (xh xl y : ftype t) :
-  (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
-        - (FT2R xh + FT2R xl) / FT2R y)
-    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
-Proof. exact (DWDivFP3_error_mixed_min xh xl y). Qed.
-
 (* ---------- output double-word closure ---------- *)
-Corollary DWDivFP3_is_DW_from_cond_min (xh xl y : ftype t) :
+Corollary DWDivFP_double_word_from_safe_input_cond
+    (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
@@ -1283,7 +1284,22 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
 - exact (proj1 (proj2 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs))).
 Qed.
 
-Lemma DWDivFP3_finite_from_mixed_safe_input_cond (xh xl y : ftype t) :
+Theorem DWDivFP_mixed_guarantee_from_safe_input_cond
+    (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_mixed_safe_input_cond xh xl y ->
+  DWDivFP_mixed_guarantee xh xl y.
+Proof.
+intros Hp4 Hsafe.
+have Hacc := DWDivFP_mixed_accuracy_from_safe_input_cond xh xl y Hp4 Hsafe.
+have Hdw := DWDivFP_double_word_from_safe_input_cond xh xl y Hp4 Hsafe.
+unfold DWDivFP_mixed_guarantee.
+revert Hacc Hdw.
+destruct (DWDivFP3 xh xl y) as [zh zl].
+cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
+Qed.
+
+Lemma DWDivFP_result_finite_from_safe_input_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->
   is_finite_p (DWDivFP3 xh xl y).
@@ -1306,7 +1322,7 @@ Lemma DWDivFP_mixed_cond_of_safe_input_cond (xh xl y : ftype t) :
   DWDivFP_mixed_cond xh xl y.
 Proof.
 intros Hp4 Hsafe.
-have Hfin := DWDivFP3_finite_from_mixed_safe_input_cond xh xl y Hp4 Hsafe.
+have Hfin := DWDivFP_result_finite_from_safe_input_cond xh xl y Hp4 Hsafe.
 destruct Hsafe as (_ & _ & _ & Hdw & _ & _ & _ & Hxh).
 unfold DWDivFP_mixed_cond, DWDivFP_mixed_input_cond,
        DWDivFP_result_finite.

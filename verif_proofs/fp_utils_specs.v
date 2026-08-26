@@ -137,12 +137,11 @@ Definition dw_plus_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-(* Minimal cond: NO quotient floor at all -- the guard accepts every quotient
-   magnitude the format can represent.  What that buys the caller is the
-   whole-range MIXED bound
-   (DWDivFP_subnormal.relative_errorDWDivFP3_from_cond_combined_min) rather
-   than the pure 6u^2 relative bound; see dw_div_fp15_guarded_spec in
-   DDOpsASI.v.  Clause 8, the product-node floor on |xh|, is retained. *)
+(* Safe input cond: NO quotient floor at all -- the guard accepts every
+   quotient magnitude the format can represent.  What that buys the caller is
+   DWDivFP_subnormal.DWDivFP_mixed_guarantee_from_safe_input_cond rather than
+   the pure 6u^2 relative bound; see dw_div_fp15_guarded_spec in DDOpsASI.v.
+   The product-node floor on |xh| is retained. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,

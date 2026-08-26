@@ -49,7 +49,8 @@
         result under explicit no-underflow assumptions.
       - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
         runtime model, giving relative error at most [(98/10) * u^2].
-      - [DWDivDW3_error_mixed_acc] is the PRIMARY whole-range API: the mixed
+      - [DWDivDW_mixed_accuracy_from_safe_input_cond] is the PRIMARY
+        whole-range API: the mixed
         bound [(98/10) * u^2 * |Q| + 5/2 * eta], i.e. the paper's own [u^2]
         coefficient with every underflow contribution confined to the
         absolute term, matching the DW x FP, DW x DW and DW/FP tiers.
@@ -4501,7 +4502,8 @@ Qed.
     The price is the physical floor: the gap arm of Algorithm 12 spends five
     half-ulps, so [2*eta] becomes [5/2*eta].  That constant is carried
     symbolically through [DWDivDW3_error_mixed_arms_param] and shows up
-    verbatim in the exported [DWDivDW3_error_mixed_acc]; the [u^2] coefficient
+    verbatim in the exported
+    [DWDivDW_mixed_accuracy_from_safe_input_cond]; the [u^2] coefficient
     is untouched, because the quotient floor never entered the arm budgets. *)
 Local Lemma DWDivDW3_closing_mixed_error_from_cond_acc
     (xh xl yh yl : ftype t) :
@@ -5256,9 +5258,9 @@ End CondAccuracyDWDivDW.
    [2^(emin+2p-1) <= |xh/yh|] (conjunct 8).  Dropping that conjunct admits
    every underflowing quotient -- for Tdouble, everything below 2^-969, i.e.
    exactly the regime the mixed bound exists to describe and the old guard
-   rejected.  See the doc comment on [DWDivDW_mixed_safe_input_cond] in DDConds.v for why
-   conjuncts 7 and 9 are NOT removable in turn, and hence why there is no
-   further [DWDivDW_cond_min] tier.
+   rejected.  See the doc comment on [DWDivDW_mixed_safe_input_cond] in
+   DDConds.v for why the divisor upper and lower bounds remain in
+   [DWDivDW_mixed_input_cond].
 
    Two results are exported here, matching the DW/FP and DW x DW tiers: the
    mixed relative/physical-floor error bound and output double-word closure.
@@ -5266,7 +5268,7 @@ End CondAccuracyDWDivDW.
    the section after this one: absorbing [5/2*eta] into [u^2|Q|] needs the
    quotient floor (conjunct 8) to convert one floor ulp to [2.01*u^2|Q|].
    ============================================================ *)
-Section CondAccAccuracyDWDivDW_public.
+Section SafeInputGuaranteeDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl yh yl : ftype t).
@@ -5300,7 +5302,7 @@ Definition absolute_error_DWDivDW : R := Rabs (zr - Q).
     The [5/2*eta] is not an artifact of a missing guard: the residual nodes it
     comes from may legitimately be zero, which is exactly why the cond
     deliberately does not bound them below. *)
-Theorem DWDivDW3_error_mixed_acc :
+Theorem DWDivDW_mixed_accuracy_from_safe_input_cond :
   absolute_error_DWDivDW <=
     98/10*u^2*Rabs Q+5/2*bpow radix2 (@common.emin t).
 Proof.
@@ -5326,7 +5328,7 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
     quotient floor.  The closing multiplication was never at risk: since
     Algorithm 12 went whole-range, [DWMulDW_acc.DWTimesDW3_double_word_mixed]
     needs only the two input double words and finiteness. *)
-Theorem DWDivDW3_double_word_from_cond_acc :
+Theorem DWDivDW_double_word_from_safe_input_cond :
   double_word_prop (fst (DWDivDW3 xh xl yh yl))
                    (snd (DWDivDW3 xh xl yh yl)).
 Proof.
@@ -5349,7 +5351,8 @@ Qed.
     under ONE destructuring of the result pair.
 
     Why this exists rather than a two-conjunct funspec POST spelled out from
-    [DWDivDW3_error_mixed_acc] and [DWDivDW3_double_word_from_cond_acc].  Those
+    [DWDivDW_mixed_accuracy_from_safe_input_cond] and
+    [DWDivDW_double_word_from_safe_input_cond].  Those
     two mention [fst (DWDivDW3 xh xl yh yl)] and [snd (DWDivDW3 xh xl yh yl)]
     separately, so stating both puts FOUR copies of the [DWDivDW3] application
     in the funspec; [DWDivDW3] is the largest definition in the library, and
@@ -5359,24 +5362,25 @@ Qed.
     single occurrence, fewer than the error bound alone used to contribute, and
     Ops_VSU.v compiles in 15m45s WITH closure included.  Nothing about the mathematics
     changes: this is exactly the conjunction of the two theorems above. *)
-Definition DWDivDW3_guarantee_acc : Prop :=
+Definition DWDivDW_mixed_guarantee : Prop :=
   let (zh, zl) := DWDivDW3 xh xl yh yl in
   (Rabs (FT2R zh + FT2R zl - Q) <=
      98/10*u^2*Rabs Q + 5/2*bpow radix2 (@common.emin t))%R /\
   double_word_prop zh zl.
 
-Theorem DWDivDW3_guarantee_from_cond_acc : DWDivDW3_guarantee_acc.
+Theorem DWDivDW_mixed_guarantee_from_safe_input_cond :
+  DWDivDW_mixed_guarantee.
 Proof.
-have Hacc := DWDivDW3_error_mixed_acc.
-have Hdw := DWDivDW3_double_word_from_cond_acc.
+have Hacc := DWDivDW_mixed_accuracy_from_safe_input_cond.
+have Hdw := DWDivDW_double_word_from_safe_input_cond.
 unfold absolute_error_DWDivDW in Hacc.
-unfold DWDivDW3_guarantee_acc.
+unfold DWDivDW_mixed_guarantee.
 revert Hacc Hdw.
 destruct (DWDivDW3 xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-End CondAccAccuracyDWDivDW_public.
+End SafeInputGuaranteeDWDivDW.
 
 (* ============================================================
    Layer 3b: the full-cond public API
@@ -5472,12 +5476,12 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
 
     Note what is NOT required: no lower bound on [xh*mh], and not even the
     quotient floor -- this is now a direct corollary of the whole-range
-    [DWDivDW3_double_word_from_cond_acc] of Layer 3a. *)
+    [DWDivDW_double_word_from_safe_input_cond] of Layer 3a. *)
 Theorem DWDivDW3_double_word_from_cond :
   double_word_prop (fst (DWDivDW3 xh xl yh yl))
                    (snd (DWDivDW3 xh xl yh yl)).
 Proof.
-exact (DWDivDW3_double_word_from_cond_acc xh xl yh yl Hp14
+exact (DWDivDW_double_word_from_safe_input_cond xh xl yh yl Hp14
          (DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl COND)).
 Qed.
 

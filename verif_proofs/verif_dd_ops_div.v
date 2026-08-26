@@ -121,9 +121,9 @@ Qed.
 (* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
    call the check, exit on failure, otherwise recover DWDivFP_mixed_safe_input_cond and call
    the unguarded op.  The exported accuracy postcondition is the
-   regime-independent combined bound
-   (relative_errorDWDivFP3_from_cond_combined_min), which the minimal cond --
-   no quotient floor -- discharges unconditionally; see
+   bundled regime-independent guarantee
+   (DWDivFP_mixed_guarantee_from_safe_input_cond), which the safe input cond
+   discharges unconditionally; see
    dw_div_fp15_guarded_spec. *)
 Lemma body_dw_div_fp15_guarded :
   semax_body Vprog Gprog f_dw_div_fp15_guarded dw_div_fp15_guarded_spec.
@@ -148,13 +148,9 @@ forward_if Post_if.
   assert (Hp4 : (4 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (relative_errorDWDivFP3_from_cond_combined_min (fst xh) (snd xh) y Hp4 HFC)
-    as Hacc.
-  (* Output double-word closure, on the same minimal cond -- mirrors
-     body_dw_mult_fp9_guarded. *)
-  assert (Hdw : double_word_prop (fst (DWDivFP3 (fst xh) (snd xh) y))
-                                 (snd (DWDivFP3 (fst xh) (snd xh) y)))
-    by exact (DWDivFP3_is_DW_from_cond_min (fst xh) (snd xh) y Hp4 HFC).
+    (DWDivFP_mixed_guarantee_from_safe_input_cond
+       (fst xh) (snd xh) y Hp4 HFC)
+    as Hg.
   entailer!!.
 Qed.
 
@@ -196,7 +192,7 @@ forward_if Post_if.
      the result pair -- see dw_div_dw18_guarded_spec for why the two facts are
      not stated separately here. *)
   pose proof
-    (DWDivDW3_guarantee_from_cond_acc
+    (DWDivDW_mixed_guarantee_from_safe_input_cond
        (fst xh) (snd xh) (fst yh) (snd yh) Hp14 HFC)
     as Hg.
   entailer!!.

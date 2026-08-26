@@ -345,7 +345,7 @@ Definition dw_mult_dw12_guarded_spec :=
    division d/y can be subnormal (0 for exact division), so the underflow regime
    contributes one 2^emin absolute term.  The exported bound is therefore the
    regime-independent combined bound proven as
-   relative_errorDWDivFP3_from_cond_combined_min:
+   DWDivFP_mixed_guarantee_from_safe_input_cond:
      |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
    which holds unconditionally once the runtime check discharges
    DWDivFP_mixed_safe_input_cond.  Note the cond is the MINIMAL one: it carries no quotient
@@ -356,9 +356,9 @@ Definition dw_mult_dw12_guarded_spec :=
    it accepts got wider.  (What the floor used to buy was the PURE relative
    bound 6u^2, which is not exported here and remains on DWDivFP_relative_error_input_cond.)
 
-   The POST also carries output double-word closure
-   (DWDivFP3_is_DW_from_cond_min), matching dw_mult_fp9_guarded_spec and
-   dw_mult_dw12_guarded_spec.  Closure holds in every regime the guard admits --
+   The bundled POST also carries output double-word closure, matching
+   dw_mult_fp9_guarded_spec and dw_mult_dw12_guarded_spec.  Closure holds in
+   every regime the guard admits --
    including a subnormal quotient, where the usual ordering |tl| <= |th| can
    fail and exactness of the closing Fast2Sum comes instead from th + tl landing
    back on the 2^emin lattice. *)
@@ -373,26 +373,20 @@ Definition dw_div_fp15_guarded_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP((Rabs (FT2R (fst (DWDivFP3 (fst xh) (snd xh) y))
-                + FT2R (snd (DWDivFP3 (fst xh) (snd xh) y))
-                - (FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
-          <= 3 * (bpow Zaux.radix2 (- fprec Tdouble)) ^ 2
-               * Rabs ((FT2R (fst xh) + FT2R (snd xh)) / FT2R y)
-             + bpow Zaux.radix2 (@common.emin Tdouble))%R
-         /\ double_word_prop (fst (DWDivFP3 (fst xh) (snd xh) y))
-                             (snd (DWDivFP3 (fst xh) (snd xh) y)))
+    PROP(DWDivFP_mixed_guarantee (fst xh) (snd xh) y)
     RETURN()
     SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 (* DWDivDW (Algorithm 18) guarded wrapper.  The exported guarantee is
-   DWDivDW_acc.DWDivDW3_guarantee_acc: the WHOLE-RANGE mixed
+   DWDivDW_acc.DWDivDW_mixed_guarantee: the WHOLE-RANGE mixed
    relative/physical-floor bound TOGETHER WITH double-word closure of the
    result,
 
      |(zh+zl) - Q| <= 9.8 u^2 |Q| + 2.5 * 2^emin  /\  double_word_prop zh zl,
 
-   with Q = (xh+xl)/(yh+yl), proven as DWDivDW3_guarantee_from_cond_acc.  This
+   with Q = (xh+xl)/(yh+yl), proven as
+   DWDivDW_mixed_guarantee_from_safe_input_cond.  This
    matches dw_mult_dw12_guarded_spec and dw_div_fp15_guarded_spec, which export
    the same pair of facts.
 
@@ -409,7 +403,7 @@ Definition dw_div_fp15_guarded_spec :=
      bound only, no closure (3 copies)      16m01s
      this bundled form (2 copies)           15m45s
 
-   DWDivDW3_guarantee_acc matches the result pair ONCE, so the whole PROP
+   DWDivDW_mixed_guarantee matches the result pair ONCE, so the whole PROP
    carries a single occurrence -- fewer than the error bound alone used to
    contribute, which is why exporting closure here costs nothing.  DWTimesDW3 and DWDivFP3 are small enough that
    their specs pay nothing for the spelled-out form.
@@ -449,7 +443,7 @@ Definition dw_div_dw18_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP(DWDivDW3_guarantee_acc (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(DWDivDW_mixed_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
           (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
