@@ -99,7 +99,7 @@ Proof.
       forward_call (y).
       forward.
 
-      (* === Return cascade: t'11 = dwx && fin_y && xh_bnd && y_bnd === *)
+      (* Return cascade: t'11 = dwx && fin_y && xh_bnd && y_bnd. *)
       set (bxh := Float.cmp Cle
                     (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
                     q_omega_val).

@@ -5,7 +5,7 @@
 
     The normal range proof is supplied by [DWDivFP_relative_acc]; the subnormal proof
     leg is supplied by [DWDivFP_subnormal].  This file exposes only the public
-    condition ladder and the combined accuracy/closure guarantee. *)
+    condition ladder and the combined accuracy and validity guarantee. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common DDConds.

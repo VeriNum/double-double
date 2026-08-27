@@ -224,7 +224,7 @@ Proof.
   now apply Fast2Mult_accuracy_norm.
 Qed.
 
-(* The accuracy bound needs ONLY overflow safety (finiteness of the rounded
+(* The accuracy bound needs only overflow safety (finiteness of the rounded
    product): Fast2Mult_acc_only_cond = is_finite (BMULT a b) = true. *)
 Corollary Fast2Mult_accuracy_from_acc_only_cond :
   Fast2Mult_acc_only_cond a b ->

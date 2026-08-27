@@ -13,7 +13,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import VSTlib.spec_math.   (* fma_spec *)
+Require Import VSTlib.spec_math.   (* Provides fma_spec. *)
 Require Import DDConds common real_extras.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_relative_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_relative_acc.
@@ -210,7 +210,7 @@ Definition fast_2mult_guarded_spec :=
 
 (* The Tier B wrapper exposes a bound on the returned error component.  Its
    finiteness guard does not support exact reconstruction or prove that the
-   output is a valid double word. *)
+   output is a valid double-word. *)
 Definition fast_2mult_acc_guarded_spec :=
   DECLARE _fast_2mult_acc_guarded
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
@@ -500,7 +500,7 @@ Definition dw_div_dw_check_spec :=
          data_at Tsh dword (f2val yh) y ).
 
 (* ======================================================================== *)
-(*  libc external                                                            *)
+(*  libc external.                                                           *)
 (* ======================================================================== *)
 
 Definition exit_spec :=

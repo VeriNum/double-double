@@ -100,20 +100,20 @@ let (th, tl1) := Fast2Sum ch cl2 in
 let tl2 := BMULT tl1 cl1 in
 let (zh, zl) := Fast2Sum th tl2 in (zh, zl).
 
-(** Algorithm 8 : Multiplication of a DW number by a FP number *)
+(** Algorithm 8: multiply a double-word number by a floating-point number. *)
 Definition DWTimesFP2 (xh xl y : ftype t) := 
 let (ch, cl1) := Fast2Mult xh y in
 let cl2 := BMULT xl y in
 let cl3 := BPLUS cl1 cl2 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 9 : Multiplication of a DW number by a FP number*)
+(** Algorithm 9: multiply a double-word number by a floating-point number. *)
 Definition DWTimesFP3 (xh xl y : ftype t) := 
 let (ch, cl1) := Fast2Mult xh y in
 let cl3 := BFMA xl y cl1 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 10 : Multiplication of a DW number by a DW number*)
+(** Algorithm 10: multiply two double-word numbers. *)
 Definition DWTimesDW1 (xh xl yh yl : ftype t) := 
 let (ch, cl1) := Fast2Mult xh yh in
 let tl1 := BMULT xh yl in
@@ -122,7 +122,7 @@ let cl2 := BPLUS tl1 tl2 in
 let cl3 := BPLUS cl1 cl2 in 
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 11 : Multiplication of a DW number by a DW number*)
+(** Algorithm 11: multiply two double-word numbers. *)
 Definition DWTimesDW2 (xh xl yh yl : ftype t) := 
 let (ch, cl1) := Fast2Mult xh yh in
 let tl        := BMULT xh yl in
@@ -130,7 +130,7 @@ let cl2       := BFMA  xl yh tl in
 let cl3       := BPLUS cl1 cl2 in
 let (zh,zl)   := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 12 : Multiplication of a DW number by a DW number *)
+(** Algorithm 12: multiply two double-word numbers. *)
 Definition DWTimesDW3 (xh xl yh yl : ftype t) := 
 let (ch, cl1) := Fast2Mult xh yh in
 let tl0 := BMULT xl yl in 
@@ -139,7 +139,7 @@ let cl2 := BFMA xl yh tl1 in
 let cl3 := BPLUS cl1 cl2 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 13 : Division of a DW number by a FP number*)
+(** Algorithm 13: divide a double-word number by a floating-point number. *)
 Definition DWDivFP1 (xh xl y : ftype t) :=
 let th := BDIV xh y in
 let (pih, pil) := Fast2Mult th y in
@@ -150,7 +150,7 @@ let d  := BPLUS dh dl in
 let tl := BDIV d y in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 14 : Division of a DW number by a FP number*)
+(** Algorithm 14: divide a double-word number by a floating-point number. *)
 Definition DWDivFP2 (xh xl y : ftype t) :=
 let th := BDIV xh y in
 let (pih, pil) := Fast2Mult th y in
@@ -160,7 +160,7 @@ let d  := BPLUS dh dl in
 let tl := BDIV d y in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 15 : Division of a DW number by a FP number*)
+(** Algorithm 15: divide a double-word number by a floating-point number. *)
 Definition DWDivFP3 (xh xl y : ftype t) :=
 let th := BDIV xh y in
 let (pih, pil) := Fast2Mult th y in
@@ -170,7 +170,7 @@ let d  := BPLUS dt xl in
 let tl := BDIV d y in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 16 : Division of a DW number by a DW number*)
+(** Algorithm 16: divide two double-word numbers. *)
 Definition DWDivDW1 (xh xl yh yl : ftype t) :=
 let th := BDIV xh yh in
 let (rh, rl) := DWTimesFP1 yh yl th in
@@ -181,7 +181,7 @@ let d  := BPLUS pih dl in
 let tl  := BDIV d yh in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 17 : Division of a DW number by a DW number*)
+(** Algorithm 17: divide two double-word numbers. *)
 Definition DWDivDW2 (xh xl yh yl : ftype t) :=
 let th := BDIV xh yh in
 let (rh, rl) := DWTimesFP1 yh yl th in
@@ -191,7 +191,7 @@ let d   := BPLUS pih dl in
 let tl  := BDIV d yh in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 18 : Division of a DW number by a DW number*)
+(** Algorithm 18: divide two double-word numbers. *)
 Definition DWDivDW3 (xh xl yh yl : ftype t) :=
 let th := BDIV (Zconst t 1) yh in
 let rh := BFMA (BOPP yh) th (Zconst t 1) in

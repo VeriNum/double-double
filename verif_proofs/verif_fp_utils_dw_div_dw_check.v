@@ -201,7 +201,7 @@ Proof.
                           (Float.div (fst xh) (fst yh))) q_omega_val)
                      as bqt_hi eqn:Ebqt_hi.
 
-           (* === return cascade ===
+           (* Return cascade.
               t'15 = dwx && dwy;  t'16 = t'15 && yh_hi;
               t'17 = t'16 && yh_lo; t'18 = t'17 && qt_hi *)
            set (Post_t15 :=

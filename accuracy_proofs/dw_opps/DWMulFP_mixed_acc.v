@@ -58,7 +58,7 @@ lra.
 Qed.
 
 (** If Algorithm 9's closing Fast2Sum preserves its two inputs, its returned
-    pair is a double word: the high component is exactly the rounding of that
+    pair is a double-word: the high component is exactly the rounding of that
     preserved sum. *)
 Local Lemma DWTimesFP3_double_word_of_sum {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
@@ -289,7 +289,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
 - (* Unordered closing Fast2Sum.  |cl3| > |ch| can only happen when the
      leading product is tiny: |cl3| <= (1+u)(2uP + 1.501eta) + eta/2 while
      |ch| >= (1-u)P - eta/2, and at u <= 1/8 those cross only below
-     4.5281*eta, so P < 4.6*eta.  The EXACT sum ch + cl3 is then within
+    4.5281*eta, so P < 4.6*eta.  The exact sum ch + cl3 is then within
      one binade of the subnormal range -- bound it through the compensated
      core error, not by the triangle inequality on |ch| and |cl3|
      separately, which would overshoot 2^(emin+3) -- and the shared

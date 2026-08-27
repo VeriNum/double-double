@@ -13,8 +13,8 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
                Fast2Mult_acc TwoSum_acc Fast2Sum_acc Fast2Sum_acc_helpers.
-(* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
-   bound DWDivDW.DWDDW3_correct is available and instantiated below.  DWDivDW.v
+(* The tight FLX bound DWDivDW.DWDDW3_correct from paper_proofs/DWDivDW.v is
+   instantiated below.  DWDivDW.v
    sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
    into this file's proofs by asserting again transparency after the Require. *)
 Require Import DWDivDW.
@@ -165,7 +165,7 @@ Section CorrectDWDivDW.
              (proj1 FIN_timesfp) Hord).
   Qed.
 
-  (** Once [(dh,dl)] is a double word, [DWPlusFP] renormalizes its result into
+  (** Once [(dh,dl)] is a double-word, [DWPlusFP] renormalizes its result into
       the double-word pair [(mh,ml)]. *)
   Local Fact DW_m (Hp3 : (3 <= fprec t)%Z) (DWd : double_word dh dl) :
     double_word mh ml.
@@ -250,7 +250,7 @@ have Hb := bpow_gt_0 radix2 (emin + 2 * fprec t).
 lra.
 Qed.
 
-(** Conjunct 7 restated as a lower bound on the EXACT reciprocal.  The two
+(** Conjunct 7 restated as a lower bound on the exact reciprocal.  The two
     forms are equivalent for [yh <> 0], because [emin = 3 - femax - p] makes
     [-(emin+2p+2) = femax-p-5].  Every consumer below goes through this lemma
     rather than reading the conjunct directly, so the cond is free to state
@@ -1678,7 +1678,7 @@ apply Rmult_le_compat_r; [exact Hbase |].
 nra.
 Qed.
 
-(** Compatibility form with the older factor [3]. *)
+(** Compatibility form with factor [3]. *)
 Local Lemma DWDivDW_eta_scales_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -2609,7 +2609,7 @@ Qed.
 (** Scale invariant form of the Newton bootstrap estimate.  The
     product [(yh+yl)*round(1/yh)] is unchanged by a power-of-two scaling of
     the divisor pair, so the normalized result applies to every nonzero
-    double word. *)
+    double-word. *)
 Local Lemma flx_newton_residual_sq (yh yl : R) :
   (14 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice yh yl -> yh <> 0 ->
@@ -3209,7 +3209,7 @@ have Hth := DWDivDW_th_FLT_FLX_from_cond xh xl yh yl COND.
 (* The high residual does not round at all ([DWDivDW_rh_exact_from_cond]), so
    it coincides with the paper's high residual and contributes nothing.  Only
    the low double round survives, which is why the total is one floor ulp
-   rather than the [3/2] this lemma used to charge. *)
+   rather than the looser [3/2]. *)
 have Hex := DWDivDW_rh_exact_from_cond xh xl yh yl Hp4 COND.
 fold th rh in Hex. cbv zeta in Hex.
 have Hrl := DWDivDW_rl_FLT_FLX_diff_from_cond xh xl yh yl
@@ -3306,7 +3306,7 @@ have Heq : (FT2R (fst e)+FT2R (snd e))-(1-Y*FT2R th) =
 change (Rabs ((FT2R (fst e)+FT2R (snd e))-(1-Y*FT2R th)) <=
   1001/1000*u^2).
 rewrite Heq Rabs_Ropp.
-(* ---- charge that rounding as a MAX, not as relative + floor --------- *)
+(* ---- Charge that rounding as a maximum, not as relative + floor. ---- *)
 have Hvb := DWDivDW_yl_th_abs_from_cond xh xl yh yl COND.
 specialize (Hvb NANS STD).
 fold th u in Hvb. fold v in Hvb.
@@ -3661,7 +3661,7 @@ Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
     (FT2R xh) (FT2R xl) (fst mhl) (snd mhl).
 
 (** Mixed contract for the closing multiplication.  Applying
-    [DWTimesDW_mixed_accuracy_from_cond] to the two double words needs no lower
+    [DWTimesDW_mixed_accuracy_from_cond] to the two double-words needs no lower
     bound on [xh*mh].  Its gap case contributes [5/2*eta], which is carried
     through [DWDivDW3_error_mixed_arms_param]. *)
 Local Lemma DWDivDW3_closing_mixed_error_from_cond_acc
@@ -4135,7 +4135,7 @@ Notation dh  := (fst (DWTimesFP3 eh el th)).
 Notation dl  := (snd (DWTimesFP3 eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
-(* Assumptions excluding underflow, currently exposed by [DWDivDW3_FLX_FLT]. *)
+(* Assumptions excluding underflow required by [DWDivDW3_FLX_FLT]. *)
 Hypothesis UF_th : bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Hypothesis UF_rh : bpow radix2 (emin + fprec t - 1)
                    <= Rabs (1 - FT2R yh * FT2R th).
@@ -4164,7 +4164,7 @@ Definition relative_error_DWDivDW :=
   Rabs ((zh + zl - (FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))
         / ((FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))).
 
-(** Under the assumptions above on double words, finiteness, precision, a
+(** Under the assumptions above on double-words, finiteness, precision, a
     nonzero divisor, and absence of underflow, [DWDivDW3] computes the quotient with
     relative error at most [9.8*u^2], where [u = 2^(-p)].
 

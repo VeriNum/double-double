@@ -164,8 +164,8 @@ Proof.
                                        (float_of_ftype (fst yh))))
                          q_prod_val).
 
-           (* === return dwx && dwy && prod_bnd ===
-              A pure conjunction now that mult_safe is gone: two nested
+           (* Return dwx && dwy && prod_bnd.
+              This is a pure conjunction: two nested
               short-circuit levels, each carrying one more raw fact forward. *)
            set (Post_t11 :=
              EX b11 : bool,
@@ -220,10 +220,10 @@ Proof.
                     Intros b12; rename H into Hb12.
                     forward. (* return t'12 *)
                     Exists b12; entailer!.
-                    (* FINAL discharge: the six conjuncts of DWTimesDW_mixed_safe_input_cond.
+                    (* Final discharge: the six conjuncts of DWTimesDW_mixed_safe_input_cond.
                        No underflow disjunct to prove -- that is the whole point
                        of the weakening -- so prod_bnd_facts closes both
-                       remaining goals (Fast2Mult finiteness AND the
+                       remaining goals (Fast2Mult finiteness and the
                        product magnitude bound) in one shot. *)
                     destruct (Hb12 eq_refl) as [Hb6t [Hb8t Hbpbt]].
                     destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwx]].

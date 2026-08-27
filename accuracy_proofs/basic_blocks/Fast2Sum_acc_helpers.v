@@ -76,7 +76,7 @@ rewrite Rminus_diag; apply generic_format_0.
 Qed.
 
 (* ===================================================================== *)
-(* 2. Correctness & double-word property                                   *)
+(* 2. Correctness and double-word property                                 *)
 (* ===================================================================== *)
 
 Variables (a b : ftype t).
@@ -559,7 +559,7 @@ have Hl := f_equal snd Heq.
 simpl in Hh, Hl. rewrite -Hh -Hl. ring.
 Qed.
 
-(** If Fast2Sum preserves the exact sum, its returned pair is a double word. *)
+(** If Fast2Sum preserves the exact sum, its returned pair is a double-word. *)
 Lemma Fast2Sum_double_word_of_sum (a b : ftype t) :
   is_finite_p (DDModels.Fast2Sum a b) ->
   FT2R (fst (DDModels.Fast2Sum a b)) +

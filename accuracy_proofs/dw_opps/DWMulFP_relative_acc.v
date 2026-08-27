@@ -23,7 +23,7 @@ From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Bullet Behavior "Strict Subproofs".
 
-(* Keep the paper's two-product folded (it is now a Definition = Fast2Mult in
+(* Keep the paper's two-product folded (it is a Definition equal to Fast2Mult in
    DWTimesFP); proofs expose it explicitly via DWTimesFP.TwoProdE. *)
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
@@ -251,7 +251,7 @@ rewrite Rabs_mult.
 rewrite Rabs_mult in Hxhy.
 destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs (FT2R xh)))
   as [Hnorm | Hsub].
-- (* normal range *)
+- (* Normal range case. *)
   have Hrel : ulp (FT2R xh) <= Rabs (FT2R xh) * bpow radix2 (1 - fprec t)
     by apply ulp_FLT_le.
   have Hxl : Rabs (FT2R xl) <= /2 * (Rabs (FT2R xh) * bpow radix2 (1 - fprec t)).
@@ -262,7 +262,7 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs (FT2R xh)))
     replace (1 - fprec t + femax t)%Z with (1 + (femax t - fprec t))%Z by lia.
     rewrite bpow_plus. have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
   nra.
-- (* subnormal range *)
+- (* Subnormal range case. *)
   have Hulpe : ulp (FT2R xh) = bpow radix2 emin.
   { apply ulp_FLT_small;
       first [ apply fprec_gt_0
@@ -367,7 +367,7 @@ have Hfst : is_finite (BPLUS (Fast2Mult_mul xh y)
                        FT2R (BFMA xl y (Fast2Mult_err xh y))) < Omega by lra.
   have Hu := ulp_below_overflow _ Hsum_lt. lra. }
 split.
-- (* fst *)
+- (* Leading component. *)
   change (is_finite (BPLUS (Fast2Mult_mul xh y)
                            (BFMA xl y (Fast2Mult_err xh y))) = true).
   exact Hfst.
@@ -458,7 +458,7 @@ all: try exact valid_fexp_inst.
 all: try apply generic_format_FLT_FT2R.
 Qed.
 
-(** Closing Fast2Sum obligations imply output double-word closure. *)
+(** Closing Fast2Sum obligations imply output double-word validity. *)
 Lemma DWTimesFP3_double_word_from_pre (xh xl y : ftype t) :
   is_finite (BPLUS (Fast2Mult_mul xh y) (BFMA xl y (Fast2Mult_err xh y))) = true ->
   Rabs (FT2R (BFMA xl y (Fast2Mult_err xh y)))
@@ -547,7 +547,7 @@ split; [exact HP0 | split; [exact Hyne | split; [exact Hxrne |]]].
 apply Rmult_integral_contrapositive_currified; [exact Hxrne | exact Hyne].
 Qed.
 
-(* KEYSTONE: on the normal leg the whole double-word error collapses to a
+(* Key identity: on the normal leg the whole double-word error collapses to a
    single FLT rounding error.  Since Fast2Sum is exact (zh+zl = ch+cl3) and the
    product error cl1 = xh*y - ch is representable (Fast2MultModel_correct, valid
    because |xh*y| >= bpow(emin+2p-1)), and cl3 = round(xl*y + cl1):
@@ -597,7 +597,7 @@ Qed.
 
 (* The local core carries the underflow disjunction and dispatches on it:
      - underflow leg (xh*y = 0): the exact product xr*yr is 0, so relerr = 0
-       (PROVEN here via relerr_0_of_xryr0 + xryr0_of_prod0);
+   (proved here via relerr_0_of_xryr0 + xryr0_of_prod0);
      - normal leg (|xh*y| >= bpow(emin+2*fprec-1)): the bridge from
        DWTimesFP9_correct via DWTimesFP3_FLX_FLT_weak, with the FMA underflow /
        [emin+2p-1, emin+3p) gap case via a direct |abs err|/|xr*yr| bound. *)
@@ -703,7 +703,7 @@ destruct Huf as [Hxy0 | Hbig].
     have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
       by (apply (dw_word_DWdouble xh xl y); exact Hdw).
     (* Explicit (folded) type so the [let (zh,zl) := DWTimesFP9 ...] does not
-       cascade open now that TwoProd is a Definition; this keeps DWTimesFP9
+       cascade open because TwoProd is a Definition; this keeps DWTimesFP9
        foldable for the rewrite by Hbridge, exactly as when TwoProd was a
        Parameter. *)
     have Hpaper :

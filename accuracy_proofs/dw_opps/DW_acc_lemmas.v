@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** This file contains helper lemmas for accuracy proofs  about double-words *)
+(** Helper lemmas for accuracy proofs about double-words. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -18,7 +18,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 then 
 |xh| <= Omega/4 (the high part bound used in DWPlusFP_safe_input_cond / DWPlusDW_safe_input_cond).
-The implication holds because Omega/4 = 2^(femax - 2) is a power of two, hence 
+The implication holds because Omega/4 = 2^(femax - 2) is a power of two, hence
 in generic_format, and round-to-nearest cannot push a value with |x| < B above 
 B when B is representable. *)
 Lemma dw_high_bnd_of_sum (xh xl : ftype t)
@@ -58,7 +58,7 @@ Notation ulp := (Ulp.ulp Zaux.radix2 fexp).
 Local Instance valid_fexp_inst_low : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 
-(** The low component of a double word is at most half an ulp of its high
+(** The low component of a double-word is at most half an ulp of its high
     component. *)
 Lemma dw_low_le_half_ulp (xh xl : ftype t) :
   double_word_prop xh xl ->
@@ -111,7 +111,7 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1))
   apply Rmult_le_pos; [apply bpow_ge_0 | exact Hxh0].
 Qed.
 
-(** Exponent and ulp ordering inherited by the low word of a double word. *)
+(** Exponent and ulp ordering inherited by the low word of a double-word. *)
 Lemma cexp_dw_le (xh xl : ftype t) :
   double_word xh xl -> FT2R xh <> 0 -> FT2R xl <> 0 ->
   (Generic_fmt.cexp radix2 fexp (FT2R xl) <=

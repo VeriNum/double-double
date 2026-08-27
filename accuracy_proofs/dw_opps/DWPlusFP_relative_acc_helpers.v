@@ -567,7 +567,7 @@ have Hsl16 : Rabs (FT2R sl) <= /16 * bpow radix2 (femax t).
   apply (fun h => Rle_trans _ _ _ h (rel_le_eighth Hp3)) in Hdel.
   apply (Rle_trans _ (/2 * bpow radix2 (femax t) * /8)); [|lra].
   apply Rmult_le_compat; try apply Rabs_pos; assumption. }
-(* finiteness *)
+(* Finiteness. *)
 rewrite -is_finite_Binary.
 have FINxlsl : is_finite (BPLUS xl sl) = true.
 { apply no_overflow_sum_is_finite; [exact Fxl|exact FINsl|].
@@ -728,7 +728,7 @@ destruct (Req_dec xr 0).
 { have xh0: FT2R xh = 0.
 move: DWx; rewrite /double_word. 
 fold xr; by rewrite H1 /rounded round_0.
-(* cases on underflow *)
+(* Cases based on underflow. *)
 destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t - 1)) (Rabs xr)).
 {  have Hv2: 
 Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)

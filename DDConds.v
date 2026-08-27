@@ -16,7 +16,7 @@ Notation fexp  := (SpecFloat.fexp (fprec t) (femax t)).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Sufficient conditions for the two returned components to reconstruct a+b
-   exactly and form a valid double word. *)
+   exactly and form a valid double-word. *)
 Definition TwoSum_exact_cond (a b : ftype t) : Prop :=
   is_finite (BPLUS a b) = true /\
   is_finite (BMINUS a b) = true /\
@@ -36,7 +36,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
                         cexp a for nonzero b,a).  It also subsumes b = 0,
                         since ulp 0 <= ulp a always.
      - a = 0            (Fast2Sum0f: fast_2sum(0,b) is exact).
-   The old `|b| <= |a|` precondition implies `ulp b <= ulp a` by ulp_le, so
+   The stronger `|b| <= |a|` precondition implies `ulp b <= ulp a` by ulp_le, so
    any caller that established it still discharges this by `left; ulp_le`. *)
 Definition Fast2Sum_exact_cond (a b : ftype t) : Prop :=
   is_finite (BPLUS a b) = true /\
@@ -51,7 +51,7 @@ Section Fast2MultCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Sufficient conditions for the two returned components to reconstruct a*b
-   exactly and form a valid double word. *)
+   exactly and form a valid double-word. *)
 Definition Fast2Mult_exact_cond (a b : ftype t) : Prop :=
   is_finite (BMULT a b) = true /\
   (FT2R a * FT2R b = 0 \/
@@ -62,7 +62,7 @@ Definition Fast2Mult_exact_cond (a b : ftype t) : Prop :=
    Compared with Fast2Mult_exact_cond, it drops the underflow condition (the `a*b = 0 \/
    threshold <= |a*b|` disjunction).  By itself it suffices for the bound
    |Fast2Mult_err a b| <= 1/2 ulp(a*b) — which holds in every regime — but does
-   not prove that mul + err = a*b or that (mul, err) is a valid double word.
+   not prove that mul + err = a*b or that (mul, err) is a valid double-word.
    Those conclusions need the underflow disjunct of the full Fast2Mult_exact_cond.
    See Fast2Mult_acc.v:
    Fast2Mult_accuracy_from_acc_only_cond (this cond) vs Fast2Mult_correct_from_exact_cond
@@ -116,10 +116,10 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* This condition bounds only the high part of the double word, matching the
+(* This condition bounds only the high part of the double-word, matching the
    shape of DWPlusDW_safe_input_cond.
    The DW relation forces |xl| <= ulp(xh)/2, so no separate magnitude bound
-   on xl is required.  is_finite xl is NOT implied by double_word_prop
+   on xl is required.  is_finite xl is not implied by double_word_prop
    (which lives in R via FT2R), so it must be asserted explicitly. *)
 (** Sufficient input condition used by the guarded C interface. *)
 Definition DWPlusFP_safe_input_cond (xh xl y : ftype t) : Prop :=
@@ -344,7 +344,7 @@ Definition DWDivFP_normal (xh xl y : ftype t) : Prop :=
    |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y|
    (DWDivFP_relative_acc.DWDivFP_relative_accuracy): the safe input condition
    for the whole range,
-   condition -- which supplies overflow headroom, the input double word,
+   condition -- which supplies overflow headroom, the input double-word,
    y <> 0 and the product node floor -- plus normality of the operations. *)
 Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   DWDivFP_mixed_safe_input_cond xh xl y /\
@@ -456,7 +456,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
    |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q|
    (DWDivDW_relative_acc.DWDivDW_relative_accuracy): the safe input condition
    for the whole range,
-   condition -- overflow headroom, the divisor window, both input double words
+   condition -- overflow headroom, the divisor window, both input double-words
    -- plus normality of the operations.  It contains no quotient magnitude
    window designed to absorb eta; the relative bound is proved in the normal
    regime, not by charging a physical floor against a large quotient. *)

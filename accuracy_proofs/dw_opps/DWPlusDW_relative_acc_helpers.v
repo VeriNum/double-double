@@ -25,8 +25,8 @@ Hypothesis HFINyh : is_finite yh = true.
 Hypothesis HFINyl : is_finite yl = true.
 
 (* Tight magnitude bounds on the high words, matching DWPlusDW_safe_input_cond.
-   These are weaker than the older `|xh + xl| < Omega/4` form (which is
-   used in the paper) but suffice for every downstream use here. *)
+   These are weaker than the `|xh + xl| < Omega/4` form used in the paper, but
+   suffice for every downstream use here. *)
 Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
 Hypothesis Hyh : Rabs (FT2R yh) <= /4 * bpow radix2 (femax t).
 
@@ -48,7 +48,7 @@ Let vh := Fast2Sum_sum sh c.
 Let vl := Fast2Sum_err sh c.
 Let w  := BPLUS tl vl.
 
-(* Tight bounds are now section hypotheses; the older /2 * Omega bound is
+(* The tight bounds are section hypotheses; the /2 * Omega bound is
    a consequence by halving. *)
 Lemma Hxh_tight_bnd : Rabs (FT2R xh) <= /4 * Omega.
 Proof. exact Hxh. Qed.
@@ -128,7 +128,7 @@ destruct H as (d1 & Hd & B).
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
 intros Hd. simpl in Hxhb, Hyhb.
-(* Abstract the unit roundoff factor; the bound holds for ANY precision. *)
+(* Abstract the unit roundoff factor; the bound holds for any precision. *)
 set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
 have Hb : 0 < b by apply bpow_gt_0.
 have HO : 0 < Omega by apply bpow_gt_0.
@@ -838,9 +838,8 @@ destruct H as (d3 & Hd3 & B).
   lra.
 Qed.
 
-(* Hc_le_sh (Rabs c <= Rabs sh) used to live here as an admitted accuracy
-   claim, but it is genuinely false in the cancellation regime (sh = 0,
-   c = th nonzero).  It is replaced by DWPlusDW_sh_c_disjunction below,
+(* Hc_le_sh (Rabs c <= Rabs sh) is false in the cancellation regime (sh = 0,
+   c = th nonzero).  DWPlusDW_sh_c_disjunction below provides the needed result,
    which gives the Fast2Sum precondition in ulp form. *)
 
 (* DWPlusDW_sh_c_disjunction: the property at the (sh, c) Fast2Sum callsite
@@ -969,7 +968,7 @@ destruct (BPLUS_accurate' t sh c HFIN1) as (d1 & Hd1 & B1).
 unfold Bplus_no_overflow.
 (* Substitute vl form *)
 rewrite Hvl_eq Hz_eq B1.
-(* Now goal: |round(tl + round(c - round((sh+c)(1+d1) - sh)))| < Omega *)
+(* Goal: |round(tl + round(c - round((sh+c)(1+d1) - sh)))| < Omega. *)
 (* Apply Plus_error to outer round (tl + ...) *)
 have Hfmt_inner1 : Generic_fmt.generic_format Zaux.radix2
   (SpecFloat.fexp (fprec t) (femax t))
@@ -1026,7 +1025,7 @@ destruct Houter as (d4 & Hd4 & B4).
     * have Heq2 : (FT2R sh + FT2R c) * (1 + d1) + - FT2R sh =
                   (FT2R sh + FT2R c) * (1 + d1) - FT2R sh by ring.
       rewrite Heq2 in B2. rewrite B2. clear B2 Heq2.
-      (* Now all rounds are expanded into deltas. Bound by interval. *)
+      (* All rounds are expanded into deltas; bound them by interval. *)
       have Htl := tl_bnd. have Hsh := sh_bnd. have Hc := c_bnd.
       (* a = (tl + (c - ((sh+c)(1+d1)-sh)(1+d2))*(1+d3))*(1+d4); the inner term
          is the FIN_vl value (<= Omega/4) and |tl| <= Omega/16, so the whole
@@ -1151,7 +1150,7 @@ have HFIN_sh : is_finite (BPLUS xh yh) = true.
 destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
 { (* xh + yh = 0: sh = 0, sl = 0, c = th, vh = th, vl = 0, w = tl.
      vh, w already known nonzero, so reduce to cexp tl <= cexp th on the
-     double word (th, tl) = TwoSumF xl yl, closed by cexp_dw_le. *)
+     double-word (th, tl) = TwoSumF xl yl, closed by cexp_dw_le. *)
   have Fmt_th := generic_format_FLT_FT2R th.
   have Hsh0 : FT2R sh = 0.
   { change (FT2R sh) with (FT2R (BPLUS xh yh)).
@@ -1192,7 +1191,7 @@ destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
 destruct (Req_dec (FT2R xh) 0) as [Hxh_zero | Hxh_nz].
 { (* xh = 0 (and xh + yh <> 0): xl = 0, sh = yh, sl = 0, th = yl, tl = 0,
      c = yl, vh = yh, vl = yl, w = yl. Reduce to cexp yl <= cexp yh on the
-     double word (yh, yl) = DWy, closed by cexp_dw_le. *)
+     double-word (yh, yl) = DWy, closed by cexp_dw_le. *)
   have Hxl0 : FT2R xl = 0 by exact (double_word_0 xh xl DWx Hxh_zero).
   have Hsh_yh : FT2R sh = FT2R yh.
   { change (FT2R sh) with (FT2R (BPLUS xh yh)).

@@ -112,7 +112,7 @@ Proof.
                        (Float.mul (float_of_ftype (fst xh)) y))
                     q_prod_val).
 
-      (* === Return cascade: dwx && fin_y && prod_bnd ===
+      (* Return cascade: dwx && fin_y && prod_bnd.
          A pure conjunction, as in body_dw_plus_fp_check: two nested
          short-circuit levels, each carrying one more raw fact forward. *)
       set (Post_t8 :=
@@ -163,10 +163,10 @@ Proof.
            Intros b9; rename H into Hb9.
            forward.  (* return t'9 *)
            Exists b9; entailer!.
-           (* FINAL discharge: the three conjuncts of DWTimesFP_mixed_safe_input_cond.
+           (* Final discharge: the three conjuncts of DWTimesFP_mixed_safe_input_cond.
               No underflow disjunct to prove -- that is the whole point of the
               weakening -- so prod_bnd_facts closes both remaining goals
-              (Fast2Mult finiteness AND the product magnitude bound) in one
+              (Fast2Mult finiteness and the product magnitude bound) in one
               shot and nothing else is needed. *)
            destruct (Hb9 eq_refl) as [Hb6t [Hfyt Hbpbt]].
            destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwp]].

@@ -40,8 +40,8 @@ Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 (* Generic ulp ceiling: a finite float's ulp cannot exceed 2^(femax - p), since
    its magnitude is below the overflow threshold.  This is just
    FLT_helpers.ulp_below_overflow composed with is_finite_no_overflow; it is
-   hoisted here because no_overflow_2Sum_a_ulp and is_finite_TwoSum each used to
-   carry a verbatim inline copy of the same 18-line argument. *)
+   stated here to avoid duplicating the same argument in no_overflow_2Sum_a_ulp
+   and is_finite_TwoSum. *)
 Lemma ulp_le_top (x : ftype t) :
   is_finite x = true -> ulp (FT2R x) <= bpow radix2 (femax t - fprec t).
 Proof.
@@ -123,7 +123,7 @@ Qed.
 
 (* No overflow of the first Fast2Sum step under the Fast2Sum_exact_cond disjunction
    (ulp ordering, or a = 0).  The magnitude version (no_overflow_2Sum_a) bounds
-   |rnd(s-a)| <= |a|, which FAILS under mere ulp ordering.  Instead we use that
+   |rnd(s-a)| <= |a|, which fails under mere ulp ordering.  Instead we use that
    under ulp b <= ulp a the step is exact (z = s - a), then bound
    |s - a| <= |b| + (1/2) ulp(s)
    <= (Omega - bpow(femax-fprec)) + (1/2) bpow(femax-fprec) < Omega.
@@ -161,7 +161,7 @@ Proof.
   have Herr : Rabs (FT2R (BPLUS a b) - (FT2R a + FT2R b))
               <= /2 * ulp (FT2R (BPLUS a b)).
   { rewrite -!BPLUS_round_correct //. apply Ulp.error_le_half_ulp_round; FLT_basics. }
-  (* ulp bound *)
+  (* Bound the ulp. *)
   have Hulps : ulp (FT2R (BPLUS a b)) <= bpow radix2 (femax t - fprec t)
     by apply ulp_le_top.
   (* |b| <= pred Omega = Omega - bpow(femax - fprec) *)
@@ -189,7 +189,7 @@ Proof.
       with (FT2R b + (FT2R (BPLUS a b) - (FT2R a + FT2R b)))%R by ring.
     eapply Rle_trans; [apply Rabs_triang|].
     apply Rplus_le_compat_l. exact Herr. }
-  (* arithmetic close *)
+  (* Complete the arithmetic. *)
   have Hpos : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
   eapply Rle_lt_trans.
   { apply Rplus_le_compat; [exact Hbmax|].
@@ -942,7 +942,7 @@ have Ha_a'_bnd : Rabs (FT2R a - FT2R a') <= bpow radix2 (femax t - fprec t).
   apply (Rle_trans _ (Rabs (FT2R s - (FT2R a + FT2R b)) + Rabs (FT2R a' - (FT2R s - FT2R b)))).
   - apply Rabs_triang.
   - lra. }
-(* da finite *)
+(* Finiteness of da. *)
 have Hda_ov_lt : Rabs (rnd (FT2R a - FT2R a')) < Omega.
 { apply (Rle_lt_trans _ (bpow radix2 (femax t - fprec t))).
   - apply Generic_fmt.abs_round_le_generic;
@@ -964,7 +964,7 @@ have Hb_b'_bnd : Rabs (FT2R b - FT2R b') <= bpow radix2 (femax t - fprec t).
   apply (Rle_trans _ (Rabs (FT2R a' - (FT2R s - FT2R b)) + Rabs (-(FT2R b' - (FT2R s - FT2R a'))))).
   - apply Rabs_triang.
   - rewrite Rabs_Ropp. lra. }
-(* db finite *)
+(* Finiteness of db. *)
 have Hdb_ov_lt : Rabs (rnd (FT2R b - FT2R b')) < Omega.
 { apply (Rle_lt_trans _ (bpow radix2 (femax t - fprec t))).
   - apply Generic_fmt.abs_round_le_generic;
@@ -1052,7 +1052,7 @@ apply Rgt_not_eq, radix_pos.
 Qed.
 
 (* ===================================================================== *)
-(* 4. Correctness & equivalence                                            *)
+(* 4. Correctness and equivalence                                          *)
 (* ===================================================================== *)
 
 Lemma TwoSumF_eq (xh y: ftype t):
@@ -1119,7 +1119,7 @@ set (db := BMINUS b b').
 have Hc := @Flocq.Pff.Pff2Flocq.TwoSum_correct emin (fprec t) choice
     (fprec_gt_one t) emin_le_0 choiceP (FT2R b) (FT2R a).
 rewrite Rplus_comm; rewrite <- Hc; clear Hc; rewrite_format.
-(* algebra *)
+(* Algebraic identity. *)
 rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
 replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
 (* rewrites from correctness theorems *)

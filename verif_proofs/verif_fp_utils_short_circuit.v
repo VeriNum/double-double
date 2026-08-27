@@ -3,7 +3,7 @@
 
 (* verif_fp_utils_short_circuit.v: pure propositional helper lemmas that
    factor out the three short-circuit patterns appearing in
-   body_dw_plus_dw_check. These are NOT VST proofs — they're standalone
+   body_dw_plus_dw_check. These are not VST proofs — they are standalone
    boolean / conjunction arithmetic that the main body proof's entailer!
    sites cite via `apply short_circuit_*_concl`. *)
 

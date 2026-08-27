@@ -6,7 +6,7 @@
    C code and `forward` produce.  Each converts cheaply (a single op, no
    nesting).
 
-   These let a composite double word body proof rewrite the whole functional model spec
+   These let a composite double-word body proof rewrite the whole functional model spec
    term (built from BDIV/BMULT/BOPP/BFMA/Zconst) into the *exact* CompCert float
    composition the forward_call cascade stored, so the two `data_at` values
    become syntactically identical and the closing `entailer!!` needs NO

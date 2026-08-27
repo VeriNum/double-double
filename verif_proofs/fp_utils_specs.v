@@ -11,14 +11,14 @@ Require Import fp_utils op_defs DDConds.
    dword struct; the other specs in this file are pure scalar and don't need it. *)
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 
-(* The function returns an int, and that int is `1` iff `is_finite x` 
-is true; otherwise it's `0`. And it doesn't touch memory.*)
+(* The function returns `1` iff `is_finite x` is true, and `0` otherwise.
+   It does not modify memory. *)
 Definition isfinite_double_spec := 
   DECLARE _isfinite_double
   WITH x : ftype Tdouble 
   PRE [ tdouble ] (* c lang types *)
     PROP()
-    PARAMS ( Vfloat x ) (* functions params *)
+    PARAMS ( Vfloat x ) (* Function parameters. *)
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
@@ -29,14 +29,14 @@ Definition isfinite_double_spec :=
 
 Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
-(* The function returns an int, and that int is `1` iff `is_finite x`
-is true; otherwise it's `0`. And it doesn't touch memory.*)
+(* The function returns `1` iff `is_finite x` is true, and `0` otherwise.
+   It does not modify memory. *)
 Definition fast2_mult_check_spec :=
   DECLARE _fast2_mult_check
   WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ] (* c lang types *)
     PROP()
-    PARAMS ( Vfloat x; Vfloat y ) (* functions params *)
+    PARAMS ( Vfloat x; Vfloat y ) (* Function parameters. *)
     SEP() (* preds on mem *)
   POST [ tint ]
     EX b : bool,
@@ -48,7 +48,7 @@ Definition fast2_mult_check_spec :=
 (* This Tier B check confirms that the rounded product is finite and therefore
    certifies Fast2Mult_acc_only_cond.  That condition suffices for the bound on the
    returned error component, but not for exact reconstruction or for proving
-   that the output is a valid double word.  Mirrors fast2_mult_check_spec. *)
+   that the output is a valid double-word.  Mirrors fast2_mult_check_spec. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
   WITH x : ftype Tdouble, y : ftype Tdouble
@@ -164,7 +164,7 @@ Definition dw_div_fp_check_spec :=
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
    (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
-   output is a valid double word.  It does not give the pure 2u^2 relative
+   output is a valid double-word.  It does not give the pure 2u^2 relative
    bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check

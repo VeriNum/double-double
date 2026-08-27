@@ -50,10 +50,8 @@ Local Definition DWPlusDW_FLX :=
 .
 
 
-(* start section hypotheses *)
 Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
-(* end section hypotheses *)
 
 Let FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl) :=
   (proj2 Hcond).

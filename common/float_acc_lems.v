@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* This file contains lemmas regarding the accuracy of floating point 
+(* This file contains lemmas regarding the accuracy of floating-point
   operations such as BPLUS, BFMA, and BMULT. *)
 
 Require Import vcfloat.VCFloat.
@@ -85,7 +85,7 @@ End General.
 
 Section FMA. 
   
-(* Define a commonly used hypothesis *)  
+(* Define a commonly used hypothesis. *)
 Definition fma_no_overflow  (x y z: R) : Prop :=
   (Rabs (rounded t  (x * y + z)) < Raux.bpow Zaux.radix2 (femax t))%R.
 

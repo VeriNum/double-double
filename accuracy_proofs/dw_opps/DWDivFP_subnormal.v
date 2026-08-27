@@ -371,7 +371,7 @@ have Hexp : u * (21/8 * M) = 21/8 * (u * M) by ring.
 rewrite Hexp in Hstep. lra.
 Qed.
 
-(* THE residual bound: the computed d tracks the true residual to within M/2 *)
+(* The computed d tracks the true residual to within M/2. *)
 Local Lemma sub_resid : Rabs (Dd - (X + L - A)) <= /2 * M.
 Proof.
 have E1 := sub_e1. have E2 := sub_e2. have E3 := sub_e3. have DF := sub_defect.
@@ -592,7 +592,7 @@ lra.
 Qed.
 
 
-(* ---------- closure comes free from preservation of the sum ---------- *)
+(* ---------- Output validity follows from preservation of the sum ---------- *)
 Local Theorem sub_double_word :
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
 Proof.
@@ -1145,7 +1145,7 @@ Qed.
 End SubFin.
 
 (** The subnormal proof leg exposed to the public mixed interface file.  Its
-    internal error and closure chains remain private to this file. *)
+    internal error and validity proofs remain private to this file. *)
 Theorem DWDivFP3_subnormal_accuracy_and_double_word
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
@@ -1182,7 +1182,7 @@ Notation u    := (bpow radix2 (- fprec t)).
 (* ============ the subnormal quotient leg, discharged from the cond ============
    All three deliverables at once: the mixed bound, output validity, and
    finiteness of the computed pair.  Section SubFin supplies the finiteness,
-   Section Sub the accuracy and closure. *)
+   Section Sub proves accuracy and output validity. *)
 Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->

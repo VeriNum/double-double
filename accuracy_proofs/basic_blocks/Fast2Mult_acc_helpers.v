@@ -102,8 +102,8 @@ Qed.
 End TwoMultFinite.
 
 (* ===================================================================== *)
-(* 1b. Unconditional facts (finiteness + double-word) from finiteness of  *)
-(*     the rounded product ALONE — no underflow hypothesis in this section.*)
+(* 1b. Unconditional facts (finiteness and double-word) from finiteness of *)
+(*     the rounded product alone — no underflow hypothesis in this section. *)
 (* ===================================================================== *)
 
 Section TwoMultUnconditional.
@@ -113,7 +113,7 @@ Notation emin := (@common.emin t).
 Variables (a b : ftype t).
 
 (* Finiteness of the Fast2Mult pair from finiteness of the rounded product
-   ALONE (no underflow condition).  The FMA that computes the error term
+alone (no underflow condition).  The FMA that computes the error term
    cannot overflow because its rounded result has magnitude <= /2 ulp(a*b),
    which is bounded by bpow (femax - fprec - 1) < bpow femax. *)
 Lemma Fast2Mult_finite_unconditional:
@@ -157,7 +157,7 @@ Proof.
       pose proof (femax_lb t); pose proof (fprec_lt_femax t); lia. }
     rewrite -round_NE_abs.
     apply round_le; try assumption; FLT_basics. }
-  (* Now bound the rounded error. *)
+  (* Bound the rounded error. *)
   rewrite -round_NE_abs.
   eapply Rle_lt_trans.
   { apply round_le;
@@ -210,7 +210,7 @@ Qed.
 End TwoMultUnconditional.
 
 (* ===================================================================== *)
-(* 2. Correctness & double-word property                                   *)
+(* 2. Correctness and double-word property                                 *)
 (* ===================================================================== *)
 
 Section TwoMultCorrect.

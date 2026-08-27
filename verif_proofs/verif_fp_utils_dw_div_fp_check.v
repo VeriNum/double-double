@@ -98,7 +98,7 @@ Proof.
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) y)) q_omega_val).
 
-      (* === return cascade: t'11 = dwx && fin_y; ... ; t'14 = t'13 && qt_hi ===
+      (* Return cascade: t'11 = dwx && fin_y; ... ; t'14 = t'13 && qt_hi.
          One level shorter than before: the qt_lo conjunct is gone. *)
       set (Post_t11 :=
         EX b11 : bool,
@@ -268,8 +268,8 @@ Proof.
                                (bpow Zaux.radix2 (-968)) Hfin_xh
                                q_lo968_val_finite q_lo968_val_FT2R).
                       unfold bxh_lo in Hbxhlt; exact Hbxhlt. }
-                    (* The single strict ceiling test does BOTH jobs: it gives the
-                       quotient upper bound AND finiteness of RN(xh/y), which is
+           (* The single strict ceiling test serves both purposes: it gives the
+              quotient upper bound and finiteness of RN(xh/y), which is
                        the cond's fifth conjunct (and forces y <> 0). *)
                     destruct (Float_cmp_Clt_bpow1022 (Float.div (fst xh) y))
                       as [Hfin_q Hq_hi].

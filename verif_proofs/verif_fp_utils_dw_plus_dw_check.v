@@ -154,17 +154,17 @@ Proof.
            (* === ldexp(1.0, 1022) returns q_omega_val === *)
            forward_call.
            forward.
-           (* xh_bnd cascade: forward chains _q_omega := _t'9 and _t'16 := x->s,
+           (* xh_bnd cascade: forward assigns _q_omega := _t'9 and _t'16 := x->s,
               then forward_call applies fabs to fst xh, then forward chains
               _xh_bnd := (_t'10 <= _q_omega). *)
            forward_call (fst xh).
            forward.
-           (* yh_bnd cascade: now at _t'15 := y->s. forward.+forward_call+forward. *)
+           (* yh_bnd cascade at _t'15 := y->s: forward, forward_call, then forward. *)
            forward.
            forward_call (fst yh).
            forward.
 
-           (* === Return cascade: t'14 = dwx && dwy && xh_bnd && yh_bnd === *)
+           (* Return cascade: t'14 = dwx && dwy && xh_bnd && yh_bnd. *)
            set (bxh := Float.cmp Cle
                          (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
                          q_omega_val).
@@ -284,7 +284,7 @@ Proof.
                        Intros b14; rename H into Hb14.
                        forward. (* return _t'14 *)
                        Exists b14; entailer!.
-                       (* entailer! subst b14 := true; Hb14 now has true=true antecedent *)
+                       (* entailer! substitutes b14 := true, leaving a true=true antecedent in Hb14. *)
                        destruct (Hb14 eq_refl) as [Hb6t [Hb8t [Hbxht Hbyht]]].
                        destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                        destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].

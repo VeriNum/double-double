@@ -903,7 +903,7 @@ Local Lemma aux_cl3_arg_le_ch (xh xl yh yl : ftype t) :
     <= Rabs (FT2R (Fast2Mult_mul xh yh)).
 Proof.
 move => Hp3 Hdwx Hdwy Hfmul Hfsum Hthresh.
-(* basic quantities *)
+(* Basic quantities. *)
 have HP0 : 0 < Rabs (FT2R xh * FT2R yh)
   by (eapply Rlt_le_trans; [apply bpow_gt_0 | exact Hthresh]).
 have Hu0 : 0 < bpow radix2 (- fprec t) by apply bpow_gt_0.
@@ -936,7 +936,7 @@ have HEP : bpow radix2 emin
       by (rewrite -bpow_plus; f_equal; lia).
     rewrite H1. have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
   lra. }
-(* subterm finiteness *)
+(* Finiteness of subterms. *)
 destruct (BPLUS_finite_e t _ _ Hfsum) as [Hfcl1 Hfcl2].
 destruct (BFMA_finite_e t xl yh (BFMA xh yl (BMULT xl yl)) Hfcl2) as [_ [_ Hftl1]].
 destruct (BFMA_finite_e t xh yl (BMULT xl yl) Hftl1) as [_ [_ Hftl0]].
@@ -1049,9 +1049,9 @@ all: try apply generic_format_FLT_FT2R.
 Qed.
 
 (* Sharper error bound for each term: the relative term and the subnormal floor are a
-   MAX, not a sum.  In the normal range ulp v = 2u|v| so the error is <= u|v| <= uc
+   maximum, not a sum.  In the normal range ulp v = 2u|v| so the error is <= u|v| <= uc
    with no floor; in the subnormal range the error is <= 1/2 bpow emin and the
-   relative term is smaller.  This lets aux_eta_bnd ABSORB the four 1/2 bpow emin
+   relative term is smaller.  This lets aux_eta_bnd absorb the four 1/2 bpow emin
    floors into the u^2 P scale rather than adding them, dropping |eta| from ~11 to
    ~7.5 u^2 P. *)
 Lemma aux_err_step2 (v c : R) :
@@ -1079,11 +1079,11 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs v)) as [Hn | Hs].
 Qed.
 
 (* Aggregate error bound for the underflow leg: |e0+e1+e2+e3| <= 15/2 u^2 P.  Uses
-   the chain that absorbs the floor (aux_err_step2 gives each error as a MAX of relative
+   the chain that absorbs the floor (aux_err_step2 gives each error as a maximum of relative
    term and subnormal floor, not a sum): magnitudes |tl0|<=2u^2P, |tl1|<=uP+4u^2P,
    |cl2|<=2uP+7u^2P (leading coeffs 1,2,3 on uP), each error e_i <= u*|arg_i| for
    i>=1 (floor absorbed) and e0<=u^2P.  Sum = 7 u^2 P + 13 u^3 P <= 15/2 u^2 P via
-   u <= 1/32 (from 5 <= fprec t).  The floors are no longer additive. *)
+   u <= 1/32 (from 5 <= fprec t).  The floors are absorbed rather than added. *)
 Lemma aux_eta_bnd (xh xl yh yl : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh xl -> double_word_prop yh yl ->
@@ -1140,7 +1140,7 @@ have HEP : bpow radix2 emin
 have Huf' : FT2R xh * FT2R yh <> 0 ->
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh)
   by (move => _; exact Hthresh).
-(* Chain of argument magnitudes, copied from aux_cl3_le_ch. *)
+(* The same chain of argument magnitudes as in aux_cl3_le_ch. *)
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh yh)) <= /2 * ulp (FT2R xh * FT2R yh)
   by (apply Fast2Mult_accuracy_norm; exact Hfmul).
 have Hulpxhyh : ulp (FT2R xh * FT2R yh)
@@ -1173,9 +1173,9 @@ have Hxlyl : Rabs (FT2R xl * FT2R yl)
                * (bpow radix2 (- fprec t) * Rabs (FT2R yh))
     by (apply Rmult_le_compat; [exact Hxlp | exact Hylp | exact Hxl | exact Hyl]).
   eapply Rle_trans; [exact Hstep|]. apply Req_le; ring. }
-(* Absorbing the floor chain.  Each rounding error is bounded by a MAX (aux_err_step2),
+(* Chain that absorbs the floor.  Each rounding error is bounded by a maximum (aux_err_step2),
    and each intermediate magnitude by |arg| + error (triangle); so the four
-   1/2 bpow emin floors are ABSORBED into the u^2 P scale instead of added.  Leading
+   1/2 bpow emin floors are absorbed into the u^2 P scale instead of added.  Leading
    coefficients on uP stay 1,2,3; the u^2 P corrections shrink (2,4,7).  Order:
    compute each error e_i first, then the magnitude it feeds. *)
 (* e0, then |tl0| <= 2 u^2 P *)
@@ -1292,7 +1292,7 @@ intros Hp4 (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hxhy4).
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Hfmul : is_finite (BMULT xh yh) = true by exact Hf2m.
 have [Hfxh Hfyh] := BMULT_finite_e t xh yh Hfmul.
-(* the cond now bounds the real product by /2*Omega; the rounded product then
+(* The condition bounds the real product by /2*Omega; the rounded product then
    stays <= /2*Omega (representable bound, RN monotone) *)
 have Hprod : Rabs (FT2R (BMULT xh yh)) <= /2 * Omega
   by (apply aux_round_half_bnd; [exact Hfmul | exact Hxhy4]).
@@ -1417,7 +1417,7 @@ have Hfst : is_finite (BPLUS (Fast2Mult_mul xh yh)
   eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
   have Hu := ulp_below_overflow _ Hsum_lt. lra. }
 split.
-- (* fst *)
+- (* Leading component. *)
   change (is_finite (BPLUS (Fast2Mult_mul xh yh)
                       (BPLUS (Fast2Mult_err xh yh)
                              (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true).
@@ -1429,7 +1429,7 @@ split.
     [ lra | exact Hfst ].
 Qed.
 
-(* Closing Fast2Sum closure from its two primitive obligations. *)
+(* Closing Fast2Sum validity from its two primitive obligations. *)
 Lemma DWTimesDW3_double_word_from_pre (xh xl yh yl : ftype t) :
   is_finite (BPLUS (Fast2Mult_mul xh yh)
                    (BPLUS (Fast2Mult_err xh yh)
@@ -1850,7 +1850,7 @@ split.
   rewrite Heq in H. exact H.
 Qed.
 
-(* KEYSTONE (DW analog of FP relerr_error_eq): the whole double-word error is the
+(* Key identity, analogous to FP relerr_error_eq: the whole double-word error is the
    sum of the four FLT rounding errors e0..e3.  Fast2Sum is exact (aux_cl3_le_ch),
    the product error cl1 is representable (Fast2MultModel_correct), and each
    intermediate is round(arg); the identity then telescopes by [ring].  This is

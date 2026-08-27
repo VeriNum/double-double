@@ -177,8 +177,8 @@ Proof. lra. Qed.
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
-(* NOTE: the paper's DWDFP3_correct (Algo15) no longer carries an abstract
-   two-product hypothesis (see paper_proofs/DWDivFP.v), so it is instantiated at
+(* The paper's DWDFP3_correct (Algorithm 15) uses the concrete two-product
+   operator (see paper_proofs/DWDivFP.v), so it is instantiated at
    the concrete operator with only (p, choice, ZNE, Hp4, ...) — no F2Mult
    discharge lemma is needed here. *)
 
@@ -296,7 +296,7 @@ Lemma FIN_dh : is_finite (BMINUS xh (BMULT (BDIV xh y) y)) = true.
 Proof. exact (proj1 (BMINUS_finite_e t _ _ FIN_dt)). Qed.
 
 (* Node (B): the FLX two-product equals the runtime Fast2Mult (product bridge).
-   Uses the WEAK variant (Fast2Mult_correct_weak) at the minimal TwoProd exactness
+   Uses the weak variant (Fast2Mult_correct_weak) at the minimal TwoProd exactness
    threshold emin+2p-1, not the strong emin+3p (the latter is an artifact of Pff's
    format_dq).  This lets cond_UF_prod be discharged from a |xh| lower bound of only
    bpow(emin+2p). *)
@@ -443,12 +443,12 @@ have Hgflx : generic_format radix2 (FLX_exp (fprec t))
 { rewrite Heq -bridge_th.
   apply: (div_error_FLX radix2 (fprec t) (Znearest choice)
            (FT2R xh) (FT2R y)); [ exact Fxh_flx | exact Fy_flx ]. }
-(* dt exact WITHOUT the normal range hypothesis UF_dt: prodExact (from UF_prod)
+(* dt is exact without the normal range hypothesis UF_dt: prodExact (from UF_prod)
    already gives dh - pil = xh - th*y, which is FLX format (div_error_FLX).  Split
    on the residual's own magnitude -- the residual can be tiny/subnormal even when
    the quotient is large, which is exactly why UF_dt is not derivable:
-   - large (>= bpow(emin+p-1)): normal range, lift FLX->FLT (the old UF_dt path,
-     but now the normal range side is PROVEN by the branch, not assumed);
+   - large (>= bpow(emin+p-1)): normal range, lift FLX->FLT, with the branch
+     proving the normal range condition;
    - small (< bpow(emin+p-1)): Hauser's FLT_format_plus_small on the two floats
      dh, -pil -- a small difference of floats is exactly representable. *)
 have HgFLT : generic_format radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
@@ -514,7 +514,7 @@ rewrite (FastTwoSumEq_FLT (BDIV xh y) _ FIN).
 by rewrite /DDModels.DWDivFP3.
 Qed.
 
-(* The paper FLX DWDivFP3 peeled down to the closing Fast2Sum, WITHOUT bridge_tl:
+(* The paper FLX DWDivFP3 peeled down to the closing Fast2Sum, without bridge_tl:
    every node except tl is rewritten to the runtime float value, leaving the
    second Fast2Sum argument as the FLX rounding of the runtime d/y.  Does not use
    UF_tl -- this is the shared reduction behind both the normal and underflow legs. *)
@@ -540,8 +540,8 @@ End BridgeDWDivFP.
 Section DWDivFP3_DoubleWord.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(* The result of DWDivFP3 is a double word.  Pure structural consequence of the
-   closing Fast2Sum (Fast2Sum_is_DW): it needs ONLY (a) finiteness of the sum
+(* The result of DWDivFP3 is a double-word.  Pure structural consequence of the
+   closing Fast2Sum (Fast2Sum_is_DW): it needs only (a) finiteness of the sum
    node BPLUS th tl and (b) the magnitude ordering |tl| <= |th|.  No FLX/FLT
    bridge, no strong underflow node discipline, no accuracy bound. *)
 Lemma DWDivFP3_is_DW (xh xl y : ftype t) :
@@ -617,8 +617,8 @@ End FiniteAccuracyDWDivFP.
    Layer-2: finiteness + treatment of underflow facts derived from DWDivFP_relative_error_input_cond.
 
    The cond bounds only the components (|xh| <= bpow(femax/2-1), |y| >=
-   bpow(1-femax/2)) plus the quotient underflow bound; from these the QUOTIENT
-   is bounded, |xh/y| <= Omega/4 (cond_quotient_bound, PROVEN), which is what
+   bpow(1-femax/2)) plus the quotient underflow bound; from these the quotient
+   is bounded, |xh/y| <= Omega/4 (proved by cond_quotient_bound), which is what
    keeps every rounded node of DWDivFP3 finite.
    ============================================================ *)
 Section DWDivFP_Finite.
@@ -790,7 +790,7 @@ Qed.
    control [th] and [pih]; the residual identities control [dh], [dt], and
    [d].  A tight bound on [d/y] keeps [tl] and the final sum finite. *)
 (* Worst case half-ulp bound (fprec>=4): 1/2 ulp v <= Omega/16 for |v| < Omega.
-   Kept OUT of the finiteness proof context: a universally quantified hypothesis makes
+   Kept out of the finiteness proof context: a universally quantified hypothesis makes
    [lra] bail ("No applicable tactic"), so this is a standalone lemma applied
    pointwise, never a local [have]. *)
 Lemma half_ulp_le (v : R) :
@@ -1472,7 +1472,7 @@ Qed.
    cond_UF_dt removed: dt = dh - pil is exact by a magnitude case split
    (bridge_dt) -- large residual lifts FLX->FLT, small residual is exact by
    Hauser's FLT_format_plus_small -- so the dt node needs no normal range fact.
-   cond_UF_tl is NOT derivable from the cond: it lower bounds |d/y| where d is the
+   cond_UF_tl is not derivable from the cond: it lower bounds |d/y| where d is the
    division residual, which is 0 for exact division -- no input condition can force
    it.  It is therefore the split line of the case analysis theorem: the normal leg
    (|d/y| normal) assumes it and gets 3u^2; the underflow leg (|d/y| subnormal)
@@ -1600,7 +1600,7 @@ have Hord_p : Rabs (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0)
               <= Rabs (FT2R (BDIV xh y)) by (eapply Rle_trans; [ exact Htls_le | exact Hth_gelo ]).
 have Hord_r : Rabs (FT2R (BDIV d y)) <= Rabs (FT2R (BDIV xh y))
   by (eapply Rle_trans; [ exact Htl_le | exact Hth_gelo ]).
-(* paper bound *)
+(* Apply the paper bound. *)
 pose proof (@DWDFP3_correct (fprec t) (fprec_gt_one t) choice eq_refl
               (FT2R xh) (FT2R xl) (FT2R y) HDWx HFy Hp4 Hyne) as Hpaper.
 rewrite (paper_reduced xh xl y FIN Hp4 Hyne Hquot UFprod) in Hpaper.
@@ -1654,7 +1654,7 @@ have Hpabs : Rabs (zhp + zlp - (FT2R xh + FT2R xl) / FT2R y)
     by (rewrite /=; ring).
   apply Rmult_le_compat_r; [ apply Rabs_pos |].
   rewrite Hupow. exact Hpaper. }
-(* triangle *)
+(* Apply the triangle inequality. *)
 eapply Rle_trans with
   (Rabs ((FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))) - (zhp + zlp))
    + Rabs (zhp + zlp - (FT2R xh + FT2R xl) / FT2R y)).
@@ -1668,7 +1668,7 @@ Qed.
 
 End CondAccuracyDWDivFP_underflow.
 
-(* The MIXED tier's charge for the tl node: FLT and FLX rounding of the same
+(* The mixed tier's charge for the tl node: FLT and FLX rounding of the same
    real differ by at most one floor ulp (round_FLT_FLX_diff). *)
 Local Lemma DWDivFP3_tl_perturbation_le_eta
   {NANS: Nans} {t : type} {STD: is_standard t}
@@ -1695,7 +1695,7 @@ have Htl_r : FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Htl_r. exact (@round_FLT_FLX_diff t _).
 Qed.
 
-(* The exact division case: the correction d is zero, so BOTH roundings at the
+(* The exact division case: the correction d is zero, so both roundings at the
    tl node are applied to 0 and the perturbation vanishes identically.  This is
    the disjunct DDConds.DWDivFP_normal keeps alongside "d/y is normal", and it
    is why the relative tier does not have to exclude exact divisions. *)

@@ -23,7 +23,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation u      := (bpow Zaux.radix2 (- fprec t)).
 Notation eminA  := (SpecFloat.emin (fprec t) (femax t)).
 (* The explicit FLX rounding chain of the low order DW*DW nodes with a floor
-   term f at the low by low node.  This is a NOTATION (pure syntax), not a
+   term f at the low by low node.  This is notation (pure syntax), not a
    synthetic algorithm Definition; it expands to the real nodes' FLX rounds. *)
 Local Notation FLXlow0 axh axl ayh ayl f :=
   (F2Sum.Fast2Sum (fprec t) choice
@@ -885,7 +885,7 @@ destruct (Rlt_dec 0 xh0) as [Hxp|Hxn].
     exact H.
 Qed.
 
-(* The far underflow in the low by low product bound, DIRECTLY for the real DWTimesDW3, via the
+(* The far underflow bound for the low by low product, directly for the real DWTimesDW3, via the
    FLT floor decomposition (no synthetic floored algorithm). *)
 Lemma DWTimesDW_abs_low0_far (xh xl yh yl : ftype t) :
   double_word xh xl -> double_word yh yl ->
@@ -1900,7 +1900,7 @@ rewrite Hfst. symmetry. apply BPLUS_round_correct.
 rewrite -Hfst. exact (proj1 FIN).
 Qed.
 
-(* Two magnitude bounds on the closing Fast2Sum's arguments, in RELATIVE form
+(* Two magnitude bounds on the closing Fast2Sum's arguments, in relative form
    (multiples of u*P and eta rather than of N).  They are coarser than the
    core chain's bounds in N form, but being expressed in u*P they make the
    ordering test of DWTimesDW3_error_floor_gap a single crossing computation
@@ -2144,8 +2144,8 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   + exact (Fast2Sum_is_DW ch cl3 (proj1 Fe) Hord).
 - (* Unordered closing Fast2Sum.  |cl3| > |ch| can only happen when the
      leading product is tiny: |cl3| <= 6uP+4eta while |ch| >= (1-u)P-eta/2,
-     and at u <= /32 those cross only below 6*eta, so P < 6*eta.  The EXACT
-     sum ch+cl3 is then bounded THROUGH the compensated core error -- not by
+     and at u <= /32 those cross only below 6*eta, so P < 6*eta.  The exact
+     sum ch+cl3 is then bounded using the compensated core error -- not by
      the triangle inequality on |ch| and |cl3| separately, which would
      overshoot -- and the shared FLT/FIX lattice at exponent emin makes
      Fast2Sum exact there, with no ordering and no precision hypothesis. *)
@@ -2588,7 +2588,7 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
   lra.
 Qed.
 
-(* Whole range closure.  Both regimes preserve the closing Fast2Sum's sum, so
+(* Whole range output validity.  Both regimes preserve the closing Fast2Sum's sum, so
    both give the double-word property: above the threshold through the
    ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the small sum
    lattice argument inside DWTimesDW3_error_floor_gap. *)

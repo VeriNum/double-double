@@ -113,7 +113,7 @@ Proof.
   cbv; auto.
 Qed.
 
-(* Upper bound mirror of no_underflow_real_from_round_mul: a STRICT rounded product
+(* Upper bound mirror of no_underflow_real_from_round_mul: a strict rounded product
    bound transfers to the exact product.  |RN(x*y)| < 2^1023 forces |x*y| < 2^1023
    = /2 * Omega.  Sound only for the strict inequality: 2^1023 is a representable
    power of two and RN is monotone/idempotent on it, so |x*y| >= 2^1023 would give
@@ -394,7 +394,7 @@ Proof.
 Qed.
 
 (* Float.cmp Clt (fabs b) q_prod_val = true → is_finite b = true ∧
-   Rabs (FT2R b) < 2^1023.  Unlike the Cle_bpow* lemmas, finiteness is DERIVED
+   Rabs (FT2R b) < 2^1023.  Unlike the Cle_bpow* lemmas, finiteness is derived
    (not assumed): a strict `<` against the finite q_prod_val can only hold when b
    is finite (a NaN abs compares unordered → false; +Inf → Gt → false).  This is
    what makes the single prod_bnd check discharge both Fast2Mult's finiteness
@@ -431,7 +431,7 @@ Proof.
 Qed.
 
 (* Packaging lemma for the guard: the single strict product check
-   `fabs(x->s * y) < ldexp(1.0, 1023)` establishes BOTH the Fast2Mult finiteness
+   `fabs(x->s * y) < ldexp(1.0, 1023)` establishes both Fast2Mult finiteness
    requirement (is_finite (BMULT a b)) and the cond's product magnitude bound
    (Rabs (FT2R a * FT2R b) <= /2 * Omega).  Combines Float_cmp_Clt_bpow1023 (which
    also derives z finite) with no_overflow_real_from_round_mul.  It derives
@@ -476,7 +476,7 @@ Proof.
     destruct (float_of_ftype a); simpl in Hcmp; try discriminate;
     destruct s; simpl in Hcmp; try discriminate;
     destruct s0; simpl in Hcmp; discriminate. }
-  (* Now Bcompare yields B2R sum = B2R a. *)
+  (* Bcompare yields B2R sum = B2R a. *)
   cbv [Float.cmp cmp_of_comparison Float.compare] in Hcmp.
   rewrite Binary.Bcompare_correct in Hcmp; [| exact Hfin_sum | exact Ha].
   destruct (Rcompare (Binary.B2R 53 1024 sum)
@@ -565,8 +565,8 @@ Qed.
 
 (* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
    a format value bpow k, so:
-     - a STRICT rounded bound below bpow k forces the exact value <= bpow k, and
-     - a STRICT rounded bound above bpow k forces the exact value > bpow k.
+     - a strict rounded bound below bpow k forces the exact value <= bpow k, and
+     - a strict rounded bound above bpow k forces the exact value > bpow k.
    These are the division check analogs of no_overflow/underflow_real_from_round_mul,
    stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
    BDIV_round_correct in body_dw_div_fp_check). *)
@@ -622,9 +622,9 @@ Proof.
     revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-(* BDIV packaging of the rounded->exact transfer: from a magnitude bound on
-   the FLOAT quotient FT2R (BDIV a b) (with b's real value nonzero and BDIV finite)
-   to the corresponding bound on the EXACT real quotient FT2R a / FT2R b.  Combines
+(* BDIV packaging of the transfer from rounded to exact: from a magnitude bound on
+   the floating-point quotient FT2R (BDIV a b), with a nonzero real value for b and finite BDIV,
+   to the corresponding bound on the exact real quotient FT2R a / FT2R b.  Combines
    BDIV_round_correct (FT2R (BDIV a b) = RN(FT2R a / FT2R b)) with round_abs_*_bpow,
    exactly as prod_bnd_facts does for multiplication. *)
 Lemma BDIV_abs_le_bpow : forall (a b : ftype Tdouble) (k : Z),
@@ -705,7 +705,7 @@ Qed.
 (* Generic magnitude comparisons against a concrete finite float constant v
    whose real value is C.  Cle_lo / Clt_lo lift `v (<=|<) fabs b` into the
    corresponding real lower bound on |FT2R b|; Clt_hi lifts `fabs b < v` into
-   finiteness of b AND the strict upper bound |FT2R b| < C (deriving finiteness
+   finiteness of b and the strict upper bound |FT2R b| < C (deriving finiteness
    the same way as Float_cmp_Clt_bpow1023). *)
 Lemma Float_cmp_Cle_lo :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),
@@ -762,7 +762,7 @@ Qed.
 
 (* Strict upper quotient bound against q_omega_val (2^1022 = Omega/4): the
    analog of Float_cmp_Clt_bpow1023 for Clt and bpow1022, deriving finiteness of the
-   (rounded) quotient AND the strict magnitude bound.  Specialized (not generic
+   rounded quotient and the strict magnitude bound.  Specialized (not generic
    in v) because the finiteness derivation needs q_omega_val concrete so that
    Bcompare against an infinity/NaN left operand reduces. *)
 Lemma Float_cmp_Clt_bpow1022 :
@@ -796,7 +796,7 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 (* ==================================================================== *)
-(*  Double word division check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
+(*  Double-word division check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
 (* ==================================================================== *)
 
 (* [q_hi966_val] represents [2^966 = 2^(femax-p-5)], the upper divisor bound
@@ -877,8 +877,8 @@ Proof.
   apply Rinv_le_contravar; [exact Hra | exact H].
 Qed.
 
-(* Instance of recip_lower_from_upper expressed with bpow, which is the form the DW/DW
-   reciprocal conjunct used to be stated in: a nonstrict upper bound |r| <= 2^k on the
+(* Instance of recip_lower_from_upper expressed with bpow.  A nonstrict upper
+   bound |r| <= 2^k on the
    divisor is exactly the lower bound 2^(-k) <= |1/r| on the reciprocal.  At
    k = -(emin + 2p - 1) = 969 for Tdouble this is what yh_hi discharges. *)
 Lemma recip_lower_from_bpow_upper : forall (r : R) (k : Z),
