@@ -498,10 +498,11 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
       |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
 
-    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_safe_input_cond]) together with
-    output double-word closure
-    ([DWDivDW_double_word_from_safe_input_cond]) and their bundle
-    ([DWDivDW_mixed_guarantee_from_safe_input_cond]).  The [5/2*eta] is not an
+    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_cond]) together with output
+    double-word closure ([DWDivDW_double_word_from_cond]) and their bundle
+    ([DWDivDW_mixed_guarantee_from_cond]).  The safe-input condition reaches
+    the same bundle through [DWDivDW_mixed_guarantee_from_safe_input_cond].
+    The [5/2*eta] is not an
     artifact of a missing guard: the closing block routes through
     [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
     range from double-word inputs and finiteness alone, and whose sub-threshold
