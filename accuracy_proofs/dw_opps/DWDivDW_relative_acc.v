@@ -239,20 +239,10 @@ Section CorrectDWDivDW.
 
 End CorrectDWDivDW.
 
-(* The generic Algorithm-9 / Fast2Mult / Fast2Sum underflow-floor lemmas that
-   used to sit here now live in DWMulFP_relative_acc.v, where they belong: they are
-   statements about DWTimesFP3 (Algorithm 9), they were already built on top of
-   the corresponding multiplication accuracy proof, and nothing about them is division
-   specific.  Moving them upstream removed a layering inversion and relaxed
-   their p >= 14 hypothesis to p >= 3.  The operation-independent rounding
-   lemmas arrive through FLT_helpers; the Algorithm-9 lemmas arrive unqualified
-   through the Require Import DWMulFP_relative_acc above:
-
-     round_FLT_error_rel_emin        round_abs_le_relative_plus_half_emin
-     Fast2Sum_sum_exact_of_sum_small (replaces Fast2Sum_sum_exact_floor_small)
-     DWTimesFP3_sum_exact_of_ord     DWTimesFP3_double_word_of_sum
-     Fast2Sum_double_word_of_sum
-     DWTimesFP_mixed_guarantee_from_cond *)
+(* Generic rounding lemmas used below come from [FLT_helpers].  The imported
+   multiplication results [DWTimesFP3_sum_exact_of_ord] and
+   [DWTimesFP_mixed_guarantee_from_cond] are proved in [DWMulFP_mixed_acc].
+   [Fast2Sum_double_word_of_sum] comes from [Fast2Sum_acc_helpers]. *)
 
 (* ============================================================
    Immediate consequences of the public division condition
@@ -2559,10 +2549,10 @@ End DWDivDWCondFacts.
    real-valued FLX model, node by node, under no-underflow assumptions: the
    relevant rounded prologue nodes carry lower bounds placing them in the
    normal range, so round_FLT agrees with round_FLX (round_FLT_FLX).  The
-   intended completed proof also composes bridges for the two reciprocal
-   refinement sub-blocks and the closing double-word multiplication.
+   proof also composes bridges for the two reciprocal refinement blocks and
+   the closing double-word multiplication.
 
-   The paper's FLX reciprocal prologue (paper_proofs/DWDivDW.v:1937-1949):
+   The FLX reciprocal prologue in [DWDivDW.DWDivDW3] is:
      th_r := rnd_p (/ yh)
      rh_r := 1 - yh * th_r
      rl_r := - rnd_p (yl * th_r)
@@ -3867,11 +3857,8 @@ Qed.
     real arithmetic; each arm of the refinement split supplies its own
     [(a,bx)] and its own budget check.
 
-    (The former [DWDivDW_relative_of_mixed_param], which went one step further
-    and absorbed [2*eta] into [u^2|Q|] as well, is gone: no public theorem
-    turns the mixed bound into a relative one by absorbing its floor term.  The
-    [bq] parameter is gone too; see
-    [DWDivDW_mixed_closing_composition_param].) *)
+    No public theorem converts this mixed bound to a relative bound by
+    absorbing its floor term. *)
 Local Lemma DWDivDW_absolute_of_mixed_param
     (u eta X Q zr a bx r c fc : R) :
   0 <= eta -> 0 <= bx ->
@@ -4265,9 +4252,9 @@ End BridgeDWDivDW.
 
 (* ============================================================
    Relative-error bound for DWDivDW3
-   Mirrors DWDivFP_relative_acc.v:274-321 (relative_errorDWDivFP3_correct): instantiate
-   the paper's tight bound DWDivDW.DWDDW3_correct (98/10*u^2), rewrite the FLX
-   model via the bridge, and read off the numeric bound.
+   As in [relative_errorDWDivFP3_correct], instantiate the paper result
+   [DWDivDW.DWDDW3_correct] with its [98/10*u^2] bound, rewrite the FLX model
+   through the bridge, and obtain the numeric bound.
    ============================================================ *)
 Section FiniteAccuracyDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.

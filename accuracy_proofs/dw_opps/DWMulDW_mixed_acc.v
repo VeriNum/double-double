@@ -2558,12 +2558,10 @@ destruct (Rle_or_lt P (9 / 8 * T)) as [Hnear | Hfar].
   lra.
 Qed.
 
-(* WHOLE-RANGE error bound.  The leading-product hypothesis is gone: the three
-   regimes are P = 0 and 0 < P < T (both handled by the gap lemma, which needs
-   no lower bound at all) and T <= P (the regime tree).  The price of covering
-   the gap is the floor rising from 2*eta to 5/2*eta; in exchange the bound
-   now holds for every finite input, and p >= 5 replaces
-   DWTimesDW3_error_mixed_floor's p >= 8. *)
+(* Whole-range error bound.  The mixed condition places no lower bound on the
+   leading product.  The gap lemma covers [P = 0] and [0 < P < T], while the
+   regime tree covers [T <= P].  The resulting floor term is [5/2*eta], and
+   the proof requires [p >= 5]. *)
 Theorem DWTimesDW_mixed_accuracy_from_cond :
   (5 <= fprec t)%Z ->
   DWTimesDW_mixed_cond xh xl yh yl ->

@@ -851,8 +851,8 @@ Qed.
                               cexp_le_abs.)
      - FT2R sh = 0         -> Fast2Sum0f             (paper cancellation case)
 
-   This corresponds to the paper's case-split inside DWPlusDW_relerr_bound's
-   proof (paper_proofs/DWPlus.v lines 2041, 2753, 3372).
+   This corresponds to the case split in the proof of
+   [DWPlusDW_relerr_bound].
 *)
 (* |b| <= |a| implies ulp b <= ulp a (Flocq ulp_le; holds including b = 0,
    since ulp is total and ulp 0 = bpow emin is the minimum ulp). *)
@@ -934,8 +934,9 @@ destruct (@DWPlus.DWPlusDW_sh_c_cexp_or_zero (fprec t) (fprec_gt_one t)
   exfalso. apply Hc_nz. rewrite -Hc_eq. exact Hc_FLX_0.
 Qed.
 
-(* Analogous disjunction at the (vh, w) callsite. The paper's now-fixed
-   DWPlusDW_wlevh proves Rabs w <= Rabs vh directly under just DW; via
+(* Analogous disjunction at the [(vh, w)] call site.
+   [DWPlus.DWPlusDW_w_le_vh_aux] proves [Rabs w <= Rabs vh] from the
+   double-word assumptions; via
    cexp_le_abs this gives cexp w <= cexp vh. Hence the cexp disjunct holds
    unconditionally (vh = 0 only when sh = 0 = c, but we keep the disjunct
    for symmetry). *)
@@ -1114,8 +1115,8 @@ Qed.
 
 (* DWPlusDW_vh_w_disjunction (closed version, placed after FIN_w which the proof
    uses for BPLUS_round_correct on w = BPLUS tl vl).
-   Mirrors DWPlusDW_sh_c_disjunction: applies DWPlus.DWPlusDW_w_le_vh_aux
-   (paper_proofs/DWPlus.v:4946) on FT2R-lifted inputs, identifies paper's
+   Mirrors [DWPlusDW_sh_c_disjunction]: applies
+   [DWPlus.DWPlusDW_w_le_vh_aux] to the inputs mapped through [FT2R], and identifies the paper's
    vh, w with our FT2R-lifted versions via TwoSumEq_FLT + FastTwoSumEq_FLT +
    rnd_plus_FLT_FLX_eq', and lifts Rabs <= to cexp <= via mag_le_abs +
    Z.max_le_compat_r. *)

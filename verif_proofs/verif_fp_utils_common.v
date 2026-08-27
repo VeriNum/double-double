@@ -1,10 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* verif_fp_utils_common.v: Shared Vprog, Gprog, and helper definitions
-   used by every verif_fp_utils_*.v body-proof file.  Splitting these out
-   means each body proof file recompiles independently: a fix to one body
-   only retypechecks that body, not the whole 800-line verif_fp_utils.v. *)
+(* Shared [Vprog], [Gprog], and helper definitions for the split
+   [verif_fp_utils_*] body proofs.  Each body proof can be checked
+   independently. *)
 
 (* Re-export the VST and floating-point imports so each verif_fp_utils_*.v
    body-proof file only needs to Require Import this common file. *)

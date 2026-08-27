@@ -109,7 +109,7 @@ End CorrectDWMulDW.
    Section 2: the load-bearing FLX -> FLT bridge for DWTimesDW3.
      DWTimesDW.DWTimesDW12 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
        = F2Rp (DWTimesDW3 xh xl yh yl).
-   Analog of DWMulFP_relative_acc.v's DWTimesFP3_FLX_FLT: each of the five rounded ops
+   Analog of DWMulFP_relative_acc.v's DWTimesFP3_FLX_FLT_weak: each of the five rounded ops
    agrees with its FLX counterpart (round_FLT_FLX + representability), and the
    closing Fast2Sum is exact via the magnitude ordering |cl3| <= |ch|.
    ============================================================ *)
@@ -1853,8 +1853,8 @@ Qed.
 (* KEYSTONE (DW analog of FP relerr_error_eq): the whole double-word error is the
    sum of the four FLT rounding errors e0..e3.  Fast2Sum is exact (aux_cl3_le_ch),
    the product error cl1 is representable (Fast2MultModel_correct), and each
-   intermediate is round(arg); the identity then telescopes by [ring].  Mirrors
-   paper DWTimesDW.v:4960-4968. *)
+   intermediate is round(arg); the identity then telescopes by [ring].  This is
+   the FLT form of the identity used in [DWTimesDW12_correct]. *)
 Lemma relerr_error_eq :
   (3 <= fprec t)%Z ->
   double_word_prop xh xl ->

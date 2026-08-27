@@ -27,8 +27,8 @@ Local Ltac fix_cmp_locals :=
    product bound |FT2R xh * FT2R y| <= Omega/2 (prod_bnd_facts).
 
    The check does NOT test Fast2Mult's underflow disjunction (the `mult_safe`
-   short-circuit it used to carry, still present in fast2_mult_check and
-   dw_mult_dw_check).  DWTimesFP_mixed_safe_input_cond is all the exported contract needs:
+   short-circuit it used to carry, still present in fast2_mult_check).
+   DWTimesFP_mixed_safe_input_cond is all the exported contract needs:
    dw_mult_fp9_guarded_spec states the whole-range mixed bound
    2u^2|P| + 2.51*eta (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_cond) rather than the
    pure 2u^2 relative bound, and that holds in the Fast2Mult underflow gap too.

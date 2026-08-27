@@ -3198,9 +3198,9 @@ Qed.
 
    The first two conjuncts are inherited directly from
    DWPlusDW_relerr_bound_pre. The third conjunct (cexp c <= cexp sh) is
-   established locally inside DWPlusDW_relerr_bound_pre's proof body via
-   the σ-case-split (line 2024 σ=1 cexp branch, line 2753 σ=2 |c|<=|sh|
-   branch), but isn't exposed there. *)
+   established locally inside the proof of [DWPlusDW_relerr_bound_pre].  The
+   [σ = 1] branch proves the exponent inequality directly, while the
+   [σ = 2] branch derives it from [|c| <= |sh|]. *)
 Theorem DWPlusDW_relerr_bound_pre' :
   (double_word zh zl) /\
   relative_errorDWDW <= (3 * u^2) / (1 - 4 * u) /\

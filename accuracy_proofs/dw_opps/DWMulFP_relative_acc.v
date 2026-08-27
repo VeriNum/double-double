@@ -599,7 +599,7 @@ Qed.
      - underflow leg (xh*y = 0): the exact product xr*yr is 0, so relerr = 0
        (PROVEN here via relerr_0_of_xryr0 + xryr0_of_prod0);
      - normal leg (|xh*y| >= bpow(emin+2*fprec-1)): the bridge from
-       DWTimesFP9_correct via DWTimesFP3_FLX_FLT, with the FMA-underflow /
+       DWTimesFP9_correct via DWTimesFP3_FLX_FLT_weak, with the FMA-underflow /
        [emin+2p-1, emin+3p) gap sub-case via a direct |abs err|/|xr*yr| bound. *)
 Lemma DWTimesFP_relative_accuracy_core :
   double_word xh xl ->

@@ -292,8 +292,8 @@ Definition dw_mult_fp9_guarded_spec :=
      |(zh+zl) - (xh+xl)*(yh+yl)|
         <= 4u^2 |(xh+xl)*(yh+yl)| + 2.5*eta,   eta = 2^emin,
 
-   i.e. DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond, reached here through its
-   safe-input form DWTimesDW_mixed_guarantee_from_safe_input_cond.  The PRE is
+   This is the accuracy component of [DWTimesDW_mixed_guarantee], established
+   for guarded inputs by [DWTimesDW_mixed_guarantee_from_safe_input_cond].  The PRE is
    empty:
    dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
    check now tests only DWTimesDW_mixed_safe_input_cond -- no underflow disjunct -- so inputs
@@ -330,18 +330,15 @@ Definition dw_mult_dw12_guarded_spec :=
 
 (* DWDivFP (Algorithm 15) guarded wrapper.  Unlike the plus/mult wrappers, the
    quotient's accuracy cannot be a clean relative 3u^2 bound: the closing
-   division d/y can be subnormal (0 for exact division), so the underflow regime
+   division d/y can be zero or subnormal, so the underflow regime
    contributes one 2^emin absolute term.  The exported bound is therefore the
    regime-independent combined bound proven as
    DWDivFP_mixed_guarantee_from_safe_input_cond:
      |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
    which holds unconditionally once the runtime check discharges
-   DWDivFP_mixed_safe_input_cond.  Note the cond is the MINIMAL one: it carries no quotient
-   floor at all, so the wrapper accepts every quotient magnitude the format can
-   represent -- subnormal quotients included.  The POST below is unchanged by
-   that relaxation, and the constant on the 2^emin term is unchanged too: the
-   mixed bound was always what this wrapper exported, and only the set of inputs
-   it accepts got wider.  The PURE relative 3u^2 bound
+   DWDivFP_mixed_safe_input_cond.  The condition has no lower bound on the
+   quotient, so it admits subnormal quotients when its other input and overflow
+   conditions hold.  The PURE relative 3u^2 bound
    (DWDivFP_relative_acc.DWDivFP_relative_accuracy) is not exported here: it holds only
    in the normal regime, on DWDivFP_relative_error_input_cond, whose
    DWDivFP_normal half is a fact about the computed nodes rather than an
@@ -413,10 +410,8 @@ Definition dw_div_fp15_guarded_spec :=
    holds in the NORMAL regime only -- its condition
    DWDivDW_relative_error_input_cond bundles DWDivDW_normal, nine lower bounds
    on residual and product NODES of the computation, which a runtime input
-   check cannot test and which may legitimately be zero.  The mixed bound is
-   what survives whole-range, and it is strictly sharper than any relative form
-   wherever 2^emin sits below its maximum -- i.e. everywhere the quotient is
-   comfortably normal.
+   check cannot test and which may legitimately be zero.  The guarded interface
+   therefore exports the mixed bound over the whole range.
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
    condition rather than an input condition -- at Tdouble it is 14 <= 53 and the

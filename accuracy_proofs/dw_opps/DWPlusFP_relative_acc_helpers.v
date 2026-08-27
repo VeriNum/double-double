@@ -1,8 +1,8 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** This file contains helper lemmas for relative-accuracy proofs 
-for double-word  plus a (double-word, floating-point number *)
+(** Helper lemmas for the relative accuracy of double-word plus
+    floating-point addition. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas.

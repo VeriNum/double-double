@@ -363,9 +363,9 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
        closing th+tl); the |xh| ceiling covers the intermediate product node
        pih = round(th*y) ~ xh, which can overflow even under the quotient bound
        (e.g. xh = Omega, y = 4).  Unlike the mul-style split into two
-       square-root bounds on xh and 1/y (which would exclude valid
-       small-magnitude or large-matched divisions), this is the precise
-       no-overflow condition and rejects only inputs that actually overflow;
+       square-root bounds on xh and 1/y, these are direct sufficient
+       conditions for the relevant nodes to avoid overflow.  They may reject
+       inputs whose computed result would remain finite;
 
      - the product-node floor 2^(emin+2p) <= |xh|.  This one is NOT removable:
        it is what makes the division residual representable to relative
@@ -519,9 +519,8 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
       only ever enters the algorithm multiplied by mh ~ 1/yh (the closing
       ch = BMULT xh mh, tl1 = BFMA xh ml tl0, and xl likewise), so the quotient
       ceiling below already bounds every node xh reaches.  Accuracy, output
-      double-word closure and finiteness were all re-verified without it.  The
-      guard's xh_hi test is consequently dead and can be deleted whenever
-      clightgen is next re-run.
+      double-word closure and finiteness do not require this bound.  The
+      current guard therefore has no [xh_hi] test.
 
     WHY CONJUNCTS 7 AND 8 STAY, AND WHERE CONJUNCT 7's EXPONENT COMES FROM.
 
