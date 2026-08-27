@@ -39,8 +39,6 @@ accuracy_proofs/dw_opps/DWMulDW_acc.v
 accuracy_proofs/dw_opps/DWDivFP_acc.v
 accuracy_proofs/dw_opps/DWDivFP_subnormal.v
 accuracy_proofs/dw_opps/DWDivDW_acc.v
-accuracy_proofs/dw_opps/DWPlusFP_finite_acc.v
-
 verif_proofs/verif_objs/fp_utils.v
 verif_proofs/verif_objs/dd_ops.v
 verif_proofs/float_verif_lemmas.v
