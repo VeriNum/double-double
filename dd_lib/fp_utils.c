@@ -98,13 +98,14 @@ int dw_mult_fp_check(struct dword *x, double y) {
 
          |(zh+zl) - (x->s + x->t)*y| <= 2u^2 |(x->s + x->t)*y| + 2.51*eta
 
-       (DWMulFP_acc.DWTimesFP3_error_mixed_flat, via
-       DWTimesFP_mixed_accuracy_from_cond_acc), which holds in EVERY regime given
+       (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond),
+       which holds in EVERY regime given
        only the double-word relation and finiteness of the computed pair.  The
        three conjuncts below are exactly what is needed to establish that
-       finiteness (DWMulFP_acc.DWTimesFP3_finite_acc), so the gap is accepted
+       finiteness
+       (DWMulFP_relative_acc.DWTimesFP3_finite_from_safe_input_cond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
-       (DWTimesFP3_double_word_from_cond_acc). */
+       as part of the same mixed guarantee. */
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -159,7 +160,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
          FT2R x->s * FT2R y->s = 0  \/  2^(emin+2*p-1) <= |FT2R x->s * FT2R y->s|
        (the `mult_safe` test this function used to carry, and which
        fast2_mult_check still does).  That disjunct buys the PURE relative bound
-       8u^2 by excluding the Fast2Mult underflow gap, at the cost of aborting on
+       4u^2 by excluding the Fast2Mult underflow gap, at the cost of aborting on
        any input whose leading product lands in it -- ordinary tiny-operand
        inputs.  The contract exported by dw_mult_dw12_guarded is instead the
        whole-range MIXED bound
@@ -167,13 +168,14 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
          |(zh+zl) - (x->s+x->t)*(y->s+y->t)|
              <= 4u^2 |(x->s+x->t)*(y->s+y->t)| + 2.5*eta
 
-       (DWMulDW_acc.DWTimesDW3_error_mixed_floor_acc, via
-       DWTimesDW_mixed_accuracy_from_cond_acc), which holds in EVERY regime given
+       (DWMulDW_mixed_acc.DWTimesDW_mixed_guarantee_from_safe_input_cond),
+       which holds in EVERY regime given
        only the two double-word relations and finiteness of the computed pair.
        The four conjuncts below are exactly what is needed to establish that
-       finiteness (DWMulDW_acc.DWTimesDW3_finite_acc), so the gap is accepted
+       finiteness
+       (DWMulDW_relative_acc.DWTimesDW3_finite_from_safe_input_cond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
-       (DWTimesDW3_double_word_from_cond_acc): closure needs only that the
+       as part of the same mixed guarantee: closure needs only that the
        closing Fast2Sum preserves its sum, which holds both above the threshold
        (via the ordering |cl3| <= |ch|) and inside the gap (where failure of that
        ordering forces the exact sum onto the FLT/FIX lattice at emin, making
@@ -209,7 +211,7 @@ int dw_div_fp_check(struct dword *x, double y) {
                                   formulation of the relative tier;
          2^(emin+p-1)  = 2^-1022  the floor of the internal
                                   DWDivFP_normal_quotient_input_cond in
-                                  DWDivFP_acc.v, which is what Layer 1's
+                                  DWDivFP_relative_acc.v, which is what Layer 1's
                                   FLX->FLT bridge for the leading quotient
                                   node needs;
          (none)                   DWDivFP_mixed_safe_input_cond, this guard.
@@ -229,7 +231,7 @@ int dw_div_fp_check(struct dword *x, double y) {
        the computed pair is established while deriving the mixed condition.
 
        The PURE relative bound 3u^2 is a separate, NORMAL-RANGE tier
-       (DWDivFP_acc.DWDivFP_relative_accuracy); its condition constrains the
+       (DWDivFP_relative_acc.DWDivFP_relative_accuracy); its condition constrains the
        computed nodes, not just the inputs, so no runtime input check
        discharges it.
        So the guard now admits EVERY quotient magnitude the format can
