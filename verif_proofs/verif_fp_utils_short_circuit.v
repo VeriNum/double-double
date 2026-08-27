@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* verif_fp_utils_short_circuit.v: pure Prop-level helper lemmas that
+(* verif_fp_utils_short_circuit.v: pure propositional helper lemmas that
    factor out the three short-circuit patterns appearing in
    body_dw_plus_dw_check. These are NOT VST proofs — they're standalone
    boolean / conjunction arithmetic that the main body proof's entailer!

@@ -1,10 +1,10 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole-range mixed-error and output-closure results for [DWTimesDW3].
+(** Whole range mixed error and output validity results for [DWTimesDW3].
 
-    This file imports the common runtime-model facts and normal-range relative
-    result from [DWMulDW_relative_acc], then handles the leading-product
+    This file imports the common runtime model facts and normal range relative
+    result from [DWMulDW_relative_acc], then handles the leading product
     underflow gap and exposes the mixed guarantee ladder. *)
 
 Require Import vcfloat.VCFloat.
@@ -22,8 +22,8 @@ Section FarLow0Apparatus.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation u      := (bpow Zaux.radix2 (- fprec t)).
 Notation eminA  := (SpecFloat.emin (fprec t) (femax t)).
-(* The explicit FLX rounding chain of the low-order DW*DW nodes with a floor
-   term f at the low-low node.  This is a NOTATION (pure syntax), not a
+(* The explicit FLX rounding chain of the low order DW*DW nodes with a floor
+   term f at the low by low node.  This is a NOTATION (pure syntax), not a
    synthetic algorithm Definition; it expands to the real nodes' FLX rounds. *)
 Local Notation FLXlow0 axh axl ayh ayl f :=
   (F2Sum.Fast2Sum (fprec t) choice
@@ -35,7 +35,7 @@ Local Notation FLXlow0 axh axl ayh ayl f :=
             + round radix2 (FLX_exp (fprec t)) (Znearest choice)
                 ((axh*ayl + axl*ayl) + f))))).
 
-(* Hard arm for the explicit FLX low-node chain. *)
+(* Hard arm for the explicit FLX low node chain. *)
 Local Lemma flx_dwtimesdw_hard
     (axh axl ayh ayl f : R) :
   (5 <= fprec t)%Z ->
@@ -885,7 +885,7 @@ destruct (Rlt_dec 0 xh0) as [Hxp|Hxn].
     exact H.
 Qed.
 
-(* The far low-low-underflow bound, DIRECTLY for the real DWTimesDW3, via the
+(* The far underflow in the low by low product bound, DIRECTLY for the real DWTimesDW3, via the
    FLT floor decomposition (no synthetic floored algorithm). *)
 Lemma DWTimesDW_abs_low0_far (xh xl yh yl : ftype t) :
   double_word xh xl -> double_word yh yl ->
@@ -1055,14 +1055,14 @@ have Heq : Rabs (zh+zl-xr*yr) =
 rewrite Heq. apply Rmult_le_compat_r; [apply Rabs_pos|exact Hrel].
 Qed.
 
-(** Absolute paper bound for the broader exact-node regime.  Each node may
+(** Absolute paper bound for the broader exact node regime.  Each node may
     be normal or merely representable on the physical FIX lattice. *)
 
 
-(** If both the low-low node and the final correction node are subnormal,
+(** If both the low by low node and the final correction node are subnormal,
     their relative components vanish.  The two remaining relative errors fit
     strictly inside the paper [4*u^2] budget; all additive pieces retain the
-    common two-ulps allowance. *)
+    shared allowance of two ulps. *)
 Theorem DWTimesDW_abs_low0_final_underflow :
   double_word xh xl ->
   double_word yh yl ->
@@ -1190,8 +1190,8 @@ eapply Rle_trans.
 - right; ring.
 Qed.
 
-(** If the first cross-term FMA underflows but the following two nodes are
-    normal, the small-node hypothesis replaces one full [u*P] contribution.
+(** If the first cross term FMA underflows but the following two nodes are
+    normal, the small node hypothesis replaces one full [u*P] contribution.
     The two active physical floors consume one ulp; their propagation consumes
     at most the second ulp, leaving the paper [4*u^2] term unchanged. *)
 Theorem DWTimesDW_abs_low0_low1_tail_normal :
@@ -1426,10 +1426,10 @@ have Htri := Rabs_triang (er2+er3) (ef0+ef1).
 eapply Rle_trans; [exact Htri|]. nra.
 Qed.
 
-(** Symmetric tail case: the low-low node and the second FMA underflow,
+(** Symmetric tail case: the low by low node and the second FMA underflow,
     while the first FMA and final addition are normal.  Here the subnormal
-    second-FMA input bounds the whole correction entering the last round, so
-    the relative pieces fit in [4*u^2] and the two floor pieces total one ulp. *)
+    second FMA input bounds the whole correction entering the last round, so
+    the relative pieces fit in [4*u^2] and the two floor terms total one ulp. *)
 Theorem DWTimesDW_abs_low0_low2_other_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -1663,7 +1663,7 @@ rewrite (BMULT_round_correct t xl0 yl0 F0) in Hr.
 exact Hr.
 Qed.
 
-(* ===== Algorithm-12 underflow gap for the whole-range mixed API ===== *)
+(* ===== Algorithm 12 underflow gap for the whole range mixed API ===== *)
 
 (* Error bound for the compensated core in the [Fast2Mult] gap, before the
    final [Fast2Sum].  The exact sum [ch+cl3] differs from [xr*yr] by at most
@@ -1878,7 +1878,7 @@ exact Herr.
 Qed.
 
 (* Bridge: the output pair of Algorithm 12 IS the closing Fast2Sum of
-   (ch, cl3), so a sum-preservation fact about that Fast2Sum transfers to
+   (ch, cl3), so a preservation of the sum fact about that Fast2Sum transfers to
    the algorithm's output.  Pure definitional unfolding. *)
 Local Lemma DWTimesDW3_double_word_of_sum (xh0 xl0 yh0 yl0 : ftype t) :
   is_finite_p (DWTimesDW3 xh0 xl0 yh0 yl0) ->
@@ -1902,13 +1902,13 @@ Qed.
 
 (* Two magnitude bounds on the closing Fast2Sum's arguments, in RELATIVE form
    (multiples of u*P and eta rather than of N).  They are coarser than the
-   core chain's N-shaped bounds, but being expressed in u*P they make the
+   core chain's bounds in N form, but being expressed in u*P they make the
    ordering test of DWTimesDW3_error_floor_gap a single crossing computation
-   instead of the two-step bootstrap that N-shaped bounds would force:
+   instead of the bootstrap with two steps that bounds in N form would force:
    |cl3| <= 6uP+4eta against |ch| >= (1-u)P-eta/2 cross only below P ~ 6*eta.
 
    Separate lemmas rather than inline [have]s so each nonlinear step runs
-   against a small context; nra does not cope with the twenty-odd hypotheses
+   against a small context; nra does not cope with the about twenty hypotheses
    in scope inside the gap theorem. *)
 Lemma gap_ch_lower_bound (xh0 yh0 : ftype t) :
   is_finite (BMULT xh0 yh0)=true ->
@@ -2196,7 +2196,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   + exact (DWTimesDW3_double_word_of_sum xh0 xl0 yh0 yl0 FIN Hsum).
 Qed.
 
-(** Common near-threshold proof.  The numerical premise records exactly how
+(** Common proof near the threshold.  The numerical premise records exactly how
     much of the physical floor is available after the [4u^2] relative term. *)
 Local Lemma DWTimesDW_abs_normal_near_threshold_core
     (floor_coeff : R) :
@@ -2260,7 +2260,7 @@ have Hbudget : 15/2*u^2*P <=
 replace (u*u) with (u^2) by ring. exact Hbudget.
 Qed.
 
-(* At the sharper [2*eta] floor the near-threshold budget requires p >= 8. *)
+(* At the sharper [2*eta] floor, the budget near the threshold requires p >= 8. *)
 Theorem DWTimesDW_abs_normal_near_threshold :
   double_word xh xl ->
   double_word yh yl ->
@@ -2307,9 +2307,9 @@ have Hu : u <= /32.
 nra.
 Qed.
 
-(** Absolute form of the existing regime-independent multiplication estimate
-    on the normal-leading branch.  This is used only for the pure-relative
-    fallback outside the sharp floored-paper regimes. *)
+(** Absolute form of the existing multiplication estimate independent of the regime
+    on the normal leading branch.  This is used only for the pure relative
+    fallback outside the regimes covered by the sharp paper result with a floor. *)
 Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -2484,15 +2484,15 @@ eapply Rle_trans.
 - apply Req_le. field.
 Qed.
 
-(** Whole-range mixed analysis.  The normal arm retains the paper's [4u^2]
-    coefficient.  Physical underflow in the low-order nodes is represented
+(** Whole range mixed analysis.  The normal arm retains the paper's [4u^2]
+    coefficient.  Physical underflow in the low order nodes is represented
     explicitly by the [2.5 eta] term.  A separate gap lemma covers leading
     products below the Fast2Mult exactness threshold, so no normality condition
     is required by the mixed API. *)
 
-(* ---------- public assembly: the whole-range mixed API ---------- *)
+(* ---------- public assembly: the whole range mixed API ---------- *)
 
-(* Normal arm at the 5/2*eta floor.  The near-threshold leg uses the _floor52
+(* Normal arm at the 5/2*eta floor.  The near the threshold leg uses the _floor52
    variant, so the whole tree holds at p >= 5. *)
 Local Theorem DWTimesDW3_error_floor_normal :
   (5 <= fprec t)%Z ->
@@ -2543,7 +2543,7 @@ destruct (Rle_or_lt P (9 / 8 * T)) as [Hnear | Hfar].
   lra.
 Qed.
 
-(* Whole-range error bound.  The mixed condition places no lower bound on the
+(* Whole range error bound.  The mixed condition places no lower bound on the
    leading product.  The gap lemma covers [P = 0] and [0 < P < T], while the
    regime tree covers [T <= P].  The resulting floor term is [5/2*eta], and
    the proof requires [p >= 5]. *)
@@ -2588,9 +2588,9 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
   lra.
 Qed.
 
-(* WHOLE-RANGE closure.  Both regimes preserve the closing Fast2Sum's sum, so
+(* Whole range closure.  Both regimes preserve the closing Fast2Sum's sum, so
    both give the double-word property: above the threshold through the
-   ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the tiny-sum
+   ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the small sum
    lattice argument inside DWTimesDW3_error_floor_gap. *)
 Theorem DWTimesDW_double_word_from_cond :
   (5 <= fprec t)%Z ->

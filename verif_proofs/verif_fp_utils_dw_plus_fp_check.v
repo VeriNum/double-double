@@ -7,11 +7,11 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 (* dw_plus_fp_check(x, y) returns 1 only if DWPlusFP_safe_input_cond holds:
    xh, xl, y are finite, (xh, xl) is a double-word, and |xh|, |y| <= Omega/4.
 
-   This is the single-double-word specialization of body_dw_plus_dw_check:
+   This is the single double-word specialization of body_dw_plus_dw_check:
    it drops the (yh, yl) double-word half entirely and, in its place, checks
    the scalar bound |y| <= Omega/4 and folds finiteness of y directly into the
    return short-circuit.  The same short_circuit_*_concl helpers discharge the
-   Prop-level conjuncts at each &&-join. *)
+   propositional conjuncts at each && join. *)
 Lemma body_dw_plus_fp_check :
   semax_body Vprog Gprog f_dw_plus_fp_check dw_plus_fp_check_spec.
 Proof.
@@ -20,8 +20,8 @@ Proof.
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
   (* fin_xl = isfinite_double(x->t) *)
   forward. forward_call. Intros vret_fxl. rename H into Hspec_fxl. forward.
-  (* fin_y = isfinite_double(y); y is a parameter, so forward_call absorbs the
-     result-store _fin_y (no leading field-read, unlike the fin_xh/fin_xl calls). *)
+  (* fin_y = isfinite_double(y); y is a parameter, so forward_call stores the
+     result in _fin_y without first reading a field, unlike the fin_xh/fin_xl calls. *)
   forward_call. Intros vret_fy. rename H into Hspec_fy.
 
   (* --- dwx stage 1: t'4 = fin_xh && fin_xl --- *)
@@ -49,7 +49,7 @@ Proof.
   - (* fin_xh = 0 *)
     forward.
     unfold Post_t4; Exists false; entailer!.
-  - (* join Post_t4: DW-equality stage --- t'5 = t'4 && (x->s + x->t == x->s) *)
+  - (* join Post_t4: Double-word equality stage --- t'5 = t'4 && (x->s + x->t == x->s) *)
     unfold Post_t4; clear Post_t4.
     Intros b4; rename H into Hb4.
     set (Post_t5 :=

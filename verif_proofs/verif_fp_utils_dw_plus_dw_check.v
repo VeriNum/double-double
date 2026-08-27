@@ -10,7 +10,7 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
    Proof structure mirrors body_two_sum_check; each &&-short-circuit becomes
    a forward_if cascade with an EX b_i, PROP(b_i = true -> P_i) invariant.
-   The Prop-level conjunct discharge at each join is delegated to the
+   Discharge of the propositional conjuncts at each join is delegated to the
    short_circuit_*_concl lemmas in verif_fp_utils_short_circuit.v. *)
 Lemma body_dw_plus_dw_check :
   semax_body Vprog Gprog f_dw_plus_dw_check dw_plus_dw_check_spec.

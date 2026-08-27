@@ -4,8 +4,8 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* Local-matching helpers: a stored
-   comparison temp is `Vint (Int.repr (Z.b2z c))`, while the forward_if invariant
+(* Local matching helpers: a stored comparison temporary is
+   `Vint (Int.repr (Z.b2z c))`, while the forward_if invariant
    carries `Vint (if c then Int.one else Int.zero)`; the two are convertible. *)
 Local Ltac cmp_val_eq :=
   rewrite Vint_b2z_if; reflexivity.
@@ -224,7 +224,7 @@ Proof.
                        No underflow disjunct to prove -- that is the whole point
                        of the weakening -- so prod_bnd_facts closes both
                        remaining goals (Fast2Mult finiteness AND the
-                       product-magnitude bound) in one shot. *)
+                       product magnitude bound) in one shot. *)
                     destruct (Hb12 eq_refl) as [Hb6t [Hb8t Hbpbt]].
                     destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwx]].
                     destruct (Hb8 Hb8t) as [Hfyh [Hfyl Hdwy]].

@@ -79,7 +79,7 @@ forward_if Post_if.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
-  (* The whole-range mixed bound is the public API for DW x FP: the guard only
+  (* The whole range mixed bound is the public API for DW x FP: the guard only
      establishes DWTimesFP_mixed_safe_input_cond (no underflow disjunct), which is exactly
      what DWTimesFP_mixed_guarantee_from_cond needs once finiteness is derived. *)
   pose proof
@@ -113,7 +113,7 @@ forward_if Post_if.
   forward_call (s, x, y, xh, yh).
   assert (Hp5 : (5 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
-  (* The whole-range mixed bound is the public API for DW x DW: the guard only
+  (* The whole range mixed bound is the public API for DW x DW: the guard only
      establishes DWTimesDW_mixed_safe_input_cond (no underflow disjunct), which is exactly
      what DWTimesDW_mixed_accuracy_from_cond needs once finiteness is derived. *)
   pose proof

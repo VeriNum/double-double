@@ -433,8 +433,8 @@ destruct (float_of_ftype a), (float_of_ftype b);
 Qed.
 
 (* Division analogue of Bmult_no_overflow / is_finite_BMULT_no_overflow.
-   Unlike multiplication, Bdiv_correct carries a divisor-nonzero side
-   condition (B2R y <> 0), so the no-overflow fact takes FT2R b <> 0. *)
+   Unlike multiplication, Bdiv_correct carries a nonzero divisor side
+   condition (B2R y <> 0), so the no overflow fact takes FT2R b <> 0. *)
 Definition Bdiv_no_overflow (x y: R) : Prop :=
   (Rabs (rounded t (x / y)) < Raux.bpow Zaux.radix2 (femax t))%R.
 

@@ -19,7 +19,7 @@ Local Ltac cascade_gather :=
          end;
   repeat match goal with H : _ /\ _ |- _ => destruct H end.
 
-(* Closes every side goal entailer! produces in the six return-cascade stages.
+(* Closes every side goal entailer! produces in the six return stages.
    Two shapes occur, and which one appears varies by stage (entailer! sometimes
    discharges the LOCAL parts on its own), so this handles both uniformly:
 
@@ -189,7 +189,7 @@ Proof.
            forward.                                  (* q := t'19 / t'20 *)
            forward_call (Float.div (fst xh) (fst yh)). forward. (* qt_hi *)
 
-           (* Abstract the three comparisons so the cascade below is name-opaque. *)
+           (* Name the three comparisons to keep their definitions out of the cascade. *)
            remember (Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh))
                        q_hi966_val) as byh_hi eqn:Ebyh_hi.
@@ -287,7 +287,7 @@ Proof.
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                              destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
                              (* No `rewrite Eb..` is needed here: entailer! has
-                                already substituted the three remember-equations
+                                already substituted the three remembered equations
                                 away, so Hyhht .. Hqtht arrive as the concrete
                                 Float.cmp facts the magnitude lemmas expect. *)
 

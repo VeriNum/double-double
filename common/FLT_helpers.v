@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Small, operation-independent helpers for Flocq's FLT format. *)
+(** Small helpers for Flocq's FLT format, independent of any operation. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common.
@@ -51,10 +51,10 @@ unfold SpecFloat.fexp, SpecFloat.emin.
 apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
 Qed.
 
-(** One ulp of headroom is at most a quarter of the overflow threshold.  Pairs
-    with [ulp_below_overflow] below to turn ulp-sized slack into
-    [Omega]-relative slack, which is how the no-overflow side conditions of the
-    multi-step algorithms are discharged. *)
+(** One ulp of headroom is at most a quarter of the overflow threshold.  Pair
+    this with [ulp_below_overflow] to express one ulp of slack relative to
+    [Omega].  This discharges overflow conditions in algorithms with several
+    steps. *)
 Lemma bpow_femax_fprec_le_quarter_Omega :
   bpow radix2 (femax t - fprec t) <= /4 * Omega.
 Proof.
@@ -138,7 +138,7 @@ destruct (Rle_lt_dec
   have := Rabs_pos v. nra.
 Qed.
 
-(** Universal FLT rounding-error bound: a relative term plus half the
+(** Universal FLT rounding error bound: a relative term plus half the
     subnormal floor. *)
 Lemma round_FLT_error_rel_emin (v : R) :
   Rabs (round radix2 fexp (Znearest choice) v - v) <=
@@ -171,7 +171,8 @@ have Hu0 : 0 <= bpow radix2 (- fprec t) by apply bpow_ge_0.
 have := Rabs_pos v. nra.
 Qed.
 
-(** The quarter-overflow power used by multi-step operation guards. *)
+(** The power equal to one quarter of the overflow threshold, used by guards
+    for operations with several steps. *)
 Lemma bpow_femax_minus_two :
   bpow radix2 (femax t - 2) = /4 * Omega.
 Proof.
@@ -180,7 +181,7 @@ have -> : Omega = (bpow radix2 (femax t - 2) * bpow radix2 2)%R
 have -> : bpow radix2 2 = 4%R by reflexivity. lra.
 Qed.
 
-(** Case-free linear upper bound on an FLT ulp. *)
+(** Uniform linear upper bound on an FLT ulp. *)
 Lemma ulp_le_lin (v : R) :
   ulp v <= Rabs v * bpow radix2 (1 - fprec t) +
     bpow radix2 (common.emin (t:=t)).
@@ -228,7 +229,7 @@ have H := round_FLT_error_rel_emin v.
 rewrite Rmult_comm. exact H.
 Qed.
 
-(** FLT and FLX rounding can differ only by one underflow-floor ulp. *)
+(** FLT and FLX rounding can differ only by one underflow floor ulp. *)
 Lemma round_FLT_FLX_diff (v : R) :
   Rabs (round radix2 fexp (Znearest choice) v
         - round radix2 (FLX_exp (fprec t)) (Znearest choice) v)

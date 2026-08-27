@@ -75,7 +75,7 @@ Proof.
     have Hc : (c = emin)%Z.
     { have Hcge : (emin <= c)%Z by rewrite /c /cexp /FLT_exp; lia.
       lia. }
-    (* Reduce to round-monotonicity: |round d| = round|d| <= round(bpow(emin-1)). *)
+    (* Reduce to monotonicity of rounding: |round d| = round|d| <= round(bpow(emin-1)). *)
     rewrite -round_NE_abs.
     apply Rle_trans with
       (round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice)
@@ -115,7 +115,7 @@ End FastTwoMultAcc.
 Section FastTwoMultFloor.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Even below the exact-reconstruction threshold, the compensated product
+(** Even below the exact reconstruction threshold, the compensated product
     loses at most half a physical underflow ulp. *)
 Lemma Fast2Mult_sum_error_floor (a b : ftype t) :
   (3 <= fprec t)%Z ->
@@ -214,7 +214,7 @@ Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 Variables (a b : ftype t).
 
-(* Fast2Mult_exact_cond is the single pre-condition shared with the verif spec
+(* Fast2Mult_exact_cond is the single precondition shared with the verif spec
    (fast2_mult_check_spec at Tdouble). *)
 Corollary Fast2Mult_accuracy_from_exact_cond :
   Fast2Mult_exact_cond a b ->
@@ -224,7 +224,7 @@ Proof.
   now apply Fast2Mult_accuracy_norm.
 Qed.
 
-(* The accuracy bound needs ONLY overflow-safety (finiteness of the rounded
+(* The accuracy bound needs ONLY overflow safety (finiteness of the rounded
    product): Fast2Mult_acc_only_cond = is_finite (BMULT a b) = true. *)
 Corollary Fast2Mult_accuracy_from_acc_only_cond :
   Fast2Mult_acc_only_cond a b ->
@@ -236,7 +236,7 @@ Qed.
 
 (* Exact reconstruction and the double-word property need the full condition:
    both a finite rounded product and the underflow disjunct. *)
-(* Stated as a Prop-level conjunction (/\) using double_word_prop, so it is
+(* Stated as a propositional conjunction (/\) using double_word_prop, so it is
    usable in VST PROP clauses.  double_word_prop is definitionally the same
    equality as double_word (just : Prop instead of : Type), so the equality
    from TwoMult_is_DW closes the double_word_prop goal. *)

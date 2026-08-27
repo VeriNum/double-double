@@ -1,12 +1,12 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative-error and output-closure results for [AccurateDWPlusDW].
+(** Relative error and output validity results for [AccurateDWPlusDW].
 
-    The operation has no separate mixed-error tier: under two input
+    The operation has no separate mixed error tier: under two input
     double-word properties and finiteness of the computed pair, its relative
-    error is at most [3u^2/(1-4u)] over the whole range.  The input-only safe
-    condition proves result finiteness and reaches the same guarantee as a
+    error is at most [3u^2/(1-4u)] over the whole range.  The condition on
+    inputs proves result finiteness and reaches the same guarantee as a
     corollary. *)
 
 Require Import vcfloat.VCFloat.

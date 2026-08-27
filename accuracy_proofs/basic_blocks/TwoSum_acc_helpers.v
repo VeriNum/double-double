@@ -5,9 +5,9 @@
    TwoSum and Fast2Sum algorithms in the FLT format.
 
    Layout:
-     1. No-overflow lemmas
+     1. No overflow lemmas
      2. Finiteness propagation
-     3. Real-arithmetic helper
+     3. Real arithmetic helper
      4. Correctness & equivalence *)
 
 Require Import vcfloat.VCFloat.
@@ -34,7 +34,7 @@ Notation BPLUS  := (@FPCore.BPLUS  NANS t STD).
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 (* ===================================================================== *)
-(* 1. No-overflow lemmas                                                   *)
+(* 1. No overflow lemmas                                                   *)
 (* ===================================================================== *)
 
 (* Generic ulp ceiling: a finite float's ulp cannot exceed 2^(femax - p), since
@@ -121,7 +121,7 @@ Proof.
   rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
 Qed.
 
-(* No-overflow of the first Fast2Sum step under the Fast2Sum_exact_cond disjunction
+(* No overflow of the first Fast2Sum step under the Fast2Sum_exact_cond disjunction
    (ulp ordering, or a = 0).  The magnitude version (no_overflow_2Sum_a) bounds
    |rnd(s-a)| <= |a|, which FAILS under mere ulp ordering.  Instead we use that
    under ulp b <= ulp a the step is exact (z = s - a), then bound
@@ -418,8 +418,8 @@ Qed.
    disjunction (ulp ordering ulp b <= ulp a, or a = 0) instead of the magnitude
    ordering |b| <= |a|.  This is exactly the shape DWPlusDW_vh_w_disjunction (and
    Fast2Sum_exact_cond) produce, so it can be forwarded directly.  The chain mirrors
-   is_finite_FastSum: no_overflow_2Sum_a_ulp for the no-overflow steps and
-   F2Sum_correct_ulp_flt for the error-term correctness. *)
+   is_finite_FastSum: no_overflow_2Sum_a_ulp for the no overflow steps and
+   F2Sum_correct_ulp_flt for the error term correctness. *)
 Lemma is_finite_FastSum_ulp (a b : ftype t):
   ulp (FT2R b) <= ulp (FT2R a) \/ FT2R a = 0 ->
   is_finite (BPLUS a b) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
@@ -993,7 +993,7 @@ lra.
 Qed.
 
 (* ===================================================================== *)
-(* 3. Real-arithmetic helper                                               *)
+(* 3. Real arithmetic helper                                               *)
 (* ===================================================================== *)
 
 Theorem round_plus_ge_ulp :

@@ -2,9 +2,9 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (* Abstract Spec Interface (ASI) for the double-word *operations* translation
-   unit (dd_ops.c / verif_objs/dd_ops.v).  Every op / guarded-wrapper funspec is
+   unit (dd_ops.c / verif_objs/dd_ops.v).  Every op / guarded wrapper funspec is
    DECLAREd here exactly once, under the dd_ops program's CompSpecs, so that the
-   body-proof file (verif_dd_ops.v) and the VSU builder (Ops_VSU.v) reference
+   body proof file (verif_dd_ops.v) and the VSU builder (Ops_VSU.v) reference
    the *same* funspec terms.  The check_* funspecs mirror fp_utils_specs.v
    verbatim (same WITH/PRE/POST) so the ops VSU's Imports match the checks VSU's
    Exports at link time.  fma is provided by MathASI; exit is a libc external. *)
@@ -194,7 +194,7 @@ Definition fast_2sum_guarded_spec :=
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 
-(* Tier A full Fast2Mult wrapper: error-term bound, exact reconstruction, and
+(* Tier A full Fast2Mult wrapper: error term bound, exact reconstruction, and
    output double-word property. *)
 Definition fast_2mult_guarded_spec :=
   DECLARE _fast_2mult_guarded
@@ -353,7 +353,7 @@ Definition dw_div_dw18_guarded_spec :=
 (*  Imported check specs (mirror fp_utils_specs.v verbatim)                  *)
 (* ======================================================================== *)
 
-(* Copy of fp_utils_specs.SumResultIsSafeForFast2Sum (a CompSpecs-free Prop);
+(* Copy of fp_utils_specs.SumResultIsSafeForFast2Sum (a Prop independent of CompSpecs);
    defined here to avoid importing fp_utils_specs (which would clash on dword /
    f2val / the check spec names and bring a second CompSpecs into scope).
    Convertible to the original, so the link's funspec match still succeeds. *)
@@ -465,8 +465,8 @@ Definition dw_mult_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-(* Minimal cond: no quotient floor at all; the caller gets the whole-range
-   mixed bound, not the normal-range pure 3u^2 one.  See
+(* Minimal cond: no quotient floor at all; the caller gets the whole range
+   mixed bound, not the normal range pure 3u^2 one.  See
    dw_div_fp15_guarded_spec above and DDConds.DWDivFP_mixed_safe_input_cond. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
@@ -512,7 +512,7 @@ Definition exit_spec :=
     PROP(False) LOCAL() SEP().
 
 (* ======================================================================== *)
-(*  Spec groupings for the ops VSU (and its body-proof Gprog)                *)
+(*  Spec groupings for the ops VSU (and its body proof Gprog)                *)
 (* ======================================================================== *)
 
 (* Externals the ops TU calls but does not define: fma (libm), exit (libc),

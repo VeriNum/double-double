@@ -1,9 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole-range mixed-error and output-closure results for [DWTimesFP3].
+(** Whole range mixed error and output validity results for [DWTimesFP3].
 
-    This file imports the common runtime-model facts and normal-range relative
+    This file imports the common runtime model facts and normal range relative
     result from [DWMulFP_relative_acc], then handles the Fast2Mult underflow
     gap and exposes the mixed guarantee ladder. *)
 
@@ -20,12 +20,12 @@ Set Bullet Behavior "Strict Subproofs".
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
-(** Whole-range mixed accuracy.  Below the TwoProd exactness threshold
+(** Whole range mixed accuracy.  Below the TwoProd exactness threshold
     [2^(emin+2p-1)], the product residual need not be representable; the
     absolute [eta] term accounts for that underflow regime. *)
 
 (** Algorithm 9's closing Fast2Sum is exact as soon as its two inputs are
-    magnitude-ordered.  No precision bound, no input condition and no regime
+    ordered by magnitude.  No precision bound, no input condition and no regime
     hypothesis is needed -- [FastTwoSum_correct] applies directly.
 
     This is the prerequisite for splitting the refinement block on the
@@ -87,7 +87,7 @@ Qed.
 (* ---------- the gap regime: below the TwoProd exactness threshold ---------- *)
 
 (** In the gap below Fast2Mult's exactness threshold, the compensated core of
-    Algorithm 9 still has a floor-only error.  This is the value before its
+    Algorithm 9 has only a floor error.  This is the value before its
     closing Fast2Sum; no ordinary [u^2] term is introduced in this regime. *)
 Local Lemma DWTimesFP_core_error_floor_gap {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
@@ -345,11 +345,11 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
   + exact (DWTimesFP3_double_word_of_sum ah al b FIN Hsum).
 Qed.
 
-(* ---------- public assembly: the whole-range mixed API ---------- *)
+(* ---------- public assembly: the whole range mixed API ---------- *)
 
 (* Normal arm.  Above the TwoProd exactness threshold the product residual
-   is representable and the entire Algorithm-9 error is relative, with no
-   physical-floor contribution: this is the local relative-accuracy core
+   is representable and the entire Algorithm 9 error is relative, with no
+   physical floor contribution: this is the local relative accuracy core
    cleared of its division by the exact product. *)
 Local Lemma DWTimesFP3_error_normal_arm {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
@@ -379,8 +379,8 @@ have Hmul := Rmult_le_compat_r (Rabs Q) _ _ (Rabs_pos _) Hrel.
 eapply Rle_trans; [exact Hmul|]. right; ring.
 Qed.
 
-(* The public whole-range result bundles the conventional mixed bound with
-   output closure.  The single local core below performs the only normal/gap
+(* The public whole range result bundles the conventional mixed bound with
+   output validity.  The single local core below performs the only normal/gap
    split used to establish that bundle. *)
 Definition DWTimesFP_mixed_guarantee {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) : Prop :=

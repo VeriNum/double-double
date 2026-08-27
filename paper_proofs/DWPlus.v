@@ -3351,13 +3351,13 @@ case: (Rle_lt_dec yh (-xh/2) )=> hyx.
  rewrite sl0 !(Rplus_0_l, Rminus_0_r, th0, round_round) // Fast2Sumf0 //= Rplus_0_r tl0 round_0 Rplus_0_r (round_generic _ _ _ sh) //.
 suff->: x + y = xh + yh by [].
 lra.
-(* c = 0 sub-case: th = 0, so c = rnd_p (sl + th) = rnd_p 0 = 0.
+(* c = 0 case: th = 0, so c = rnd_p (sl + th) = rnd_p 0 = 0.
    Choose the right disjunct. *)
 { right.
   rewrite sl0 Rplus_0_l TwoSum_sumE.
   rewrite (round_round Hp).
   exact th0. }
-(* w = 0 sub-case: c = rnd_p(sl + th) = 0 (sl = 0, th = 0), so vl = F2Sum_err sh 0 = 0,
+(* w = 0 case: c = rnd_p(sl + th) = 0 (sl = 0, th = 0), so vl = F2Sum_err sh 0 = 0,
    and tl = 0, hence w = rnd_p(0 + 0) = 0. *)
 right; right.
 have c_eq : rnd_p (sl + th) = 0
@@ -3569,7 +3569,7 @@ rewrite vl_eq Rplus_0_r tl0 round_0 //.
       rewrite round_0 Rplus_0_r round_generic //.
       split;[split|] => //; try apply:generic_format_0.
       by rewrite Rplus_0_r round_generic.
-    (* shth0 sub-case disjunction: c = th = -sh, so cexp c = cexp sh *)
+    (* shth0 case disjunction: c = th = -sh, so cexp c = cexp sh *)
     { left.
       have th_neg : th = -sh by lra.
       rewrite th_neg /cexp mag_opp.
@@ -5293,7 +5293,7 @@ case:(Req_dec (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl)) 0) => [Hc0 | Hc_nz].
 { right; right; exact Hc0. }
 left.
 (* Case 3: xh + yh <> 0 AND c <> 0 -> need cexp c <= cexp sh.
-   Sub-case 3a: xh = 0. Derive xl = 0 from DW(xh, xl) in FLX, then
+   Case 3a: xh = 0. Derive xl = 0 from DW(xh, xl) in FLX, then
    sh = yh and c = yl. The cexp inequality follows from DW(yh, yl). *)
 case:(Req_dec xh 0) => [Hxh0 | Hxh_nz].
 { have xl0 : xl = 0.
@@ -5328,7 +5328,7 @@ case:(Req_dec xh 0) => [Hxh0 | Hxh_nz].
   rewrite /cexp /fexp.
   move: Hmag_yl. rewrite /cexp /fexp.
   move: Hp; lia. }
-(* Sub-case 3b: xh <> 0, xh + yh <> 0, c <> 0.  Use DWPlusDW_cexp_or_zero_aux
+(* Case 3b: xh <> 0, xh + yh <> 0, c <> 0.  Use DWPlusDW_cexp_or_zero_aux
    (mirrors the WLOG dispatch of DWPlusDW_relerr_bound to invoke
    DWPlusDW_relerr_bound_pre' under normalized inputs and extract its third
    conjunct). *)

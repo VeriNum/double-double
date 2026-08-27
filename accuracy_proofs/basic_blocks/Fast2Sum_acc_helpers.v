@@ -5,7 +5,7 @@
    Fast2Sum algorithm in the FLT format.
 
    Layout:
-     1. Zero-case helpers
+     1. Zero case helpers
      2. Correctness & double-word property
      3. FLT/FLX equivalence *)
 
@@ -27,7 +27,7 @@ Notation FE := (FLT_exp (@emin t) (fprec t)).
 Notation emin := (@common.emin t).
 
 (* ===================================================================== *)
-(* 1. Zero-case helpers                                                    *)
+(* 1. Zero case helpers                                                    *)
 (* ===================================================================== *)
 
 Lemma Fast2Sum_2sum0' (xl a b: ftype t):

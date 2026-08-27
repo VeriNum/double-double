@@ -1,9 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Public whole-range mixed-accuracy interface for [DWDivFP3].
+(** Public whole range mixed accuracy interface for [DWDivFP3].
 
-    The normal-range proof is supplied by [DWDivFP_relative_acc]; the subnormal proof
+    The normal range proof is supplied by [DWDivFP_relative_acc]; the subnormal proof
     leg is supplied by [DWDivFP_subnormal].  This file exposes only the public
     condition ladder and the combined accuracy/closure guarantee. *)
 
@@ -70,8 +70,8 @@ unfold DWDivFP_mixed_cond, DWDivFP_mixed_input_cond,
 exact (conj (conj Hdw Hxh) Hfin).
 Qed.
 
-(** Whole-range mixed accuracy from the mathematical input assumptions and an
-    a-posteriori finiteness check on the result. *)
+(** Whole range mixed accuracy from the mathematical input assumptions and an
+    a posteriori finiteness check on the result. *)
 Theorem DWDivFP_mixed_accuracy_from_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_cond xh xl y ->

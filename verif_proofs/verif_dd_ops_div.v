@@ -39,20 +39,21 @@ forward.            (* rh  = t'1 *)
 forward.            (* t'2 = y->t *)
 forward.            (* rl  = -(t'2 * th) *)
 forward_call.       (* fast_2sum(&e, rh, rl) *)
-(* dw_mult_fp9(&delta, &e, th): witness (s, x, xh, y) = (v_delta, v_e, e-pair, th) *)
+(* dw_mult_fp9(&delta, &e, th): witness (s, x, xh, y) = (v_delta, v_e, e pair, th) *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?E) v_e] =>
    forward_call (v_delta, v_e, E, T) end end.
-(* dw_plus_fp(&m, &delta, th): witness (v_m, v_delta, delta-pair, th) *)
+(* dw_plus_fp(&m, &delta, th): witness (v_m, v_delta, delta pair, th) *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?D) v_delta] =>
    forward_call (v_m, v_delta, D, T) end end.
-(* dw_mult_dw12(z, x, &m): witness (s, x, v_m, xh, m-pair) *)
+(* dw_mult_dw12(z, x, &m): witness (s, x, v_m, xh, m pair) *)
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
 (* Rewrite the postcondition's DWDivDW3 term into the exact composition the
    cascade produced, so both `data_at` values become syntactically identical
-   and the closing entailer needs no whole-term B-op/Float-op conversion. *)
+   and the closing entailer needs no whole term conversion between B and
+   CompCert floating-point operations. *)
 match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
   replace (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh)) with PROD end.
 2:{ unfold DWDivDW3.
@@ -64,12 +65,12 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* body_dw_div_fp15: the callees (fast_2mult, fast_2sum) are precondition-free,
+(* body_dw_div_fp15: the callees (fast_2mult, fast_2sum) require no preconditions,
    so the forward cascade needs no cond discharge.  The C directly performs the
    subtractions/additions of Algorithm 15, so -- unlike body_dw_div_dw18, whose
    arithmetic is hidden inside dw_mult_fp9 / dw_plus_fp / dw_mult_dw12 -- the
    stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
-   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert-float
+   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert float
    composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
    data_at values become syntactically identical for the closing entailer. *)
 Lemma body_dw_div_fp15: semax_body Vprog Gprog f_dw_div_fp15 dw_div_fp15_spec.
@@ -106,7 +107,7 @@ Qed.
 (* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
    call the check, exit on failure, otherwise recover DWDivFP_mixed_safe_input_cond and call
    the unguarded op.  The exported accuracy postcondition is the
-   bundled regime-independent guarantee
+   bundled guarantee, which is independent of the regime
    (DWDivFP_mixed_guarantee_from_safe_input_cond), which the safe input cond
    discharges unconditionally; see
    dw_div_fp15_guarded_spec. *)

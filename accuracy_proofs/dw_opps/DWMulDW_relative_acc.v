@@ -5,7 +5,7 @@
 
     Its public result is [DWTimesDW_relative_accuracy], the pure [4u^2]
     relative bound under [DWTimesDW_relative_error_input_cond].  Shared
-    runtime-model and finiteness lemmas are consumed by [DWMulDW_mixed_acc],
+    runtime model and finiteness lemmas are consumed by [DWMulDW_mixed_acc],
     while [DWDivDW_relative_acc] consumes the FLX bridge for its closing
     multiplication. *)
 
@@ -13,9 +13,9 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_relative_acc_helpers DW_acc_lemmas.
-(* The primitive Fast2Sum and Fast2Mult files supply the generic exact-sum and
-   underflow-floor lemmas reused by the Algorithm-12 gap block.  DWMulFP_relative_acc
-   supplies only the operation-specific bridge shared with division. *)
+(* The primitive Fast2Sum and Fast2Mult files supply the generic exact sum and
+   underflow floor lemmas reused by the Algorithm 12 gap block.  DWMulFP_relative_acc
+   supplies only the bridge specific to this operation and shared with division. *)
 Require Import DWMulFP_relative_acc.
 From Flocq Require Import Pff2Flocq Core.
 
@@ -35,7 +35,7 @@ Arguments DWTimesFP.TwoProd : simpl never.
 
 
 (* ============================================================
-   Section 1: extract per-operation finiteness from
+   Section 1: derive finiteness of each node from
    FIN : is_finite_p (DWTimesDW3 xh xl yh yl).
    ============================================================ *)
 Section CorrectDWMulDW.
@@ -48,7 +48,7 @@ Section CorrectDWMulDW.
   (* fst (DWTimesDW3 xh xl yh yl) reduces to
        BPLUS (BMULT xh yh) (BPLUS (Fast2Mult_err xh yh)
                                   (BFMA xl yh (BFMA xh yl (BMULT xl yl)))).
-     One pass of BPLUS/BFMA finite-elimination exposes every subterm's
+     One pass of BPLUS/BFMA elimination of finiteness exposes every subterm's
      finiteness; the descriptive result facts below then close by
      [exact]/[split]. *)
   Ltac prove_finite :=
@@ -106,7 +106,7 @@ End CorrectDWMulDW.
 
 
 (* ============================================================
-   Section 2: the load-bearing FLX -> FLT bridge for DWTimesDW3.
+   Section 2: the essential FLX -> FLT bridge for DWTimesDW3.
      DWTimesDW.DWTimesDW12 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
        = F2Rp (DWTimesDW3 xh xl yh yl).
    Analog of DWMulFP_relative_acc.v's DWTimesFP3_FLX_FLT_weak: each of the five rounded ops
@@ -126,7 +126,7 @@ Let ulp := (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))).
 Variables (xh xl yh yl : ftype t).
 
 Hypothesis FIN : is_finite_p (DWTimesDW3 xh xl yh yl).
-(* Normal-regime hypotheses: every rounding argument of DWTimesDW3 is normal
+(* Normal regime hypotheses: every rounding argument of DWTimesDW3 is normal
    (>= bpow(emin+fprec-1)), so each FLT rounding equals its FLX counterpart
    (round_FLT_FLX).  Nprod is the two-product threshold for
    DWMulFP_relative_acc.Fast2Mult_correct_weak. *)
@@ -155,7 +155,7 @@ move => [Fv|Nv].
 Qed.
 
 (** Assembly lemma for weakened bridges.  It separates the purely algebraic
-    Algorithm-12 composition from the per-node reason why FLT and FLX agree
+    Algorithm 12 composition from the conditions under which each FLT and FLX node agrees
     (normality, zero, or exact subnormal representability). *)
 Local Lemma DWTimesDW3_FLX_FLT_from_node_equalities :
   round radix2 (FLX_exp (fprec t)) (Znearest choice)
@@ -358,7 +358,7 @@ destruct (Req_dec a 0) as [Ha|Ha].
   exact (Rabs_eq_R0 _ Habs).
 Qed.
 
-(** Binade-local half-ulp bound above the subnormal floor. *)
+(** Local to the binade half-ulp bound above the subnormal floor. *)
 Lemma half_ulp_FLT_below_binade (x : R) (k : Z) :
   (0 <= k)%Z ->
   Rabs x < bpow radix2 (emin+fprec t+k) ->
@@ -422,7 +422,7 @@ Qed.
 
 (** Products preserve fixed-point lattices, with the lattice exponents
     adding.  This elementary fact is the useful form of exponent provenance
-    for the underflow bridge: products entering the low-word FMA are not
+    for the underflow bridge: products entering the low word FMA are not
     arbitrary reals. *)
 Local Lemma generic_format_FIX_mult (ex ey : Z) (x y : R) :
   generic_format radix2 (FIX_exp ex) x ->
@@ -479,9 +479,9 @@ Qed.
 
 
 (** Every FLT rounding error splits into a normal relative component and one
-    genuine underflow-floor component.  Exactly one component is nonzero in
+    genuine underflow floor component.  Exactly one component is nonzero in
     the proof.  This decomposition is the interface used to replay the paper
-    Algorithm-12 algebra while carrying denormal effects separately. *)
+    Algorithm 12 algebra while carrying denormal effects separately. *)
 Local Lemma round_FLT_error_relative_plus_floor (x : R) :
   exists er ef : R,
     (round radix2 fexp (Znearest choice) x-x = er+ef)%R /\
@@ -646,7 +646,7 @@ eapply Rle_trans with (r2:=
   + exact Hy'.
 Qed.
 
-(** Normality propagates through the first low-word FMA.  If [xl*yl] already
+(** Normality propagates through the first low word FMA.  If [xl*yl] already
     reaches the FLT normal threshold, [xh*yl] is at least four times larger
     (the double-word relation gives [|xl| <= u|xh|]); rounding [xl*yl] cannot
     cancel enough of it to cross back below that threshold. *)
@@ -713,7 +713,7 @@ change (P <= Rabs (FT2R xh*FT2R yl+FT2R (BMULT xl yl))).
 nra.
 Qed.
 
-(** The same low-product normality premise forces the opposite cross product
+(** The same low product normality premise forces the opposite cross product
     [xl*yh] onto the physical lattice.  The double-word relation contributes
     the missing factor [2^p]: [|yl| <= u|yh|]. *)
 Local Lemma normal_low0_implies_cross_product_FIX
@@ -747,7 +747,7 @@ apply FLT_product_FIX_of_large.
 - exact Hcross.
 Qed.
 
-(** Consequently the third low-word rounding argument is always on the FLT
+(** Consequently the third low word rounding argument is always on the FLT
     floor lattice.  It may cancel into the subnormal range, but that case is
     exact rather than an additional underflow error. *)
 Local Lemma normal_low0_implies_low2_FIX
@@ -766,7 +766,7 @@ Qed.
 
 (** Under the leading two-product threshold, its exact error word is also on
     the physical lattice.  This supplies the lattice provenance of [cl1] in
-    the complementary low-low-underflow branch. *)
+    the complementary underflow in the low by low product branch. *)
 Local Lemma Fast2Mult_err_FIX_of_normal_product (xh yh : ftype t) :
   is_finite (BMULT xh yh) = true ->
   bpow radix2 (emin+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh) ->
@@ -803,10 +803,10 @@ apply generic_format_FIX_plus.
 Qed.
 
 
-(* --- DW x DW-specific bounds for the extra products and FMAs --- *)
+(* --- Bounds specific to DW x DW for the extra products and FMAs --- *)
 
-(* |xh*yl| and |xl*yh| are ~u-small relative to |xh*yh| (one low word each);
-   |xl*yl| is ~u^2-small (both low words).  Each stays well under Omega. *)
+(* |xh*yl| and |xl*yh| are of order u relative to |xh*yh| (one low word each);
+   |xl*yl| is of order u^2 (both low words).  Each stays well under Omega. *)
 Local Lemma aux_xhyl_bnd (xh xl yh yl : ftype t) :
   double_word_prop yh yl ->
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega ->
@@ -1048,7 +1048,7 @@ all: try exact valid_fexp_inst.
 all: try apply generic_format_FLT_FT2R.
 Qed.
 
-(* Sharper per-term error bound: the relative term and the subnormal floor are a
+(* Sharper error bound for each term: the relative term and the subnormal floor are a
    MAX, not a sum.  In the normal range ulp v = 2u|v| so the error is <= u|v| <= uc
    with no floor; in the subnormal range the error is <= 1/2 bpow emin and the
    relative term is smaller.  This lets aux_eta_bnd ABSORB the four 1/2 bpow emin
@@ -1079,7 +1079,7 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs v)) as [Hn | Hs].
 Qed.
 
 (* Aggregate error bound for the underflow leg: |e0+e1+e2+e3| <= 15/2 u^2 P.  Uses
-   the floor-ABSORBING chain (aux_err_step2 gives each error as a MAX of relative
+   the chain that absorbs the floor (aux_err_step2 gives each error as a MAX of relative
    term and subnormal floor, not a sum): magnitudes |tl0|<=2u^2P, |tl1|<=uP+4u^2P,
    |cl2|<=2uP+7u^2P (leading coeffs 1,2,3 on uP), each error e_i <= u*|arg_i| for
    i>=1 (floor absorbed) and e0<=u^2P.  Sum = 7 u^2 P + 13 u^3 P <= 15/2 u^2 P via
@@ -1140,7 +1140,7 @@ have HEP : bpow radix2 emin
 have Huf' : FT2R xh * FT2R yh <> 0 ->
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh)
   by (move => _; exact Hthresh).
-(* argument-magnitude chain (copied from aux_cl3_le_ch) *)
+(* Chain of argument magnitudes, copied from aux_cl3_le_ch. *)
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh yh)) <= /2 * ulp (FT2R xh * FT2R yh)
   by (apply Fast2Mult_accuracy_norm; exact Hfmul).
 have Hulpxhyh : ulp (FT2R xh * FT2R yh)
@@ -1173,7 +1173,7 @@ have Hxlyl : Rabs (FT2R xl * FT2R yl)
                * (bpow radix2 (- fprec t) * Rabs (FT2R yh))
     by (apply Rmult_le_compat; [exact Hxlp | exact Hylp | exact Hxl | exact Hyl]).
   eapply Rle_trans; [exact Hstep|]. apply Req_le; ring. }
-(* Floor-absorbing chain.  Each rounding error is bounded by a MAX (aux_err_step2),
+(* Absorbing the floor chain.  Each rounding error is bounded by a MAX (aux_err_step2),
    and each intermediate magnitude by |arg| + error (triangle); so the four
    1/2 bpow emin floors are ABSORBED into the u^2 P scale instead of added.  Leading
    coefficients on uP stay 1,2,3; the u^2 P corrections shrink (2,4,7).  Order:
@@ -1422,14 +1422,14 @@ split.
                       (BPLUS (Fast2Mult_err xh yh)
                              (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true).
   exact Hfst.
-- (* snd: headroom route, no closing-Fast2Sum ordering required *)
+- (* snd: headroom route, no closing Fast2Sum ordering required *)
   apply (is_finite_FastSum_small (Fast2Mult_mul xh yh)
            (BPLUS (Fast2Mult_err xh yh)
                   (BFMA xl yh (BFMA xh yl (BMULT xl yl)))));
     [ lra | exact Hfst ].
 Qed.
 
-(* Closing-Fast2Sum closure from its two primitive obligations. *)
+(* Closing Fast2Sum closure from its two primitive obligations. *)
 Lemma DWTimesDW3_double_word_from_pre (xh xl yh yl : ftype t) :
   is_finite (BPLUS (Fast2Mult_mul xh yh)
                    (BPLUS (Fast2Mult_err xh yh)
@@ -1448,8 +1448,8 @@ Qed.
 End DWTimesDW_Finite.
 
 
-(** Error identities and rounding bounds shared by the normal-range relative
-    proof and the whole-range mixed proof. *)
+(** Error identities and rounding bounds shared by the normal range relative
+    proof and the whole range mixed proof. *)
 Section DWTimesDW_Accuracy.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1772,8 +1772,8 @@ destruct (Rle_dec (Rabs a) (2*u)) as [Hsmall|Hlarge].
   rewrite Hround Rabs_left; nra.
 Qed.
 
-(** First floored node of the normalized Algorithm-12 replay.  Despite the
-    low-word floor, [tl1] retains both of the paper proof's sharp facts:
+(** First floored node of the normalized Algorithm 12 replay.  Despite the
+    low word floor, [tl1] retains both of the paper proof's sharp facts:
     output magnitude at most [2u] and rounding error at most [u^2]. *)
 Lemma low0_tl1_sharp
     (P f base : R) :
@@ -1794,7 +1794,7 @@ Qed.
 
 (** Second floored node.  The paper bound on the unrounded cross term has
     a [-u^2] reserve; [tl1]'s [u^2] error consumes that reserve, leaving only
-    the low-floor contribution.  Its [16/9*u^2] normalized maximum is below
+    the low floor contribution.  Its [16/9*u^2] normalized maximum is below
     the [2*u^2] midpoint at [3u], so [cl2] remains bounded by [3u]. *)
 Lemma low0_cl2_sharp
     (P f e1 cross : R) :
@@ -1898,7 +1898,7 @@ have Hsum : (zh + zl)%R = (FT2R ch + FT2R cl3)%R.
 rewrite Hsum Hch_eq. unfold xr, yr, cl3, cl2. ring.
 Qed.
 
-(** Mixed-error form of [relerr_error_eq].  The four Algorithm-12 rounding
+(** Mixed error form of [relerr_error_eq].  The four Algorithm 12 rounding
     errors are decomposed into the relative pieces consumed by the paper's
     normal proof and four explicit floor pieces.  No triangle inequality is
     taken here, so the correlations used by the paper analysis remain
@@ -2126,7 +2126,7 @@ Qed.
 
 End DWTimesDW_Accuracy.
 
-(* ===== Far low-low-underflow analysis ===== *)
+(* ===== Far underflow in the low by low product analysis ===== *)
 
 Section RelativeAccuracyDWTimesDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -2144,8 +2144,8 @@ Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R yh + FT2R yl).
 
 
-(** Sharp normal-range core.  Normality of the leading and low-low products
-    propagates enough exact-or-normal structure through the remaining nodes
+(** Sharp normal range core.  Normality of the leading and low by low products
+    propagates enough exact or normal structure through the remaining nodes
     to recover the paper's [4u^2] relative bound. *)
 Lemma DWTimesDW_relative_accuracy_core :
   double_word xh xl ->
@@ -2198,7 +2198,7 @@ replace (4*u^2)%R with
 apply Rlt_le. exact Hpaper.
 Qed.
 
-(** Public pure-relative result for the normal range. *)
+(** Public pure relative result for the normal range. *)
 Theorem DWTimesDW_relative_accuracy :
   (5 <= fprec t)%Z ->
   DWTimesDW_relative_error_input_cond xh xl yh yl ->

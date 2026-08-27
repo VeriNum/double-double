@@ -19,7 +19,7 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-(* The C body matches the DWPlusFP model line-for-line:
+(* The C body matches the DWPlusFP model directly:
      two_sum(&sh, x->s, y);   (sh.s,sh.t) = TwoSumF xh y
      v = x->t + sh.t;         v = BPLUS xl sl
      fast_2sum(s, sh.s, v);   (zh,zl) = Fast2Sum sh.s v

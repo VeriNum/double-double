@@ -76,7 +76,7 @@ Let u := pow (-p).
 
 (* The two-product operator imported from DWTimesFP is discharged over its
    section variables, so it must be applied to (p, choice) here.  Without this
-   notation the bare [TwoProd] refers to the under-applied global. *)
+   notation the bare [TwoProd] refers to the partially applied global. *)
 Local Notation TwoProd := (DWTimesFP.TwoProd p choice).
 
 Section Algo14.
@@ -1746,7 +1746,7 @@ Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
 Notation F2P_error a b  :=  (snd (Fast2Mult a b)).
 
 (* The two-product is the concrete FLX Fast2Mult, so its defining identity is a
-   theorem (for FLX-format inputs, via mult_error_FLX) rather than an abstract
+   theorem (for FLX format inputs, via mult_error_FLX) rather than an abstract
    hypothesis, and TwoProdE holds by reflexivity.  This mirrors how the
    multiplication development (DWTimesFP.Algo9) keeps DWTimesFP9_correct free of
    an abstract two-product hypothesis, and lets DWDFP3_correct be instantiated

@@ -29,7 +29,7 @@ Section Fast2SumCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Sufficient condition for fast_2sum(a,b) to be correct (s + t = a + b,
-   with s = round(a+b)).  Stated with ulp, which is well-behaved at 0
+   with s = round(a+b)).  Stated with ulp, which is regular at 0
    (ulp 0 = bpow emin, the minimum):
      - ulp b <= ulp a   covers both the Dekker case |b| <= |a| (ulp_le) and
                         Boldo's exponent case (ulp b <= ulp a <-> cexp b <=
@@ -82,7 +82,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(** Input-only sufficient condition used by the guarded C interface. *)
+(** Sufficient input condition used by the guarded C interface. *)
 Definition DWPlusDW_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -121,7 +121,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    The DW relation forces |xl| <= ulp(xh)/2, so no separate magnitude bound
    on xl is required.  is_finite xl is NOT implied by double_word_prop
    (which lives in R via FT2R), so it must be asserted explicitly. *)
-(** Input-only sufficient condition used by the guarded C interface. *)
+(** Sufficient input condition used by the guarded C interface. *)
 Definition DWPlusFP_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -164,7 +164,7 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
 (* Safe input condition for the mixed guarantee on [DWTimesFP3].  It uses
-   [Fast2Mult_acc_only_cond], so it permits the leading-product underflow gap.
+   [Fast2Mult_acc_only_cond], so it permits the leading product underflow gap.
    Together with input finiteness, the double-word relation, and the product
    ceiling, it proves result finiteness and hence the mixed error bound and
    output validity.  [dw_mult_fp_check] establishes this condition.  The pure
@@ -206,7 +206,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Exact leading-product condition used by the closing multiplication in
+(* Exact leading product condition used by the closing multiplication in
    [DWDivDW3].  It excludes the [Fast2Mult] underflow gap, requires finite
    double-word inputs, and keeps [|xh*yh|] below [Omega/2] so that the final
    [Fast2Sum] remains finite. *)
@@ -219,7 +219,7 @@ Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : 
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
 (* Safe input condition for the mixed guarantee on [DWTimesDW3].  It uses
-   [Fast2Mult_acc_only_cond], so it permits the leading-product underflow gap.
+   [Fast2Mult_acc_only_cond], so it permits the leading product underflow gap.
    The remaining conjuncts require finite double-word inputs and enough
    overflow headroom to prove result finiteness.  The mixed guarantee then
    supplies the [4u^2|P| + 5/2*eta] bound and output validity.
@@ -232,10 +232,10 @@ Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   Fast2Mult_acc_only_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-(* Input-only condition for the sharp normal-range relative bound.  The mixed
-   safe-input condition supplies overflow headroom and input double-word
-   properties.  Normality of the leading product and the low-low product is
-   sufficient: the remaining low-order nodes are then either exact on the
+(* Input condition for the sharp normal range relative bound.  The mixed
+   safe input condition supplies overflow headroom and the double-word
+   properties.  Normality of the leading product and the low by low product is
+   sufficient: the remaining low order nodes are then either exact on the
    physical FLT lattice or normal. *)
 Definition DWTimesDW_relative_error_input_cond
     (xh xl yh yl : ftype t) : Prop :=
@@ -285,8 +285,8 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* ------------------------------------------------------------------
-   WHOLE-RANGE MIXED TIER for DWDivFP3 (Algorithm 15).
-   Input-only, runtime-checkable; no underflow floor on the quotient.
+   Whole range mixed tier for DWDivFP3 (Algorithm 15).
+   Input condition decidable at runtime; no underflow floor on the quotient.
    ------------------------------------------------------------------ *)
 
 (* Safe input condition for the mixed guarantee on [DWDivFP3].  It requires
@@ -324,10 +324,10 @@ Definition DWDivFP_mixed_cond
   DWDivFP_result_finite xh xl y.
 
 (* ------------------------------------------------------------------
-   NORMAL-RANGE PURE RELATIVE TIER for DWDivFP3.
+   Normal range pure relative tier for DWDivFP3.
    ------------------------------------------------------------------ *)
 
-(* Normal-range condition for the pure relative bound on [DWDivFP3].  It
+(* Normal range condition for the pure relative bound on [DWDivFP3].  It
    requires a normal leading quotient and either a zero correction or a normal
    correction quotient.  The zero case preserves exact division.  These are
    properties of computed nodes, not conditions that an input guard can check. *)
@@ -340,11 +340,12 @@ Definition DWDivFP_normal (xh xl y : ftype t) : Prop :=
                                   (Fast2Mult_err (BDIV xh y) y)) xl)
               / FT2R y)).
 
-(* Input condition for the sharp normal-range relative bound
+(* Input condition for the sharp normal range relative bound
    |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y|
-   (DWDivFP_relative_acc.DWDivFP_relative_accuracy): the whole-range safe-input
+   (DWDivFP_relative_acc.DWDivFP_relative_accuracy): the safe input condition
+   for the whole range,
    condition -- which supplies overflow headroom, the input double word,
-   y <> 0 and the product-node floor -- plus normality of the operations. *)
+   y <> 0 and the product node floor -- plus normality of the operations. *)
 Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   DWDivFP_mixed_safe_input_cond xh xl y /\
   DWDivFP_normal xh xl y.
@@ -364,7 +365,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
 (* ------------------------------------------------------------------
-   WHOLE-RANGE MIXED TIER for DWDivDW3 (Algorithm 18).
+   Whole range mixed tier for DWDivDW3 (Algorithm 18).
    ------------------------------------------------------------------ *)
 
 (** Safe input condition for the mixed guarantee on [DWDivDW3].  It requires
@@ -407,7 +408,7 @@ Definition DWDivDW_mixed_cond
 End DWDivDWCond.
 
 
-(* Normal-range condition for the pure relative bound on [DWDivDW3].
+(* Normal range condition for the pure relative bound on [DWDivDW3].
    [DWDivDW_normal] records the nine node bounds needed to identify the FLT
    computation with the FLX model.  These bounds do not follow from input
    magnitudes, and the nodes may be zero.  The mixed tier therefore permits
@@ -451,9 +452,10 @@ End DWDivDWNormal.
 Section DWDivDWRelativeCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(* Input condition for the sharp normal-range relative bound
+(* Input condition for the sharp normal range relative bound
    |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q|
-   (DWDivDW_relative_acc.DWDivDW_relative_accuracy): the whole-range safe-input
+   (DWDivDW_relative_acc.DWDivDW_relative_accuracy): the safe input condition
+   for the whole range,
    condition -- overflow headroom, the divisor window, both input double words
    -- plus normality of the operations.  It contains no quotient magnitude
    window designed to absorb eta; the relative bound is proved in the normal

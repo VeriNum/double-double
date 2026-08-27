@@ -1,11 +1,11 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative-error and output-closure results for [DWPlusFP].
+(** Relative error and output validity results for [DWPlusFP].
 
-    The operation has no separate mixed-error tier: under the mathematical
+    The operation has no separate mixed error tier: under the mathematical
     input condition and finiteness of the computed pair, its relative error is
-    at most [2u^2] over the whole range.  An input-only safe condition proves
+    at most [2u^2] over the whole range.  A condition on the inputs proves
     result finiteness and reaches the same guarantee as a corollary. *)
 
 Require Import vcfloat.VCFloat.
@@ -85,7 +85,7 @@ Qed.
 
 End FiniteAccuracyDWPlusFP.
 
-(** Absolute form of the paper-tight multiplicative theorem. *)
+(** Absolute form of the sharp paper multiplicative theorem. *)
 Lemma DWPlusFP_error_paper_tight {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->

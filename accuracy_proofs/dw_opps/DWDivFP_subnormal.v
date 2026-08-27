@@ -2,11 +2,11 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (** Mixed error and output validity when the leading quotient of [DWDivFP3] is
-    subnormal.  The normal FLT-to-FLX bridge does not apply here.  Instead, the
+    subnormal.  The normal FLT to FLX bridge does not apply here.  Instead, the
     quotient, correction, and final sum lie on the [2^emin] lattice.  This
-    gives [|th-xh/y| <= eta/2], keeps the low-input contribution below
+    gives [|th-xh/y| <= eta/2], keeps the low input contribution below
     [eta/2], and makes the final [Fast2Sum] exact.  The result has the same
-    [3u^2|Q| + eta] bound as the normal leading-quotient case.
+    [3u^2|Q| + eta] bound as the normal leading quotient case.
     [DWDivFP_mixed_acc] combines both cases. *)
 
 Require Import vcfloat.VCFloat.
@@ -134,7 +134,7 @@ exact (proj2 (BMINUS_finite_e t (BMINUS xh (BMULT (BDIV xh y) y))
                 (Fast2Mult_err (BDIV xh y) y) (FIN_dt xh xl y FIN))).
 Qed.
 
-(* ---------- the real-valued chain ---------- *)
+(* ---------- Computation over the reals ---------- *)
 Notation X   := (FT2R xh).
 Notation L   := (FT2R xl).
 Notation Y   := (FT2R y).
@@ -251,7 +251,7 @@ have Hpos : 0 <= u * Rabs A
 have He0 : 0 <= eta by apply bpow_ge_0.
 have HuMpos : 0 <= u * M
   by (apply Rmult_le_pos; [ apply bpow_ge_0 | exact HM ]).
-(* pure-M bound on the product-node rounding error *)
+(* Bound involving only M on the product node rounding error. *)
 have HAP : Rabs (A - Pih) <= 9/16 * M by lra.
 have Hb2 : u * Rabs (A - Pih) <= u * (9/16 * M)
   by (apply Rmult_le_compat_l; [ apply bpow_ge_0 | exact HAP ]).
@@ -576,7 +576,7 @@ have He : FT2R (BMINUS (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Hs He. ring.
 Qed.
 
-(* ================= the subnormal-quotient leg ================= *)
+(* ================= the subnormal quotient leg ================= *)
 Local Theorem sub_main :
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y)) - Q)
     <= 3 * u ^ 2 * Rabs Q + eta.
@@ -592,7 +592,7 @@ lra.
 Qed.
 
 
-(* ---------- closure comes free from sum-preservation ---------- *)
+(* ---------- closure comes free from preservation of the sum ---------- *)
 Local Theorem sub_double_word :
   double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
 Proof.
@@ -669,7 +669,7 @@ destruct (float_of_ftype y) eqn:E; simpl in Hb; try discriminate.
 - revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-(* eta*|y| <= 1/2 : the subnormal-branch slack is an absolute constant *)
+(* eta*|y| <= 1/2 : the subnormal case slack is an absolute constant *)
 Local Lemma fin_etaY : eta * Rabs (FT2R y) <= /2.
 Proof.
 have HY := fin_Y_lt. have He : 0 < eta by apply bpow_gt_0.
@@ -1144,7 +1144,7 @@ Qed.
 
 End SubFin.
 
-(** The subnormal proof leg exposed to the public mixed-interface file.  Its
+(** The subnormal proof leg exposed to the public mixed interface file.  Its
     internal error and closure chains remain private to this file. *)
 Theorem DWDivFP3_subnormal_accuracy_and_double_word
     {NANS : Nans} {t : type} {STD : is_standard t}
@@ -1171,7 +1171,7 @@ Qed.
 
 
 
-(* Safe-input subnormal bridge.  The whole-range public ladder is in
+(* Safe input subnormal bridge.  The whole range public ladder is in
    DWDivFP_mixed_acc.v. *)
 Section CondMin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1179,8 +1179,8 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (@common.emin t).
 Notation u    := (bpow radix2 (- fprec t)).
 
-(* ============ the subnormal-quotient leg, discharged from the cond ============
-   All three deliverables at once: the mixed bound, output closure, and
+(* ============ the subnormal quotient leg, discharged from the cond ============
+   All three deliverables at once: the mixed bound, output validity, and
    finiteness of the computed pair.  Section SubFin supplies the finiteness,
    Section Sub the accuracy and closure. *)
 Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :

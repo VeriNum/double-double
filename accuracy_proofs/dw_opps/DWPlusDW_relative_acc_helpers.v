@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Helper lemmas for the relative-accuracy proof of [AccurateDWPlusDW]. *)
+(** Helper lemmas for the relative accuracy proof of [AccurateDWPlusDW]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas DW_acc_lemmas.
@@ -31,7 +31,7 @@ Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
 Hypothesis Hyh : Rabs (FT2R yh) <= /4 * bpow radix2 (femax t).
 
 (* Every real floating-point type has fprec >= 11 (binary16 is the smallest);
-   the Fast2Sum-stage overflow bounds need fprec >= 3 to leave headroom below
+   the overflow bounds for the Fast2Sum stage need fprec >= 3 to leave headroom below
    Omega.  VCFloat itself only guarantees fprec >= 2, so we assume this. *)
 Hypothesis Hprec : (3 <= fprec t)%Z.
 
@@ -57,7 +57,7 @@ Lemma Hyh_tight_bnd : Rabs (FT2R yh) <= /4 * Omega.
 Proof. exact Hyh. Qed.
 
 (* Helper: 2 * bpow e = bpow (e+1), used to discharge the overflow bounds
-   for the (small) low-word sums without relying on a concrete precision. *)
+   for the (small) low word sums without relying on a concrete precision. *)
 Lemma two_mul_bpow : forall e : Z, bpow radix2 e * 2 = bpow radix2 (e + 1).
 Proof.
 intros e.
@@ -65,7 +65,7 @@ have H2 : (2:R) = bpow radix2 1 by (simpl; lra).
 rewrite H2 -bpow_plus. f_equal; lia.
 Qed.
 
-(* The relative-error factor produced by FLT_plus_error_N_ex, after unfolding
+(* The relative error factor produced by FLT_plus_error_N_ex, after unfolding
    default_rel/u_ro, is bpow (Z.pos_sub 1 (fprecp t)); this is the same exponent
    as default_rel's bpow (- fprec t + 1). *)
 Lemma pos_sub_fprec : Z.pos_sub 1 (fprecp t) = (- fprec t + 1)%Z.
@@ -128,7 +128,7 @@ destruct H as (d1 & Hd & B).
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
 intros Hd. simpl in Hxhb, Hyhb.
-(* Abstract the unit-roundoff factor; the bound holds for ANY precision. *)
+(* Abstract the unit roundoff factor; the bound holds for ANY precision. *)
 set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
 have Hb : 0 < b by apply bpow_gt_0.
 have HO : 0 < Omega by apply bpow_gt_0.
@@ -168,7 +168,7 @@ destruct H as (d1 & Hd & B).
 rewrite B. clear B.
 move: Hd. unfold default_rel, Relative.u_ro. simpl.
 intros Hd. simpl in Hxhb, Hyhb.
-(* Same precision-independent argument as no_ov_sh. *)
+(* Same independent of precision argument as no_ov_sh. *)
 set b := bpow radix2 (Z.pos_sub 1 (fprecp t)) in Hd.
 have Hb : 0 < b by apply bpow_gt_0.
 have HO : 0 < Omega by apply bpow_gt_0.
@@ -870,7 +870,7 @@ Qed.
 
 (* The (sh, c) Fast2Sum precondition, in ulp form: ulp c <= ulp sh \/ sh = 0.
 This is exactly the shape Fast2Sum_exact_cond consumes.  The substantive content is
-the FLX-level DWPlusDW_sh_c_cexp_or_zero, bridged via TwoSumEq_FLT +
+the FLX level DWPlusDW_sh_c_cexp_or_zero, bridged via TwoSumEq_FLT +
 rnd_plus_FLT_FLX_eq' and converted cexp -> ulp by ulp_neq_0 + bpow_le. *)
 Lemma DWPlusDW_sh_c_disjunction :
   (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R c) <=
@@ -883,7 +883,7 @@ destruct (Req_dec (FT2R sh) 0) as [Hsh0 | Hsh_nz]; [right; exact Hsh0 | left].
 destruct (Req_dec (FT2R c) 0) as [Hc0 | Hc_nz].
 { rewrite Hc0. apply ulp_le_abs. rewrite Rabs_R0; apply Rabs_pos. }
 (* c <> 0, sh <> 0: bridge to FLX cexp, then cexp <= -> ulp <=.
-   Sub-case FT2R xh + FT2R yh = 0 contradicts Hsh_nz. *)
+   Case FT2R xh + FT2R yh = 0 contradicts Hsh_nz. *)
 have HFIN_sh : is_finite (BPLUS xh yh) = true.
 { change (is_finite (TwoSumF_sum xh yh) = true); exact FIN_sh. }
 destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
@@ -1117,7 +1117,7 @@ Qed.
    uses for BPLUS_round_correct on w = BPLUS tl vl).
    Mirrors [DWPlusDW_sh_c_disjunction]: applies
    [DWPlus.DWPlusDW_w_le_vh_aux] to the inputs mapped through [FT2R], and identifies the paper's
-   vh, w with our FT2R-lifted versions via TwoSumEq_FLT + FastTwoSumEq_FLT +
+   vh, w with our versions lifted to FT2R via TwoSumEq_FLT + FastTwoSumEq_FLT +
    rnd_plus_FLT_FLX_eq', and lifts Rabs <= to cexp <= via mag_le_abs +
    Z.max_le_compat_r. *)
 (* The (vh, w) Fast2Sum precondition in ulp form: ulp w <= ulp vh \/ vh = 0.
@@ -1126,7 +1126,7 @@ Qed.
    ulp_le_abs (0 <= |vh|).  The substantive content is DWPlus's
    DWPlusDW_w_le_vh_aux, bridged via TwoSumEq_FLT/FastTwoSumEq_FLT/
    rnd_plus_FLT_FLX_eq' and converted to ulp via ulp_le_abs.  The boundary
-   sub-cases (xh + yh = 0; xh = 0) are closed by ulp_dw_le on the input
+   cases (xh + yh = 0; xh = 0) are closed by ulp_dw_le on the input
    double-word (th, tl) or (yh, yl). *)
 Lemma DWPlusDW_vh_w_disjunction_core
     (Fsh : is_finite sh = true)
@@ -1464,7 +1464,7 @@ Qed.
 
 End DWPlusDWFinite.
 
-(* Package the input-only safe condition into result finiteness. *)
+(* Derive result finiteness from the condition on the inputs. *)
 Section DWPlusDWCondBridge.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl yh yl : ftype t).

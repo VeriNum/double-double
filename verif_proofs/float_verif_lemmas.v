@@ -1,7 +1,7 @@
 
 (* float_verif_lemmas.v: Helper lemmas connecting CompCert floating-point
-   operations and comparisons with VCFloat/Flocq real-number semantics.
-   Includes finite-value, rounding-bound, and concrete IEEE-754 threshold
+   operations and comparisons with VCFloat/Flocq real semantics.
+   Includes finiteness, rounding bound, and concrete IEEE-754 threshold
    results used by the VST verification proofs. *)
    (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
@@ -113,12 +113,12 @@ Proof.
   cbv; auto.
 Qed.
 
-(* Upper-bound mirror of no_underflow_real_from_round_mul: a STRICT rounded-product
+(* Upper bound mirror of no_underflow_real_from_round_mul: a STRICT rounded product
    bound transfers to the exact product.  |RN(x*y)| < 2^1023 forces |x*y| < 2^1023
    = /2 * Omega.  Sound only for the strict inequality: 2^1023 is a representable
    power of two and RN is monotone/idempotent on it, so |x*y| >= 2^1023 would give
    |RN(x*y)| >= 2^1023.  Used to lift the C guard `fabs(x->s*y) < ldexp(1.0,1023)`
-   into the cond's product-magnitude bound Rabs (FT2R xh * FT2R y) <= /2 * Omega. *)
+   into the cond's product magnitude bound Rabs (FT2R xh * FT2R y) <= /2 * Omega. *)
 Lemma no_overflow_real_from_round_mul :
   forall (x y: ftype Tdouble),
   Rabs ((round radix2 fexp ZnearestE) (FT2R x * FT2R y)) <
@@ -302,7 +302,7 @@ Proof.
 Qed.
 
 (* q_sqrt_val: IEEE-754 double for 2^(femax/2 - 1) = 2^511 in Tdouble, the
-   *factor* (square-root-scale) bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_exact_leading_product_input_cond.
+   *factor* (square root scale) bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_exact_leading_product_input_cond.
    Same construction as q_omega_val but scaling 1.0 by 2^511 instead of 2^1022.
    Used by Float_cmp_Cle_bpow511 to lift the C runtime check
    `fabs(a) <= ldexp(1.0, 511)` into the abstract bound
@@ -332,7 +332,7 @@ Proof.
 Qed.
 
 (* Float.cmp Cle (fabs b) q_sqrt_val = true → Rabs (FT2R b) <= 2^(femax/2 - 1).
-   The factor-bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
+   The factor bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
    is bpow (femax/2 - 1) itself, matching DWTimesFP_relative_error_input_cond directly). *)
 Lemma Float_cmp_Cle_bpow511 :
   forall (b : ftype Tdouble),
@@ -398,7 +398,7 @@ Qed.
    (not assumed): a strict `<` against the finite q_prod_val can only hold when b
    is finite (a NaN abs compares unordered → false; +Inf → Gt → false).  This is
    what makes the single prod_bnd check discharge both Fast2Mult's finiteness
-   requirement and the product-magnitude bound. *)
+   requirement and the product magnitude bound. *)
 Lemma Float_cmp_Clt_bpow1023 :
   forall (b : ftype Tdouble),
   Float.cmp Clt
@@ -432,7 +432,7 @@ Qed.
 
 (* Packaging lemma for the guard: the single strict product check
    `fabs(x->s * y) < ldexp(1.0, 1023)` establishes BOTH the Fast2Mult finiteness
-   requirement (is_finite (BMULT a b)) and the cond's product-magnitude bound
+   requirement (is_finite (BMULT a b)) and the cond's product magnitude bound
    (Rabs (FT2R a * FT2R b) <= /2 * Omega).  Combines Float_cmp_Clt_bpow1023 (which
    also derives z finite) with no_overflow_real_from_round_mul.  It derives
    both facts directly from the product bound. *)
@@ -458,7 +458,7 @@ Qed.
 
 (* Float.cmp Ceq (Float.add a b) a = true → FT2R a = round(FT2R a + FT2R b),
    i.e., (a, b) satisfies the double-word relation in IEEE-754 RN.
-   The C-level test `(a + b) == a` lifts to double_word_prop. *)
+   The C test `(a + b) == a` lifts to double_word_prop. *)
 Lemma Float_add_eq_dw : forall (a b : ftype Tdouble),
   is_finite a = true ->
   is_finite b = true ->
@@ -560,14 +560,14 @@ Proof.
 Qed.
 
 (* ==================================================================== *)
-(*  Division-check helpers (dw_div_fp_check / DWDivFP_mixed_safe_input_cond)  *)
+(*  Division guard helpers (dw_div_fp_check / DWDivFP_mixed_safe_input_cond)  *)
 (* ==================================================================== *)
 
 (* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
    a format value bpow k, so:
      - a STRICT rounded bound below bpow k forces the exact value <= bpow k, and
      - a STRICT rounded bound above bpow k forces the exact value > bpow k.
-   These are the division-check analogs of no_overflow/underflow_real_from_round_mul,
+   These are the division check analogs of no_overflow/underflow_real_from_round_mul,
    stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
    BDIV_round_correct in body_dw_div_fp_check). *)
 Lemma round_abs_le_bpow (r : R) (k : Z) :
@@ -622,7 +622,7 @@ Proof.
     revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-(* BDIV-level packaging of the rounded->exact transfer: from a magnitude bound on
+(* BDIV packaging of the rounded->exact transfer: from a magnitude bound on
    the FLOAT quotient FT2R (BDIV a b) (with b's real value nonzero and BDIV finite)
    to the corresponding bound on the EXACT real quotient FT2R a / FT2R b.  Combines
    BDIV_round_correct (FT2R (BDIV a b) = RN(FT2R a / FT2R b)) with round_abs_*_bpow,
@@ -652,7 +652,7 @@ Qed.
 (* Normal powers of two used by the division guards.
    [q_lo968_val = 2^-968] is the DW/FP product floor and the DW/DW divisor
    floor.  [q_lo969_val = 2^-969] is used to derive the DW/DW divisor ceiling.
-   Their normal representation supports the strict rounded-to-exact transfer
+   Their normal representation supports the strict transfer from rounded to exact
    in [BDIV_abs_gt_bpow]. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
@@ -761,7 +761,7 @@ Proof.
 Qed.
 
 (* Strict upper quotient bound against q_omega_val (2^1022 = Omega/4): the
-   Clt-bpow1022 analog of Float_cmp_Clt_bpow1023, deriving finiteness of the
+   analog of Float_cmp_Clt_bpow1023 for Clt and bpow1022, deriving finiteness of the
    (rounded) quotient AND the strict magnitude bound.  Specialized (not generic
    in v) because the finiteness derivation needs q_omega_val concrete so that
    Bcompare against an infinity/NaN left operand reduces. *)
@@ -796,7 +796,7 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 (* ==================================================================== *)
-(*  DW-division-check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
+(*  Double word division check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
 (* ==================================================================== *)
 
 (* [q_hi966_val] represents [2^966 = 2^(femax-p-5)], the upper divisor bound
@@ -827,7 +827,7 @@ Proof.
   nra.
 Qed.
 
-(* Upper-bound mirror of Float_cmp_Cle_lo: lifts the C test `fabs b <= v` into
+(* Upper bound mirror of Float_cmp_Cle_lo: lifts the C test `fabs b <= v` into
    the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
    Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
    the /4*Omega form), so the same lemma serves both the 2^966 bound on |yh| and
@@ -861,7 +861,7 @@ Proof.
 Qed.
 
 (* An upper bound on |r| is a lower bound on |1/r|, for r <> 0.  This is what
-   makes the check's direct non-strict test on |y->s| discharge the DW/DW
+   makes the check's direct nonstrict test on |y->s| discharge the DW/DW
    reciprocal conjunct exactly (no rounding, no strictness slop).  The r <> 0
    side condition is essential and not cosmetic: at r = 0 the Coq convention
    1/0 = 0 makes the conclusion false while the hypothesis Rabs 0 <= C holds.
@@ -877,8 +877,8 @@ Proof.
   apply Rinv_le_contravar; [exact Hra | exact H].
 Qed.
 
-(* bpow-shaped instance of recip_lower_from_upper, which is the form the DW/DW
-   reciprocal conjunct used to be stated in: a non-strict upper bound |r| <= 2^k on the
+(* Instance of recip_lower_from_upper expressed with bpow, which is the form the DW/DW
+   reciprocal conjunct used to be stated in: a nonstrict upper bound |r| <= 2^k on the
    divisor is exactly the lower bound 2^(-k) <= |1/r| on the reciprocal.  At
    k = -(emin + 2p - 1) = 969 for Tdouble this is what yh_hi discharges. *)
 Lemma recip_lower_from_bpow_upper : forall (r : R) (k : Z),

@@ -140,11 +140,11 @@ Definition dw_plus_fp_check_spec :=
 (* Safe input cond: NO quotient floor at all -- the guard accepts every
    quotient magnitude the format can represent.  What that buys the caller is
    DWDivFP_mixed_acc.DWDivFP_mixed_guarantee_from_safe_input_cond rather than
-   the normal-range pure 3u^2 relative bound
+   the normal range pure 3u^2 relative bound
    (DWDivFP_relative_acc.DWDivFP_relative_accuracy), whose condition constrains the
-   computed nodes and so is not an input-only test; see
+   computed nodes and so is not an input test; see
    dw_div_fp15_guarded_spec in DDOpsASI.v.
-   The product-node floor on |xh| is retained. *)
+   The product node floor on |xh| is retained. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,

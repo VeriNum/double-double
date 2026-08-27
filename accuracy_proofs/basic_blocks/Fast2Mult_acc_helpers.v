@@ -176,7 +176,7 @@ Proof.
     { rewrite -bpow_plus. f_equal. lia. }
     rewrite Hstep bpow_1 /=. lra. }
   (* round (bpow (c-1)) <= |round (bpow (c-1))| <= bpow (femax - fprec - 1) < bpow femax.
-     We use abs_round_le_generic with the generic-format target bpow (femax - fprec - 1);
+     We use abs_round_le_generic with the generic format target bpow (femax - fprec - 1);
      this avoids requiring bpow (c-1) itself to be in generic format (which fails in the
      subnormal case c = emin). *)
   apply Rle_lt_trans with (bpow radix2 (femax t - fprec t - 1)).

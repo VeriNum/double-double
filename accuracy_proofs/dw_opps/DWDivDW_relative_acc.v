@@ -16,7 +16,7 @@ Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
 (* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
    bound DWDivDW.DWDDW3_correct is available and instantiated below.  DWDivDW.v
    sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
-   into this file's proofs by re-asserting transparency after the Require. *)
+   into this file's proofs by asserting again transparency after the Require. *)
 Require Import DWDivDW.
 Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DWMulFP_mixed_acc
                DWPlusFP_relative_acc DWMulDW_relative_acc DWMulDW_mixed_acc
@@ -50,10 +50,10 @@ Section CorrectDWDivDW.
   Notation mh  := (fst (DWPlusFP dh dl th)).
   Notation ml  := (snd (DWPlusFP dh dl th)).
 
-  (* The closing DWTimesDW3 xh xl mh ml is finite as a pair; its per-node
+  (* The closing DWTimesDW3 xh xl mh ml is finite as a pair; finiteness of each node
      finiteness follows from DWMulDW_relative_acc's CorrectDWMulDW facts applied at
      (xh, xl, mh, ml).  The prologue nodes (th, rh, rl, eh, el, dh, dl, mh, ml)
-     are finite by a BPLUS/BFMA/BMULT finite-elimination pass on FIN, exactly
+     follows by eliminating BPLUS/BFMA/BMULT from FIN, exactly
      as in DWMulDW_relative_acc.v's [prove_finite]. *)
 
   (** If the complete division returns finite components, then its final
@@ -73,12 +73,12 @@ Section CorrectDWDivDW.
   Local Fact FIN_ml : is_finite ml = true.
   Proof. exact (DWMulDW_relative_acc.DWTimesDW3_yl_finite xh xl mh ml FIN_mul). Qed.
 
-  (** Pair finiteness of the reciprocal-renormalization block. *)
+  (** The reciprocal renormalization returns a finite pair. *)
   Local Fact FIN_plus : is_finite_p (DWPlusFP dh dl th).
   Proof. split; [exact FIN_mh | exact FIN_ml]. Qed.
 
-  (** The two components produced by the reciprocal-times-error block are
-      finite.  These are recovered through the finite-input projections of
+  (** The product of the reciprocal and error returns two finite components.
+      These are recovered through the finite input projections of
       the enclosing [DWPlusFP]. *)
   Local Fact FIN_dh : is_finite dh = true.
   Proof. exact (DWPlusFP_relative_acc_helpers.FINxh dh dl th FIN_plus). Qed.
@@ -100,7 +100,7 @@ Section CorrectDWDivDW.
   Local Fact FIN_fast2sum : is_finite_p (Fast2Sum rh rl).
   Proof. split; [exact FIN_eh | exact FIN_el]. Qed.
 
-  (** Finiteness of the two explicit reciprocal-residual operands. *)
+  (** Finiteness of the two explicit reciprocal residual operands. *)
   Local Fact FIN_rh : is_finite rh = true.
   Proof.
     have Hsum := FIN_eh.
@@ -133,7 +133,7 @@ Section CorrectDWDivDW.
 
   (** The initial rounded reciprocal [1/yh] is finite whenever the complete
       division result is finite.  This is useful when reasoning backward from
-      the final result to the reciprocal-construction steps. *)
+      the final result to the reciprocal construction. *)
   Local Fact FIN_th : is_finite th = true.
   Proof.
     have Hmh := FIN_mh.
@@ -146,7 +146,7 @@ Section CorrectDWDivDW.
 
   (** Structural bridge for the residual [Fast2Sum].  Finiteness alone cannot
       imply nonoverlap: the required magnitude ordering is exposed explicitly
-      for the later normal-range analysis. *)
+      for the later normal range analysis. *)
   Local Fact DW_e
       (Hord : Rabs (FT2R rl) <= Rabs (FT2R rh)) :
     double_word eh el.
@@ -190,7 +190,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (SpecFloat.emin (fprec t) (femax t)).
 
 (** Internal condition used by the numerical analysis.  Unlike the
-    caller-facing safe-input condition, it contains no quotient ceiling: that
+    public safe input condition, it contains no quotient ceiling: that
     ceiling is needed only to prove output finiteness before executing the
     kernel.  In the postchecked interface, output finiteness is supplied by
     [DWDivDW_mixed_cond] instead. *)
@@ -255,7 +255,7 @@ Qed.
     [-(emin+2p+2) = femax-p-5].  Every consumer below goes through this lemma
     rather than reading the conjunct directly, so the cond is free to state
     whichever side the runtime guard can test more cheaply -- and it states the
-    [|yh|] side, which needs no [1.0/y->s] node and no rounded-to-exact
+    [|yh|] side, which needs no [1.0/y->s] node and no transfer from rounded to exact
     transfer. *)
 Local Lemma DWDivDW_cond_recip_lower (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
@@ -276,7 +276,7 @@ Qed.
     [emin+2p <= femax-p-5], i.e. [p <= femax-4] once [emin = 3-femax-p] is
     substituted -- and then [emin+2p = 3-femax+p <= -1].  Every scale
     conversion below inherits this: the underflow floor is at most [u^2], not
-    the format-generic [4*u^2].  (Only [p < femax] is available without the
+    the bound [4*u^2], valid for any format.  (Only [p < femax] is available without the
     window, and [eta <= 4u^2] does not fit the arm budgets.) *)
 Local Lemma DWDivDW_cond_emin_le (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
@@ -295,7 +295,7 @@ Qed.
     unit scale.  This is what lets the reciprocal residual's single rounding
     be charged at [1.001*u^2] with NO floor ulp at all
     ([DWDivDW_residual_value_error_tight_floor]): the max of the relative term
-    and [eta/2] collapses to the relative one.  The format-generic
+    and [eta/2] collapses to the relative one.  The general bound
     [eta <= 4*u^2] of [DWDivDW_eta_scales_from_cond_tight] would not do. *)
 Local Lemma DWDivDW_cond_eta_le_u2 (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
@@ -357,7 +357,7 @@ eapply Rle_trans.
 Qed.
 
 (** Finiteness of the reciprocal bootstrap node, obtained by reusing the
-    quotient-node proof from DW/FP division at numerator [1]. *)
+    quotient node proof from DW/FP division at numerator [1]. *)
 Local Lemma DWDivDW_th_finite_from_cond (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite (BDIV (Zconst t 1) yh) = true.
@@ -836,7 +836,7 @@ Qed.
 
 (** All three operations of the residual [Fast2Sum] stay within tiny
     power-of-two envelopes.  This proof does not require the Fast2Sum
-    magnitude-ordering condition. *)
+    magnitude ordering. *)
 Local Lemma DWDivDW_fast2sum_cascade_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let e := Fast2Sum
@@ -906,7 +906,7 @@ move => Hp14 COND.
 exact (proj1 (DWDivDW_fast2sum_cascade_from_cond xh xl yh yl Hp14 COND)).
 Qed.
 
-(** Forward overflow cascade for the reciprocal-times-residual block.  The
+(** Forward overflow cascade for the product of the reciprocal and residual block.  The
     deliberately coarse [|eh| <= 2], [|el| <= 8] bounds are sufficient because
     [th] is at scale [2^(femax-p-3)]. *)
 Local Lemma DWDivDW_timesfp_cascade_from_cond (xh xl yh yl : ftype t) :
@@ -1881,7 +1881,7 @@ have Htotal : Rabs ((FT2R eh+FT2R el)-
 repeat split; [exact Htotal|exact Heh|exact Hel].
 Qed.
 
-(** Compatibility form obtained by absorbing the two explicit residual-floor
+(** Compatibility form obtained by absorbing the two explicit residual floor
     terms.  New denormal proofs should use
     [DWDivDW_residual_value_error_floor] instead. *)
 Local Lemma DWDivDW_residual_value_error (xh xl yh yl : ftype t) :
@@ -1923,9 +1923,9 @@ split.
 - split; [exact Heh|exact Hel].
 Qed.
 
-(** Two-arm compensated refinement-product estimate.  When the closing
+(** Compensated refinement product estimate split into two cases.  When the closing
     Fast2Sum is ordered, its sum is exact and the refinement costs one floor
-    ulp.  Otherwise the general two-floor bound holds and the Newton residual
+    ulp.  Otherwise the general bound with two floor terms holds and the Newton residual
     is itself second order. *)
 Local Lemma DWDivDW_refinement_product_value_error_tight_floor
     (xh xl yh yl : ftype t) :
@@ -2277,9 +2277,9 @@ split.
   rewrite Heq; exact Hprod.
 Qed.
 
-(** In the complementary closing-product regime, all nodes of the final
+(** In the complementary closing product regime, all nodes of the final
     [DWTimesDW3] are absolutely small.  This supplies finiteness without the
-    normal-product disjunct required by [DWTimesDW_exact_leading_product_input_cond]. *)
+    normal product disjunct required by [DWTimesDW_exact_leading_product_input_cond]. *)
 Local Lemma DWDivDW3_finite_from_cond_zprod_underflow (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -2480,7 +2480,7 @@ Qed.
 End DWDivDWCondFacts.
 
 (* Bridge from the bounded FLT implementation to [DWDivDW.DWDivDW3].
-   Normal-range bounds make each FLT rounding agree with its FLX counterpart.
+   Normal range bounds make each FLT rounding agree with its FLX counterpart.
    The proof composes the reciprocal refinement bridges with the final
    double-word multiplication bridge. *)
 Section PaperModelDWDivDW.
@@ -2606,7 +2606,7 @@ eapply Rle_trans; [|exact Hmul].
 right. field.
 Qed.
 
-(** Scale- and sign-invariant form of the Newton bootstrap estimate.  The
+(** Scale invariant form of the Newton bootstrap estimate.  The
     product [(yh+yl)*round(1/yh)] is unchanged by a power-of-two scaling of
     the divisor pair, so the normalized result applies to every nonzero
     double word. *)
@@ -2686,7 +2686,7 @@ rewrite Habspow.
 apply Rmult_le_compat_r; [apply Rabs_pos|exact Hsq].
 Qed.
 
-(** Residual-parameterized form of the Newton step.  The remainder is exactly
+(** Form of the Newton step parameterized by the residual.  The remainder is exactly
     [-(1-Y*th)^2/Y], so any bound on the residual transfers directly; the
     [2298/1000*u^2] of the previous lemma is just this with the generic
     [|1-Y*th| <= (3/2+u/2)*u].
@@ -2991,9 +2991,9 @@ Qed.
     gives [emin <= -2p < 1-2p], so the exact residual is always an FLT value
     and the FMA does not round at all.
 
-    This is the first of the node-exclusivity facts.  The [rh] node
-    contributes no signed delta whatsoever -- neither an ordinary [u]-relative
-    term nor an underflow floor -- so the [~UF_rh] arm of the regime cascade
+    This is the first fact showing that the node errors are exclusive.  The [rh] node
+    contributes no signed delta whatsoever -- neither an ordinary relative
+    term of order [u] nor an underflow floor -- so the [~UF_rh] arm of the regime cascade
     carries no error of its own. *)
 Local Lemma DWDivDW_rh_exact_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
@@ -3078,8 +3078,8 @@ apply (DWDivDW_residual_fast2sum_exact_from_fix
 exact (DWDivDW_rh_fix_from_cond xh xl yh yl Hp14 COND).
 Qed.
 
-(** Reciprocal-refinement multiplication with exactly the paper's [2*u^2]
-    ordinary term and only the Fast2Mult-gap floor term. *)
+(** Refinement of the reciprocal multiplication with exactly the paper's [2*u^2]
+    ordinary term and only the floor term from the Fast2Mult gap. *)
 Local Lemma DWDivDW_refinement_product_error_mixed_paper
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
@@ -3156,8 +3156,8 @@ exact (DWPlusFP_error_paper_tight
   (fst d) (snd d) th ltac:(lia) DWd Fm).
 Qed.
 
-(** The low-divisor product is the second and only other reciprocal-prologue
-    node that may initially differ; it also costs at most one floor ulp. *)
+(** The low divisor product is the only other node in the reciprocal setup
+    that may initially differ; it costs at most one floor ulp. *)
 Local Lemma DWDivDW_rl_FLT_FLX_diff_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3341,7 +3341,7 @@ have Hth := DWDivDW_th_FLT_FLX_from_cond xh xl yh yl COND.
 fold th Y. cbv zeta in H. rewrite Hth in H. exact H.
 Qed.
 
-(** The exact scale that propagates a reciprocal-residual perturbation to the
+(** The exact scale that propagates a reciprocal residual perturbation to the
     quotient is essentially one: [|(xh+xl)*th| <= 1.001*|Q|]. *)
 Local Lemma DWDivDW_X_th_quotient_scale_from_cond
     (xh xl yh yl : ftype t) :
@@ -3412,12 +3412,12 @@ eapply Rle_trans.
   apply Rmult_le_compat_r; [apply Rabs_pos|]. nra.
 Qed.
 
-(** Quotient-scaled interpretation of the compensated refinement block.
+(** Interpretation of the compensated refinement block scaled by the quotient.
     Its ordinary rounding contribution is below [0.01*u^2*|Q|] at
     [p >= 14]; the only second-order denormal contribution is retained as
     the two actual floor ulps generated inside Algorithm 9. *)
-(** Coefficient-parametric scaling of the refinement block onto the quotient
-    scale.  The third-order coefficient [c3] is absorbed into [1/100*u^2] for
+(** Scale the refinement block by the quotient, with parametric coefficients.
+    The third-order coefficient [c3] is absorbed into [1/100*u^2] for
     any [c3 <= 140] at [p >= 14], so both arms of the refinement split share
     this step; only the floor coefficient [fl] is carried through. *)
 Local Lemma DWDivDW_refinement_product_error_scaled_param
@@ -3499,10 +3499,10 @@ eapply Rle_trans with (r2:=
   + right; ring.
 Qed.
 
-(** Coefficient-parametric reciprocal reconstruction.  The refinement block's
+(** Reciprocal reconstruction with parametric coefficients.  The refinement block's
     floor coefficient [fr] and the Newton remainder's coefficient [nw] are
     taken as inputs, so the two arms of the refinement split share this whole
-    float-level assembly instead of each needing a copy.
+    floating-point level assembly instead of each needing a copy.
 
     The conclusion is an exact identity in [fr] and [nw] -- nothing is rounded
     up here, which is what lets each arm keep its own sharp constants. *)
@@ -3652,9 +3652,9 @@ Definition DWDivDW_reciprocal_FLX_model (yh yl : ftype t) : R * R :=
   let dhl  := DWTimesFP.DWTimesFP9 (fprec t) choice eh_r el_r th_r in
   DWPlus.DWPlusFP (fprec t) choice (fst dhl) (snd dhl) th_r.
 
-(** The real-valued, unbounded-exponent computation analyzed by the paper.
+(** The computation over the reals with unbounded exponents, as analyzed by the paper.
     Naming it separately lets the denormal proof compare the runtime result
-    with this fixed reference value instead of re-analyzing normal rounding. *)
+    with this fixed reference value instead of analyzing again normal rounding. *)
 Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
   let mhl := DWDivDW_reciprocal_FLX_model yh yl in
   DWTimesDW.DWTimesDW12 (fprec t) choice
@@ -3739,9 +3739,9 @@ eapply Rle_trans.
 - right; ring.
 Qed.
 
-(** Conversion of a mixed physical-floor estimate with symbolic coefficients
+(** Conversion of a mixed physical floor estimate with symbolic coefficients
     into the exported mixed form: trade [eta*|X|] for [u^2|Q|] against the
-    guard-derived scale fact, and keep the [fc*eta] physical-floor term.  Pure
+    derived from the guard scale fact, and keep the [fc*eta] physical floor term.  Pure
     real arithmetic; each arm of the refinement split supplies its own
     [(a,bx)] and its own budget check.
 
@@ -3928,7 +3928,7 @@ destruct Harms as [Htight|[Hcoarse Hsmall]].
   nra.
 Qed.
 
-(** The whole-range [5/2*eta] instance: no quotient underflow floor anywhere,
+(** The whole range [5/2*eta] instance: no quotient underflow floor anywhere,
     hence [DWDivDW_internal_input_cond]. *)
 Theorem DWDivDW3_error_mixed_arms_acc
     (xh xl yh yl : ftype t) :
@@ -3976,13 +3976,13 @@ Notation dl  := (snd (DWTimesFP3 eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
-(* Normal-range hypotheses for the reciprocal, low-product, and error-sum
+(* Normal range hypotheses for the reciprocal, low product, and error sum
    nodes represented explicitly by the current theorem signature. *)
 Hypothesis UF_th   : bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Hypothesis UF_rh   : bpow radix2 (emin + fprec t - 1)
   <= Rabs (1 - FT2R yh * FT2R th).
 Hypothesis UF_rl   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R yl * FT2R th).
-(* Normal-range hypotheses consumed by the composed multiplication bridges. *)
+(* Normal range hypotheses consumed by the composed multiplication bridges. *)
 Hypothesis UF_dprod : bpow radix2 (emin + 2 * fprec t - 1)
   <= Rabs (FT2R eh * FT2R th).
 Hypothesis UF_dlow : bpow radix2 (emin + fprec t - 1)
@@ -4002,12 +4002,12 @@ Hypothesis UF_z3 : bpow radix2 (emin + fprec t - 1)
 (** The finite-precision runtime computation [DDModels.DWDivDW3] denotes the
     same real pair as the paper's FLX computation.
 
-    The lower-bound hypotheses exclude underflow at the reciprocal,
-    low-product, and error-sum nodes, allowing FLT rounding to be replaced by
+    The lower bound hypotheses exclude underflow at the reciprocal,
+    low product, and error sum nodes, allowing FLT rounding to be replaced by
     FLX rounding.  This equality is the link used by
-    [relative_errorDWDivDW3_correct] to reuse the paper-level error bound.
+    [relative_errorDWDivDW3_correct] to reuse the paper error bound.
 
-    The hypotheses enumerate the normal-range obligations required by the
+    The hypotheses enumerate the normal range obligations required by the
     reciprocal prologue and the two composed multiplication bridges. *)
 Lemma DWDivDW3_FLX_FLT :
   F2Rp (DWDivDW3 xh xl yh yl)
@@ -4106,7 +4106,7 @@ Qed.
 End BridgeDWDivDW.
 
 (* ============================================================
-   Relative-error bound for DWDivDW3
+   Relative error bound for DWDivDW3
    As in [relative_errorDWDivFP3_correct], instantiate the paper result
    [DWDivDW.DWDDW3_correct] with its [98/10*u^2] bound, rewrite the FLX model
    through the bridge, and obtain the numeric bound.
@@ -4135,7 +4135,7 @@ Notation dh  := (fst (DWTimesFP3 eh el th)).
 Notation dl  := (snd (DWTimesFP3 eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
-(* No-underflow assumptions currently exposed by [DWDivDW3_FLX_FLT]. *)
+(* Assumptions excluding underflow, currently exposed by [DWDivDW3_FLX_FLT]. *)
 Hypothesis UF_th : bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Hypothesis UF_rh : bpow radix2 (emin + fprec t - 1)
                    <= Rabs (1 - FT2R yh * FT2R th).
@@ -4164,8 +4164,8 @@ Definition relative_error_DWDivDW :=
   Rabs ((zh + zl - (FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))
         / ((FT2R xh + FT2R xl) / (FT2R yh + FT2R yl))).
 
-(** Under the double-word, finiteness, precision, nonzero-divisor, and
-    no-underflow assumptions above, [DWDivDW3] computes the quotient with
+(** Under the assumptions above on double words, finiteness, precision, a
+    nonzero divisor, and absence of underflow, [DWDivDW3] computes the quotient with
     relative error at most [9.8*u^2], where [u = 2^(-p)].
 
     The proof transfers [DWDivDW.DWDDW3_correct] from the paper's FLX model to
@@ -4208,9 +4208,9 @@ End FiniteAccuracyDWDivDW.
    Once the reciprocal reconstruction has established the public condition
    of the closing [DWTimesDW3] block, its existing componentwise finiteness
    theorems provide finiteness of the complete division result.  Keeping this
-   as a separate lemma makes the remaining reciprocal-range proof expose the
+   as a separate lemma lets the remaining reciprocal proof expose the
    precise condition it must establish rather than a collection of internal
-   output-finiteness facts.
+   exact facts needed for output finiteness.
    ============================================================ *)
 Section FiniteDWDivDWFromFinalBlock.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -4228,7 +4228,7 @@ Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
 (** The complete division is finite as soon as its closing multiplication
-    satisfies the already-proved [DWTimesDW_exact_leading_product_input_cond]. *)
+    satisfies [DWTimesDW_exact_leading_product_input_cond], proved earlier. *)
 Local Lemma DWDivDW3_finite_from_final_cond :
   (4 <= fprec t)%Z ->
   DWTimesDW_exact_leading_product_input_cond xh xl mh ml ->
@@ -4245,7 +4245,7 @@ Qed.
 End FiniteDWDivDWFromFinalBlock.
 
 (* Pure relative bound in the normal regime.  [DWDivDW_normal] supplies the
-   nine node bounds needed by the FLT-to-FLX bridge; [UF_th] follows separately
+   nine node bounds needed by the FLT to FLX bridge; [UF_th] follows separately
    from [DWDivDW_internal_input_cond].  Together with the safe input condition,
    these form [DWDivDW_relative_error_input_cond].  The result is the paper's
    [9.8u^2] bound with no absolute floor term. *)

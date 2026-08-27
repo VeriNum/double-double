@@ -29,7 +29,7 @@ Proof.
   mkVSU prog Ops_Internal.
   (* Discharge each internal function's SF obligation by focusing the first
      remaining goal.  Sequential 1:{ } focusing avoids a `;`-composition
-     interaction that mis-elaborates solve_SF_internal's evars. *)
+     interaction that causes solve_SF_internal's evars to elaborate incorrectly. *)
   1:{ solve_SF_dd body_two_sum. }
   1:{ solve_SF_dd body_fast_2sum. }
   1:{ solve_SF_dd body_fast_2mult. }

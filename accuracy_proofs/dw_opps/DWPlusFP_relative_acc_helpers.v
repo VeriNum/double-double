@@ -153,14 +153,14 @@ Variables (xh xl y : ftype t).
 
 Hypothesis DWx : double_word xh xl.
 
-(* No-overflow bound for the TwoSum sum [round (xh + y)], expressed via the
-   relative-error model [round (xh + y) = (xh + y) * (1 + d1)].  The relative
+(* Overflow bound for the TwoSum sum [round (xh + y)], expressed via the
+   relative error model [round (xh + y) = (xh + y) * (1 + d1)].  The relative
    error [d1] returned by [FLT_plus_error_N_ex] is bounded by
    [u_ro / (1 + u_ro)] with [u_ro = /2 * 2^(1 - fprec t)]; since [fprec t >= 2]
    we have [|d1| <= /4], and with [|xh| <= Omega/2], [|y| <= Omega/4] the product
    is at most [(3/4) * (5/4) * Omega = (15/16) * Omega < Omega].  This is the
-   type-generic replacement for the [interval]-based overflow check (which
-   relied on [femax t = 1024]). *)
+   replaces the overflow check based on [interval] and works for any type; the
+   former check relied on [femax t = 1024]. *)
 Lemma sum_round_no_overflow (d1 : R)
   (Hd1 : Rabs d1 <= /2 * bpow radix2 (Z.pos_sub 1 (fprecp t))
                      / (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t))))
@@ -239,19 +239,19 @@ have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
 refine (Rle_trans _ _ _ Hxh _); nra.
 Qed.
 
-(** ** Interval-free no-overflow toolkit.
+(** ** No overflow toolkit without interval tactics.
 
-   To check that the rounded sub-expressions of [TwoSumF_err] stay below the
+   To check that the rounded subexpressions of [TwoSumF_err] stay below the
    overflow threshold [Omega = bpow radix2 (femax t)] for an arbitrary type [t]
    (where [Omega] is not a literal, so [interval] does not apply), we expand
-   each rounding via its relative-error model and bound the result
+   each rounding via its relative error model and bound the result
    compositionally.  Each [b_*] lemma states [Rabs z <= c]; [mag] chains them
    over an arithmetic tree, never forming the triple products that defeat [nra],
-   and [nob_close] finishes with [lra] on a pure-[Omega] inequality. *)
+   and [nob_close] finishes with [lra] on an inequality involving only [Omega]. *)
 
 (* u_ro = /2 * 2^(1-fprec) <= /8 (as fprec t >= 3); the FLT bound u_ro/(1+u_ro)
    is also <= /8.  The bound /8 (rather than /4, which only needs fprec >= 2) is
-   what makes the deepest sub-expression of the error term ([err], with three
+   what makes the deepest subexpression of the error term ([err], with three
    nested roundings) provably below the overflow threshold by the compositional
    bound below: the three [(1 + d)] factors compound to [(9/8)^3], and the input
    magnitudes [Omega/4] then keep the product strictly under [Omega]. *)
@@ -318,7 +318,7 @@ Ltac nob_close :=
   generalize (bpow_gt_0 radix2 (femax t)); intro;
   eapply Rle_lt_trans; [ mag | ]; lra.
 
-(* Normalise relative-error hypotheses to the uniform bound [Rabs d <= /8].
+(* Normalise relative error hypotheses to the uniform bound [Rabs d <= /8].
    Requires a hypothesis [Hp3 : 3 <= fprec t] in context. *)
 Ltac eighth_bounds :=
   match goal with HP : (3 <= fprec t)%Z |- _ =>
@@ -330,9 +330,9 @@ Ltac eighth_bounds :=
       apply (fun h => Rle_trans _ _ _ h (reldiv_le_eighth HP)) in H
   end end.
 
-(* Reduce a no-overflow obligation to its structured real expression:
+(* Reduce a no overflow obligation to its structured real expression:
    introduce the relative error of the pending round, then expand the FT2R of
-   every finite sub-term. *)
+   every finite subterm. *)
 Ltac gf_side :=
   try apply Generic_fmt.generic_format_opp;
   rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
@@ -362,7 +362,7 @@ Ltac expand_ft2r :=
       destruct (BMINUS_accurate' _ _ _ H) as (?d & ?Hd & E); rewrite E; clear E
   end.
 
-(* Per-shape no-overflow lemmas for the five rounded sub-expressions of
+(* No overflow lemmas for the five shapes of rounded subexpressions in
    [TwoSumF_err xh y].  Each exposes the relevant TwoSum cancellation with
    [ring], then bounds the residual with [mag]/[nob_close].  Inputs satisfy
    [|xh|,|y| <= Omega/4]; relative errors satisfy [|d| <= /8]. *)
@@ -461,9 +461,9 @@ rewrite /TwoSumF_err/TwoSumF/fst/snd => //.
 rewrite -is_finite_Binary.
 rewrite -is_finite_Binary in HFINxh.
 rewrite -is_finite_Binary in HFINy.
-(* Establish finiteness of every rounded sub-expression bottom-up via the
-   FT2R-level no-overflow lemmas, discharging each no-overflow obligation with
-   the matching per-shape bound. *)
+(* Establish finiteness of every rounded subexpression from the leaves upward via the
+   no overflow lemmas at the FT2R level, discharging each obligation with
+   the corresponding shape bound. *)
 have FINs : is_finite (BPLUS xh y) = true.
 { apply no_overflow_sum_is_finite; [exact HFINxh|exact HFINy|].
   show_nob. expand_ft2r. eighth_bounds. nob_close. }
@@ -493,7 +493,7 @@ Proof.
 rewrite /is_finite_p; split.
 { rewrite is_finite_Binary.
   apply TwoSumF_sum_finite; try assumption.
-  (* the sum needs the [/2] high-part bound, supplied from [/4] by the bnd lemma *)
+  (* the sum needs the [/2] high part bound, supplied from [/4] by the bnd lemma *)
   apply TwoSumF_err_finite_bnd; assumption. }
 rewrite is_finite_Binary.
 apply TwoSumF_err_finite; assumption.
@@ -540,8 +540,8 @@ let zh := Fast2Sum_sum sh (BPLUS xl sl) in
 Proof.
 (* zh = Fast2Sum_sum sh (BPLUS xl sl) = BPLUS sh (BPLUS xl sl). *)
 rewrite /Fast2Sum_sum/fst/Fast2Sum.
-(* [is_finite] copies of the operand-finiteness hypotheses for the
-   FT2R-level no-overflow lemmas (the [TwoSum*] lemmas keep the [Binary] form). *)
+(* [is_finite] copies of the hypotheses on operand finiteness for the no overflow
+   lemmas at the FT2R level (the [TwoSum*] lemmas keep the [Binary] form). *)
 have Fxl : is_finite xl = true by (rewrite is_finite_Binary; exact HFINxl).
 have Hxh2 : Rabs (FT2R xh) <= /2 * bpow radix2 (femax t)
   by (apply TwoSumF_err_finite_bnd; assumption).

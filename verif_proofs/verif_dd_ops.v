@@ -3,7 +3,7 @@
 
 (* Compatibility aggregator for the body proofs of dd_ops.c.  New code should
    import the family modules directly; this module preserves the former
-   one-import interface. *)
+   single import interface. *)
 
 Require Export DD.verif_proofs.verif_dd_ops_common.
 Require Export DD.verif_proofs.verif_dd_ops_basic.

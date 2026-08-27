@@ -19,7 +19,7 @@ Proof.
   (* Hfin_spec : vret_fin = true <-> is_finite (BMULT x y) = true *)
   rename H into Hfin_spec.
 
-  (* px / py: the zero-product witnesses carried through the boolean short-circuits.
+  (* px / py: the zero product witnesses carried through the boolean short-circuits.
      px asserts x == 0.0 (and y is finite); py asserts y == 0.0 (and x is finite).
      Either witness allows us to conclude FT2R x * FT2R y = 0 at the join point. *)
   set (px := is_finite y = true /\

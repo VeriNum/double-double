@@ -4,12 +4,13 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* Discharge the residual `Vint (if b then Int.one else Int.zero) =
-   Vint (Int.repr (Z.b2z c))` LOCAL-matching goals that entailer! spins off
+(* Discharge the residual local goals
+   `Vint (if b then Int.one else Int.zero) = Vint (Int.repr (Z.b2z c))`
+   that entailer! produces
    whenever a forward_if invariant carries the xh_bnd / y_bnd comparison temps.
-   Each such temp equals a `Float.cmp Cle ...` value; case-splitting the
-   comparison closes both sides by reflexivity. *)
-(* Int.repr (Z.b2z b) is exactly the if-form used in the invariants. *)
+   Each such temp equals a `Float.cmp Cle ...` value; analyzing the comparison
+   closes both sides by reflexivity. *)
+(* Int.repr (Z.b2z b) is exactly the if expression used in the invariants. *)
 (* The stored xh_bnd / y_bnd temp is `Vint (Int.repr (Z.b2z c))` where c is the
    raw Float.cmp Cle comparison; the invariant carries `Vint (if bxh ..)` with
    bxh := that same comparison (up to convertibility of q_sqrt_val / femax).
@@ -165,7 +166,7 @@ Proof.
            (* FINAL discharge: the three conjuncts of DWTimesFP_mixed_safe_input_cond.
               No underflow disjunct to prove -- that is the whole point of the
               weakening -- so prod_bnd_facts closes both remaining goals
-              (Fast2Mult finiteness AND the product-magnitude bound) in one
+              (Fast2Mult finiteness AND the product magnitude bound) in one
               shot and nothing else is needed. *)
            destruct (Hb9 eq_refl) as [Hb6t [Hfyt Hbpbt]].
            destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwp]].

@@ -2,7 +2,7 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (* Shared proof environment for the body proofs of dd_ops.c.  As in LAProof's
-   densemat_lemmas.v, every body-proof module imports this single definition of
+   densemat_lemmas.v, every body proof module imports this single definition of
    Gprog so that all semax_body theorems use exactly the VSU's specification
    environment. *)
 

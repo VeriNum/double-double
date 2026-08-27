@@ -5,8 +5,8 @@
 
     Its public result is [DWTimesFP_relative_accuracy], the pure [2u^2]
     relative bound under [DWTimesFP_relative_error_input_cond].  The shared
-    runtime-model, finiteness, and normal-arm lemmas are consumed by
-    [DWMulFP_mixed_acc], which contains the whole-range mixed API. *)
+    runtime model, finiteness, and normal case lemmas are consumed by
+    [DWMulFP_mixed_acc], which contains the whole range mixed API. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -63,7 +63,7 @@ Section DWTimesFP_ResultFacts.
 End DWTimesFP_ResultFacts.
 
 (* The paper's FLX TwoProd agrees with the runtime FLT Fast2Mult at the
-   exact-reconstruction threshold [emin + 2p - 1]. *)
+   exact reconstruction threshold [emin + 2p - 1]. *)
 Section Fast2Mult_FLX_Bridge.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -232,7 +232,7 @@ apply Rabs_le; split.
   rewrite Hrgh Hr in Hhi. lra.
 Qed.
 
-(* The low-word product |xl*y| is small: in the normal range the relative ulp
+(* The low word product |xl*y| is small: in the normal range the relative ulp
    bound gives |xl| <= 2^-p |xh| so |xl*y| <= 2^-p |xh*y|; in the subnormal
    range |xl| <= 1/2 bpow emin is itself tiny.  Either way |xl*y| <= Omega/4. *)
 Local Lemma aux_xly_bnd (xh xl y : ftype t) :
@@ -303,7 +303,7 @@ have Hfcl1 : is_finite (Fast2Mult_err xh y) = true.
 { destruct (Fast2Mult_finite_unconditional xh y Hfmul) as [_ H]. exact H. }
 have Hcl1u : Rabs (FT2R (Fast2Mult_err xh y)) <= /2 * ulp (FT2R xh * FT2R y).
 { apply Fast2Mult_accuracy_norm; exact Hfmul. }
-(* product real bound + low-product bound + cl1 in absolute terms *)
+(* product real bound + low product bound + cl1 in absolute terms *)
 have Hxhy : Rabs (FT2R xh * FT2R y) <= /2 * Omega by exact Hreal.
 have Hxhy_lt : Rabs (FT2R xh * FT2R y) < Omega by lra.
 have Hxly : Rabs (FT2R xl * FT2R y) <= /2 * bpow radix2 (femax t - fprec t).
@@ -371,7 +371,7 @@ split.
   change (is_finite (BPLUS (Fast2Mult_mul xh y)
                            (BFMA xl y (Fast2Mult_err xh y))) = true).
   exact Hfst.
-- (* snd: headroom route, no closing-Fast2Sum ordering required *)
+- (* snd: headroom route, no closing Fast2Sum ordering required *)
   apply (is_finite_FastSum_small (Fast2Mult_mul xh y)
                                  (BFMA xl y (Fast2Mult_err xh y)));
     [ lra | exact Hfst ].
@@ -554,8 +554,8 @@ Qed.
 
      (zh+zl) - xr*yr = round(w) - w,   where  w = xl*y + cl1.
 
-   This is the foundation for both the subnormal-w bound (proved below) and the
-   normal-w bound (the tight 2u^2 constant, via the FLX bridge). *)
+   This is the foundation for both the subnormal w bound (proved below) and the
+   normal w bound (the tight 2u^2 constant, via the FLX bridge). *)
 Local Lemma relerr_error_eq :
   double_word_prop xh xl ->
   is_finite_p (DWTimesFP3 xh xl y) ->
@@ -599,8 +599,8 @@ Qed.
      - underflow leg (xh*y = 0): the exact product xr*yr is 0, so relerr = 0
        (PROVEN here via relerr_0_of_xryr0 + xryr0_of_prod0);
      - normal leg (|xh*y| >= bpow(emin+2*fprec-1)): the bridge from
-       DWTimesFP9_correct via DWTimesFP3_FLX_FLT_weak, with the FMA-underflow /
-       [emin+2p-1, emin+3p) gap sub-case via a direct |abs err|/|xr*yr| bound. *)
+       DWTimesFP9_correct via DWTimesFP3_FLX_FLT_weak, with the FMA underflow /
+       [emin+2p-1, emin+3p) gap case via a direct |abs err|/|xr*yr| bound. *)
 Lemma DWTimesFP_relative_accuracy_core :
   double_word xh xl ->
   is_finite_p (DWTimesFP3 xh xl y) ->
@@ -722,7 +722,7 @@ Qed.
    third field of DWTimesFP_relative_error_input_cond (DDConds.v), projecting the underflow
    disjunct of Fast2Mult_exact_cond: under the cond the leading product is
    either exactly zero or at least the TwoProd exactness threshold, which is
-   precisely why the theorem below has no physical-floor term. *)
+   precisely why the theorem below has no physical floor term. *)
 Local Lemma DWTimesFP_cond_no_gap :
   DWTimesFP_relative_error_input_cond xh xl y ->
   FT2R xh * FT2R y = 0 \/
@@ -730,7 +730,7 @@ Local Lemma DWTimesFP_cond_no_gap :
 Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
 
 (** Pure relative error bound.  The input condition excludes the nonzero
-    underflow gap, while its safe-input consequence establishes finiteness. *)
+    underflow gap, while its safe input consequence establishes finiteness. *)
 Theorem DWTimesFP_relative_accuracy :
   (3 <= fprec t)%Z ->
   DWTimesFP_relative_error_input_cond xh xl y ->

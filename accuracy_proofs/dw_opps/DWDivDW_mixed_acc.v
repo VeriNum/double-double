@@ -1,9 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Public whole-range mixed-error and output-closure API for [DWDivDW3].
+(** Public whole range mixed error and output validity API for [DWDivDW3].
 
-    The shared reciprocal analysis and normal-range relative theorem are in
+    The shared reciprocal analysis and normal range relative theorem are in
     [DWDivDW_relative_acc]. *)
 
 Require Import vcfloat.VCFloat.
@@ -27,7 +27,7 @@ Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
 (** Compact error name used by the VST funspec. *)
 Definition absolute_error_DWDivDW : R := Rabs (zr - Q).
 
-(** The whole-range mixed error bound and output closure, destructuring the
+(** The whole range mixed error bound and output validity, destructuring the
     result once to keep the VST funspec small. *)
 Definition DWDivDW_mixed_guarantee : Prop :=
   let (zh, zl) := DWDivDW3 xh xl yh yl in
