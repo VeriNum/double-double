@@ -4931,18 +4931,10 @@ by case: (DWPlusDW_relerr_bound_pre' Hp3' DWx DWy xhy Hnz Hxh_nz xhpos xh1' xh2'
         => _ [_ [? _]].
 Qed.
 
-(* Outer paper-level lemma: extract the 4th conjunct of _pre' (Rabs w <=
-   Rabs vh \/ vh = 0 \/ w = 0) for general inputs via the same WLOG
-   dispatch used in DWPlusDW_cexp_or_zero_aux. The transformations preserve
-   the disjunction:
-   - swap (xh,xl) <-> (yh,yl): TwoSum/Fast2Sum operations are symmetric, so
-     vh, w are unchanged.
-   - negation: vh -> -vh, w -> -w; Rabs preserved, zero condition preserved.
-   - bpow scaling by e: vh -> e*vh, w -> e*w; Rabs scales by |e| on both
-     sides, zero condition preserved (since e <> 0).
-
-   To avoid the noise of deeply-nested helper signatures, the preservation
-   reasoning is inlined at each WLOG step. *)
+(* Extend the fourth conjunct of [_pre'] to general inputs with the WLOG
+   transformations used by [DWPlusDW_cexp_or_zero_aux].  Swapping operands
+   preserves [vh] and [w]; negation preserves absolute values and zero; and
+   scaling multiplies both absolute values by the same nonzero factor. *)
 Lemma DWPlusDW_w_le_vh_aux (xh xl yh yl: R)
   (Hp3': (3 <= p)%Z)
   (DWx: double_word xh xl) (DWy: double_word yh yl)

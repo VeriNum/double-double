@@ -1,62 +1,12 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative accuracy and shared analysis for double-word divided by a floating-point number
-    (Algorithm 15, DWDivFP3).  Mirrors the two-layer structure of
-    DWMulFP_relative_acc.v: an FLX->FLT bridge collapsing every rounded node of the
-    FLT runtime model [DDModels.DWDivFP3] onto the paper's real-valued FLX
-    model [DWDivFP.DWDivFP3], then the Layer-1 relative-error theorem obtained
-    from the paper's tight 3u^2 bound (DWDivFP.DWDFP3_correct), and finally the
-    Layer-2 condition-level tiers.
-
-    Notation: u = 2^(-p) is the relative rounding unit and eta = 2^emin is the
-    smallest positive subnormal, the physical underflow floor.  ADMIT-FREE.
-
-    ============================================================================
-    PUBLIC INTERFACE
-
-      There are exactly two accuracy tiers, and neither is obtained from the
-      other by absorbing eta.
-
-      (1) NORMAL-RANGE PURE RELATIVE, this file:
-
-        DWDivFP_relative_accuracy    relerr <= 3u^2
-                                     from DDConds.DWDivFP_relative_error_input_cond
-
-      That cond is the whole-range safe-input condition plus
-      DDConds.DWDivFP_normal, which says the leading quotient is normal and the
-      closing correction is either exactly zero or has a normal quotient.  In
-      that regime DWDivFP3 agrees with the paper's FLX model node for node, so
-      the paper's constant transfers with nothing added.  The exact-division
-      disjunct keeps exact quotients inside the tier.
-
-        relative_errorDWDivFP3_correct   the FLX-bridged Layer-1 core, stated
-                                         directly from per-node normal-range
-                                         premises
-
-      (2) WHOLE-RANGE MIXED, this file's normal-leading-quotient half plus
-          DWDivFP_subnormal.v's subnormal half:
-
-        DWDivFP3_error_mixed_acc     |Qhat - Q| <= 3u^2|Q| + eta
-                                     from the internal analysis condition,
-                                     result finiteness, and a normal leading
-                                     quotient
-
-      The runtime guard dw_div_fp_check discharges the canonical whole-range
-      DWDivFP_mixed_safe_input_cond.  DWDivFP_mixed_acc.v combines this file
-      with the subnormal proof and exposes the public ladder
-      DWDivFP_mixed_accuracy_from_cond / DWDivFP_double_word_from_cond /
-      DWDivFP_mixed_guarantee_from_cond.  The safe-input guarantee is a
-      corollary of that ladder.
-
-    Sharing between the tiers.  The two tiers meet at
-    DWDivFP3_error_underflow_perturbation, which bounds the error by
-    3u^2|Q| plus the SYMBOLIC divergence of the single node tl = round(d/y)
-    from its FLX counterpart.  The mixed tier charges that divergence at one
-    floor ulp (DWDivFP3_tl_perturbation_le_eta); the exact-division case of the
-    relative tier observes it is identically zero
-    (DWDivFP3_error_exact_division).
-    ============================================================================ *)
+(** Relative and mixed error analysis for [DWDivFP3].  The FLT-to-FLX bridge
+    connects [DDModels.DWDivFP3] with [DWDivFP.DWDivFP3].  In the normal regime,
+    [DWDivFP_relative_accuracy] transfers the paper's [3u^2] relative bound.
+    [DWDivFP3_error_mixed_acc] adds one [eta] term when the correction quotient
+    underflows.  [DWDivFP_mixed_acc] combines that result with the subnormal
+    leading-quotient proof and exports the mixed guarantee. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -269,18 +219,9 @@ Section CorrectDWDivFP.
 
 End CorrectDWDivFP.
 
-(* ============================================================
-   FLX -> FLT bridge for DWDivFP3.
-
-   Collapses every rounded node of the FLT runtime model
-   [DDModels.DWDivFP3] onto the paper's real-valued FLX model
-   [DWDivFP.DWDivFP3], under a declarative strong-underflow discipline: each
-   rounded node carries a lower bound placing it in the normal range so that
-   round_FLT agrees with round_FLX (round_FLT_FLX), and the closing Fast2Sum
-   is handled by FastTwoSumEq_FLT.  The two exact subtractions (dh = xh - pih,
-   dt = dh - pil) become round-identities in FLT via the FLX-format facts from
-   the paper (xhmpih_exact) lifted to FLT.
-   ============================================================ *)
+(* FLT-to-FLX bridge for [DWDivFP3].  Normal-range bounds make each FLT
+   rounding agree with its FLX counterpart.  [FastTwoSumEq_FLT] handles the
+   final sum, and [xhmpih_exact] supplies the exact subtraction facts. *)
 Section BridgeDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -845,18 +786,9 @@ have Hhalf : bpow radix2 (femax t - fprec t) <= /2 * Omega.
 lra.
 Qed.
 
-(* MAIN finiteness of fst (DWDivFP3 xh xl y) from the cond.
-
-   PROOF OBLIGATION (overflow analysis; the quotient bound cond_quotient_bound
-   + th_finite gives the th node; the remaining nodes are, in order):
-     pih = BMULT th y  : |th*y| <= |xh|(1+2^-p) < Omega  (th*y ~ xh, ulp_FLT_le);
-     pil = Fast2Mult_err th y : Fast2Mult_finite_if_BMULT_finite;
-     dh,dt,d           : residual sums/diffs, crude |.|+|.| < Omega;
-     tl = BDIV d y     : the delicate node — the TIGHT residual bound
-                         d = round((xh+xl) - th*y) gives |d/y| <= |(xh+xl)/y|+|th|
-                         ~ 2*Omega/4, via the exactness facts (dh=xh-pih,
-                         dt=xh-th*y) once dh,dt finite; normal/subnormal split;
-     fst = BPLUS th tl : |th+tl| < Omega. *)
+(* Finiteness of the high result component.  The quotient and dividend bounds
+   control [th] and [pih]; the residual identities control [dh], [dt], and
+   [d].  A tight bound on [d/y] keeps [tl] and the final sum finite. *)
 (* Worst-case half-ulp bound (fprec>=4): 1/2 ulp v <= Omega/16 for |v| < Omega.
    Kept OUT of the finiteness proof context: a forall-quantified hypothesis makes
    [lra] bail ("No applicable tactic"), so this is a standalone lemma applied
@@ -1548,18 +1480,9 @@ Qed.
 
 End DWDivFP_Finite.
 
-(* ============================================================
-   NORMAL-RANGE PURE RELATIVE TIER, part 1: the normal leg.
-
-   The sharp 3u^2 bound in the regime where both the leading quotient and the
-   closing correction d/y stay in the FLT normal range.  The internal input
-   condition supplies the input double word, y <> 0, and the product-node
-   floor; result finiteness and leading-quotient normality are explicit
-   hypotheses.  The remaining fact -- |d/y| normal (UF_tl) -- is the explicit
-   hypothesis Hdyn: d is 0 for exact division, so it genuinely characterises
-   the normal regime rather than following from the inputs.
-   DDConds.DWDivFP_normal packages Hdyn with that exact-division disjunct.
-   ============================================================ *)
+(* Pure [3u^2] relative bound when the leading quotient and nonzero correction
+   quotient are normal.  [DWDivFP_normal] packages the correction condition
+   with the zero case needed for exact division. *)
 Section CondAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1588,24 +1511,10 @@ Qed.
 
 End CondAccuracyDWDivFP.
 
-(* ============================================================
-   WHOLE-RANGE MIXED TIER, part 1: the underflow leg, with the single-node
-   perturbation left SYMBOLIC.
-
-   When the closing correction d/y is subnormal, the runtime diverges from the
-   FLX model at exactly one node, tl = round(d/y).  Every other node matches
-   the FLX model (th via UF_th, the product via cond_UF_prod_internal, dt exact, d
-   via the underflow-insensitive BPLUS), so the result carries the paper's
-   3u^2 relative error plus that single divergence.
-
-   Keeping the divergence symbolic instead of immediately charging it at one
-   floor ulp is what lets the two tiers share this proof:
-
-     - the MIXED tier bounds it by 2^emin (round_FLT_FLX_diff, packaged as
-       DWDivFP3_tl_perturbation_le_eta below);
-     - the exact-division case of the RELATIVE tier observes that it is
-       exactly ZERO, since both roundings are applied to 0.
-   ============================================================ *)
+(* Error bound when only the correction quotient may underflow.  The FLT and
+   FLX computations can differ only at [tl = round(d/y)], so the bound keeps
+   that difference symbolic.  [DWDivFP3_tl_perturbation_le_eta] bounds it by
+   [eta] for the mixed result; in exact division it is zero. *)
 Section CondAccuracyDWDivFP_underflow.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1833,23 +1742,10 @@ rewrite Hpert Rplus_0_r in Habs.
 exact Habs.
 Qed.
 
-(* ============================================================
-   WHOLE-RANGE MIXED TIER, part 2: the regime-independent bound under the
-   normal-leading-quotient helper.
-
-   The split point |d/y| vs 2^(emin+p-1) is decidable, so a case split feeds
-   either the normal leg (DWDivFP3_relative_accuracy_normal_quotient, whose
-   extra Hdyn is exactly the >= side, scaled from relative to absolute and
-   weakened by the non-negative floor term) or the underflow leg
-   (DWDivFP3_error_underflow_perturbation, the < side, whose symbolic
-   perturbation is charged at one floor ulp).  Both deliver
-
-     |zh+zl - X/y| <= 3u^2 |X/y| + 2^emin.
-
-   The runtime API is one level up: DWDivFP_mixed_acc.v case-splits
-   DWDivFP_mixed_safe_input_cond into this theorem and the
-   subnormal-leading-quotient leg.
-   ============================================================ *)
+(* Mixed bound for a normal leading quotient.  Split on whether [d/y] is
+   normal.  The normal case uses [DWDivFP3_relative_accuracy_normal_quotient];
+   the underflow case uses [DWDivFP3_error_underflow_perturbation] and charges
+   its symbolic difference by [eta].  Both yield [3u^2|Q| + eta]. *)
 Section CondAccuracyDWDivFP_mixed.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1906,22 +1802,11 @@ Qed.
 
 End CondAccuracyDWDivFP_mixed.
 
-(* ============================================================
-   NORMAL-RANGE PURE RELATIVE TIER, part 2: the public theorem.
-
-   The sharp 3u^2 relative bound holds exactly where DWDivFP3 agrees with the
-   paper's unbounded-exponent FLX model: the leading quotient is normal, and
-   the closing correction is either exactly zero (exact division -- the tl node
-   rounds 0 in both models) or its own quotient is normal.  Both facts are
-   recorded by DDConds.DWDivFP_normal; the rest of
-   DWDivFP_relative_error_input_cond is the whole-range safe-input condition,
-   which supplies overflow headroom, y <> 0 and the product-node floor.
-
-   NOTHING is absorbed here.  The constant is 3u^2 because in this regime there
-   is no floor ulp to charge, not because a quotient magnitude window pays for
-   one; the whole-range statement remains the mixed
-   3u^2|Q| + eta of DWDivFP_mixed_acc.DWDivFP_mixed_accuracy_from_cond.
-   ============================================================ *)
+(* Public pure relative theorem.  [DWDivFP_normal] requires a normal leading
+   quotient and either a zero correction or a normal correction quotient.
+   [DWDivFP_relative_error_input_cond] adds the safe input requirements.  In
+   this regime the FLT and FLX models agree, giving the paper's [3u^2] bound
+   without an absolute floor term. *)
 Section RelativeAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

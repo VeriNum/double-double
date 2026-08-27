@@ -71,19 +71,9 @@ Hypothesis TwoProdE : TwoProd = Fast2Mult. (* or Dekker's algorithm *)
 
 Notation DWTimesFP := (DWTimesFP p choice).
 
-(* The maintained DWTimesDW.v no longer marks these [simpl never]; this file's
-   Algo17 proofs are written assuming the DW* operators stay folded (they
-   destruct them with [case H: DWTimesDW12 ...] and fold via equations), so
-   restore that discipline to keep [rewrite /=] from unfolding them.
-   [simpl never] only blocks [simpl]/[cbn]; the [case] tactic computes a
-   weak-head normal form and would still reduce the (now transparent) concrete
-   [DWTimesDW12] to a pair constructor, expanding [zh]/[zl] and breaking the
-   equation-based destructs.  Making it [Opaque] blocks that reduction so
-   [case H: DWTimesDW12 ... => [zh zl]] keeps [zh]/[zl] abstract.  The two
-   degenerate [xh+xl=0] subcases (in [DWDDW3_correct_aux] and [DWDDW3_correct])
-   that previously relied on the pair reducing now destruct the pair explicitly
-   before rewriting; [DWDDW3_correct]'s [xh=0] branch re-enables transparency
-   locally for its [rewrite /DWTimesDW12]. *)
+(* Keep these operators opaque so [case H: DWTimesDW12 ...] records an
+   equation without reducing the operator to a pair constructor.  The proofs
+   unfold [DWTimesDW12] explicitly only where computation is required. *)
 Arguments DWTimesDW.DWTimesDW12 : simpl never.
 Arguments DWTimesFP.DWTimesFP9 : simpl never.
 Opaque DWTimesDW.DWTimesDW12.
@@ -2184,4 +2174,3 @@ End  Algo17.
 
 
 End Div.
-

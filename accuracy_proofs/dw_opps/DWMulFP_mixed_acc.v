@@ -443,18 +443,11 @@ destruct (Rle_dec
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-(* ------------------------------------------------------------------
-   PUBLIC WHOLE-RANGE INTERFACE.
-
-   DWTimesFP_mixed_cond contains exactly the input double-word property and
-   finiteness of the computed pair.  From it, the first two theorems below
-   expose accuracy and output closure separately; the guarantee theorem
-   combines them.
-   A caller using only pre-operation checks may instead establish
-   DWTimesFP_mixed_safe_input_cond, derive mixed_cond via result finiteness,
-   and obtain the same bundle.  No underflow disjunct is needed in either
-   route, so both cover the Fast2Mult underflow gap.
-   ------------------------------------------------------------------ *)
+(* Public mixed interface.  [DWTimesFP_mixed_cond] combines the input
+   double-word property with result finiteness.  The following theorems expose
+   accuracy, output validity, and their conjunction.  A caller may instead
+   establish [DWTimesFP_mixed_safe_input_cond] before the operation.  Neither
+   route excludes the [Fast2Mult] underflow gap. *)
 
 Lemma DWTimesFP_mixed_cond_of_safe_input_cond {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :

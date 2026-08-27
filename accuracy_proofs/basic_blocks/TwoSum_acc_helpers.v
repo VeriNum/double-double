@@ -197,23 +197,10 @@ Proof.
   lra.
 Qed.
 
-(* No-overflow of the first Fast2Sum step from pure magnitude headroom on the
-   SECOND argument -- no ordering hypothesis of any kind.
-
-   The two lemmas above both need an ordering because they bound the step
-   argument through |a|.  That is unnecessary: since
-     s - a = b + (s - (a + b)),   s = BPLUS a b,
-   the step argument is controlled by |b| plus the rounding error of the sum,
-     |s - a| <= |b| + /2 ulp(s),
-   and NOT by |s| + |a|.  So a bound on |b| alone suffices.  This is the route
-   needed in the Fast2Mult underflow gap, where neither the magnitude ordering
-   |b| <= |a| nor the ulp ordering ulp b <= ulp a is available.
-
-   The stated conclusion is the sharp Omega/2, which callers need in order to
-   chain into the second Fast2Sum step (see is_finite_FastSum_small):
-     |b| <= Omega/4, ulp(_) <= bpow (femax - fprec) <= Omega/4
-     ==> |s - a| <= Omega/4 + Omega/8 = 3/8 Omega
-     ==> |rnd (s - a)| <= 3/8 Omega + Omega/8 = Omega/2. *)
+(* Overflow bound for the first [Fast2Sum] step without an ordering assumption.
+   From [s-a = b + (s-(a+b))], its magnitude is bounded by [|b|] and the
+   rounding error of [s].  Thus [|b| <= Omega/4] gives the [Omega/2] bound
+   needed by [is_finite_FastSum_small], even in the [Fast2Mult] underflow gap. *)
 Lemma round_2Sum_a_bnd_small (a b : ftype t):
   Rabs (FT2R b) <= /4 * Omega ->
   is_finite (BPLUS a b) = true ->
@@ -485,20 +472,11 @@ Proof.
   apply no_overflow_2Sum_a_ulp => //.
 Qed.
 
-(* Same finiteness result as is_finite_FastSum / is_finite_FastSum_ulp, but from
-   pure magnitude headroom on the second argument instead of from an ordering.
-   |b| <= Omega/4 is enough for BOTH Fast2Sum steps:
-
-     z = BMINUS s a : |rnd (s - a)| <= Omega/2      (round_2Sum_a_bnd_small)
-     t = BMINUS b z : |b - z| <= Omega/4 + Omega/2 = 3/4 Omega, so
-                      |rnd (b - z)| <= 3/4 Omega + Omega/8 = 7/8 Omega < Omega.
-
-   Unlike its two siblings this route says nothing about the VALUE of the error
-   term -- Fast2Sum need not be exact here -- only that it is finite.  That is
-   exactly what is wanted in the Fast2Mult underflow gap, where the closing
-   Fast2Sum of DWTimesFP3 may be unordered: the value is then recovered
-   separately from the shared FLT/FIX lattice (see
-   Fast2Sum_acc_helpers.Fast2Sum_sum_exact_of_sum_small). *)
+(* Finiteness of both [Fast2Sum] steps from [|b| <= Omega/4], without an
+   ordering assumption.  The first step is at most [Omega/2]; the second is
+   therefore below [Omega].  This lemma proves only finiteness.  In the
+   [Fast2Mult] underflow gap, sum preservation follows separately from
+   [Fast2Sum_sum_exact_of_sum_small]. *)
 Lemma is_finite_FastSum_small (a b : ftype t):
   Rabs (FT2R b) <= /4 * Omega ->
   is_finite (BPLUS a b) = true ->

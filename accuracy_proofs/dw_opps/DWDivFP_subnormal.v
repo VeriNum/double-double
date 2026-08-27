@@ -1,34 +1,13 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** The subnormal-quotient proof leg of DWDivFP3 (Algorithm 15).  The public
-    whole-range ladder that combines it with the normal proof lives in
-    DWDivFP_mixed_acc.v.
-
-    WHY A SEPARATE LEG.  DWDivFP_relative_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
-    leading quotient (|xh/y| >= 2^(emin+p-1)); below that the node th is
-    subnormal and the FLX->FLT bridge for it fails.  So the region
-    |xh/y| < 2^(emin+p-1) cannot reuse the Layer-1 theorem at all and gets its
-    own argument, in the style of DWMulFP_relative_acc's floor-gap block.
-
-    WHY IT IS EASY THERE.  Everything sits on the 2^emin lattice:
-      - ulp(xh/y) = eta exactly, so |th - xh/y| <= eta/2;
-      - |xl/y| <= u|xh/y| < eta/2, so |Q - th| <= eta ALREADY, before any
-        correction -- the target bound is met even if tl comes out zero;
-      - clause 8 against the subnormal quotient forces |y| > 2^(p+1), hence
-        eta < u*(eta*|y|)/2, which makes every eta-sized term negligible
-        against the residual budget and keeps the error accounting linear in u;
-      - th + tl is again a lattice point, so FLT_format_plus_small makes the
-        closing Fast2Sum EXACT -- which is what lets closure hold even where
-        the usual ordering |tl| <= |th| fails (it does fail, at th = 0).
-
-    The exported constant is unchanged: 3u^2|Q| + 2^emin, the same as on
-    DWDivFP_normal_quotient_input_cond.  Clause 8 is retained and is not
-    removable; see the
-    DWDivFP_mixed_safe_input_cond comment in DDConds.v for the counterexample.
-
-    The only exported proof bridges are the internal subnormal
-    accuracy/closure theorem and its safe-input corollary.  ADMIT-FREE. *)
+(** Mixed error and output validity when the leading quotient of [DWDivFP3] is
+    subnormal.  The normal FLT-to-FLX bridge does not apply here.  Instead, the
+    quotient, correction, and final sum lie on the [2^emin] lattice.  This
+    gives [|th-xh/y| <= eta/2], keeps the low-input contribution below
+    [eta/2], and makes the final [Fast2Sum] exact.  The result has the same
+    [3u^2|Q| + eta] bound as the normal leading-quotient case.
+    [DWDivFP_mixed_acc] combines both cases. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.

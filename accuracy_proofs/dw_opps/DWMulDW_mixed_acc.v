@@ -1665,17 +1665,10 @@ Qed.
 
 (* ===== Algorithm-12 underflow gap for the whole-range mixed API ===== *)
 
-(* The compensated core of Algorithm 12 in the gap, at NODE level: the
-   exact sum ch + cl3 approximates xr*yr to within 5/2 ulp of the
-   underflow floor, plus one u^2*P term for the discarded xl*yl product.
-   No ordering hypothesis, no lower bound on the leading product -- the
-   closing Fast2Sum is not involved yet, which is what lets both this file
-   and DWDivDW_relative_acc (whose closing step supplies its own ordering) share it.
-
-   The 5/2 is spent as: eta/2 on the Fast2Mult residual (Hdelta), eta/2
-   each on the tl1 and cl2 FMA roundings (He1, He2), and a full eta on the
-   cl3 addition (He3) -- |cl1+cl2| can reach 4N, one binade above the
-   others, so its ulp there is 2*eta. *)
+(* Error bound for the compensated core in the [Fast2Mult] gap, before the
+   final [Fast2Sum].  The exact sum [ch+cl3] differs from [xr*yr] by at most
+   [5/2*eta] plus the [u^2*P] term for the omitted [xl*yl] product.  The four
+   rounding charges are [eta/2], [eta/2], [eta/2], and [eta]. *)
 Lemma DWTimesDW_core_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (3 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
@@ -2089,19 +2082,11 @@ have Hgoal : 6*u'*P = 6*(u'*P) by ring.
 rewrite Hgoal. lra.
 Qed.
 
-(* Full Algorithm 12 in the Fast2Mult gap: the compensated core's 5/2 floor
-   ulps are the whole cost, and the output is still a double word.
-
-   Both arms of the closing Fast2Sum deliver SUM PRESERVATION, which is what
-   closure needs -- ordering is not required:
-     - ordered   -> FastTwoSum_correct (the returned pair reconstructs the sum
-                    exactly in FLT, including for subnormal values);
-     - unordered -> |cl3| > |ch| forces the leading product into the tiny
-       regime (P < 6*eta), where the exact sum ch+cl3 still lies on the shared
-       FLT/FIX lattice at exponent emin and Fast2Sum is exact anyway
-       (Fast2Sum_sum_exact_of_sum_small).
-   Thus the gap theorem establishes both the mixed error bound and that the
-   output is a valid double word. *)
+(* Mixed error and output validity for Algorithm 12 in the [Fast2Mult] gap.
+   If [|cl3| <= |ch|], [FastTwoSum_correct] preserves the sum.  Otherwise the
+   leading product is small enough that [ch+cl3] lies on the shared FLT/FIX
+   lattice, and [Fast2Sum_sum_exact_of_sum_small] preserves it.  The core
+   contributes the full [5/2*eta] floor term. *)
 Lemma DWTimesDW3_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->

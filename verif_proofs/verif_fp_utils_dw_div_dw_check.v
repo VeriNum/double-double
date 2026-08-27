@@ -43,52 +43,12 @@ Local Ltac cascade_close :=
     | (intro; cascade_gather; repeat split; assumption)
     | (intro; cascade_gather; tauto) ].
 
-(* dw_div_dw_check(x, y) returns 1 only if DWDivDW_mixed_safe_input_cond holds: xh, xl, yh,
-   yl finite, (xh,xl) and (yh,yl) double-words, |yh| <= 2^(femax-p-5),
-   2^(emin+2p) <= |yh|, and |xh/yh| <= Omega/4.
-
-   Structure: body_dw_mult_dw_check's fin + dwx + dwy cascade, then the magnitude
-   and quotient tail of body_dw_div_fp_check with the scalar divisor promoted to
-   the leading component y->s.  Raw facts are threaded through each forward_if and
-   DWDivDW_mixed_safe_input_cond is discharged only at the final return join.
-
-   Nine conjuncts come out of five clauses, because one of them is free:
-
-   - yh_hi (|y->s| <= 2^966) IS conjunct 7, verbatim.  The cond states that
-     conjunct directly on |FT2R yh| -- 2^(femax-p-5), i.e. 2^966 for Tdouble --
-     so this is a plain non-strict comparison on an input: no rounded reciprocal
-     node, no rounded->exact transfer, and the test is exactly as strong as the
-     conjunct rather than stronger.  (The equivalent reciprocal form, for
-     yh <> 0, is 2^(emin+2p+2) <= |1/FT2R yh|; the proof derives that bridge
-     internally, but it is not needed by this body proof.)
-     The exponent is load-bearing for the exported CONSTANT, not just for
-     soundness: conjunct 7 says eta*|yh| <= u^2/4, which is what pays for the
-     reciprocal reconstruction's underflow floor after the closing multiply by
-     X, and loosening 966 by k binades multiplies that charge by 2^k -- taking
-     the exported bound from 9.8u^2|Q| back toward 12.33u^2|Q|.
-     The same clause also gives |yh| <= Omega/4 by bpow_le (966 <= 1022); that
-     used to be a separate conjunct discharged for free here, and is now simply
-     absent from DWDivDW_mixed_safe_input_cond because conjunct 7 is already
-     stronger, so the check has no q_omega test on y->s either.
-
-   Two tests this check used to have and no longer does, because their conjuncts
-   are gone from the cond:
-
-   - xh_hi (|x->s| <= 2^1022).  DWDivDW_mixed_safe_input_cond bounds no node by
-     |xh|: xh only ever enters Algorithm 18 multiplied by mh ~ 1/yh, so the
-     quotient ceiling already covers every node it reaches.
-   - qt_lo (2^(-969) < |q|), a quotient underflow floor.  An earlier
-     formulation of the relative tier carried it; it bought a sharper 2*eta
-     closing floor at the cost of rejecting every quotient below 2^-969.  The
-     pure relative tier is now the normal-range
-     DWDivDW_relative_acc.DWDivDW_relative_accuracy, which no input-only guard can
-     discharge, and the guarded spec exports the whole-range mixed bound
-     instead -- see dw_div_dw18_guarded_spec.
-
-   Only the quotient ceiling needs the rounded->exact transfer, at the same
-   exponent body_dw_div_fp_check uses: the strict upper bound
-   (Float_cmp_Clt_bpow1022) also yields is_finite q, so BDIV_abs_le_bpow applies
-   (one-directional soundness).  A non-strict `<=` there would be UNSOUND. *)
+(* [dw_div_dw_check] establishes [DWDivDW_mixed_safe_input_cond]: finite
+   double-word operands, the divisor window, and the quotient ceiling.  The
+   upper divisor test is exactly [2^(femax-p-5)] and also implies the weaker
+   overflow bound.  The strict test on the rounded quotient proves finiteness;
+   [BDIV_abs_le_bpow] then transfers the ceiling to the exact quotient.  The
+   check imposes no lower bound on the quotient. *)
 Lemma body_dw_div_dw_check :
   semax_body Vprog Gprog f_dw_div_dw_check dw_div_dw_check_spec.
 Proof.

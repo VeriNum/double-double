@@ -4,31 +4,11 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_div_fp_check(x, y) returns 1 only if DWDivFP_mixed_safe_input_cond holds:
-   xh, xl, y finite, (xh, xl) a double-word, RN(xh/y) finite, |xh| within
-   [2^(emin+2p), Omega/4], and |xh/y| <= Omega/4.
-
-   THERE IS NO QUOTIENT FLOOR.  The guard has shed it in two steps: first from
-   2^(emin+2p-1) = 2^-969 (the floor an earlier, quotient-window formulation of
-   the relative tier carried) to 2^(emin+p-1) = 2^-1022 (the floor Layer 1's
-   FLX->FLT bridge needs), and now entirely -- the region below 2^(emin+p-1),
-   where the leading quotient node is subnormal and Layer 1 does not apply, has
-   its own proof in DWDivFP_subnormal.v and yields the same mixed bound with
-   the same constant.  So this check now accepts every quotient magnitude the
-   format can represent.
-
-   WHAT REPLACES THE FLOOR.  The cond's fifth conjunct is `is_finite (BDIV xh y)`,
-   and the single STRICT ceiling test establishes it: a strict comparison against
-   a finite constant rejects NaN (unordered) and +Inf, so it forces RN(xh/y)
-   finite, which in turn forces FT2R y <> 0 (BDIV_denom_ne0).  That nonzero-ness
-   is exactly what the old floor was quietly providing.
-
-   The finiteness + double-word (dwx) cascade is identical to body_dw_plus_fp_check;
-   the |xh| window is two magnitude comparisons on xh (via Float_cmp_Cle_bpow1022
-   for the Omega/4 upper bound and Float_cmp_Cle_lo for the 2^(emin+2p) lower
-   bound, the product-node floor, which is retained and is not removable).  The
-   quotient ceiling is tested on the ROUNDED quotient and transferred to the exact
-   one by BDIV_abs_le_bpow (rounded->exact soundness, one-directional). *)
+(* [dw_div_fp_check] establishes [DWDivFP_mixed_safe_input_cond]: finite inputs,
+   a double-word dividend, a finite leading quotient, the required dividend
+   window, and the quotient ceiling.  There is no lower quotient bound.  A
+   strict ceiling on the rounded quotient proves its finiteness and a nonzero
+   divisor.  [BDIV_abs_le_bpow] transfers that ceiling to the exact quotient. *)
 Lemma body_dw_div_fp_check :
   semax_body Vprog Gprog f_dw_div_fp_check dw_div_fp_check_spec.
 Proof.

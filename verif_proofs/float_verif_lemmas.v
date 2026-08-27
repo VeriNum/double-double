@@ -649,24 +649,11 @@ Proof.
   apply round_abs_gt_bpow; assumption.
 Qed.
 
-(* Lower-bound constants for the division guards, both by the same
-   Bldexp-of-1.0 construction as q_omega_val:
-
-     q_lo968_val = 2^(-968) = 2^(emin + 2p)     product-node lower bound
-                              (used by the DW/FP safe and mixed input conditions,
-                               and by the DW/DW divisor lower bound)
-     q_lo969_val = 2^(-969) = 2^(emin + 2p - 1) reciprocal-conjunct scale for
-                              the DW/DW divisor upper bound
-
-   Both are representable powers of two in the NORMAL range, which is what makes
-   the strict rounded->exact transfer in BDIV_abs_gt_bpow sound at each of them:
-   RN is monotone and idempotent there.
-
-   NOTE: dw_div_fp_check no longer has a quotient floor at all, so there is no
-   2^-1022 constant here.  It briefly did, during the intermediate step when the
-   DW/FP division guard tested 2^(emin+p-1); that clause is gone (see
-   DDConds.DWDivFP_mixed_safe_input_cond and DWDivFP_subnormal.v), and with it the constant.
-   q_lo969_val survives only because dw_div_dw_check still uses it. *)
+(* Normal powers of two used by the division guards.
+   [q_lo968_val = 2^-968] is the DW/FP product floor and the DW/DW divisor
+   floor.  [q_lo969_val = 2^-969] is used to derive the DW/DW divisor ceiling.
+   Their normal representation supports the strict rounded-to-exact transfer
+   in [BDIV_abs_gt_bpow]. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -812,23 +799,10 @@ Qed.
 (*  DW-division-check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
 (* ==================================================================== *)
 
-(* q_hi966_val: IEEE-754 double for 2^966 = 2^(femax - p - 5), the divisor
-   upper bound (conjunct 7) of DWDivDW_mixed_safe_input_cond.  Same Bldexp-of-1.0 construction
-   as q_omega_val / q_lo968_val.
-
-   Why this exponent: conjunct 7 is stated directly on |FT2R yh|, and it says
-   exactly eta*|yh| <= u^2/4.  That inequality IS the exported u^2 coefficient
-   of DWDivDW_mixed_accuracy_from_cond -- it pays for the reciprocal
-   reconstruction's own underflow floor once the closing multiply by X scales
-   it up, at a charge of fr/4 rather than 2*fr.  Loosening 966 by k binades
-   multiplies the charge by 2^k and takes the exported constant from 9.8 back
-   toward 12.33.
-
-   The check tests |y->s| directly with a non-strict comparison -- no rounded
-   reciprocal node and no rounded->exact transfer are needed, so the test is
-   exactly as strong as the conjunct rather than stronger.  (The equivalent
-   reciprocal form is 2^(emin+2p+2) <= |1/FT2R yh|; see
-   recip_lower_from_bpow_upper, still used to state that equivalence.) *)
+(* [q_hi966_val] represents [2^966 = 2^(femax-p-5)], the upper divisor bound
+   in [DWDivDW_mixed_safe_input_cond].  This bound is equivalent to
+   [eta*|yh| <= u^2/4], which pays for the reciprocal reconstruction floor.
+   The guard compares [|y->s|] directly with this value. *)
 Definition q_hi966_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE

@@ -1,63 +1,13 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative accuracy and shared representation results for [DWDivDW3], the implementation
-    model of Algorithm 18 for dividing one double-word number by another.
-
-    A double-word value is represented by a pair [(xh,xl)] whose sum denotes
-    the represented real number.  [DWDivDW3] first constructs an approximation
-    [(mh,ml)] to the reciprocal of the divisor [(yh,yl)], then multiplies the
-    dividend [(xh,xl)] by that approximation.
-
-    DWDivDW3 is *compositional* (see DDModels.v): a reciprocal-bootstrap
-    prologue
-
-        th := BDIV 1 yh ; rh := BFMA (-yh) th 1 ; rl := -(BMULT yl th) ;
-        (eh,el) := Fast2Sum rh rl ;
-        (dh,dl) := DWTimesFP3 eh el th ;
-        (mh,ml) := DWPlusFP  dh dl th ;
-        (zh,zl) := DWTimesDW3 xh xl mh ml
-
-    The closing block is the double-word multiplication analyzed in
-    [DWMulDW_relative_acc.v].  This file connects three views of the algorithm:
-
-      - [DDModels.DWDivDW3], the finite-precision runtime model used by the
-        verification of [dw_div_dw18];
-      - [DWDivDW.DWDivDW3], the idealized FLX model analyzed in the paper;
-      - the relative-error statement for the real value represented by the
-        pair returned by the runtime model.
-
-    FLT below means the runtime floating-point model, including its bounded
-    exponent range.  FLX means the paper's idealized model with the same
-    precision but an unbounded exponent range.  A bridge theorem proves that
-    the two models agree when the relevant operations do not underflow.
-
-    The paper's tight relative-error bound is
-    DWDivDW.DWDDW3_correct : Rabs ((zh+zl - (x/y))/(x/y)) <= 98/10*u^2
-    (requires 14 <= p, both operands double_word, yh <> 0).
-
-    Main results:
-
-      - Intermediate finiteness facts recover the nodes of the reciprocal and
-        closing multiplication from finiteness of the result.
-      - [DWDivDW3_FLX_FLT] identifies the runtime result with the paper's FLX
-        result under explicit no-underflow assumptions.
-      - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
-        runtime model, giving relative error at most [(98/10) * u^2].
-      - [DWDivDW3_error_mixed_arms_acc] is the shared whole-range error core.
-        [DWDivDW_mixed_acc] exposes it through the public mixed guarantee API,
-        with bound [(98/10) * u^2 * |Q| + 5/2 * eta].
-      - [DWDivDW_relative_accuracy] is the NORMAL-RANGE pure relative tier:
-        the paper's own [(98/10) * u^2] with no physical-floor term, under
-        [DDConds.DWDivDW_relative_error_input_cond] = the whole-range
-        safe-input condition plus [DDConds.DWDivDW_normal].  It is proved
-        directly from [relative_errorDWDivDW3_correct]; no relative bound
-        anywhere in this file is obtained by absorbing an [eta] term into
-        [u^2|Q|].
-
-    Both the bridge and the transferred relative-error theorem are proved
-    below from explicit normal-range premises for every rounding node that
-    must be reconciled with the FLX model. *)
+(** Accuracy results for [DWDivDW3].  The algorithm constructs a reciprocal
+    approximation and multiplies it by the dividend.  This file connects the
+    bounded FLT model [DDModels.DWDivDW3] with the paper's FLX model
+    [DWDivDW.DWDivDW3].  [DWDivDW3_FLX_FLT] proves their equality in the normal
+    regime.  [DWDivDW_relative_accuracy] transfers the paper's [9.8u^2]
+    relative bound, while [DWDivDW3_error_mixed_arms_acc] supplies the common
+    core for the mixed bound exported by [DWDivDW_mixed_acc]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -81,21 +31,8 @@ Set Bullet Behavior "Strict Subproofs".
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
-(* ============================================================
-   Finiteness of intermediate operations
-
-   Extract per-operation finiteness from
-   FIN : is_finite_p (DWDivDW3 xh xl yh yl).
-
-   Runtime shape (DDModels.DWDivDW3):
-     th := BDIV (Zconst t 1) yh
-     rh := BFMA (BOPP yh) th (Zconst t 1)
-     rl := BOPP (BMULT yl th)
-     (eh,el) := Fast2Sum rh rl
-     (dh,dl) := DWTimesFP3 eh el th
-     (mh,ml) := DWPlusFP  dh dl th
-     (zh,zl) := DWTimesDW3 xh xl mh ml
-   ============================================================ *)
+(* Finiteness of the reciprocal prologue and closing multiplication,
+   extracted from [is_finite_p (DWDivDW3 xh xl yh yl)]. *)
 Section CorrectDWDivDW.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -2542,25 +2479,10 @@ Qed.
 
 End DWDivDWCondFacts.
 
-(* ============================================================
-   Agreement between the FLX paper model and the FLT runtime model
-
-   Collapses the FLT runtime model DDModels.DWDivDW3 onto the paper's
-   real-valued FLX model, node by node, under no-underflow assumptions: the
-   relevant rounded prologue nodes carry lower bounds placing them in the
-   normal range, so round_FLT agrees with round_FLX (round_FLT_FLX).  The
-   proof also composes bridges for the two reciprocal refinement blocks and
-   the closing double-word multiplication.
-
-   The FLX reciprocal prologue in [DWDivDW.DWDivDW3] is:
-     th_r := rnd_p (/ yh)
-     rh_r := 1 - yh * th_r
-     rl_r := - rnd_p (yl * th_r)
-     eh_r := rnd_p (rh_r + rl_r) ; el_r := snd (Fast2Sum rh_r rl_r)
-     (dh_r,dl_r) := DWTimesFP9 eh_r el_r th_r
-     (mh_r,ml_r) := DWPlusFP   dh_r dl_r th_r
-     DWDivDW3_FLX := DWTimesDW12 xh xl mh_r ml_r
-   ============================================================ *)
+(* Bridge from the bounded FLT implementation to [DWDivDW.DWDivDW3].
+   Normal-range bounds make each FLT rounding agree with its FLX counterpart.
+   The proof composes the reciprocal refinement bridges with the final
+   double-word multiplication bridge. *)
 Section PaperModelDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -3333,24 +3255,11 @@ cbv zeta in Hex, Hres.
 rewrite Hex. exact Hres.
 Qed.
 
-(** Tight distance from the runtime residual pair to the exact Newton
-    residual.
-
-    There is no floor term.  The two components returned by the closing Fast2Sum
-    reconstruct its input sum exactly
-    ([DWDivDW_residual_fast2sum_exact_from_cond]) and the high residual is
-    exact ([DWDivDW_rh_exact_from_cond]), so the entire distance IS the single
-    FLT rounding of [yl*th] -- an identity, not an estimate.  Charging that one
-    rounding as a max ([round_FLT_error_max_emin]) rather than as
-    "relative + floor" removes the [1*eta] this lemma used to carry, and with
-    it the [bq*eta*|Q|] term that used to cost [1.001] on the exported [u^2]
-    coefficient.
-
-    The earlier proof went through the FLX model instead, paying
-    [DWDivDW_fast2sum_sum_FLT_FLX_diff_from_cond]'s floor ulp on top of the FLX
-    relative error.  Those two are never simultaneously live -- above
-    [2^(emin+p-1)] the FLT and FLX roundings are equal, below it the relative
-    term is dominated -- but the additive split could not see that. *)
+(** Distance from the runtime residual pair to the exact Newton residual.
+    [DWDivDW_residual_fast2sum_exact_from_cond] preserves the residual sum, and
+    [DWDivDW_rh_exact_from_cond] makes the high residual exact.  The remaining
+    error is one rounding of [yl*th], bounded directly by
+    [round_FLT_error_max_emin] without an added floor term. *)
 Local Lemma DWDivDW_residual_value_error_tight_floor
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
@@ -3751,23 +3660,10 @@ Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (fst mhl) (snd mhl).
 
-(** WHOLE-RANGE aggregate closing-block contract.
-
-    No lower bound on the closing product [xh*mh] appears anywhere in its
-    proof, hence no quotient floor is needed and
-    [DWDivDW_internal_input_cond] suffices.  The entire regime tree is
-    [DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond] instantiated at the two
-    double words [(xh,xl)] and [(mh,ml)]: nothing in it was ever
-    division-specific, and Algorithm 12's own whole-range theorem covers the
-    sub-threshold gap through the tiny-sum lattice argument rather than a
-    magnitude ordering that would need such a bound.
-
-    The price is the physical floor: the gap arm of Algorithm 12 spends five
-    half-ulps, so the closing block's floor is [5/2*eta].  That constant is
-    carried symbolically through [DWDivDW3_error_mixed_arms_param] and shows up
-    verbatim in the exported
-    [DWDivDW_mixed_accuracy_from_cond]; the [u^2] coefficient
-    is untouched, because a quotient floor never entered the arm budgets. *)
+(** Mixed contract for the closing multiplication.  Applying
+    [DWTimesDW_mixed_accuracy_from_cond] to the two double words needs no lower
+    bound on [xh*mh].  Its gap case contributes [5/2*eta], which is carried
+    through [DWDivDW3_error_mixed_arms_param]. *)
 Local Lemma DWDivDW3_closing_mixed_error_from_cond_acc
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
@@ -3806,18 +3702,10 @@ have Hmul := DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond
 exact Hmul.
 Qed.
 
-(** Coefficient-parametric form of the composition.  Pure real arithmetic: the
-    reciprocal reconstruction's two coefficients stay symbolic, so the two
-    arms of the refinement split can instantiate it with their own constants
-    instead of each needing its own copy of the float-level assembly.  The
-    conclusion is an exact identity in those coefficients -- nothing is
-    rounded up here.
-
-    There used to be a third coefficient [bq] on an [eta*|Q|] summand, coming
-    from the reciprocal residual's floor ulp.  That floor is gone
-    ([DWDivDW_residual_value_error_tight_floor] now charges its one rounding
-    as a max rather than as relative + floor), so the parameter is gone with
-    it -- worth [1.001] on the exported [u^2] coefficient. *)
+(** Parametric composition in real arithmetic.  The reciprocal coefficients
+    remain symbolic so each refinement case can supply its own values.  The
+    residual rounding is bounded by [DWDivDW_residual_value_error_tight_floor],
+    so no separate coefficient for an [eta*|Q|] term is needed. *)
 Local Lemma DWDivDW_mixed_closing_composition_param
     (u eta X Y Q M zr a bx fc : R) :
   0 <= u -> u <= /16384 -> 0 <= eta -> Y <> 0 -> Q = X/Y ->
@@ -3880,45 +3768,12 @@ have H4 : (a+bx*r)*(u^2*Rabs Q) <= c*(u^2*Rabs Q).
 eapply Rle_trans; [exact Habs|]. nra.
 Qed.
 
-(** Master two-arm theorem.  The refinement split of
-    [DWDivDW_refinement_product_value_error_tight_floor] is destructed here,
-    and each arm carries its own reciprocal coefficients through the shared
-    parametric assembly:
-
-    - ordered arm: Algorithm 9's closing Fast2Sum is exact, so the refinement
-      floor is [eta] rather than [2*eta] ([fr = 1]), while the Newton
-      remainder keeps its generic [2.298] coefficient;
-    - unordered arm: the refinement floor stays at [2*eta] ([fr = 2]), but the
-      reciprocal residual is itself [O(u^2)], so the Newton remainder is
-      fourth order and its coefficient collapses.
-
-    The arm-specific constants remain separate until the final relative-error
-    conversion, yielding the regime-independent coefficient [9.8] -- the
-    paper's own constant, [DWDivDW.DWDDW3_correct].  Itemized against that
-    paper budget (5 closing + 2.298 Newton + 0.5 rl-rounding + 2 DWPlusFP =
-    9.798), the runtime assembly reads:
-
-      closing DWTimesDW12       4        (sharper than the paper's 5)
-      Newton residual           2.298
-      DWPlusFP                  2
-      residual + refinement     1.013    (0.01 refinement + 1.002 residual)
-      -----------------------------------
-      a                         9.311
-      refinement eta floor      0.2504   (fr=1) / 0.5008 (fr=2)
-      -----------------------------------
-      ordered arm               9.5614
-      unordered arm             7.6144   (a = 7.113 there)
-
-    The refinement [eta] floor is the only FLT-only line, and its size is
-    conjunct 7's exponent: [eta*|X| = eta*|Y|*|Q| <= (u^2/4)*|Q|] there, so the
-    charge is [fr/4] rather than [2*fr].  See the
-    [DDConds.DWDivDW_mixed_safe_input_cond] doc comment for why that floor
-    cannot be removed and why 9.8 is unreachable without those three binades.
-
-    The closing block is NOT proved here: it enters as the hypothesis
-    [Hclose], parametric in its physical-floor coefficient [fc].  The [u^2]
-    coefficient is the same for every [fc], and neither arm budget mentions the
-    closing floor. *)
+(** Combine the two cases from
+    [DWDivDW_refinement_product_value_error_tight_floor].  In the ordered case,
+    exact [Fast2Sum] reduces the refinement floor to [eta].  In the unordered
+    case, the floor is [2*eta], but the smaller reciprocal residual reduces the
+    Newton term.  Both cases fit the [9.8u^2] coefficient.  The closing block
+    enters through [Hclose] with a symbolic floor coefficient. *)
 Local Theorem DWDivDW3_error_mixed_arms_param
     (xh xl yh yl : ftype t) (fc : R) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
@@ -4389,28 +4244,11 @@ Qed.
 
 End FiniteDWDivDWFromFinalBlock.
 
-(* ============================================================
-   NORMAL-RANGE PURE RELATIVE TIER for DWDivDW3
-
-   [DDConds.DWDivDW_normal] bundles the nine residual/product node lower bounds
-   that let each rounded node of the reciprocal-bootstrap prologue and of the
-   closing multiplication be identified with its FLX counterpart.  All nine
-   fail in the worst-case type (emin+2p=2), so none is derivable from input
-   magnitudes, and each of the underlying nodes may legitimately be zero --
-   which is exactly why the whole-range mixed tier below does not bound them
-   and pays a physical floor instead.  [UF_th] is NOT among them: it follows
-   from [DWDivDW_internal_input_cond] via [DWDivDW_cond_UF_th].
-
-   [DDConds.DWDivDW_relative_error_input_cond] is that predicate bundled with
-   the whole-range safe-input condition, which supplies the two double-word
-   operands, the divisor window and the nonzero leading divisor.
-
-   NOTHING is absorbed here.  The constant is the paper's own [9.8]
-   ([DWDivDW.DWDDW3_correct]) because in this regime there is no physical floor
-   to charge -- not because a quotient magnitude window pays for one.  The
-   whole-range statement remains the mixed [9.8u^2|Q| + 5/2 eta] of Layer 3a
-   below.
-   ============================================================ *)
+(* Pure relative bound in the normal regime.  [DWDivDW_normal] supplies the
+   nine node bounds needed by the FLT-to-FLX bridge; [UF_th] follows separately
+   from [DWDivDW_internal_input_cond].  Together with the safe input condition,
+   these form [DWDivDW_relative_error_input_cond].  The result is the paper's
+   [9.8u^2] bound with no absolute floor term. *)
 Section RelativeAccuracyDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

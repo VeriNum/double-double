@@ -257,20 +257,10 @@ Definition dw_plus_dw2_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* The public API for DW x FP is the WHOLE-RANGE mixed bound
-
-     |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta,   eta = 2^emin,
-
-   i.e. DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_cond, reached here through its
-   safe-input form DWTimesFP_mixed_guarantee_from_safe_input_cond.  The PRE is
-   empty:
-   dw_mult_fp9_guarded's runtime check makes the POST unconditional, and the
-   check now tests only DWTimesFP_mixed_safe_input_cond -- no underflow disjunct -- so inputs
-   whose leading product falls in the Fast2Mult underflow gap are computed rather
-   than rejected.  The price is stated in the bound: the 2.51*eta floor term is
-   carried in every regime, including the normal one where the sharper pure 2u^2
-   relative bound (DWTimesFP_relative_accuracy, which needs the gap excluded)
-   would hold. *)
+(* Guarded DW by FP multiplication exports
+   [DWTimesFP_mixed_guarantee_from_safe_input_cond].  Its bound is
+   [2u^2|P| + 2.51*eta] and includes output validity.  The runtime check permits
+   the [Fast2Mult] underflow gap, unlike the pure relative interface. *)
 Definition dw_mult_fp9_guarded_spec :=
   DECLARE _dw_mult_fp9_guarded
   WITH s: val, x: val,
@@ -287,27 +277,11 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-(* The public API for DW x DW is the WHOLE-RANGE mixed bound
-
-     |(zh+zl) - (xh+xl)*(yh+yl)|
-        <= 4u^2 |(xh+xl)*(yh+yl)| + 2.5*eta,   eta = 2^emin,
-
-   This is the accuracy component of [DWTimesDW_mixed_guarantee], established
-   for guarded inputs by [DWTimesDW_mixed_guarantee_from_safe_input_cond].  The PRE is
-   empty:
-   dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
-   check now tests only DWTimesDW_mixed_safe_input_cond -- no underflow disjunct -- so inputs
-   whose leading product falls in the Fast2Mult underflow gap are computed rather
-   than rejected.  The price is stated in the bound: the 2.5*eta floor term is
-   carried in every regime.  The separate normal-range interface proves the
-   sharper pure 4u^2 relative bound under
-   DWTimesDW_relative_error_input_cond.
-
-   Output double-word closure survives the weakening: it needs only that the
-   closing Fast2Sum preserves its sum, which holds above the threshold via the
-   ordering |cl3| <= |ch| and inside the gap because failure of that ordering
-   forces the exact sum onto the FLT/FIX lattice at emin, where Fast2Sum is
-   exact anyway (DWTimesDW_double_word_from_cond). *)
+(* Guarded DW by DW multiplication exports
+   [DWTimesDW_mixed_guarantee_from_safe_input_cond].  Its bound is
+   [4u^2|P| + 2.5*eta] and includes output validity.  The runtime check permits
+   the [Fast2Mult] underflow gap.  In that gap, the final sum lies on the
+   FLT/FIX lattice and [Fast2Sum] remains exact. *)
 Definition dw_mult_dw12_guarded_spec :=
   DECLARE _dw_mult_dw12_guarded
   WITH s: val, x: val, y: val,
@@ -328,28 +302,11 @@ Definition dw_mult_dw12_guarded_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* DWDivFP (Algorithm 15) guarded wrapper.  Unlike the plus/mult wrappers, the
-   quotient's accuracy cannot be a clean relative 3u^2 bound: the closing
-   division d/y can be zero or subnormal, so the underflow regime
-   contributes one 2^emin absolute term.  The exported bound is therefore the
-   regime-independent combined bound proven as
-   DWDivFP_mixed_guarantee_from_safe_input_cond:
-     |zh+zl - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
-   which holds unconditionally once the runtime check discharges
-   DWDivFP_mixed_safe_input_cond.  The condition has no lower bound on the
-   quotient, so it admits subnormal quotients when its other input and overflow
-   conditions hold.  The PURE relative 3u^2 bound
-   (DWDivFP_relative_acc.DWDivFP_relative_accuracy) is not exported here: it holds only
-   in the normal regime, on DWDivFP_relative_error_input_cond, whose
-   DWDivFP_normal half is a fact about the computed nodes rather than an
-   input-only test the guard could perform.
-
-   The bundled POST also carries output double-word closure, matching
-   dw_mult_fp9_guarded_spec and dw_mult_dw12_guarded_spec.  Closure holds in
-   every regime the guard admits --
-   including a subnormal quotient, where the usual ordering |tl| <= |th| can
-   fail and exactness of the closing Fast2Sum comes instead from th + tl landing
-   back on the 2^emin lattice. *)
+(* Guarded DW by FP division exports
+   [DWDivFP_mixed_guarantee_from_safe_input_cond].  Its bound is
+   [3u^2|Q| + eta] and includes output validity.  The condition has no lower
+   quotient bound, so it admits subnormal quotients.  The pure relative theorem
+   requires normality facts about computed nodes and is not exported here. *)
 Definition dw_div_fp15_guarded_spec :=
   DECLARE _dw_div_fp15_guarded
   WITH s: val, x: val,
@@ -366,57 +323,13 @@ Definition dw_div_fp15_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-(* DWDivDW (Algorithm 18) guarded wrapper.  The exported guarantee is
-   DWDivDW_mixed_acc.DWDivDW_mixed_guarantee: the WHOLE-RANGE mixed
-   relative/physical-floor bound TOGETHER WITH double-word closure of the
-   result,
-
-     |(zh+zl) - Q| <= 9.8 u^2 |Q| + 2.5 * 2^emin  /\  double_word_prop zh zl,
-
-   with Q = (xh+xl)/(yh+yl), proven as
-   DWDivDW_mixed_guarantee_from_safe_input_cond.  This
-   matches dw_mult_dw12_guarded_spec and dw_div_fp15_guarded_spec, which export
-   the same pair of facts.
-
-   WHY IT IS ONE NAMED Prop RATHER THAN TWO SPELLED-OUT CONJUNCTS, unlike those
-   two siblings: DWDivDW3 is by far the largest definition in the library
-   (reciprocal prologue + DWTimesFP3 + DWPlusFP + a closing DWTimesDW3), and the
-   two facts stated separately mention `fst (DWDivDW3 ...)` and
-   `snd (DWDivDW3 ...)` twice each -- four copies of that application in this
-   funspec, on top of the one in the SEP clause.  OpsVSU's solve_SF_dd
-   obligations are superlinear in that count.  Measured, compiling
-   verif_proofs/vsu/Ops_VSU.v on this machine:
-
-     two spelled-out conjuncts (5 copies)   killed at 2h17m, still running
-     bound only, no closure (3 copies)      16m01s
-     this bundled form (2 copies)           15m45s
-
-   DWDivDW_mixed_guarantee matches the result pair ONCE, so the whole PROP
-   carries a single occurrence -- fewer than the error bound alone used to
-   contribute, which is why exporting closure here costs nothing.  DWTimesDW3 and DWDivFP3 are small enough that
-   their specs pay nothing for the spelled-out form.
-
-   The 9.8 is the paper's own FLX coefficient (DWDivDW.DWDDW3_correct), so this
-   guarantee has the same shape and the same constant as its three siblings:
-   2u^2|P| for DW x FP, 4u^2|P| for DW x DW, 3u^2|Q| for DW/FP.  What buys it is
-   conjunct 7 of DWDivDW_mixed_safe_input_cond, |yh| <= 2^(femax-p-5): that says
-   eta*|yh| <= u^2/4, which is exactly what pays for the reciprocal
-   reconstruction's own underflow floor once the closing multiply by X scales it
-   up.  Three binades looser and the charge is 8x larger and the constant is
-   12.33 -- see the DWDivDW_mixed_safe_input_cond doc comment in DDConds.v.
-
-   WHY NOT a pure relative form: the pure relative tier is
-   DWDivDW_relative_acc.DWDivDW_relative_accuracy, at the paper's own 9.8 u^2, and it
-   holds in the NORMAL regime only -- its condition
-   DWDivDW_relative_error_input_cond bundles DWDivDW_normal, nine lower bounds
-   on residual and product NODES of the computation, which a runtime input
-   check cannot test and which may legitimately be zero.  The guarded interface
-   therefore exports the mixed bound over the whole range.
-
-   The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
-   condition rather than an input condition -- at Tdouble it is 14 <= 53 and the
-   body proof discharges it inline -- so the guarantee rests on DWDivDW_mixed_safe_input_cond
-   alone, which is precisely what dw_div_dw_check establishes. *)
+(* Guarded DW by DW division exports
+   [DWDivDW_mixed_guarantee_from_safe_input_cond].  Its bound is
+   [9.8u^2|Q| + 2.5*eta] and includes output validity.  The named guarantee
+   keeps repeated occurrences of the large [DWDivDW3] term out of the VST
+   specification.  The runtime check establishes the safe input condition;
+   the format condition [14 <= fprec Tdouble] is discharged in the body proof.
+   The pure relative theorem requires normality facts about computed nodes. *)
 Definition dw_div_dw18_guarded_spec :=
   DECLARE _dw_div_dw18_guarded
   WITH s: val, x: val, y: val,

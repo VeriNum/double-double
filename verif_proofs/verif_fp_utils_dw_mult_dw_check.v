@@ -14,27 +14,11 @@ Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* dw_mult_dw_check(x, y) returns 1 only if DWTimesDW_mixed_safe_input_cond holds: xl, yl
-   finite, (xh, xl) and (yh, yl) each a double-word, and the STRICT
-   rounded-product test |RN(xh*yh)| < 2^1023, which supplies both
-   is_finite (BMULT xh yh) and the real product bound
-   |FT2R xh * FT2R yh| <= Omega/2 (prod_bnd_facts).
-
-   The check does NOT test Fast2Mult's underflow disjunction (the `mult_safe`
-   short-circuit it used to carry, still present in fast2_mult_check).
-   DWTimesDW_mixed_safe_input_cond is all the exported contract needs:
-   dw_mult_dw12_guarded_spec states the whole-range mixed bound
-   4u^2|P| + 2.5*eta (DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond).  It holds
-   in the Fast2Mult underflow gap too, unlike the separate pure 4u^2
-   normal-range theorem; output double-word closure also holds there
-   (DWTimesDW_double_word_from_cond).  So the guard now accepts gap inputs
-   instead of aborting on them.
-
-   Structure mirrors body_dw_mult_fp_check with the scalar y promoted to a second
-   double-word (y->s, y->t): the dwx and dwy cascades, the ldexp bound constant,
-   the fabs comparison, and a final return cascade that is a pure conjunction
-   with no disjunctive arm.  Raw facts are carried through each forward_if and
-   DWTimesDW_mixed_safe_input_cond is discharged only at the final return join. *)
+(* [dw_mult_dw_check] establishes [DWTimesDW_mixed_safe_input_cond]: finite
+   double-word inputs and a strict bound on the rounded leading product.
+   [prod_bnd_facts] converts that test into product finiteness and the
+   [Omega/2] real bound.  The check does not exclude the [Fast2Mult] underflow
+   gap because the exported mixed guarantee covers it. *)
 Lemma body_dw_mult_dw_check :
   semax_body Vprog Gprog f_dw_mult_dw_check dw_mult_dw_check_spec.
 Proof.
