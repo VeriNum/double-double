@@ -818,7 +818,7 @@ Qed.
 
    Why this exponent: conjunct 7 is stated directly on |FT2R yh|, and it says
    exactly eta*|yh| <= u^2/4.  That inequality IS the exported u^2 coefficient
-   of DWDivDW_mixed_accuracy_from_safe_input_cond -- it pays for the reciprocal
+   of DWDivDW_mixed_accuracy_from_cond -- it pays for the reciprocal
    reconstruction's own underflow floor once the closing multiply by X scales
    it up, at a charge of fr/4 rather than 2*fr.  Loosening 966 by k binades
    multiplies the charge by 2^k and takes the exported constant from 9.8 back

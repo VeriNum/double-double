@@ -1,9 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** The SUBNORMAL-QUOTIENT leg of DWDivFP3 (Algorithm 15), and with it the
-    public API on DDConds.DWDivFP_mixed_safe_input_cond -- the input-only
-    sufficient condition discharged by the existing runtime guard.
+(** The SUBNORMAL-QUOTIENT leg of DWDivFP3 (Algorithm 15), and the public
+    whole-range API on DDConds.DWDivFP_mixed_cond.  This condition combines
+    the mathematical input assumptions with an a-posteriori finiteness check.
 
     WHY A SEPARATE LEG.  DWDivFP_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
     leading quotient (|xh/y| >= 2^(emin+p-1)); below that the node th is
@@ -28,14 +28,17 @@
     DWDivFP_mixed_safe_input_cond comment in DDConds.v for the counterexample.
 
     ============================================================================
-    PUBLIC INTERFACE (all on DDConds.DWDivFP_mixed_safe_input_cond)
+    PUBLIC INTERFACE
 
-      DWDivFP_mixed_accuracy_from_safe_input_cond
+      DWDivFP_mixed_accuracy_from_cond
                                            |Qhat - Q| <= 3u^2|Q| + eta
-      DWDivFP_double_word_from_safe_input_cond
+      DWDivFP_double_word_from_cond
                                            output is a double word
-      DWDivFP_mixed_guarantee_from_safe_input_cond
+      DWDivFP_mixed_guarantee_from_cond
                                            both results, bundled
+      DWDivFP_mixed_guarantee_from_safe_input_cond
+                                           safe-input corollary after proving
+                                           result finiteness
 
       DWDivFP_normal_quotient_input_cond_of_mixed_safe_input_cond
                                            safe input + normal quotient recovers the
@@ -53,21 +56,6 @@ Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 Require Import mathcomp.ssreflect.ssreflect.
-
-(* generic divisor-nonzero from quotient finiteness (statement mentions BDIV,
-   so NANS is constrained and no evars linger at use sites) *)
-Lemma bdiv_denom_ne0 {NANS: Nans} {t : type} {STD: is_standard t} (a b : ftype t) :
-  is_finite b = true -> is_finite (BDIV a b) = true -> FT2R b <> 0%R.
-Proof.
-intros Hb Hfin Hb0.
-rewrite <- B2R_float_of_ftype in Hb0.
-unfold BDIV, BINOP in Hfin.
-rewrite is_finite_Binary float_of_ftype_of_float in Hfin.
-rewrite is_finite_Binary in Hb.
-destruct (float_of_ftype b) eqn:E; simpl in Hb; try discriminate.
-- destruct (float_of_ftype a); cbn [Binary.Bdiv] in Hfin; try discriminate.
-- revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
-Qed.
 
 Section Sub.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1201,7 +1189,7 @@ End SubFin.
 
 
 (* ==========================================================================
-   PUBLIC API on DDConds.DWDivFP_mixed_safe_input_cond
+   PUBLIC WHOLE-RANGE INTERFACE
    ========================================================================== *)
 Section CondMin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1233,7 +1221,8 @@ Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
   /\ is_finite_p (DWDivFP3 xh xl y).
 Proof.
 intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb) Hsub.
-have Hyne : FT2R y <> 0 by exact (bdiv_denom_ne0 xh y Hfy Hfth).
+have Hyne : FT2R y <> 0 by
+  exact (DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth).
 have FIN : is_finite_p (DWDivFP3 xh xl y) by (apply fin_main; assumption).
 split; [| split ].
 - apply sub_main; assumption.
@@ -1252,54 +1241,6 @@ Lemma DWDivFP_normal_quotient_input_cond_of_mixed_safe_input_cond (xh xl y : fty
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb) Hnorm.
 repeat split; try assumption.
-Qed.
-
-(* ---------- the mixed bound: PRIMARY API ---------- *)
-Theorem DWDivFP_mixed_accuracy_from_safe_input_cond
-    (xh xl y : ftype t) :
-  (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
-        - (FT2R xh + FT2R xl) / FT2R y)
-    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin.
-Proof.
-intros Hp4 COND.
-destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
-                    (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
-- (* normal branch: recover the internal helper and reuse the theorem *)
-  exact (DWDivFP3_error_mixed_acc xh xl y Hp4
-           (DWDivFP_normal_quotient_input_cond_of_mixed_safe_input_cond xh xl y COND Hn)).
-- exact (proj1 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs)).
-Qed.
-
-(* ---------- output double-word closure ---------- *)
-Corollary DWDivFP_double_word_from_safe_input_cond
-    (xh xl y : ftype t) :
-  (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
-Proof.
-intros Hp4 COND.
-destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
-                    (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
-- exact (DWDivFP3_is_DW_from_cond_acc xh xl y Hp4
-           (DWDivFP_normal_quotient_input_cond_of_mixed_safe_input_cond xh xl y COND Hn)).
-- exact (proj1 (proj2 (DWDivFP3_subnormal_leg xh xl y Hp4 COND Hs))).
-Qed.
-
-Theorem DWDivFP_mixed_guarantee_from_safe_input_cond
-    (xh xl y : ftype t) :
-  (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  DWDivFP_mixed_guarantee xh xl y.
-Proof.
-intros Hp4 Hsafe.
-have Hacc := DWDivFP_mixed_accuracy_from_safe_input_cond xh xl y Hp4 Hsafe.
-have Hdw := DWDivFP_double_word_from_safe_input_cond xh xl y Hp4 Hsafe.
-unfold DWDivFP_mixed_guarantee.
-revert Hacc Hdw.
-destruct (DWDivFP3 xh xl y) as [zh zl].
-cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
 Lemma DWDivFP_result_finite_from_safe_input_cond (xh xl y : ftype t) :
@@ -1332,20 +1273,70 @@ unfold DWDivFP_mixed_cond, DWDivFP_mixed_input_cond,
 exact (conj (conj Hdw Hxh) Hfin).
 Qed.
 
-Lemma DWDivFP_inputs_finite_of_result_finite (xh xl y : ftype t) :
-  DWDivFP_result_finite xh xl y ->
-  is_finite xh = true /\
-  is_finite xl = true /\
-  is_finite y = true.
+(** Whole-range mixed accuracy from the mathematical input assumptions and an
+    a-posteriori finiteness check on the result. *)
+Theorem DWDivFP_mixed_accuracy_from_cond (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_mixed_cond xh xl y ->
+  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+        - (FT2R xh + FT2R xl) / FT2R y)
+    <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) +
+       bpow radix2 emin.
 Proof.
-unfold DWDivFP_result_finite.
-move => Hfin.
-have Hfxh := DWDivFP_acc.FINxh xh xl y Hfin.
-have Hpih := DWDivFP_acc.FINpih xh xl y Hfin.
-have [_ Hfy] := BMULT_finite_e t (BDIV xh y) y Hpih.
-have Hd := DWDivFP_acc.FIN_d xh xl y Hfin.
-have [_ Hfxl] := BPLUS_finite_e t _ xl Hd.
-exact (conj Hfxh (conj Hfxl Hfy)).
+move => Hp4 Hcond.
+have INTERNAL := DWDivFP_internal_input_cond_of_mixed_cond xh xl y Hcond.
+have FIN : is_finite_p (DWDivFP3 xh xl y) := proj2 Hcond.
+specialize (FIN STD).
+move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hxhlb]]]]].
+have Hyne := DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth.
+destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
+                    (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
+- exact (DWDivFP3_error_mixed_acc xh xl y Hp4 INTERNAL FIN Hn).
+- exact (sub_main xh xl y Hp4 FIN Hyne Hdwp Hxhlb Hs).
+Qed.
+
+Theorem DWDivFP_double_word_from_cond (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_mixed_cond xh xl y ->
+  double_word_prop (fst (DWDivFP3 xh xl y))
+                   (snd (DWDivFP3 xh xl y)).
+Proof.
+move => Hp4 Hcond.
+have INTERNAL := DWDivFP_internal_input_cond_of_mixed_cond xh xl y Hcond.
+have FIN : is_finite_p (DWDivFP3 xh xl y) := proj2 Hcond.
+specialize (FIN STD).
+move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hxhlb]]]]].
+have Hyne := DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth.
+destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
+                    (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
+- exact (DWDivFP_double_word_from_internal_normal_quotient
+    xh xl y Hp4 INTERNAL FIN Hn).
+- exact (sub_double_word xh xl y Hp4 FIN Hyne Hdwp Hxhlb Hs).
+Qed.
+
+Theorem DWDivFP_mixed_guarantee_from_cond (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_mixed_cond xh xl y ->
+  DWDivFP_mixed_guarantee xh xl y.
+Proof.
+move => Hp4 Hcond.
+have Hacc := DWDivFP_mixed_accuracy_from_cond xh xl y Hp4 Hcond.
+have Hdw := DWDivFP_double_word_from_cond xh xl y Hp4 Hcond.
+unfold DWDivFP_mixed_guarantee.
+revert Hacc Hdw.
+destruct (DWDivFP3 xh xl y) as [zh zl].
+cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
+Qed.
+
+Theorem DWDivFP_mixed_guarantee_from_safe_input_cond
+    (xh xl y : ftype t) :
+  (4 <= fprec t)%Z ->
+  DWDivFP_mixed_safe_input_cond xh xl y ->
+  DWDivFP_mixed_guarantee xh xl y.
+Proof.
+move => Hp4 Hsafe.
+apply DWDivFP_mixed_guarantee_from_cond; [exact Hp4 |].
+exact (DWDivFP_mixed_cond_of_safe_input_cond xh xl y Hp4 Hsafe).
 Qed.
 
 End CondMin.

@@ -392,11 +392,11 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    whole computation sits on the 2^emin lattice: the correction tl rounds
    within half an ulp of the exact one, and the closing Fast2Sum is exact
    because th + tl is again a lattice point.  The error bound, output
-   double-word closure and finiteness are established together in
-   DWDivFP_subnormal.v (DWDivFP3_subnormal_leg, and the ladder
-   DWDivFP_mixed_accuracy_from_safe_input_cond /
-   DWDivFP_double_word_from_safe_input_cond /
-   DWDivFP_mixed_guarantee_from_safe_input_cond).
+   double-word closure and finiteness are established in DWDivFP_subnormal.v.
+   Its public ladder is DWDivFP_mixed_accuracy_from_cond /
+   DWDivFP_double_word_from_cond / DWDivFP_mixed_guarantee_from_cond; the
+   safe-input guarantee is a corollary after the precondition proves result
+   finiteness.
 
    It does NOT suffice for the pure 3u^2 relative bound, which exists only in
    the normal regime; that is the province of

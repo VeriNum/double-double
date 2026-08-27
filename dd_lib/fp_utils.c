@@ -205,8 +205,8 @@ int dw_div_fp_check(struct dword *x, double y) {
        HISTORY, and why the floor is gone.  This test carried a quotient floor
        through two rounds of relaxation:
 
-         2^(emin+2p-1) = 2^-969   the floor of the full DWDivFP_relative_error_input_cond, which
-                                  buys the PURE relative bound 6u^2;
+         2^(emin+2p-1) = 2^-969   the floor of an earlier, quotient-window
+                                  formulation of the relative tier;
          2^(emin+p-1)  = 2^-1022  the floor of the internal
                                   DWDivFP_normal_quotient_input_cond in
                                   DWDivFP_acc.v, which is what Layer 1's
@@ -224,9 +224,15 @@ int dw_div_fp_check(struct dword *x, double y) {
 
          |(zh+zl) - (x->s + x->t)/y| <= 3u^2 |(x->s + x->t)/y| + 2^emin
 
-       (DWDivFP_acc / DWDivFP_subnormal: relative_errorDWDivFP3_from_cond_combined_min),
-       plus output double-word closure (DWDivFP3_is_DW_from_cond_min) and
+       (DWDivFP_subnormal.DWDivFP_mixed_accuracy_from_safe_input_cond), plus
+       output double-word closure
+       (DWDivFP_subnormal.DWDivFP_double_word_from_safe_input_cond) and
        finiteness of the computed pair (bundled into DWDivFP3_subnormal_leg).
+
+       The PURE relative bound 3u^2 is a separate, NORMAL-RANGE tier
+       (DWDivFP_acc.DWDivFP_relative_accuracy); its condition constrains the
+       computed nodes, not just the inputs, so no runtime input check
+       discharges it.
        So the guard now admits EVERY quotient magnitude the format can
        represent, and the exported postcondition did not weaken.
 
