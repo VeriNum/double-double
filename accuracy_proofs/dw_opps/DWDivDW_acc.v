@@ -54,9 +54,13 @@
         bound [(98/10) * u^2 * |Q| + 5/2 * eta], i.e. the paper's own [u^2]
         coefficient with every underflow contribution confined to the
         absolute term, matching the DW x FP, DW x DW and DW/FP tiers.
-      - [relative_errorDWDivDW3_from_cond_combined] gives the
-        regime-independent relative bound, including underflow, of
-        [(139/10) * u^2].
+      - [DWDivDW_relative_accuracy] is the NORMAL-RANGE pure relative tier:
+        the paper's own [(98/10) * u^2] with no physical-floor term, under
+        [DDConds.DWDivDW_relative_error_input_cond] = the whole-range
+        safe-input condition plus [DDConds.DWDivDW_normal].  It is proved
+        directly from [relative_errorDWDivDW3_correct]; no relative bound
+        anywhere in this file is obtained by absorbing an [eta] term into
+        [u^2|Q|].
 
     Both the bridge and the transferred relative-error theorem are proved
     below from explicit normal-range premises for every rounding node that
@@ -1813,63 +1817,6 @@ have Hmhlo : (1-86*u)*T <= Rabs (FT2R mh) by nra.
 repeat split; [exact Hmhlo | exact Hmh | exact Hml | exact HDW | exact Hord].
 Qed.
 
-Lemma DWDivDW_zprod_lower_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_mixed_safe_input_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  /2 * Rabs (FT2R xh / FT2R yh)
-    <= Rabs (FT2R xh * FT2R (fst m)).
-Proof.
-move => Hp14 COND.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set mh := fst m.
-set u := bpow radix2 (- fprec t).
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R) = bpow radix2 (-14) by (simpl; lra).
-  apply bpow_le; lia. }
-have Hrel := DWDivDW_reciprocal_relative_from_cond xh xl yh yl Hp14 COND.
-fold th rh rl e d m in Hrel. destruct Hrel as [Hmhlo _].
-fold mh u in Hmhlo.
-have Hres := DWDivDW_th_yh_residual_from_cond xh xl yh yl COND.
-fold th u in Hres.
-have Hprodlo : 1-u <= Rabs (FT2R th) * Rabs (FT2R yh).
-{ rewrite -Rabs_mult.
-  have Hrev := Rabs_triang_inv 1 (FT2R th * FT2R yh).
-  rewrite Rabs_R1 (Rabs_minus_sym 1 (FT2R th * FT2R yh)) in Hrev.
-  lra. }
-have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
-have HY : 0 < Rabs (FT2R yh) by apply Rabs_pos_lt; exact Hyhne.
-have HmhY : /2 <= Rabs (FT2R mh) * Rabs (FT2R yh).
-{ have H := Rmult_le_compat_r (Rabs (FT2R yh)) _ _
-      (Rlt_le _ _ HY) Hmhlo.
-  have Hcoef : /2 <= (1-86*u)*(1-u) by nra.
-  eapply Rle_trans; [exact Hcoef |].
-  eapply Rle_trans.
-  - apply Rmult_le_compat_l; [nra | exact Hprodlo].
-  - eapply Rle_trans; [| exact H]. right; ring. }
-have Hscaled : /2 * Rabs (FT2R xh)
-    <= Rabs (FT2R xh) * (Rabs (FT2R mh) * Rabs (FT2R yh)).
-{ have := Rmult_le_compat_l (Rabs (FT2R xh)) _ _ (Rabs_pos _) HmhY.
-  nra. }
-apply (Rmult_le_reg_r (Rabs (FT2R yh))); [exact HY |].
-rewrite Rabs_mult Rmult_assoc.
-have Hratio : Rabs (FT2R xh / FT2R yh) * Rabs (FT2R yh)
-                = Rabs (FT2R xh).
-{ rewrite -Rabs_mult. f_equal. field; exact Hyhne. }
-rewrite Rmult_assoc Hratio.
-exact Hscaled.
-Qed.
-
 Lemma DWDivDW_eta_scales_from_cond_tight (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_mixed_safe_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -1966,111 +1913,6 @@ have Hnonneg : 0 <= bpow radix2 (-fprec t)^2 *
     Rabs (FT2R (BDIV (Zconst t 1) yh)).
 { apply Rmult_le_pos; [apply pow_le; apply bpow_ge_0|apply Rabs_pos]. }
 eapply Rle_trans; [exact Ht|]. nra.
-Qed.
-
-(** One absolute underflow ulp costs at most [2.01] [u^2] units on the
-    exact quotient scale.  This is the conversion needed by the eventual
-    FLT/FLX perturbation theorem; unlike [DWDivDW_eta_absorbed_by_zprod], it
-    does not lose a factor through the reconstructed reciprocal product. *)
-Lemma DWDivDW_eta_absorbed_by_quotient_tight (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_relative_error_input_cond xh xl yh yl ->
-  bpow radix2 (@common.emin t) <=
-    (201/100) * bpow radix2 (- fprec t) ^ 2 *
-      Rabs ((FT2R xh + FT2R xl) / (FT2R yh + FT2R yl)).
-Proof.
-move => Hp14 COND.
-set u := bpow radix2 (- fprec t).
-set eta := bpow radix2 (@common.emin t).
-set X := FT2R xh + FT2R xl.
-set Y := FT2R yh + FT2R yl.
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R) = bpow radix2 (-14) by (simpl; lra).
-  apply bpow_le; lia. }
-move: (COND) => [_ [_ [_ [_ [DWx [DWy [_ [Hq _]]]]]]]].
-have Hyhne : FT2R yh <> 0.
-{ intro H0. move: Hq; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0.
-  have := bpow_gt_0 radix2
-    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1); lra. }
-have Hxhne : FT2R xh <> 0.
-{ intro H0. move: Hq; rewrite H0 /Rdiv Rmult_0_l Rabs_R0.
-  have := bpow_gt_0 radix2
-    (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1); lra. }
-have Hxl := @DW_acc_lemmas.dw_low_le_u_high t STD xh xl DWx.
-have Hyl := @DW_acc_lemmas.dw_low_le_u_high t STD yh yl DWy.
-fold u in Hxl, Hyl.
-have HXlo : (1-u)*Rabs (FT2R xh) <= Rabs X.
-{ unfold X. have H := Rabs_triang_inv (FT2R xh) (-FT2R xl).
-  rewrite Rabs_Ropp in H.
-  replace (FT2R xh - -FT2R xl)%R with
-    (FT2R xh + FT2R xl)%R in H by ring. nra. }
-have HYup : Rabs Y <= (1+u)*Rabs (FT2R yh).
-{ unfold Y. have H := Rabs_triang (FT2R yh) (FT2R yl). nra. }
-have HYne : Y <> 0.
-{ intro H0.
-  have Hrev := Rabs_triang_inv (FT2R yh) (-FT2R yl).
-  rewrite Rabs_Ropp in Hrev.
-  replace (FT2R yh - -FT2R yl)%R with Y in Hrev by (unfold Y; ring).
-  rewrite H0 Rabs_R0 in Hrev.
-  have Hypos : 0 < Rabs (FT2R yh) by apply Rabs_pos_lt; exact Hyhne.
-  nra. }
-have HY0 : 0 < Rabs Y by apply Rabs_pos_lt; exact HYne.
-have Hlead : Rabs (FT2R xh / FT2R yh) * Rabs (FT2R yh)
-               = Rabs (FT2R xh).
-{ rewrite -Rabs_mult. f_equal. field; exact Hyhne. }
-have HQY : Rabs (X/Y) * Rabs Y = Rabs X.
-{ rewrite -Rabs_mult. f_equal. field; exact HYne. }
-have Hscale : (1-u)/(1+u) * Rabs (FT2R xh / FT2R yh)
-                <= Rabs (X/Y).
-{ apply (Rmult_le_reg_r (Rabs Y)); [exact HY0|].
-  rewrite HQY.
-  have Hfac0 : 0 <= (1-u)/(1+u) * Rabs (FT2R xh / FT2R yh)
-  .
-  { apply Rmult_le_pos; [|apply Rabs_pos].
-    unfold Rdiv. apply Rmult_le_pos; [nra|].
-    apply Rlt_le, Rinv_0_lt_compat; nra. }
-  have Hmul := Rmult_le_compat_l
-    ((1-u)/(1+u) * Rabs (FT2R xh / FT2R yh)) _ _ Hfac0 HYup.
-  eapply Rle_trans; [exact Hmul|].
-  replace (((1-u)/(1+u) * Rabs (FT2R xh / FT2R yh)) *
-      ((1+u)*Rabs (FT2R yh)))%R with
-    ((1-u)*(Rabs (FT2R xh / FT2R yh)*Rabs (FT2R yh)))%R
-      by (field; nra).
-  rewrite Hlead. exact HXlo. }
-have Hbase : (1-u)/(1+u) *
-    bpow radix2 (@common.emin t + 2*fprec t-1) <= Rabs (X/Y).
-{ eapply Rle_trans; [|exact Hscale].
-  apply Rmult_le_compat_l; [|exact Hq].
-  unfold Rdiv. apply Rmult_le_pos; [nra|].
-  apply Rlt_le, Rinv_0_lt_compat; nra. }
-have Heta : eta = 2*u^2 *
-    bpow radix2 (@common.emin t + 2*fprec t-1).
-{ have He : u*u*bpow radix2 (@common.emin t+2*fprec t-1) =
-      bpow radix2 (@common.emin t-1).
-  { unfold u. rewrite -!bpow_plus; f_equal; lia. }
-  have Het : eta = 2*bpow radix2 (@common.emin t-1).
-  { unfold eta. have H2 : (2:R) = bpow radix2 1 by reflexivity.
-    rewrite H2 -bpow_plus; f_equal; lia. }
-  rewrite Het. replace (2*u^2*bpow radix2
-    (@common.emin t+2*fprec t-1)) with
-    (2*(u*u*bpow radix2 (@common.emin t+2*fprec t-1))) by nra.
-  rewrite He; reflexivity. }
-have Hmul := Rmult_le_compat_l ((201/100)*u^2) _ _ ltac:(nra) Hbase.
-rewrite Heta. eapply Rle_trans; [|exact Hmul].
-have Hb := bpow_ge_0 radix2 (@common.emin t+2*fprec t-1).
-replace (2*u^2*bpow radix2 (@common.emin t+2*fprec t-1)) with
-  ((2*u^2)*bpow radix2 (@common.emin t+2*fprec t-1)) by ring.
-replace ((201/100)*u^2*((1-u)/(1+u)*
-  bpow radix2 (@common.emin t+2*fprec t-1))) with
-  (((201/100)*u^2*((1-u)/(1+u)))*
-  bpow radix2 (@common.emin t+2*fprec t-1)) by ring.
-apply Rmult_le_compat_r; [exact Hb|].
-have Hcoef : 2 <= (201/100)*(1-u)/(1+u).
-{ apply (Rmult_le_reg_r (1+u)); [nra|].
-  have Heq : ((201/100)*(1-u)/(1+u))*(1+u) = (201/100)*(1-u)
-    by (field; nra).
-  rewrite Heq; nra. }
-nra.
 Qed.
 
 Lemma DWDivDW_residual_value_error_floor (xh xl yh yl : ftype t) :
@@ -2851,56 +2693,6 @@ destruct (Rle_or_lt
     Hp14 COND Hsmall).
 Qed.
 
-Lemma DWDivDW_eta_absorbed_by_zprod (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_relative_error_input_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  bpow radix2 (@common.emin t) <=
-    4 * bpow radix2 (- fprec t) ^ 2 *
-      Rabs (FT2R xh * FT2R (fst m)).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-have Hq : bpow radix2 (@common.emin t + 2 * fprec t - 1)
-    <= Rabs (FT2R xh / FT2R yh).
-{ move: (COND) => [_ [_ [_ [_ [_ [_ [_ [H _]]]]]]]]. exact H. }
-have Hz := DWDivDW_zprod_lower_from_cond xh xl yh yl Hp14
-  (DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl COND).
-fold th rh rl e d m in Hz.
-change (/2 * Rabs (FT2R xh / FT2R yh) <=
-  Rabs (FT2R xh * FT2R (fst m))) in Hz.
-have Hlow : /2 * bpow radix2 (@common.emin t + 2 * fprec t - 1)
-    <= Rabs (FT2R xh * FT2R (fst m)) by nra.
-have Hu20 : 0 <= 4 * bpow radix2 (- fprec t) ^ 2.
-{ apply Rmult_le_pos; [lra | apply pow_le; apply bpow_ge_0]. }
-have Hmul := Rmult_le_compat_l
-  (4 * bpow radix2 (- fprec t) ^ 2) _ _ Hu20 Hlow.
-eapply Rle_trans; [| exact Hmul].
-have He : bpow radix2 (- fprec t) * bpow radix2 (- fprec t) *
-    bpow radix2 (@common.emin t + 2 * fprec t - 1) =
-    bpow radix2 (@common.emin t - 1).
-{ rewrite -!bpow_plus; f_equal; lia. }
-have Heta : bpow radix2 (@common.emin t) =
-    2 * bpow radix2 (@common.emin t - 1).
-{ have H2 : (2:R) = bpow radix2 1 by reflexivity.
-  rewrite H2 -bpow_plus; f_equal; lia. }
-apply Req_le. rewrite Heta.
-replace (4 * bpow radix2 (- fprec t) ^ 2 *
-  (/2 * bpow radix2 (@common.emin t + 2 * fprec t - 1)))
-  with (2 * (bpow radix2 (- fprec t) * bpow radix2 (- fprec t) *
-    bpow radix2 (@common.emin t + 2 * fprec t - 1))) by nra.
-rewrite He; reflexivity.
-Qed.
-
 End DWDivDWCondFacts.
 
 (* ============================================================
@@ -2917,7 +2709,8 @@ End DWDivDWCondFacts.
    bpow(emin+2p-1) <= |xh*yh| -- in deep underflow the correction is not forced
    below the (subnormal) high product, so a Fast2Sum-of-a-multiply result is
    NOT unconditionally a double-word.  This normal-range fact is exactly what
-   DWDivDW_relative_error_input_cond's quotient bound supplies for the closing multiply.
+   the closing-product clause of DDConds.DWDivDW_normal supplies for the
+   closing multiply.
    ============================================================ *)
 (** [DWTimesDW3] returns a nonoverlapping double-word representation provided
     both operands satisfy [double_word_prop], the computed result is finite,
@@ -2967,8 +2760,8 @@ Qed.
        level a multiply-Fast2Sum needing its own normal-range, as in
        DWTimesDW3_double_word;
      - the closing-multiply normal range bpow(emin+2p-1) <= |xh*mh| (mh ~ 1/yh,
-       so this is the quotient normal-range that DWDivDW_relative_error_input_cond's bound (ii)
-       supplies once the reciprocal error mh - 1/yh is controlled).
+       so this is the quotient normal-range that DDConds.DWDivDW_normal's
+       closing-product clause states directly).
    Both DW-ness and the normal range are taken here as explicit hypotheses, the
    same "split-line" discipline the DWDivFP development uses for UF_tl.
    ============================================================ *)
@@ -3575,7 +3368,7 @@ destruct (Z.leb_spec0 emin ef) as [Hemin|Hemin].
 Qed.
 
 (** The preceding lemma splits on whether the paper lattice [1-2p] is coarser
-    than [emin].  Under [DWDivDW_relative_error_input_cond] it never is: [DWDivDW_cond_emin_le]
+    than [emin].  Under [DWDivDW_mixed_safe_input_cond] it never is: [DWDivDW_cond_emin_le]
     gives [emin <= -2p < 1-2p], so the exact residual is always an FLT value
     and the FMA does not round at all.
 
@@ -4304,204 +4097,23 @@ Definition DWDivDW3_FLX_model (xh xl yh yl : ftype t) : R * R :=
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (fst mhl) (snd mhl).
 
-(** Aggregate closing-block contract at the sharper [2*eta] floor.
-
-    This is the tier that COSTS the quotient underflow floor, conjunct 8 of
-    [DWDivDW_relative_error_input_cond]: the near-threshold and gap regimes of Algorithm 12 are
-    reached through the magnitude ordering [|cl3| <= |ch|], which division has
-    to earn from a lower bound on the closing product [xh*mh] (via
-    [DWDivDW_zprod_lower_from_cond] and [DWDivDW_eta_absorbed_by_zprod], both
-    of which read conjunct 8).  Its only remaining client is the pure relative
-    [13.9*u^2] bound, whose budget does not fit the [5/2*eta] of the
-    whole-range tier below.  Everything else now routes through
-    [DWDivDW3_closing_mixed_error_from_cond_acc]. *)
-Local Lemma DWDivDW3_closing_mixed_error_from_cond
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_relative_error_input_cond xh xl yh yl ->
-  let th := BDIV (Zconst t 1) yh in
-  let rh := BFMA (BOPP yh) th (Zconst t 1) in
-  let rl := BOPP (BMULT yl th) in
-  let e := Fast2Sum rh rl in
-  let d := DWTimesFP3 (fst e) (snd e) th in
-  let m := DWPlusFP (fst d) (snd d) th in
-  let X := FT2R xh+FT2R xl in
-  let M := FT2R (fst m)+FT2R (snd m) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-X*M) <=
-    4*bpow radix2 (-fprec t)^2*Rabs (X*M)+
-    2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-set th := BDIV (Zconst t 1) yh.
-set rh := BFMA (BOPP yh) th (Zconst t 1).
-set rl := BOPP (BMULT yl th).
-set e := Fast2Sum rh rl.
-set d := DWTimesFP3 (fst e) (snd e) th.
-set m := DWPlusFP (fst d) (snd d) th.
-set mh := fst m; set ml := snd m.
-set X := FT2R xh+FT2R xl.
-set M := FT2R mh+FT2R ml.
-set zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-set u := bpow radix2 (-fprec t).
-set eta := bpow radix2 (@common.emin t).
-set T := bpow radix2 (@common.emin t+2*fprec t-1).
-set N := bpow radix2 (@common.emin t+fprec t-1).
-set P0 := FT2R xh*FT2R mh.
-set P := Rabs P0.
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hu : u <= /16384.
-{ unfold u. have -> : (/16384:R)=bpow radix2 (-14) by (simpl;lra).
-  apply bpow_le; lia. }
-have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
-have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
-have HN0 : 0 < N by (unfold N;apply bpow_gt_0).
-have CONDa := DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl COND.
-move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-have Hrel := DWDivDW_reciprocal_relative_from_cond
-  xh xl yh yl Hp14 CONDa.
-specialize (Hrel NANS STD). fold th rh rl e d m in Hrel.
-destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m mh ml in DWm.
-have FIN := DWDivDW3_finite_from_cond xh xl yh yl Hp14 CONDa.
-specialize (FIN NANS STD). fold th rh rl e d m mh ml in FIN.
-change (is_finite_p (DWTimesDW3 xh xl mh ml)) in FIN.
-change (Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta).
-destruct (Rle_or_lt P (9/8*T)) as [Hnear|Hfar].
-- destruct (Rle_or_lt T P) as [Nprod|Hgap].
-  + have Hmul := DWMulDW_acc.DWTimesDW_abs_normal_near_threshold
-      xh xl mh ml DWx DWm FIN ltac:(lia) Nprod Hnear.
-    fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-  + have Heta := DWDivDW_eta_absorbed_by_zprod xh xl yh yl Hp14 COND.
-specialize (Heta NANS STD).
-fold th rh rl e d m in Heta. cbv zeta in Heta.
-fold m mh u eta P0 P in Heta.
-have HPlow0 := DWDivDW_zprod_lower_from_cond xh xl yh yl Hp14 CONDa.
-specialize (HPlow0 NANS STD).
-fold th rh rl e d m in HPlow0. cbv zeta in HPlow0.
-fold m mh P0 P in HPlow0.
-have Hq : T <= Rabs (FT2R xh/FT2R yh).
-{ unfold T. move: (COND) => [_ [_ [_ [_ [_ [_ [_ [H _]]]]]]]]. exact H. }
-have HPlow : /2*T <= P.
-{ have H := Rmult_le_compat_l (/2) _ _ ltac:(lra) Hq.
-  eapply Rle_trans; [exact H|exact HPlow0]. }
-set ch := BMULT xh mh.
-set cl1 := Fast2Mult_err xh mh.
-set tl0 := BMULT xl ml.
-set tl1 := BFMA xh ml tl0.
-set cl2 := BFMA xl mh tl1.
-set cl3 := BPLUS cl1 cl2.
-have Fch : is_finite ch=true by
-  (unfold ch;exact (DWMulDW_acc.DWTimesDW3_mul_finite xh xl mh ml FIN)).
-(* The whole guard-free error chain that used to be inlined here (five
-   rounding nodes, ~210 lines) is DWMulDW_acc's operand-generic gap lemma,
-   instantiated at the two double words (xh,xl) and (mh,ml).  Nothing in it
-   was ever division-specific. *)
-have Herr := DWMulDW_acc.DWTimesDW_core_error_floor_gap
-  xh xl mh ml ltac:(lia) DWx DWm FIN Hgap.
-fold u eta P0 P ch cl1 tl0 tl1 cl2 cl3 in Herr.
-(* Division's own two contributions.  The ordering |cl3| <= |ch| is where the
-   quotient window is genuinely needed: it turns eta into 4u^2*P (HetaP, from
-   DWDivDW_eta_absorbed_by_zprod), which is what makes the relative-form node
-   bound 6uP+4eta fit under (1-u)P-eta/2. *)
-have Hcl3b := DWMulDW_acc.gap_cl3_upper_bound
-  xh xl mh ml ltac:(lia) DWx DWm FIN Hgap.
-fold u eta P0 P cl1 tl0 tl1 cl2 cl3 in Hcl3b.
-have Hchlo := DWMulDW_acc.gap_ch_lower_bound xh mh Fch.
-fold u eta P0 P ch in Hchlo.
-have HetaP : eta <= 4*u^2*P.
-{ change (eta <= 4*u^2*P). unfold P,P0,mh.
-  exact Heta. }
-(* linearize the atoms u*P and u^2*P so the crossing test is linear:
-   6uP + 4eta <= 6uP + 16u^2P and (1-u)P - eta/2 >= P - uP - 2u^2P, and
-   u <= /16384 makes 7uP + 18u^2P <= P with room to spare *)
-have HuP : u*P <= /16384*P.
-{ have H := Rmult_le_compat_r P _ _ HP0 Hu. nra. }
-have HuP0 : 0 <= u*P by nra.
-have Hu2P : u^2*P <= /16384*(u*P).
-{ have H := Rmult_le_compat_r (u*P) _ _ HuP0 Hu.
-  have He : u^2*P = u*(u*P) by ring. rewrite He. nra. }
-have Hord : Rabs (FT2R cl3) <= Rabs (FT2R ch).
-{ eapply Rle_trans; [exact Hcl3b|].
-  eapply Rle_trans; [|exact Hchlo].
-  have H6 : 6*u*P = 6*(u*P) by ring. rewrite H6. nra. }
-have Hsum := FastTwoSum_correct ch cl3 (proj1 FIN) Hord.
-set zh := Fast2Sum_sum ch cl3.
-set zl := Fast2Sum_err ch cl3.
-fold zh zl in Hsum.
-have HsumE : FT2R zh+FT2R zl=FT2R ch+FT2R cl3.
-{ rewrite Hsum. ring. }
-have HXM := DWMulDW_acc.aux_dw_exact_product_lower xh xl mh ml DWx DWm.
-fold u X M P0 P in HXM.
-specialize (HXM STD).
-change (Rabs (zr-X*M) <= 4*u^2*Rabs (X*M)+2*eta).
-change (Rabs ((FT2R zh+FT2R zl)-X*M) <=
-  4*u^2*Rabs (X*M)+2*eta).
-rewrite HsumE. eapply Rle_trans; [exact Herr|].
-(* squeeze the exported 5/2*eta down to division's advertised 2*eta: the
-   spare eta/2 plus the u^2*P residual both fit inside 4u^2|X*M| *)
-have Hreserve : /2*eta+u^2*P <= 4*u^2*Rabs (X*M).
-{ have Hbase : 3*u^2*P <= 4*u^2*((1-u)^2*P) by nra.
-  eapply Rle_trans; [|eapply Rle_trans; [exact Hbase|]].
-  - nra.
-  - apply Rmult_le_compat_l; [nra|exact HXM]. }
-nra.
-- have Nprod : T <= P.
-  { have HT0 : 0<T by (unfold T;apply bpow_gt_0).
-    have Hcoef : T<=9/8*T by (clear -HT0;nra).
-    eapply Rle_trans; [exact Hcoef|apply Rlt_le;exact Hfar]. }
-  destruct (Rle_or_lt N (Rabs (FT2R xl*FT2R ml))) as [N0|U0].
-  + have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_normal
-      xh xl mh ml DWx DWm FIN ltac:(lia) Nprod N0.
-    fold X M zr u in Hmul. cbv zeta in Hmul.
-    eapply Rle_trans; [exact Hmul|]. nra.
-  + destruct (Rle_or_lt N
-      (Rabs (FT2R (Fast2Mult_err xh mh)+
-        FT2R (BFMA xl mh (BFMA xh ml (BMULT xl ml))))))
-      as [N3|U3].
-    * destruct (Rle_or_lt N
-        (Rabs (FT2R xh*FT2R ml+FT2R (BMULT xl ml)))) as [N1|U1].
-      -- destruct (Rle_or_lt N
-          (Rabs (FT2R xl*FT2R mh+
-            FT2R (BFMA xh ml (BMULT xl ml))))) as [N2|U2].
-         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_far
-              xh xl mh ml DWx DWm FIN ltac:(lia)
-              Hfar U0 N1 N2 N3.
-            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low2_other_normal
-              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 N1 U2 N3.
-            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-      -- destruct (Rle_or_lt N
-          (Rabs (FT2R xl*FT2R mh+
-            FT2R (BFMA xh ml (BMULT xl ml))))) as [N2|U2].
-         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_tail_normal
-              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U1 N2 N3.
-            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-         ++ have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_low1_low2_final_normal
-              xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U1 U2 N3.
-            fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-    * have Hmul := DWMulDW_acc.DWTimesDW_abs_low0_final_underflow
-        xh xl mh ml DWx DWm FIN ltac:(lia) Nprod U0 U3.
-      fold X M zr u eta in Hmul. cbv zeta in Hmul. exact Hmul.
-Qed.
-
 (** WHOLE-RANGE aggregate closing-block contract.
 
-    Same shape as [DWDivDW3_closing_mixed_error_from_cond], but with no lower
-    bound on the closing product [xh*mh] anywhere in its proof -- hence no
-    quotient floor, hence [DWDivDW_mixed_safe_input_cond] instead of [DWDivDW_relative_error_input_cond].  The
-    entire regime tree is [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond]
-    instantiated at the two double words [(xh,xl)] and [(mh,ml)]: nothing in it
-    was ever division-specific, and Algorithm 12's own whole-range theorem
-    covers the sub-threshold gap through the tiny-sum lattice argument rather
-    than the magnitude ordering that needed the bound.
+    No lower bound on the closing product [xh*mh] appears anywhere in its
+    proof, hence no quotient floor is needed and
+    [DWDivDW_mixed_safe_input_cond] suffices.  The entire regime tree is
+    [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond] instantiated at the two
+    double words [(xh,xl)] and [(mh,ml)]: nothing in it was ever
+    division-specific, and Algorithm 12's own whole-range theorem covers the
+    sub-threshold gap through the tiny-sum lattice argument rather than a
+    magnitude ordering that would need such a bound.
 
     The price is the physical floor: the gap arm of Algorithm 12 spends five
-    half-ulps, so [2*eta] becomes [5/2*eta].  That constant is carried
-    symbolically through [DWDivDW3_error_mixed_arms_param] and shows up
+    half-ulps, so the closing block's floor is [5/2*eta].  That constant is
+    carried symbolically through [DWDivDW3_error_mixed_arms_param] and shows up
     verbatim in the exported
     [DWDivDW_mixed_accuracy_from_safe_input_cond]; the [u^2] coefficient
-    is untouched, because the quotient floor never entered the arm budgets. *)
+    is untouched, because a quotient floor never entered the arm budgets. *)
 Local Lemma DWDivDW3_closing_mixed_error_from_cond_acc
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_mixed_safe_input_cond xh xl yh yl ->
@@ -4592,9 +4204,9 @@ Qed.
     [(a,bx)] and its own budget check.
 
     (The former [DWDivDW_relative_of_mixed_param], which went one step further
-    and absorbed [2*eta] into [u^2|Q|] as well, was never used --
-    [relative_errorDWDivDW3_from_cond_combined] does that absorption inline --
-    and is gone.  The [bq] parameter is gone too; see
+    and absorbed [2*eta] into [u^2|Q|] as well, is gone: no public theorem
+    turns the mixed bound into a relative one by absorbing its floor term.  The
+    [bq] parameter is gone too; see
     [DWDivDW_mixed_closing_composition_param].) *)
 Lemma DWDivDW_absolute_of_mixed_param
     (u eta X Q zr a bx r c fc : R) :
@@ -4648,16 +4260,14 @@ Qed.
 
     The refinement [eta] floor is the only FLT-only line, and its size is
     conjunct 7's exponent: [eta*|X| = eta*|Y|*|Q| <= (u^2/4)*|Q|] there, so the
-    charge is [fr/4] rather than [2*fr].  See the [DWDivDW_relative_error_input_cond] doc comment in
-    DDModels.v for why that floor cannot be removed and why 9.8 is unreachable
-    without those three binades.
+    charge is [fr/4] rather than [2*fr].  See the
+    [DWDivDW_mixed_safe_input_cond] doc comment in DDConds.v for why that floor
+    cannot be removed and why 9.8 is unreachable without those three binades.
 
     The closing block is NOT proved here: it enters as the hypothesis
-    [Hclose], parametric in its physical-floor coefficient [fc].  That is what
-    keeps this theorem independent of the quotient underflow floor -- conjunct
-    8 of [DWDivDW_relative_error_input_cond] is used by one closing tier and not by the other, and
-    nothing else in the two arms reads it.  The [u^2] coefficient is the same
-    for every [fc], and neither arm budget mentions the closing floor. *)
+    [Hclose], parametric in its physical-floor coefficient [fc].  The [u^2]
+    coefficient is the same for every [fc], and neither arm budget mentions the
+    closing floor. *)
 Local Theorem DWDivDW3_error_mixed_arms_param
     (xh xl yh yl : ftype t) (fc : R) :
   (14 <= fprec t)%Z -> DWDivDW_mixed_safe_input_cond xh xl yh yl ->
@@ -4810,26 +4420,6 @@ destruct Harms as [Htight|[Hcoarse Hsmall]].
     (98/10) fc Heta0 ltac:(nra)
     Hcomp HetaX).
   nra.
-Qed.
-
-(** The [2*eta] instance: the sharper floor, paid for by the quotient
-    underflow floor through [DWDivDW3_closing_mixed_error_from_cond]. *)
-Local Theorem DWDivDW3_error_mixed_arms
-    (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_relative_error_input_cond xh xl yh yl ->
-  let X := FT2R xh+FT2R xl in
-  let Q := X/(FT2R yh+FT2R yl) in
-  let zr := FT2R (fst (DWDivDW3 xh xl yh yl))+
-            FT2R (snd (DWDivDW3 xh xl yh yl)) in
-  Rabs (zr-Q) <= 98/10*bpow radix2 (-fprec t)^2*Rabs Q+
-                 2*bpow radix2 (@common.emin t).
-Proof.
-move => Hp14 COND /=.
-have H := DWDivDW3_error_mixed_arms_param xh xl yh yl 2 Hp14
-  (DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond xh xl yh yl COND).
-cbv zeta in H. apply H.
-have Hc := DWDivDW3_closing_mixed_error_from_cond xh xl yh yl Hp14 COND.
-cbv zeta in Hc. exact Hc.
 Qed.
 
 (** The whole-range [5/2*eta] instance: no quotient underflow floor anywhere,
@@ -5145,58 +4735,28 @@ Qed.
 End FiniteDWDivDWFromFinalBlock.
 
 (* ============================================================
-   Normal-regime characterization for DWDivDW3
+   NORMAL-RANGE PURE RELATIVE TIER for DWDivDW3
 
-   The nine residual/product node lower bounds below all fail in the
-   worst-case type (emin+2p=2), so none is derivable from [DWDivDW_relative_error_input_cond]
-   and none is exact.  Bundled here as the single normal-regime
-   characterization [DWDivDW_normal] — the DWDivDW analogue of DWDivFP's
-   [Hdyn] — so the normal-leg accuracy theorem takes the DWDivFP-style
-   shape [COND -> DWDivDW_normal -> bound].  [UF_th] is NOT included: it
-   is derived from [DWDivDW_relative_error_input_cond] via [DWDivDW_cond_UF_th].
+   [DDConds.DWDivDW_normal] bundles the nine residual/product node lower bounds
+   that let each rounded node of the reciprocal-bootstrap prologue and of the
+   closing multiplication be identified with its FLX counterpart.  All nine
+   fail in the worst-case type (emin+2p=2), so none is derivable from input
+   magnitudes, and each of the underlying nodes may legitimately be zero --
+   which is exactly why the whole-range mixed tier below does not bound them
+   and pays a physical floor instead.  [UF_th] is NOT among them: it follows
+   from [DWDivDW_mixed_safe_input_cond] via [DWDivDW_cond_UF_th].
+
+   [DDConds.DWDivDW_relative_error_input_cond] is that predicate bundled with
+   the whole-range safe-input condition, which supplies the two double-word
+   operands, the divisor window and the nonzero leading divisor.
+
+   NOTHING is absorbed here.  The constant is the paper's own [9.8]
+   ([DWDivDW.DWDDW3_correct]) because in this regime there is no physical floor
+   to charge -- not because a quotient magnitude window pays for one.  The
+   whole-range statement remains the mixed [9.8u^2|Q| + 5/2 eta] of Layer 3a
+   below.
    ============================================================ *)
-Section NormalCharDWDivDW.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-Notation emin := (common.emin (t:=t)).
-Variables (xh xl yh yl : ftype t).
-Notation th  := (BDIV (Zconst t 1) yh).
-Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
-Notation rl  := (BOPP (BMULT yl th)).
-Notation eh  := (fst (Fast2Sum rh rl)).
-Notation el  := (snd (Fast2Sum rh rl)).
-Notation dh  := (fst (DWTimesFP3 eh el th)).
-Notation dl  := (snd (DWTimesFP3 eh el th)).
-Notation mh  := (fst (DWPlusFP dh dl th)).
-Notation ml  := (snd (DWPlusFP dh dl th)).
-
-Definition DWDivDW_normal : Prop :=
-  bpow radix2 (emin + fprec t - 1) <= Rabs (1 - FT2R yh * FT2R th) /\
-  bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R yl * FT2R th) /\
-  bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R eh * FT2R th) /\
-  bpow radix2 (emin + fprec t - 1)
-    <= Rabs (FT2R el * FT2R th + FT2R (Fast2Mult_err eh th)) /\
-  bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R mh) /\
-  bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xl * FT2R ml) /\
-  bpow radix2 (emin + fprec t - 1)
-    <= Rabs (FT2R xh * FT2R ml + FT2R (BMULT xl ml)) /\
-  bpow radix2 (emin + fprec t - 1)
-    <= Rabs (FT2R (BFMA xh ml (BMULT xl ml)) + FT2R xl * FT2R mh) /\
-  bpow radix2 (emin + fprec t - 1)
-    <= Rabs (FT2R (Fast2Mult_err xh mh)
-             + FT2R (BFMA xl mh (BFMA xh ml (BMULT xl ml)))).
-End NormalCharDWDivDW.
-
-(* ============================================================
-   Layer 2: normal-regime accuracy from the public condition
-
-   [DWDivDW_relative_error_input_cond] supplies the double-word operands, the nonzero leading
-   divisor, and normality of the initial reciprocal.  It deliberately does
-   not lower-bound residual nodes, since any of them may be exactly zero.
-   Their bounds below are therefore the genuine normal-regime split line.
-   Result finiteness remains explicit until the separate overflow cascade for
-   the complete reciprocal/refinement pipeline is established.
-   ============================================================ *)
-Section CondAccuracyDWDivDW.
+Section RelativeAccuracyDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin := (common.emin (t:=t)).
@@ -5204,28 +4764,10 @@ Notation u := (bpow radix2 (- fprec t)).
 
 Variables (xh xl yh yl : ftype t).
 
-Notation th  := (BDIV (Zconst t 1) yh).
-Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
-Notation rl  := (BOPP (BMULT yl th)).
-Notation eh  := (fst (Fast2Sum rh rl)).
-Notation el  := (snd (Fast2Sum rh rl)).
-Notation dh  := (fst (DWTimesFP3 eh el th)).
-Notation dl  := (snd (DWTimesFP3 eh el th)).
-Notation mh  := (fst (DWPlusFP dh dl th)).
-Notation ml  := (snd (DWPlusFP dh dl th)).
-
 Hypothesis Hp14 : (14 <= fprec t)%Z.
-Hypothesis COND : DWDivDW_mixed_safe_input_cond xh xl yh yl.
+Hypothesis COND : DWDivDW_relative_error_input_cond xh xl yh yl.
 
-(* The nine residual/product normality facts are bundled into the single
-   [DWDivDW_normal] characterization (defined above), mirroring DWDivFP's
-   [COND + Hdyn] normal-leg interface. *)
-Hypothesis Hnormal : DWDivDW_normal xh xl yh yl.
-
-(** Normal-regime form of the tight paper bound using only the public input
-    condition plus the single normal-regime characterization [DWDivDW_normal]
-    for residual computations. *)
-Theorem relative_errorDWDivDW3_from_cond_normal :
+Theorem DWDivDW_relative_accuracy :
   Rabs
     ((FT2R (fst (DWDivDW3 xh xl yh yl))
        + FT2R (snd (DWDivDW3 xh xl yh yl))
@@ -5233,39 +4775,39 @@ Theorem relative_errorDWDivDW3_from_cond_normal :
      / ((FT2R xh + FT2R xl) / (FT2R yh + FT2R yl)))
   <= 98 / 10 * u ^ 2.
 Proof.
-move: (COND) =>
+move: (COND) => [SAFE Hnormal].
+move: (SAFE) =>
   [Hfxh [Hfxl [Hfyh [Hfyl [DWx [DWy _]]]]]].
 move: Hnormal =>
   [UF_rh [UF_rl [UF_dprod [UF_dlow [UF_zprod
     [UF_z0 [UF_z1 [UF_z2 UF_z3]]]]]]]].
-have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl COND.
-have UF_th := DWDivDW_cond_UF_th xh xl yh yl COND.
+have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl SAFE.
+have UF_th := DWDivDW_cond_UF_th xh xl yh yl SAFE.
 have FINAL_cond := DWDivDW_final_cond_from_cond_normal xh xl yh yl
-  Hp14 COND UF_zprod.
+  Hp14 SAFE UF_zprod.
 have FIN := DWDivDW3_finite_from_final_cond xh xl yh yl ltac:(lia) FINAL_cond.
 exact (relative_errorDWDivDW3_correct xh xl yh yl
          DWx DWy FIN Hp14 Hyhne UF_th UF_rh UF_rl
          UF_dprod UF_dlow UF_zprod UF_z0 UF_z1 UF_z2 UF_z3).
 Qed.
 
-End CondAccuracyDWDivDW.
+End RelativeAccuracyDWDivDW.
 
 (* ============================================================
-   Layer 3a: the WHOLE-RANGE public API, from DWDivDW_mixed_safe_input_cond
+   Layer 3a: the WHOLE-RANGE MIXED public API, from
+   DWDivDW_mixed_safe_input_cond
 
-   [DWDivDW_mixed_safe_input_cond] is [DWDivDW_relative_error_input_cond] minus its quotient underflow floor
-   [2^(emin+2p-1) <= |xh/yh|] (conjunct 8).  Dropping that conjunct admits
-   every underflowing quotient -- for Tdouble, everything below 2^-969, i.e.
-   exactly the regime the mixed bound exists to describe and the old guard
-   rejected.  See the doc comment on [DWDivDW_mixed_safe_input_cond] in
-   DDConds.v for why the divisor upper and lower bounds remain in
-   [DWDivDW_mixed_input_cond].
+   [DWDivDW_mixed_safe_input_cond] carries no underflow floor on the quotient
+   at all, so it admits every underflowing quotient -- for Tdouble, everything
+   below 2^-969, i.e. exactly the regime the mixed bound exists to describe.
+   See its doc comment in DDConds.v for why the divisor upper and lower bounds
+   remain, and why they do not restrict underflow coverage.
 
-   Two results are exported here, matching the DW/FP and DW x DW tiers: the
-   mixed relative/physical-floor error bound and output double-word closure.
-   The pure relative [13.9*u^2] bound stays with the full [DWDivDW_relative_error_input_cond] in
-   the section after this one: absorbing [5/2*eta] into [u^2|Q|] needs the
-   quotient floor (conjunct 8) to convert one floor ulp to [2.01*u^2|Q|].
+   Three results are exported here, matching the DW x FP, DW x DW and DW/FP
+   tiers: the mixed relative/physical-floor error bound, output double-word
+   closure, and their bundle for the VST layer.  There is no pure relative
+   theorem on this cond, and none is derived from these by absorbing the
+   [5/2*eta] term: pure relative accuracy is the normal-range tier above.
    ============================================================ *)
 Section SafeInputGuaranteeDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -5381,13 +4923,14 @@ Qed.
 End SafeInputGuaranteeDWDivDW.
 
 (* ============================================================
-   Layer 3b: the full-cond public API
+   Layer 3b: compatibility corollary on the relative-tier condition
 
-   The arm-specific proof above already covers both normal and underflowing
-   executions.  This section exports its [13.9*u^2] relative bound as the
-   canonical condition-level result.  It differs from Layer 3a only in that
-   the quotient floor buys back the sharper [2*eta] closing floor, which is
-   what makes the relative conversion fit under 13.9.
+   Output double-word closure is a whole-range fact (Layer 3a), so the
+   normal-range relative condition gets it for free through
+   [DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond].  This is the
+   only result the relative tier adds beyond
+   [DWDivDW_relative_accuracy]; there is deliberately no mixed
+   theorem here, and no relative theorem derived by absorbing a floor term.
    ============================================================ *)
 Section CondAccuracyDWDivDW_public.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -5396,60 +4939,6 @@ Variables (xh xl yh yl : ftype t).
 Hypothesis Hp14 : (14 <= fprec t)%Z.
 Hypothesis COND : DWDivDW_relative_error_input_cond xh xl yh yl.
 
-Notation u := (bpow radix2 (-fprec t)).
-Let X := FT2R xh + FT2R xl.
-Let Q := X / (FT2R yh + FT2R yl).
-Let zr := FT2R (fst (DWDivDW3 xh xl yh yl)) +
-          FT2R (snd (DWDivDW3 xh xl yh yl)).
-
-(** PRIMARY API: the mixed relative/physical-floor bound.
-
-    The [2*eta] is the closing block's own underflow budget.  It is NOT an
-    artifact of a missing guard: no strengthening of [DWDivDW_relative_error_input_cond] removes it,
-    because the residual nodes it comes from may legitimately be zero, which is
-    exactly why the cond deliberately does not bound them below.
-
-    The two refinement-arm budgets stay separate to the very end;
-    [DWDivDW_absolute_of_mixed_param] converts each arm's [(a,bx)] against
-    the guard-derived scale fact, giving [9.5614] on the ordered arm and
-    [7.6144] on the unordered one -- both under the exported [9.8].  Those
-    coefficients are not exposed. *)
-Theorem DWDivDW3_error_mixed :
-  Rabs (zr-Q) <= 98/10*u^2*Rabs Q+2*bpow radix2 (@common.emin t).
-Proof.
-exact (DWDivDW3_error_mixed_arms xh xl yh yl Hp14 COND).
-Qed.
-
-(** Canonical exported regime-independent RELATIVE bound, now a short corollary
-    of the mixed theorem: the cond's quotient window makes one floor ulp worth
-    [2.01*u^2|Q|] ([DWDivDW_eta_absorbed_by_quotient_tight]), so
-    [9.8 + 2*2.01 = 13.82 <= 13.9].  The mixed form is therefore strictly
-    sharper wherever [eta] sits below that maximum -- i.e. everywhere the
-    quotient is comfortably normal. *)
-Theorem relative_errorDWDivDW3_from_cond_combined :
-  Rabs ((zr-Q)/Q) <= 139/10*u^2.
-Proof.
-have Habs := DWDivDW3_error_mixed.
-have HetaOut := DWDivDW_eta_absorbed_by_quotient_tight
-  xh xl yh yl Hp14 COND.
-specialize (HetaOut STD). fold X Q in HetaOut.
-(* Q <> 0 is free from the absorption fact: 0 < eta forces 0 < |Q|. *)
-have Hu0 : 0 < u by apply bpow_gt_0.
-have Hb : 0 < bpow radix2 (@common.emin t) by apply bpow_gt_0.
-have HQ0 : 0 <= Rabs Q by apply Rabs_pos.
-have HQabs : 0 < Rabs Q.
-{ have Hu2 : 0 < u^2 by nra. nra. }
-have Herr : Rabs (zr-Q) <= 139/10*u^2*Rabs Q.
-{ eapply Rle_trans; [exact Habs|]. nra. }
-rewrite Rabs_mult Rabs_inv.
-apply (Rmult_le_reg_r (Rabs Q)); [exact HQabs|].
-rewrite Rmult_assoc Rinv_l; [rewrite Rmult_1_r; exact Herr|].
-apply Rgt_not_eq; exact HQabs.
-Qed.
-
-(* Node notations for the reciprocal-bootstrap prologue, as in the other
-   sections of this file.  Declared here, after the two error theorems, so
-   their statements are unaffected. *)
 Notation th  := (BDIV (Zconst t 1) yh).
 Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
 Notation rl  := (BOPP (BMULT yl th)).
@@ -5460,7 +4949,7 @@ Notation dl  := (snd (DWTimesFP3 eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
-(** Closure, under exactly the hypotheses of the error bounds above.
+(** Closure, under the hypotheses of [DWDivDW_relative_accuracy].
 
     This previously needed two assumptions beyond the cond -- that the
     reconstructed reciprocal [(mh,ml)] is a double word, and that the closing
@@ -5472,8 +4961,8 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
     it routes through the gap arm of [DWTimesDW3_error_floor_gap] rather than
     the magnitude-ordering argument that needed the normal-range bound.
 
-    Note what is NOT required: no lower bound on [xh*mh], and not even the
-    quotient floor -- this is now a direct corollary of the whole-range
+    Note what is NOT required: no lower bound on [xh*mh], and no normality of
+    any node -- this is a direct corollary of the whole-range
     [DWDivDW_double_word_from_safe_input_cond] of Layer 3a. *)
 Theorem DWDivDW3_double_word_from_cond :
   double_word_prop (fst (DWDivDW3 xh xl yh yl))

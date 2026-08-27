@@ -347,72 +347,60 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Precondition for DWDivFP3 (Algorithm 15).  Division needs two no-overflow
-   bounds, both referencing only the components xh, y:
-   - the QUOTIENT bound |xh/y| <= Omega/4 = bpow(femax-2) covers the nodes whose
-     magnitude is the quotient (th = round(xh/y), tl = d/y, closing th+tl);
-   - the |xh| bound covers the intermediate product node pih = round(th*y) ~ xh,
-     which can overflow even under the quotient bound (e.g. xh = Omega, y = 4).
-   Unlike the mul-style split into two square-root bounds on xh and 1/y (which
-   would exclude valid small-magnitude or large-matched divisions), this is the
-   precise no-overflow condition and rejects only inputs that actually overflow.
-   The underflow bound on the quotient is the analog of the product underflow
-   bound in DWTimesFP_relative_error_input_cond and
-   DWTimesDW_exact_leading_product_input_cond, and it forces y <> 0.
+(* ------------------------------------------------------------------
+   WHOLE-RANGE MIXED TIER for DWDivFP3 (Algorithm 15).
+   Input-only, runtime-checkable; no underflow floor on the quotient.
+   ------------------------------------------------------------------ *)
 
-   This is the STRONG cond: its quotient floor 2^(emin+2p-1) is what buys the
-   pure relative 6u^2 bound (DWDivFP_acc.DWDivFP3_accuracy).  The runtime guard
-   discharges only DWDivFP_mixed_safe_input_cond below.  That condition has no
-   quotient floor and proves the mixed bound throughout the admitted range.  A
-   helper for the branch where the leading quotient is normal lives in
-   DWDivFP_acc.v as DWDivFP_normal_quotient_input_cond. *)
-Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
-  is_finite xh = true /\
-  is_finite xl = true /\
-  is_finite y  = true /\
-  double_word_prop xh xl /\
-  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh / FT2R y) /\
-  Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
-  Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
-  (* Product-node underflow bound: |xh| bounded below so that the Fast2Mult
-     product th*y ~ xh stays above the TwoProd-exactness threshold emin+2p-1.
-     Unlike the quotient bound, this reaches |xh| itself (a normal quotient can
-     coexist with a subnormal product when y is tiny), and it is a genuine
-     caller-checkable input condition.  The extra binade over emin+2p-1 absorbs
-     the (1-u) factor in |th*y| >= |xh|(1-u) from thy_residual. *)
-  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+(* DWDivFP_mixed_safe_input_cond is used to prove, throughout the admitted
+   floating-point range, the mixed error bound for DWDivFP3, that its output is
+   a valid double word, and that the computed pair is finite.  Its conjuncts
+   are:
 
-(* DWDivFP_mixed_safe_input_cond drops the quotient floor ENTIRELY, replacing
-   it by finiteness of the leading quotient node.  That conjunct is the division
-   analogue of Fast2Mult_acc_only_cond (which is likewise just
-   `is_finite (BMULT a b) = true`), and it does the same double duty:
+     - finiteness of the three inputs and the double-word relation on (xh,xl);
 
-     - it forces FT2R y <> 0, which every proof in DWDivFP_acc previously got
-       from the quotient floor;
-     - it supplies the th-node finiteness that th_finite previously derived
-       from the quotient CEILING plus y <> 0.
+     - finiteness of the leading quotient node th = BDIV xh y.  That conjunct
+       is the division analogue of Fast2Mult_acc_only_cond (which is likewise
+       just `is_finite (BMULT a b) = true`), and it does double duty: it forces
+       FT2R y <> 0, and it supplies the th-node finiteness that would otherwise
+       have to be derived from a quotient ceiling together with y <> 0;
 
-   Unlike DWDivFP_normal_quotient_input_cond in DWDivFP_acc.v, this cond admits
-   a SUBNORMAL quotient.  The mixed bound survives with the SAME constant,
+     - the two no-overflow bounds, both referencing only xh and y.  The
+       QUOTIENT ceiling |xh/y| <= Omega/4 = bpow(femax-2) covers the nodes
+       whose magnitude is the quotient (th = round(xh/y), tl = d/y and the
+       closing th+tl); the |xh| ceiling covers the intermediate product node
+       pih = round(th*y) ~ xh, which can overflow even under the quotient bound
+       (e.g. xh = Omega, y = 4).  Unlike the mul-style split into two
+       square-root bounds on xh and 1/y (which would exclude valid
+       small-magnitude or large-matched divisions), this is the precise
+       no-overflow condition and rejects only inputs that actually overflow;
 
-     |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin,
+     - the product-node floor 2^(emin+2p) <= |xh|.  This one is NOT removable:
+       it is what makes the division residual representable to relative
+       accuracy u, hence what makes DWDivFP3 a double-word algorithm at all.
+       Dropping it costs the u^2 bound outright -- xh = 7*eta, y = 3*eta is a
+       double word with a perfectly normal quotient 7/3 on which the algorithm
+       returns zl = 0 and a relative error of u/2, violating 3u^2|Q| + c*eta
+       for every constant c.  It is also what forces |y| > 2^(p+1), without
+       which the closing division node has no bound.
 
-   because once |xh/y| < 2^(emin+p-1) the whole computation sits on the
-   2^emin lattice: the correction tl rounds within half an ulp of the exact
-   one, and the closing Fast2Sum is exact because th + tl is again a lattice
-   point.  The error bound, proof that the output is a valid double word, and
-   finiteness are established together in DWDivFP_subnormal.v
-   (DWDivFP3_subnormal_leg).  The normal branch still routes through
-   DWDivFP_normal_quotient_input_cond.
+   The cond admits a SUBNORMAL quotient.  The mixed bound
 
-   Clause 8, the product-node floor 2^(emin+2p) <= |xh|, is again UNCHANGED and
-   is NOT removable: it is what makes the division residual representable to
-   relative accuracy u, hence what makes DWDivFP3 a double-word algorithm at
-   all.  Dropping it costs the u^2 bound outright -- xh = 7*eta, y = 3*eta is a
-   double word with a perfectly normal quotient 7/3 on which the algorithm
-   returns zl = 0 and a relative error of u/2, violating 3u^2|Q| + c*eta for
-   every constant c.  It also, in this branch, is what forces |y| > 2^(p+1),
-   without which the closing division node has no bound.
+     |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y| + 2^emin
+
+   survives with the same u^2 constant, because once |xh/y| < 2^(emin+p-1) the
+   whole computation sits on the 2^emin lattice: the correction tl rounds
+   within half an ulp of the exact one, and the closing Fast2Sum is exact
+   because th + tl is again a lattice point.  The error bound, output
+   double-word closure and finiteness are established together in
+   DWDivFP_subnormal.v (DWDivFP3_subnormal_leg, and the ladder
+   DWDivFP_mixed_accuracy_from_safe_input_cond /
+   DWDivFP_double_word_from_safe_input_cond /
+   DWDivFP_mixed_guarantee_from_safe_input_cond).
+
+   It does NOT suffice for the pure 3u^2 relative bound, which exists only in
+   the normal regime; that is the province of
+   DWDivFP_relative_error_input_cond below.
 
    This is the cond discharged by the runtime guard dw_div_fp_check. *)
 Definition DWDivFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
@@ -425,11 +413,13 @@ Definition DWDivFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
   Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 
+(* Mathematical assumptions that must hold before the kernel is called. *)
 Definition DWDivFP_mixed_input_cond
     (xh xl y : ftype t) : Prop :=
   double_word_prop xh xl /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 
+(* Output validity: the computed pair is finite. *)
 Definition DWDivFP_result_finite
     (xh xl y : ftype t) : Prop :=
   is_finite_p (DWDivFP3 xh xl y).
@@ -439,37 +429,96 @@ Definition DWDivFP_mixed_cond
   DWDivFP_mixed_input_cond xh xl y /\
   DWDivFP_result_finite xh xl y.
 
+(* ------------------------------------------------------------------
+   NORMAL-RANGE PURE RELATIVE TIER for DWDivFP3.
+   ------------------------------------------------------------------ *)
+
+(* DWDivFP_normal is the algorithmic normal-range predicate: it states that the
+   two nodes whose roundings the 3u^2 analysis charges at relative accuracy u
+   really do sit in the FLT normal range, so that DWDivFP3 coincides with the
+   paper's unbounded-exponent FLX model.
+
+     - the leading quotient xh/y is normal.  This is what lets
+       th = BDIV xh y be read as the FLX rounding of the quotient;
+
+     - the closing correction d = (xh - th*y) - pil + xl is EITHER exactly zero
+       OR its quotient d/y is normal.  The zero disjunct is not decoration: it
+       is the exact-division case, where the correction vanishes and nothing is
+       lost, and a bare floor `2^(emin+p-1) <= |d/y|` would exclude it.
+
+   Neither conjunct follows from magnitude bounds on xh, xl, y alone -- these
+   are facts about the computation, which is why they live here rather than in
+   the runtime-checkable input tier above.  Contrast the old formulation, whose
+   quotient window 2^(emin+2p-1) <= |xh/y| existed only so that one floor ulp
+   could be charged against a large quotient; nothing here absorbs eta. *)
+Definition DWDivFP_normal (xh xl y : ftype t) : Prop :=
+  bpow Zaux.radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) /\
+  (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                       (Fast2Mult_err (BDIV xh y) y)) xl) = 0 \/
+   bpow Zaux.radix2 (emin + fprec t - 1)
+     <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
+                                  (Fast2Mult_err (BDIV xh y) y)) xl)
+              / FT2R y)).
+
+(* Input condition for the sharp normal-range relative bound
+   |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y|
+   (DWDivFP_acc.DWDivFP_relative_accuracy): the whole-range safe-input
+   condition -- which supplies overflow headroom, the input double word,
+   y <> 0 and the product-node floor -- plus normality of the operations. *)
+Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
+  DWDivFP_mixed_safe_input_cond xh xl y /\
+  DWDivFP_normal xh xl y.
+
+Lemma DWDivFP_mixed_safe_input_cond_of_relative_error_input_cond
+    (xh xl y : ftype t) :
+  DWDivFP_relative_error_input_cond xh xl y ->
+  DWDivFP_mixed_safe_input_cond xh xl y.
+Proof. intros [Hsafe _]; exact Hsafe. Qed.
+
 End DWDivFPCond.
+
 
 Section DWDivDWCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
-(** Guard condition for reciprocal-bootstrap double-word division.
+(* ------------------------------------------------------------------
+   WHOLE-RANGE MIXED TIER for DWDivDW3 (Algorithm 18).
+   ------------------------------------------------------------------ *)
 
-    The two lower bounds serve different purposes: [1/yh] keeps the reciprocal
-    construction in range, while [xh/yh] keeps the final multiplication in
-    range.  Residual quantities such as [yl*th] and [rh+rl] are deliberately
-    not lower-bounded because they may legitimately be zero; those nodes form
-    the later normal/denormal case split.
+(** [DWDivDW_mixed_safe_input_cond] is used to prove, throughout the admitted
+    floating-point range, both the mixed error bound for [DWDivDW3] and that
+    its output is a valid double word.  It is the DW/DW analogue of
+    [DWDivFP_mixed_safe_input_cond] above, and carries NO underflow floor on
+    the quotient: for Tdouble it admits every quotient below 2^-969, i.e. the
+    entire underflowing-quotient range the mixed bound was built to cover.
+
+    The exported results are
+
+      |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
+
+    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_safe_input_cond]) together with
+    output double-word closure
+    ([DWDivDW_double_word_from_safe_input_cond]) and their bundle
+    ([DWDivDW_mixed_guarantee_from_safe_input_cond]).  The [5/2*eta] is not an
+    artifact of a missing guard: the closing block routes through
+    [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
+    range from double-word inputs and finiteness alone, and whose sub-threshold
+    gap arm spends five half-ulps.  The residual nodes that floor comes from
+    may legitimately be zero, which is exactly why this cond deliberately does
+    not bound them below.
 
     NO-OVERFLOW BOUNDS: only the quotient ceiling survives.  This cond used to
     carry three [<= 2^(femax-2)] conjuncts, on |xh|, |yh| and |xh/yh|.  Two of
     them are gone.
 
-    - |yh| <= 2^(femax-2) was REDUNDANT.  The reciprocal conjunct already is an
-      upper bound on |yh|, and a strictly stronger one: for yh <> 0 -- which
-      that conjunct itself forces, since Rocq's [1/0 = 0] makes it false at
-      yh = 0 -- it reads
-
-        Rabs (FT2R yh) <= 2^(-(emin+2p-1)) = 2^(femax-p-2)
-
-      using emin = 3 - femax - p, i.e. the same bound tightened by p binades.
-      [DWDivDW_acc.DWDivDW_cond_yh_upper] recovers the weaker form for clients
-      that want it.  The runtime guard [dw_div_dw_check] already exploited this
-      -- it tests |y->s| <= 2^969 and derived |y->s| <= 2^1022 from it -- so the
-      two conjuncts were never independent.
+    - |yh| <= 2^(femax-2) was REDUNDANT.  Conjunct 7 below is an upper bound on
+      |yh|, and a strictly stronger one: it is the same bound tightened by p
+      binades.  [DWDivDW_acc.DWDivDW_cond_yh_upper] recovers the weaker form
+      for clients that want it.  The runtime guard [dw_div_dw_check] already
+      exploited this -- it tests |y->s| <= 2^969 and derived |y->s| <= 2^1022
+      from it -- so the two conjuncts were never independent.
 
     - |xh| <= 2^(femax-2) was UNUSED.  It is not implied by anything, but no
       theorem in DWDivDW_acc.v ever read it, finiteness
@@ -479,63 +528,11 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
       ceiling below already bounds every node xh reaches.  Accuracy, output
       double-word closure and finiteness were all re-verified without it.  The
       guard's xh_hi test is consequently dead and can be deleted whenever
-      clightgen is next re-run. *)
-Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
-  is_finite xh = true /\
-  is_finite xl = true /\
-  is_finite yh = true /\
-  is_finite yl = true /\
-  double_word_prop xh xl /\
-  double_word_prop yh yl /\
-  Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - fprec t - 5) /\
-  bpow Zaux.radix2 (emin + 2 * fprec t - 1)
-    <= Rabs (FT2R xh / FT2R yh) /\
-  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh) /\
-  Rabs (FT2R xh / FT2R yh) <= bpow Zaux.radix2 (femax t - 2).
+      clightgen is next re-run.
 
-(** [DWDivDW_mixed_safe_input_cond] is used to prove, throughout the admitted
-    floating-point range, both the mixed error bound for [DWDivDW3] and that its
-    output is a valid double word.  It is the DW/DW analogue of
-    [DWDivFP_mixed_safe_input_cond] above.  It DROPS conjunct 8 of
-    [DWDivDW_relative_error_input_cond], the quotient underflow floor
+    WHY CONJUNCTS 7 AND 8 STAY, AND WHERE CONJUNCT 7's EXPONENT COMES FROM.
 
-      2^(emin+2p-1) <= |xh/yh|,
-
-    outright.  Every remaining conjunct keeps its position, so a destructuring
-    pattern for [DWDivDW_relative_error_input_cond] applies to
-    [DWDivDW_mixed_safe_input_cond] verbatim up to conjunct 7, and shifts by
-    one from conjunct 8 on.  (The conditions are ten and
-    nine conjuncts long respectively, not twelve and eleven: the separate |yh|
-    and |xh| upper bounds were removed as redundant and unused -- see the note
-    on [DWDivDW_relative_error_input_cond] above.)
-
-    WHY CONJUNCT 8 GOES.  It was needed in exactly one place: the closing
-    [DWTimesDW3 xh xl mh ml] block, whose old proof had to establish the
-    magnitude ordering |cl3| <= |ch| by hand, and paid for it with a lower
-    bound on the closing product |xh*mh| >= |xh/yh|/2.  That whole argument is
-    now [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
-    range from double-word inputs and finiteness alone.  The price is the
-    closing block's floor rising from [2*eta] to [5/2*eta], hence the exported
-    mixed bound
-
-      |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
-
-    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_safe_input_cond]) together with
-    output double-word closure
-    ([DWDivDW_double_word_from_safe_input_cond]).  For Tdouble this admits
-    every quotient below 2^-969 -- i.e. the entire underflowing-quotient range
-    the mixed bound was built to cover, which the old guard rejected.
-
-    The [u^2] coefficient does not depend on conjunct 8: that conjunct never
-    entered the two arm budgets, only the trailing physical-floor constant.
-    The pure relative bound [relative_errorDWDivDW3_from_cond_combined]
-    (16.5 u^2) still needs the full [DWDivDW_relative_error_input_cond]: absorbing [5/2*eta] into
-    [u^2|Q|] costs 2.5*2.0003 on top of the mixed coefficient, so that theorem
-    keeps the old [2*eta] closing route, which conjunct 8 pays for.
-
-    WHY CONJUNCTS 7 AND 9 STAY, AND WHERE CONJUNCT 7's EXPONENT COMES FROM.
-
-    Conjuncts 7 and 9 are the two sides of one window on the divisor,
+    Conjuncts 7 and 8 are the two sides of one window on the divisor,
 
       2^(emin+2p) <= |yh| <= 2^(femax-p-5)        (Tdouble: 2^-968 .. 2^966),
 
@@ -543,7 +540,7 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
     be written as [2^(emin+2p-1) <= |1/yh|], which for yh <> 0 is the same
     kind of statement one exponent looser; it is now stated directly on |yh|,
     so the cond never mentions 1/FT2R yh and the guard needs no rounded-to-
-    exact reciprocal transfer.  Nonzero-ness comes from conjunct 9.
+    exact reciprocal transfer.  Nonzero-ness comes from conjunct 8.
 
     CONJUNCT 7 IS THE EXPORTED COEFFICIENT.  Since eta = 2^emin and u = 2^-p,
     conjunct 7 says exactly
@@ -564,26 +561,25 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
 
       |yh| <= 2^(femax-p-2-k)  ==>  charge = fr * 2^(1-k),   fr = 1 or 2.
 
-    At k = 0 -- where this cond sat until now -- the charge is 2.0 on the
-    ordered arm and 4.0 on the unordered one, and the exported coefficient was
-    12.33.  Nothing rearranges that away: the floor fr is REPRESENTATIONAL,
-    not algorithmic.  At the window's edge |th| ~ 2^(emin+2p-1), so the
-    refinement product eh*th sits one binade above the smallest normal and its
-    exact value needs bits below 2^emin -- ANY double-word D misses E*th by up
-    to eta/2, whatever algorithm produces it.  With the paper's own FLX budget
-    assembled from 5 (closing DWTimesDW12, relaxed from its actual <4u^2)
-    + 2.298 (Newton residual) + 0.5 (rl rounding) + 2 (DWPlusFP) = 9.798, the
-    only slack a runtime proof has over 9.8 is the 5 -> 4 closing gain, i.e.
-    1.0 -- less than the charge.  So 9.8 is out of reach at k <= 1 however the
-    analysis is arranged, and k = 3 is what this cond takes: charge 0.25,
-    arm budgets 9.56 (ordered) and 7.60 (unordered), exported 9.8 with slack.
+    At k = 0 the charge is 2.0 on the ordered arm and 4.0 on the unordered one,
+    and the exported coefficient was 12.33.  Nothing rearranges that away: the
+    floor fr is REPRESENTATIONAL, not algorithmic.  At the window's edge
+    |th| ~ 2^(emin+2p-1), so the refinement product eh*th sits one binade above
+    the smallest normal and its exact value needs bits below 2^emin -- ANY
+    double-word D misses E*th by up to eta/2, whatever algorithm produces it.
+    With the paper's own FLX budget assembled from 5 (closing DWTimesDW12,
+    relaxed from its actual <4u^2) + 2.298 (Newton residual) + 0.5 (rl
+    rounding) + 2 (DWPlusFP) = 9.798, the only slack a runtime proof has over
+    9.8 is the 5 -> 4 closing gain, i.e. 1.0 -- less than the charge.  So 9.8
+    is out of reach at k <= 1 however the analysis is arranged, and k = 3 is
+    what this cond takes: charge 0.25, arm budgets 9.56 (ordered) and 7.60
+    (unordered), exported 9.8 with slack.
 
     The price is 3 binades off the TOP of the divisor range, an overflow-side
-    restriction.  Underflow whole-range coverage is untouched: there is still
-    no floor on the quotient (that is conjunct 8, dropped by
-    [DWDivDW_mixed_safe_input_cond] below).
+    restriction.  Underflow whole-range coverage is untouched: there is no
+    floor on the quotient anywhere in this cond.
 
-    Conjunct 9, [2^(emin+2p) <= |yh|], is likewise not an underflow floor.
+    Conjunct 8, [2^(emin+2p) <= |yh|], is likewise not an underflow floor.
     Since emin = 3 - femax - p it is literally
 
       |1/yh| <= 2^(femax-p-3),
@@ -604,14 +600,14 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
         [DWDivDW_cond_emin_le]).
 
     Only ~3 of those p+3 binades of headroom are structurally needed (mh is
-    th*(1+3u), and every other th-scaled node is far smaller), so conjunct 9
+    th*(1+3u), and every other th-scaled node is far smaller), so conjunct 8
     could in principle come down to "yh is normal", 2^(emin+p-1) -- 54 binades
     lower for Tdouble.  What blocks it is the eta <= u^2 derivation above,
     which would then have to become an explicit format side condition
     p + 3 <= femax on every theorem in the chain.  That is a separate change;
     the lower bound never enters the error budget either way.
 
-    Replacing conjunct 9 by finiteness of th in the style of
+    Replacing conjunct 8 by finiteness of th in the style of
     [DWDivFP_mixed_safe_input_cond] would recover yh <> 0 and th-finiteness but
     none of those uses -- and unlike DW/FP division, which forms
     th = BDIV xh y and is therefore covered by its quotient ceiling, DW/DW has
@@ -620,7 +616,7 @@ Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
     [DWDivDW_result_finite], checked after the kernel, supplies the required
     overflow information.
 
-    This is the cond the runtime guard [dw_div_dw_check] should discharge. *)
+    This is the cond the runtime guard [dw_div_dw_check] discharges. *)
 Definition DWDivDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -639,6 +635,7 @@ Definition DWDivDW_mixed_input_cond
   Rabs (FT2R yh) <= bpow Zaux.radix2 (femax t - fprec t - 5) /\
   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh).
 
+(* Output validity: the computed pair is finite. *)
 Definition DWDivDW_result_finite
     (xh xl yh yl : ftype t) : Prop :=
   is_finite_p (DWDivDW3 xh xl yh yl).
@@ -648,14 +645,77 @@ Definition DWDivDW_mixed_cond
   DWDivDW_mixed_input_cond xh xl yh yl /\
   DWDivDW_result_finite xh xl yh yl.
 
+End DWDivDWCond.
+
+
+(* ------------------------------------------------------------------
+   NORMAL-RANGE PURE RELATIVE TIER for DWDivDW3.
+
+   [DWDivDW_normal] bundles the nine residual/product normal-range facts that
+   the 9.8u^2 analysis needs in order to identify each rounded node of the
+   reciprocal-bootstrap prologue and of the closing multiplication with its FLX
+   counterpart.  All nine fail in the worst-case type (emin+2p = 2), so none is
+   derivable from input magnitudes, and each of the underlying nodes may
+   legitimately be zero -- which is precisely why the whole-range mixed tier
+   above does not bound them below and pays a physical floor instead.
+
+   It gets its own section so the algorithm's node names can be Notations, as
+   in DDModels.DWDivDW3 itself.
+   ------------------------------------------------------------------ *)
+Section DWDivDWNormal.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+Notation emin := (SpecFloat.emin (fprec t) (femax t)).
+
+Variables (xh xl yh yl : ftype t).
+
+Notation th  := (BDIV (Zconst t 1) yh).
+Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
+Notation rl  := (BOPP (BMULT yl th)).
+Notation eh  := (fst (Fast2Sum rh rl)).
+Notation el  := (snd (Fast2Sum rh rl)).
+Notation dh  := (fst (DWTimesFP3 eh el th)).
+Notation dl  := (snd (DWTimesFP3 eh el th)).
+Notation mh  := (fst (DWPlusFP dh dl th)).
+Notation ml  := (snd (DWPlusFP dh dl th)).
+
+Definition DWDivDW_normal : Prop :=
+  bpow Zaux.radix2 (emin + fprec t - 1) <= Rabs (1 - FT2R yh * FT2R th) /\
+  bpow Zaux.radix2 (emin + fprec t - 1) <= Rabs (FT2R yl * FT2R th) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R eh * FT2R th) /\
+  bpow Zaux.radix2 (emin + fprec t - 1)
+    <= Rabs (FT2R el * FT2R th + FT2R (Fast2Mult_err eh th)) /\
+  bpow Zaux.radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R mh) /\
+  bpow Zaux.radix2 (emin + fprec t - 1) <= Rabs (FT2R xl * FT2R ml) /\
+  bpow Zaux.radix2 (emin + fprec t - 1)
+    <= Rabs (FT2R xh * FT2R ml + FT2R (BMULT xl ml)) /\
+  bpow Zaux.radix2 (emin + fprec t - 1)
+    <= Rabs (FT2R (BFMA xh ml (BMULT xl ml)) + FT2R xl * FT2R mh) /\
+  bpow Zaux.radix2 (emin + fprec t - 1)
+    <= Rabs (FT2R (Fast2Mult_err xh mh)
+             + FT2R (BFMA xl mh (BFMA xh ml (BMULT xl ml)))).
+
+End DWDivDWNormal.
+
+
+Section DWDivDWRelativeCond.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(* Input condition for the sharp normal-range relative bound
+   |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q|
+   (DWDivDW_acc.DWDivDW_relative_accuracy): the whole-range safe-input
+   condition -- overflow headroom, the divisor window, both input double words
+   -- plus normality of the operations.  It contains no quotient magnitude
+   window designed to absorb eta; the relative bound is proved in the normal
+   regime, not by charging a physical floor against a large quotient. *)
+Definition DWDivDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
+  DWDivDW_mixed_safe_input_cond xh xl yh yl /\
+  DWDivDW_normal xh xl yh yl.
+
 Lemma DWDivDW_mixed_safe_input_cond_of_relative_error_input_cond
     (xh xl yh yl : ftype t) :
   DWDivDW_relative_error_input_cond xh xl yh yl ->
   DWDivDW_mixed_safe_input_cond xh xl yh yl.
-Proof.
-  intros (Fxh & Fxl & Fyh & Fyl & DWx & DWy & Hyhhi & _ & Hylo &
-          Hratiohi).
-  repeat split; assumption.
-Qed.
+Proof. intros [Hsafe _]; exact Hsafe. Qed.
 
-End DWDivDWCond.
+End DWDivDWRelativeCond.

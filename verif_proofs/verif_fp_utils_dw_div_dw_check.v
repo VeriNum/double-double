@@ -76,20 +76,22 @@ Ltac cascade_close :=
      the exported bound from 9.8u^2|Q| back toward 12.33u^2|Q|.
      The same clause also gives |yh| <= Omega/4 by bpow_le (966 <= 1022); that
      used to be a separate conjunct discharged for free here, and is now simply
-     absent from DWDivDW_relative_error_input_cond (recoverable as DWDivDW_cond_yh_upper), so the
-     check has no q_omega test on y->s either.
+     absent from DWDivDW_mixed_safe_input_cond (recoverable as
+     DWDivDW_cond_yh_upper), so the check has no q_omega test on y->s either.
 
    Two tests this check used to have and no longer does, because their conjuncts
    are gone from the cond:
 
-   - xh_hi (|x->s| <= 2^1022).  DWDivDW_relative_error_input_cond bounds no node by |xh|: xh only ever
-     enters Algorithm 18 multiplied by mh ~ 1/yh, so the quotient ceiling already
-     covers every node it reaches.
-   - qt_lo (2^(-969) < |q|), the quotient underflow floor.  That is conjunct 8 of
-     the full DWDivDW_relative_error_input_cond, which DWDivDW_mixed_safe_input_cond drops; it bought the sharper
-     2*eta closing floor and the pure 13.9u^2 relative bound, at the cost of
-     rejecting every quotient below 2^-969.  The guarded spec now exports the
-     whole-range mixed bound instead -- see dw_div_dw18_guarded_spec.
+   - xh_hi (|x->s| <= 2^1022).  DWDivDW_mixed_safe_input_cond bounds no node by
+     |xh|: xh only ever enters Algorithm 18 multiplied by mh ~ 1/yh, so the
+     quotient ceiling already covers every node it reaches.
+   - qt_lo (2^(-969) < |q|), a quotient underflow floor.  An earlier
+     formulation of the relative tier carried it; it bought a sharper 2*eta
+     closing floor at the cost of rejecting every quotient below 2^-969.  The
+     pure relative tier is now the normal-range
+     DWDivDW_acc.DWDivDW_relative_accuracy, which no input-only guard can
+     discharge, and the guarded spec exports the whole-range mixed bound
+     instead -- see dw_div_dw18_guarded_spec.
 
    Only the quotient ceiling needs the rounded->exact transfer, at the same
    exponent body_dw_div_fp_check uses: the strict upper bound

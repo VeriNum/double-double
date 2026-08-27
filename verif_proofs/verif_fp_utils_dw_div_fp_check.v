@@ -9,8 +9,8 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
    [2^(emin+2p), Omega/4], and |xh/y| <= Omega/4.
 
    THERE IS NO QUOTIENT FLOOR.  The guard has shed it in two steps: first from
-   2^(emin+2p-1) = 2^-969 (the floor of DWDivFP_relative_error_input_cond, which buys the pure
-   relative 6u^2 bound) to 2^(emin+p-1) = 2^-1022 (the floor Layer 1's
+   2^(emin+2p-1) = 2^-969 (the floor an earlier, quotient-window formulation of
+   the relative tier carried) to 2^(emin+p-1) = 2^-1022 (the floor Layer 1's
    FLX->FLT bridge needs), and now entirely -- the region below 2^(emin+p-1),
    where the leading quotient node is subnormal and Layer 1 does not apply, has
    its own proof in DWDivFP_subnormal.v and yields the same mixed bound with

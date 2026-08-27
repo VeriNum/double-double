@@ -300,9 +300,9 @@ Definition dw_mult_fp9_guarded_spec :=
    check now tests only DWTimesDW_mixed_safe_input_cond -- no underflow disjunct -- so inputs
    whose leading product falls in the Fast2Mult underflow gap are computed rather
    than rejected.  The price is stated in the bound: the 2.5*eta floor term is
-   carried in every regime, including the normal one where the sharper pure 8u^2
-   relative bound (DWTimesDW_relative_accuracy, which needs the gap excluded)
-   would hold.
+   carried in every regime.  The separate normal-range interface proves the
+   sharper pure 4u^2 relative bound under
+   DWTimesDW_relative_error_input_cond.
 
    Output double-word closure survives the weakening: it needs only that the
    closing Fast2Sum preserves its sum, which holds above the threshold via the
@@ -342,8 +342,11 @@ Definition dw_mult_dw12_guarded_spec :=
    represent -- subnormal quotients included.  The POST below is unchanged by
    that relaxation, and the constant on the 2^emin term is unchanged too: the
    mixed bound was always what this wrapper exported, and only the set of inputs
-   it accepts got wider.  (What the floor used to buy was the PURE relative
-   bound 6u^2, which is not exported here and remains on DWDivFP_relative_error_input_cond.)
+   it accepts got wider.  The PURE relative 3u^2 bound
+   (DWDivFP_acc.DWDivFP_relative_accuracy) is not exported here: it holds only
+   in the normal regime, on DWDivFP_relative_error_input_cond, whose
+   DWDivFP_normal half is a fact about the computed nodes rather than an
+   input-only test the guard could perform.
 
    The bundled POST also carries output double-word closure, matching
    dw_mult_fp9_guarded_spec and dw_mult_dw12_guarded_spec.  Closure holds in
@@ -404,17 +407,17 @@ Definition dw_div_fp15_guarded_spec :=
    eta*|yh| <= u^2/4, which is exactly what pays for the reciprocal
    reconstruction's own underflow floor once the closing multiply by X scales it
    up.  Three binades looser and the charge is 8x larger and the constant is
-   12.33 -- see the DWDivDW_relative_error_input_cond doc comment in DDConds.v.
+   12.33 -- see the DWDivDW_mixed_safe_input_cond doc comment in DDConds.v.
 
-   WHY NOT the pure relative 13.9 u^2 form (relative_errorDWDivDW3_from_cond_
-   combined) that this spec used to export: that theorem needs the full
-   DWDivDW_relative_error_input_cond, whose quotient underflow floor 2^(emin+2p-1) <= |xh/yh| rejects
-   every quotient below 2^-969.  dw_div_dw_check no longer tests for it, and
-   establishes only DWDivDW_mixed_safe_input_cond; absorbing the 2.5*2^emin floor into
-   u^2|Q| would cost 2.5*2.0003 on top of 9.8, over 13.9.  The trade is
-   deliberate: the guard now admits the entire underflowing-quotient range, and
-   the mixed bound is strictly sharper than 13.9 u^2 wherever 2^emin sits below
-   its maximum -- i.e. everywhere the quotient is comfortably normal.
+   WHY NOT a pure relative form: the pure relative tier is
+   DWDivDW_acc.DWDivDW_relative_accuracy, at the paper's own 9.8 u^2, and it
+   holds in the NORMAL regime only -- its condition
+   DWDivDW_relative_error_input_cond bundles DWDivDW_normal, nine lower bounds
+   on residual and product NODES of the computation, which a runtime input
+   check cannot test and which may legitimately be zero.  The mixed bound is
+   what survives whole-range, and it is strictly sharper than any relative form
+   wherever 2^emin sits below its maximum -- i.e. everywhere the quotient is
+   comfortably normal.
 
    The theorem's other hypothesis, Hp14 : 14 <= fprec t, is a format side
    condition rather than an input condition -- at Tdouble it is 14 <= 53 and the
@@ -555,9 +558,9 @@ Definition dw_mult_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-(* Minimal cond: no quotient floor at all; the caller gets the mixed bound,
-   not the pure 6u^2 one.  See dw_div_fp15_guarded_spec above and
-   DDConds.DWDivFP_mixed_safe_input_cond. *)
+(* Minimal cond: no quotient floor at all; the caller gets the whole-range
+   mixed bound, not the normal-range pure 3u^2 one.  See
+   dw_div_fp15_guarded_spec above and DDConds.DWDivFP_mixed_safe_input_cond. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
