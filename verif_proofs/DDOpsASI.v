@@ -15,6 +15,7 @@ Require Import vcfloat.FPCompCert.
 
 Require Import VSTlib.spec_math.   (* Provides fma_spec. *)
 Require Import DDConds common real_extras.
+Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_relative_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_relative_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_mixed_acc.
@@ -180,7 +181,7 @@ Definition two_sum_guarded_spec :=
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
   POST [ tvoid ]
-    PROP((Rabs (FT2R (TwoSumF_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
+    PROP(TwoSum_exact_guarantee a b)
     RETURN()
     SEP(data_at Tsh dword (f2val (TwoSumF a b)) p).
 
@@ -190,7 +191,7 @@ Definition fast_2sum_guarded_spec :=
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
   POST [ tvoid ]
-    PROP((Rabs (FT2R (Fast2Sum_err a b)) <= / 2 * ulp (FT2R a + FT2R b))%R)
+    PROP(Fast2Sum_exact_guarantee a b)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
 

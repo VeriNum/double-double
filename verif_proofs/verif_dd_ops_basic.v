@@ -59,7 +59,7 @@ forward_if Post_if.
   assert_PROP (TwoSum_exact_cond a b) as HFC by entailer!.
   forward_call (p, a, b).
   entailer!!.
-  apply TwoSum_accuracy_from_exact_cond, HFC.
+  apply TwoSum_exact_guarantee_from_cond, HFC.
 Qed.
 
 Lemma body_fast_2sum_guarded: semax_body Vprog Gprog f_fast_2sum_guarded fast_2sum_guarded_spec.
@@ -90,7 +90,7 @@ forward_if Post_if.
     - exact Hle. }
   forward_call (p, a, b).
   entailer!!.
-  apply FastTwoSum_accuracy_from_magnitude_order; assumption.
+  apply Fast2Sum_exact_guarantee_from_magnitude_order; assumption.
 Qed.
 
 Lemma body_fast_2mult_guarded: semax_body Vprog Gprog f_fast_2mult_guarded fast_2mult_guarded_spec.

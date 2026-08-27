@@ -46,6 +46,12 @@ Variables (a b : ftype t).
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
+Definition TwoSum_exact_guarantee : Prop :=
+  Rabs (FT2R (TwoSumF_err a b)) <= /2 * ulp (FT2R a + FT2R b) /\
+  FT2R (TwoSumF_sum a b) + FT2R (TwoSumF_err a b) =
+    FT2R a + FT2R b /\
+  double_word_prop (TwoSumF_sum a b) (TwoSumF_err a b).
+
 Corollary TwoSum_accuracy_from_exact_cond :
   TwoSum_exact_cond a b ->
   Rabs (FT2R (TwoSumF_err a b)) <= /2 * ulp (FT2R a + FT2R b).
@@ -53,6 +59,23 @@ Proof.
   intros [Hfin_plus [Hfin_minus HbFmax]].
   apply TwoSum_accuracy.
   split; [exact Hfin_plus | apply is_finite_TwoSum; assumption].
+Qed.
+
+Theorem TwoSum_exact_guarantee_from_cond :
+  TwoSum_exact_cond a b ->
+  TwoSum_exact_guarantee.
+Proof.
+intros Hcond.
+have Hacc := TwoSum_accuracy_from_exact_cond Hcond.
+destruct Hcond as [Hfin_plus [Hfin_minus HbFmax]].
+have Hfin : is_finite_p (TwoSumF a b).
+{ split; [exact Hfin_plus |].
+  apply is_finite_TwoSum; assumption. }
+have Hcorrect := TwoSumF_correct a b Hfin.
+have Hdw := TwoSum_is_DW a b Hfin.
+unfold TwoSum_exact_guarantee.
+split; [exact Hacc |].
+split; [lra | exact Hdw].
 Qed.
 
 End TwoSumCondAcc.
