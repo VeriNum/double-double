@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** This file contains helper lemmas for accuracy proofs 
+(** This file contains helper lemmas for relative-accuracy proofs 
 for double-word  plus a (double-word, floating-point number *)
 
 Require Import vcfloat.VCFloat.

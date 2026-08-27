@@ -81,7 +81,7 @@ Local Ltac cascade_close :=
      formulation of the relative tier carried it; it bought a sharper 2*eta
      closing floor at the cost of rejecting every quotient below 2^-969.  The
      pure relative tier is now the normal-range
-     DWDivDW_acc.DWDivDW_relative_accuracy, which no input-only guard can
+     DWDivDW_relative_acc.DWDivDW_relative_accuracy, which no input-only guard can
      discharge, and the guarded spec exports the whole-range mixed bound
      instead -- see dw_div_dw18_guarded_spec.
 

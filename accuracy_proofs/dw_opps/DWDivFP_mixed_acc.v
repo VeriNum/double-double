@@ -3,13 +3,13 @@
 
 (** Public whole-range mixed-accuracy interface for [DWDivFP3].
 
-    The normal-range proof is supplied by [DWDivFP_acc]; the subnormal proof
+    The normal-range proof is supplied by [DWDivFP_relative_acc]; the subnormal proof
     leg is supplied by [DWDivFP_subnormal].  This file exposes only the public
     condition ladder and the combined accuracy/closure guarantee. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common DDConds.
-Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_relative_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_subnormal.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.

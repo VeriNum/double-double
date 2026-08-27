@@ -1,6 +1,8 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
+(** Helper lemmas for the relative-accuracy proof of [AccurateDWPlusDW]. *)
+
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas DW_acc_lemmas.
 Require Import TwoSum_acc Fast2Sum_acc.

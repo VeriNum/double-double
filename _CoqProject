@@ -30,16 +30,19 @@ accuracy_proofs/basic_blocks/Fast2Mult_acc_helpers.v
 accuracy_proofs/basic_blocks/Fast2Mult_acc.v
 
 accuracy_proofs/dw_opps/DW_acc_lemmas.v
-accuracy_proofs/dw_opps/DWPlusFP_acc_helpers.v
-accuracy_proofs/dw_opps/DWPlusFP_acc.v
-accuracy_proofs/dw_opps/DWPlusDW_acc_helpers.v
-accuracy_proofs/dw_opps/DWPlusDW_acc.v
-accuracy_proofs/dw_opps/DWMulFP_acc.v
-accuracy_proofs/dw_opps/DWMulDW_acc.v
-accuracy_proofs/dw_opps/DWDivFP_acc.v
+accuracy_proofs/dw_opps/DWPlusFP_relative_acc_helpers.v
+accuracy_proofs/dw_opps/DWPlusFP_relative_acc.v
+accuracy_proofs/dw_opps/DWPlusDW_relative_acc_helpers.v
+accuracy_proofs/dw_opps/DWPlusDW_relative_acc.v
+accuracy_proofs/dw_opps/DWMulFP_relative_acc.v
+accuracy_proofs/dw_opps/DWMulFP_mixed_acc.v
+accuracy_proofs/dw_opps/DWMulDW_relative_acc.v
+accuracy_proofs/dw_opps/DWMulDW_mixed_acc.v
+accuracy_proofs/dw_opps/DWDivFP_relative_acc.v
 accuracy_proofs/dw_opps/DWDivFP_subnormal.v
 accuracy_proofs/dw_opps/DWDivFP_mixed_acc.v
-accuracy_proofs/dw_opps/DWDivDW_acc.v
+accuracy_proofs/dw_opps/DWDivDW_relative_acc.v
+accuracy_proofs/dw_opps/DWDivDW_mixed_acc.v
 verif_proofs/verif_objs/fp_utils.v
 verif_proofs/verif_objs/dd_ops.v
 verif_proofs/float_verif_lemmas.v

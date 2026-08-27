@@ -15,12 +15,12 @@ Require Import vcfloat.FPCompCert.
 
 Require Import VSTlib.spec_math.   (* fma_spec *)
 Require Import DDConds common real_extras.
-Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_relative_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_relative_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulFP_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_mixed_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_mixed_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivDW_mixed_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
@@ -261,7 +261,7 @@ Definition dw_plus_dw2_guarded_spec :=
 
      |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta,   eta = 2^emin,
 
-   i.e. DWMulFP_acc.DWTimesFP_mixed_guarantee_from_cond, reached here through its
+   i.e. DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_cond, reached here through its
    safe-input form DWTimesFP_mixed_guarantee_from_safe_input_cond.  The PRE is
    empty:
    dw_mult_fp9_guarded's runtime check makes the POST unconditional, and the
@@ -292,7 +292,7 @@ Definition dw_mult_fp9_guarded_spec :=
      |(zh+zl) - (xh+xl)*(yh+yl)|
         <= 4u^2 |(xh+xl)*(yh+yl)| + 2.5*eta,   eta = 2^emin,
 
-   i.e. DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond, reached here through its
+   i.e. DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond, reached here through its
    safe-input form DWTimesDW_mixed_guarantee_from_safe_input_cond.  The PRE is
    empty:
    dw_mult_dw12_guarded's runtime check makes the POST unconditional, and the
@@ -342,7 +342,7 @@ Definition dw_mult_dw12_guarded_spec :=
    that relaxation, and the constant on the 2^emin term is unchanged too: the
    mixed bound was always what this wrapper exported, and only the set of inputs
    it accepts got wider.  The PURE relative 3u^2 bound
-   (DWDivFP_acc.DWDivFP_relative_accuracy) is not exported here: it holds only
+   (DWDivFP_relative_acc.DWDivFP_relative_accuracy) is not exported here: it holds only
    in the normal regime, on DWDivFP_relative_error_input_cond, whose
    DWDivFP_normal half is a fact about the computed nodes rather than an
    input-only test the guard could perform.
@@ -370,7 +370,7 @@ Definition dw_div_fp15_guarded_spec :=
         data_at Tsh dword (f2val xh) x).
 
 (* DWDivDW (Algorithm 18) guarded wrapper.  The exported guarantee is
-   DWDivDW_acc.DWDivDW_mixed_guarantee: the WHOLE-RANGE mixed
+   DWDivDW_mixed_acc.DWDivDW_mixed_guarantee: the WHOLE-RANGE mixed
    relative/physical-floor bound TOGETHER WITH double-word closure of the
    result,
 
@@ -409,7 +409,7 @@ Definition dw_div_fp15_guarded_spec :=
    12.33 -- see the DWDivDW_mixed_safe_input_cond doc comment in DDConds.v.
 
    WHY NOT a pure relative form: the pure relative tier is
-   DWDivDW_acc.DWDivDW_relative_accuracy, at the paper's own 9.8 u^2, and it
+   DWDivDW_relative_acc.DWDivDW_relative_accuracy, at the paper's own 9.8 u^2, and it
    holds in the NORMAL regime only -- its condition
    DWDivDW_relative_error_input_cond bundles DWDivDW_normal, nine lower bounds
    on residual and product NODES of the computation, which a runtime input

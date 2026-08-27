@@ -24,7 +24,7 @@ Local Ltac fix_cmp_locals :=
    short-circuit it used to carry, still present in fast2_mult_check).
    DWTimesDW_mixed_safe_input_cond is all the exported contract needs:
    dw_mult_dw12_guarded_spec states the whole-range mixed bound
-   4u^2|P| + 2.5*eta (DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond).  It holds
+   4u^2|P| + 2.5*eta (DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond).  It holds
    in the Fast2Mult underflow gap too, unlike the separate pure 4u^2
    normal-range theorem; output double-word closure also holds there
    (DWTimesDW_double_word_from_cond).  So the guard now accepts gap inputs

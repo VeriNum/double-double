@@ -1,9 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Accuracy proof for double-word divided by a floating-point number
+(** Relative accuracy and shared analysis for double-word divided by a floating-point number
     (Algorithm 15, DWDivFP3).  Mirrors the two-layer structure of
-    DWMulFP_acc.v: an FLX->FLT bridge collapsing every rounded node of the
+    DWMulFP_relative_acc.v: an FLX->FLT bridge collapsing every rounded node of the
     FLT runtime model [DDModels.DWDivFP3] onto the paper's real-valued FLX
     model [DWDivFP.DWDivFP3], then the Layer-1 relative-error theorem obtained
     from the paper's tight 3u^2 bound (DWDivFP.DWDFP3_correct), and finally the
@@ -62,7 +62,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc Fast2Sum_acc
                Fast2Sum_acc_helpers.
-Require Import DWPlusFP_acc_helpers DWMulFP_acc DW_acc_lemmas.
+Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 From Flocq Require Relative Sterbenz.
@@ -363,7 +363,7 @@ Lemma bridge_prod :
   DWTimesFP.Fast2Mult (fprec t) choice (FT2R (BDIV xh y)) (FT2R y)
     = F2Rp (Fast2Mult (BDIV xh y) y).
 Proof.
-exact (DWMulFP_acc.Fast2Mult_correct_weak (BDIV xh y) y (FINpih xh xl y FIN)
+exact (DWMulFP_relative_acc.Fast2Mult_correct_weak (BDIV xh y) y (FINpih xh xl y FIN)
          (fun _ => UF_prod)).
 Qed.
 

@@ -141,7 +141,7 @@ Definition dw_plus_fp_check_spec :=
    quotient magnitude the format can represent.  What that buys the caller is
    DWDivFP_mixed_acc.DWDivFP_mixed_guarantee_from_safe_input_cond rather than
    the normal-range pure 3u^2 relative bound
-   (DWDivFP_acc.DWDivFP_relative_accuracy), whose condition constrains the
+   (DWDivFP_relative_acc.DWDivFP_relative_accuracy), whose condition constrains the
    computed nodes and so is not an input-only test; see
    dw_div_fp15_guarded_spec in DDOpsASI.v.
    The product-node floor on |xh| is retained. *)
@@ -163,7 +163,7 @@ Definition dw_div_fp_check_spec :=
 
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
-   (DWMulFP_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
+   (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
    output is a valid double word.  It does not give the pure 2u^2 relative
    bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=

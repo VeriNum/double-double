@@ -11,7 +11,7 @@ Require Import VSTlib.spec_math.
 Require Import DDConds common real_extras op_defs.
 Require Import DD.verif_proofs.dd_float_reconcile.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_mixed_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWDivDW_mixed_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 Require Import DD.verif_proofs.verif_dd_ops_common.

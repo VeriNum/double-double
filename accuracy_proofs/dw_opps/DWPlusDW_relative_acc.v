@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Pure relative-error and output-closure results for [AccurateDWPlusDW].
+(** Relative-error and output-closure results for [AccurateDWPlusDW].
 
     The operation has no separate mixed-error tier: under two input
     double-word properties and finiteness of the computed pair, its relative
@@ -12,7 +12,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import TwoSum_acc Fast2Sum_acc.
-Require Import DWPlus DDConds DWord_defs DWPlusDW_acc_helpers.
+Require Import DWPlus DDConds DWord_defs DWPlusDW_relative_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
 Set Bullet Behavior "Strict Subproofs".

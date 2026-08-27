@@ -9,8 +9,8 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDConds common real_extras op_defs.
-Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulFP_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWMulDW_mixed_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 Require Import DD.verif_proofs.verif_dd_ops_common.

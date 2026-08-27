@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Pure relative-error and output-closure results for [DWPlusFP].
+(** Relative-error and output-closure results for [DWPlusFP].
 
     The operation has no separate mixed-error tier: under the mathematical
     input condition and finiteness of the computed pair, its relative error is
@@ -11,7 +11,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import DWPlus DDConds DWord_defs TwoSum_acc Fast2Sum_acc.
-Require Import DWPlusFP_acc_helpers.
+Require Import DWPlusFP_relative_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -143,7 +143,7 @@ Theorem DWPlusFP_double_word_from_cond
                    (snd (DWPlusFP xh xl y)).
 Proof.
 intros Hp3 [Hdw Hfin].
-exact (DWPlusFP_acc_helpers.DWPlusFP_double_word
+exact (DWPlusFP_relative_acc_helpers.DWPlusFP_double_word
          xh xl y Hdw Hfin Hp3).
 Qed.
 

@@ -5,11 +5,11 @@
     whole-range ladder that combines it with the normal proof lives in
     DWDivFP_mixed_acc.v.
 
-    WHY A SEPARATE LEG.  DWDivFP_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
+    WHY A SEPARATE LEG.  DWDivFP_relative_acc.v's Layer 1 needs UF_th, i.e. a NORMAL
     leading quotient (|xh/y| >= 2^(emin+p-1)); below that the node th is
     subnormal and the FLX->FLT bridge for it fails.  So the region
     |xh/y| < 2^(emin+p-1) cannot reuse the Layer-1 theorem at all and gets its
-    own argument, in the style of DWMulFP_acc's floor-gap block.
+    own argument, in the style of DWMulFP_relative_acc's floor-gap block.
 
     WHY IT IS EASY THERE.  Everything sits on the 2^emin lattice:
       - ulp(xh/y) = eta exactly, so |th - xh/y| <= eta/2;
@@ -34,8 +34,8 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc
         Fast2Mult_acc_helpers Fast2Sum_acc.
-Require Import DWPlusFP_acc_helpers DWMulFP_acc DW_acc_lemmas.
-Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
+Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DW_acc_lemmas.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_relative_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 Require Import mathcomp.ssreflect.ssreflect.

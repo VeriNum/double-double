@@ -186,14 +186,14 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 
      |(zh+zl) - (xh+xl)*y| <= 2u^2 |(xh+xl)*y| + 2.51*eta
 
-   (DWMulFP_acc.DWTimesFP_mixed_guarantee_from_cond), together with output
+   (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_cond), together with output
    double-word closure.  Both conclusions hold in
    every regime given only the input double-word relation and finiteness of the
    computed pair.  The three conjuncts below are what a runtime guard needs to
    establish that finiteness.
    It does NOT suffice for the pure 2u^2 relative bound, which is available only
    when the nonzero underflow gap is excluded; that remains the province of the
-   full DWTimesFP_relative_error_input_cond (see DWMulFP_acc.DWTimesFP_cond_no_gap).
+   full DWTimesFP_relative_error_input_cond (see DWMulFP_relative_acc.DWTimesFP_cond_no_gap).
 
    This is the cond discharged by the runtime guard dw_mult_fp_check and carried
    by the exported funspec dw_mult_fp9_guarded_spec. *)
@@ -271,13 +271,13 @@ Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : 
    every regime given only the two input double-word relations and finiteness of
    the computed pair.  The conjuncts below are what a runtime guard needs to
    establish that finiteness
-   (DWMulDW_acc.DWTimesDW_mixed_cond_of_safe_input_cond).
+   (DWMulDW_mixed_acc.DWTimesDW_mixed_cond_of_safe_input_cond).
 
    This is the cond discharged by the runtime guard dw_mult_dw_check and carried
    by the exported funspec dw_mult_dw12_guarded_spec, exactly as
    DWTimesFP_mixed_safe_input_cond is for dw_mult_fp_check and
    dw_mult_fp9_guarded_spec.  DWTimesDW_exact_leading_product_input_cond remains in use
-   inside DWDivDW_acc, whose reciprocal refinement needs the underflow disjunct
+   inside DWDivDW_relative_acc, whose reciprocal refinement needs the underflow disjunct
    for the exact product step. *)
 Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xl = true /\
@@ -454,7 +454,7 @@ Definition DWDivFP_normal (xh xl y : ftype t) : Prop :=
 
 (* Input condition for the sharp normal-range relative bound
    |(zh+zl) - (xh+xl)/y| <= 3u^2 |(xh+xl)/y|
-   (DWDivFP_acc.DWDivFP_relative_accuracy): the whole-range safe-input
+   (DWDivFP_relative_acc.DWDivFP_relative_accuracy): the whole-range safe-input
    condition -- which supplies overflow headroom, the input double word,
    y <> 0 and the product-node floor -- plus normality of the operations. *)
 Definition DWDivFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
@@ -490,13 +490,13 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
       |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q| + 5/2 eta
 
-    ([DWDivDW_acc.DWDivDW_mixed_accuracy_from_cond]) together with output
+    ([DWDivDW_mixed_acc.DWDivDW_mixed_accuracy_from_cond]) together with output
     double-word closure ([DWDivDW_double_word_from_cond]) and their bundle
     ([DWDivDW_mixed_guarantee_from_cond]).  The safe-input condition reaches
     the same bundle through [DWDivDW_mixed_guarantee_from_safe_input_cond].
     The [5/2*eta] is not an
     artifact of a missing guard: the closing block routes through
-    [DWMulDW_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
+    [DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond], which covers the WHOLE
     range from double-word inputs and finiteness alone, and whose sub-threshold
     gap arm spends five half-ulps.  The residual nodes that floor comes from
     may legitimately be zero, which is exactly why this cond deliberately does
@@ -514,7 +514,7 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
       from it -- so the two conjuncts were never independent.
 
     - |xh| <= 2^(femax-2) was UNUSED.  It is not implied by anything, but no
-      theorem in DWDivDW_acc.v ever read it, finiteness
+      theorem in DWDivDW_relative_acc.v ever read it, finiteness
       ([DWDivDW3_finite_from_cond]) included, and the reason is structural: xh
       only ever enters the algorithm multiplied by mh ~ 1/yh (the closing
       ch = BMULT xh mh, tl1 = BFMA xh ml tl0, and xl likewise), so the quotient
@@ -696,7 +696,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Input condition for the sharp normal-range relative bound
    |(zh+zl) - (xh+xl)/(yh+yl)| <= 9.8 u^2 |Q|
-   (DWDivDW_acc.DWDivDW_relative_accuracy): the whole-range safe-input
+   (DWDivDW_relative_acc.DWDivDW_relative_accuracy): the whole-range safe-input
    condition -- overflow headroom, the divisor window, both input double words
    -- plus normality of the operations.  It contains no quotient magnitude
    window designed to absorb eta; the relative bound is proved in the normal
