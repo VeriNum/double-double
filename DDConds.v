@@ -82,7 +82,8 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-Definition DWPlusDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
+(** Input-only sufficient condition used by the guarded C interface. *)
+Definition DWPlusDW_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite yh = true /\
@@ -92,25 +93,20 @@ Definition DWPlusDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
   Rabs (FT2R xh) <= /4 * Omega /\
   Rabs (FT2R yh) <= /4 * Omega.
 
-(* Input-only sufficient condition retained by the existing guarded interface. *)
-Definition DWPlusDW_mixed_safe_input_cond
-    (xh xl yh yl : ftype t) : Prop :=
-  DWPlusDW_relative_error_input_cond xh xl yh yl.
-
 (* Mathematical assumptions that must hold before the kernel is called. *)
-Definition DWPlusDW_mixed_input_cond
+Definition DWPlusDW_input_cond
     (xh xl yh yl : ftype t) : Prop :=
   double_word_prop xh xl /\
   double_word_prop yh yl.
 
-Definition DWPlusDW_result_finite
+Definition DWPlusDW_output_finite_cond
     (xh xl yh yl : ftype t) : Prop :=
   is_finite_p (AccurateDWPlusDW xh xl yh yl).
 
-Definition DWPlusDW_mixed_cond
+Definition DWPlusDW_cond
     (xh xl yh yl : ftype t) : Prop :=
-  DWPlusDW_mixed_input_cond xh xl yh yl /\
-  DWPlusDW_result_finite xh xl yh yl.
+  DWPlusDW_input_cond xh xl yh yl /\
+  DWPlusDW_output_finite_cond xh xl yh yl.
 
 End DWPlusDWCond.
 
@@ -121,11 +117,12 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* This condition bounds only the high part of the double word, matching the
-   shape of DWPlusDW_relative_error_input_cond.
+   shape of DWPlusDW_safe_input_cond.
    The DW relation forces |xl| <= ulp(xh)/2, so no separate magnitude bound
    on xl is required.  is_finite xl is NOT implied by double_word_prop
    (which lives in R via FT2R), so it must be asserted explicitly. *)
-Definition DWPlusFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
+(** Input-only sufficient condition used by the guarded C interface. *)
+Definition DWPlusFP_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y  = true /\
@@ -133,24 +130,19 @@ Definition DWPlusFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   Rabs (FT2R xh) <= /4 * Omega /\
   Rabs (FT2R y)  <= /4 * Omega.
 
-(* Input-only sufficient condition retained by the existing guarded interface. *)
-Definition DWPlusFP_mixed_safe_input_cond
-    (xh xl y : ftype t) : Prop :=
-  DWPlusFP_relative_error_input_cond xh xl y.
-
 (* Mathematical assumptions that must hold before the kernel is called. *)
-Definition DWPlusFP_mixed_input_cond
+Definition DWPlusFP_input_cond
     (xh xl y : ftype t) : Prop :=
   double_word_prop xh xl.
 
-Definition DWPlusFP_result_finite
+Definition DWPlusFP_output_finite_cond
     (xh xl y : ftype t) : Prop :=
   is_finite_p (DWPlusFP xh xl y).
 
-Definition DWPlusFP_mixed_cond
+Definition DWPlusFP_cond
     (xh xl y : ftype t) : Prop :=
-  DWPlusFP_mixed_input_cond xh xl y /\
-  DWPlusFP_result_finite xh xl y.
+  DWPlusFP_input_cond xh xl y /\
+  DWPlusFP_output_finite_cond xh xl y.
 
 End DWPlusFPCond.
 

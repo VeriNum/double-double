@@ -11,7 +11,6 @@ Require Import VSTlib.spec_math.
 Require Import DDConds common real_extras op_defs.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc_helpers.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 Require Import DD.verif_proofs.verif_dd_ops_common.
@@ -78,7 +77,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y)
+  PROP (DWPlusFP_safe_input_cond (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -89,12 +88,12 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWPlusFP_safe_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (@DWPlusFP_mixed_guarantee_from_safe_input_cond
+    (@DWPlusFP_relative_guarantee_from_safe_input_cond
        _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hg.
   entailer!!.
@@ -107,7 +106,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWPlusDW_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -120,12 +119,12 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+    (DWPlusDW_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (DWPlusDW_mixed_guarantee_from_safe_input_cond
+    (DWPlusDW_relative_guarantee_from_safe_input_cond
        (fst xh) (snd xh) (fst yh) (snd yh) Hfp HFC)
     as Hg.
   entailer!!.

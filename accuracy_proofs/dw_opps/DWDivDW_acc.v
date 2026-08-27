@@ -423,7 +423,7 @@ Lemma DWPlusFP_error_paper_tight {NANS : Nans} {t : type}
          Rabs (FT2R ah+FT2R al+FT2R b).
 Proof.
 move => Hp3 DWa FIN.
-have H := @DWPlusFP_acc.relative_errorDWPlusFP_correct'
+have H := @DWPlusFP_acc.DWPlusFP_multiplicative_accuracy_core
   NANS t STD ah al b DWa FIN Hp3.
 destruct H as [del [Heq Hdel]].
 cbv zeta in Heq.
@@ -1393,7 +1393,7 @@ have Hthq : Rabs (FT2R th) <= /4 * bpow radix2 (femax t).
 have Hthpred : Rabs (FT2R th) <
     Ulp.pred radix2 (SpecFloat.fexp (fprec t) (femax t)) (bpow radix2 (femax t)).
 { eapply Rle_lt_trans; [exact Hthq |].
-  apply (@DWPlusDW_acc_helpers.Omega4_lt_predOmega t); lia. }
+  exact (@FLT_lemmas.Omega4_lt_predOmega t). }
 have Tcond : TwoSum_exact_cond dh th := conj Fsh (conj Fminus Hthpred).
 have Fts : is_finite_p ts.
 { fold ts. split; [exact Fsh |].

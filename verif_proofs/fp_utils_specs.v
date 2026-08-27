@@ -116,7 +116,7 @@ Definition dw_plus_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusDW_relative_error_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWPlusDW_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
@@ -133,7 +133,7 @@ Definition dw_plus_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusFP_relative_error_input_cond (fst xh) (snd xh) y)
+         DWPlusFP_safe_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 

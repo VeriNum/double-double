@@ -41,6 +41,35 @@ apply Z.max_r in H0; rewrite H0; try lia => //.
 apply Z.max_l in H0; rewrite H0; try lia => //.
 Qed.
 
+(** A quarter of the overflow threshold is strictly below its predecessor. *)
+Lemma Omega4_lt_predOmega :
+  /4 * bpow radix2 (femax t) <
+  Ulp.pred radix2 fexp (bpow radix2 (femax t)).
+Proof.
+have HpredEq :
+  Ulp.pred radix2 fexp (bpow radix2 (femax t)) =
+  bpow radix2 (femax t) - bpow radix2 (fexp (femax t)).
+{ apply Ulp.pred_bpow. }
+rewrite HpredEq.
+have Hfexp : fexp (femax t) = (femax t - fprec t)%Z.
+{ unfold SpecFloat.fexp, SpecFloat.emin.
+  pose proof fprec_lb t; pose proof femax_lb t; lia. }
+rewrite Hfexp.
+have Heq14 : /4 * bpow radix2 (femax t) = bpow radix2 (femax t - 2).
+{ have H14 : (/4:R) = bpow radix2 (-2) by (simpl; lra).
+  rewrite H14 -bpow_plus. f_equal; lia. }
+rewrite Heq14.
+have H1 :
+  bpow radix2 (femax t - fprec t) <= bpow radix2 (femax t - 2).
+{ apply bpow_le. pose proof fprec_lb t; lia. }
+have H2 :
+  bpow radix2 (femax t) = 4 * bpow radix2 (femax t - 2).
+{ have H4 : (4:R) = bpow radix2 2 by (simpl; lra).
+  rewrite H4 -bpow_plus. f_equal; lia. }
+have H3 : 0 < bpow radix2 (femax t - 2) by apply bpow_gt_0.
+nra.
+Qed.
+
 (* Lemma 2.1 *)
 Lemma roundN_plus_ulp_FLT  (a b : ftype t) : 
       ( (FT2R a + FT2R b) <> 0) ->

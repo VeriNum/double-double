@@ -17,7 +17,7 @@ Section DWHighBnd.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 then 
-|xh| <= Omega/4 (the high-part bound used in DWPlusFP_relative_error_input_cond / DWPlusDW_relative_error_input_cond).
+|xh| <= Omega/4 (the high-part bound used in DWPlusFP_safe_input_cond / DWPlusDW_safe_input_cond).
 The implication holds because Omega/4 = 2^(femax - 2) is a power of two, hence 
 in generic_format, and round-to-nearest cannot push a value with |x| < B above 
 B when B is representable. *)
@@ -109,6 +109,36 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1))
     eapply Rle_lt_trans; [exact Hhalf |]. lra. }
   rewrite Hxl0 Rabs_R0.
   apply Rmult_le_pos; [apply bpow_ge_0 | exact Hxh0].
+Qed.
+
+(** Exponent and ulp ordering inherited by the low word of a double word. *)
+Lemma cexp_dw_le (xh xl : ftype t) :
+  double_word xh xl -> FT2R xh <> 0 -> FT2R xl <> 0 ->
+  (Generic_fmt.cexp radix2 fexp (FT2R xl) <=
+   Generic_fmt.cexp radix2 fexp (FT2R xh))%Z.
+Proof.
+move=> Hdw Hxh Hxl.
+have Hlow := dw_ulp xh xl Hdw.
+have Hulp : ulp (FT2R xh) = bpow radix2 (Generic_fmt.cexp radix2 fexp (FT2R xh))
+  by rewrite ulp_neq_0.
+rewrite Hulp in Hlow.
+have Hlt : Rabs (FT2R xl) < bpow radix2 (Generic_fmt.cexp radix2 fexp (FT2R xh)).
+{ have Hpos : 0 < bpow radix2 (Generic_fmt.cexp radix2 fexp (FT2R xh))
+    by apply bpow_gt_0.
+  lra. }
+have Hmag := mag_le_bpow radix2 (FT2R xl) _ Hxl Hlt.
+have Hp0 : (0 < fprec t)%Z by apply fprec_gt_0.
+unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp in *.
+apply Z.max_lub; [lia | apply Z.le_max_r].
+Qed.
+
+Lemma ulp_dw_le (xh xl : ftype t) :
+  double_word xh xl -> FT2R xh <> 0 -> FT2R xl <> 0 ->
+  (ulp (FT2R xl) <= ulp (FT2R xh))%R.
+Proof.
+intros Hdw Hxh Hxl.
+rewrite !ulp_neq_0 //.
+apply bpow_le, cexp_dw_le; assumption.
 Qed.
 
 End DWLowBounds.

@@ -7,8 +7,7 @@ for double-word  plus a (double-word, floating-point number *)
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas.
 Require Import DWPlus DDModels DWord_defs.
-Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
-Require Import DW_acc_lemmas.
+Require Import TwoSum_acc Fast2Sum_acc.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -146,16 +145,8 @@ apply (@generic_format_FLX_FLT radix2 emin),
 apply dw_word_DWdouble => //.
 Qed.
 
-Lemma DWPlusFP_double_word' : 
-rounded t (FT2R (fst (DWPlusFP xh xl y)) + FT2R (snd (DWPlusFP xh xl y)) ) = 
-  FT2R (fst (DWPlusFP xh xl y)).
-Proof.
-symmetry. apply DWPlusFP_double_word.
-Qed.
-
 End CorrectDWPlusFP'.
 
-Require Import Interval.Tactic.
 Section FiniteDWPlusFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl y : ftype t).
@@ -239,24 +230,6 @@ rewrite -Hp  /BPLUS /BINOP float_of_ftype_of_float /xh'/y' => //.
 Qed.
 
 Notation fexp:= ((SpecFloat.fexp (fprec t) (femax t))).
-
-Lemma TwoSumF_err_finite_ubnd
-(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
-  FT2R xh <=  / 2 * bpow radix2 (femax t).
-Proof.
-apply Rabs_le_inv in Hxh; destruct Hxh as [_ Hxh].
-have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
-nra.
-Qed.
-
-Lemma TwoSumF_err_finite_lbnd
-(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
- - (/ 2 * bpow radix2 (femax t)) <= FT2R xh.
-Proof.
-apply Rabs_le_inv in Hxh; destruct Hxh as [Hxh _].
-have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
-nra.
-Qed.
 
 Lemma TwoSumF_err_finite_bnd
 (Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
@@ -475,12 +448,12 @@ Qed.
 
 
 
-Lemma TwoSumF_err_finite'
+Lemma TwoSumF_err_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
 (HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
 (Hp3 : (3 <= fprec t)%Z)
-(Hy : Rabs (FT2R y) <= /4 * (bpow radix2 (femax t)))
-(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t))):
+(Hxh : Rabs (FT2R xh) <= /4 * (bpow radix2 (femax t)))
+(Hy : Rabs (FT2R y) <= /4 * (bpow radix2 (femax t))):
 let sl := TwoSumF_err xh y in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype sl) = true.
 Proof.
@@ -508,19 +481,6 @@ have FINdb : is_finite (BMINUS y (BMINUS (BPLUS xh y) (BMINUS (BPLUS xh y) y))) 
   show_nob. expand_ft2r. eighth_bounds. apply nofl_db; assumption. }
 apply no_overflow_sum_is_finite; [exact FINda|exact FINdb|].
 show_nob. expand_ft2r. eighth_bounds. apply nofl_err; assumption.
-Qed.
-Lemma TwoSumF_err_finite
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
-(Hp3 : (3 <= fprec t)%Z)
-(Hxh : Rabs (FT2R xh) <= / 4 * bpow radix2 (femax t))
-(Hy :  Rabs (FT2R y)  <= /4 * (bpow radix2 (femax t)))  :
-let sl := TwoSumF_err xh y in
-Binary.is_finite (fprec t) (femax t) (float_of_ftype sl) = true.
-Proof.
-(* Same obligation as [TwoSumF_err_finite'] (only the order of the input-bound
-   hypotheses differs); reuse its type-generic, interval-free proof. *)
-exact (TwoSumF_err_finite' HFINxh HFINy Hp3 Hy Hxh).
 Qed.
 Theorem is_finite_p_TwoSum
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
@@ -741,26 +701,6 @@ replace (Fast2Sum _ _) with (zh,zl) => //.
 rewrite /fst/snd. split.
 - rewrite is_finite_Binary. apply DWPlusFP_zh_finite; assumption.
 - rewrite is_finite_Binary. apply DWPlusFP_zl_finite; assumption.
-Qed.
-
-(* Backward-compatible variant taking the sum-form precondition.
-   Used by external callers (e.g. DWPlusFP_vcfloat) that haven't yet
-   migrated to the high-part bound; internally bridges via
-   dw_high_bnd_of_sum. *)
-Corollary DWPlusFP_finite_from_sum
-(HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
-(HFINxl: Binary.is_finite (fprec t) (femax t) (float_of_ftype xl) = true)
-(HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
-(Hp3 : (3 <= fprec t)%Z)
-(Hxhl : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t)))
-(Hy :   Rabs (FT2R y) < /4 * (bpow radix2 (femax t))) :
-is_finite_p (DWPlusFP xh xl y).
-Proof.
-have Hdw : double_word_prop xh xl
-  by rewrite /double_word_prop; exact DWx.
-apply DWPlusFP_finite => //.
-- by apply (dw_high_bnd_of_sum xh xl Hdw Hxhl).
-- by apply Rlt_le.
 Qed.
 
 End FiniteDWPlusFP.

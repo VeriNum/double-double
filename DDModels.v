@@ -76,13 +76,6 @@ let (sh, sl) := TwoSumF xh y in
 let v:= BPLUS xl sl in
 let (zh, zl) := Fast2Sum sh v in (zh, zl).
 
-(** Algorithm 4p : Addition of DW number and FP number *)
-Definition DWPlusFP' (xh xl y : ftype t) := 
-let xhp := BPLUS xh xl in
-let (sh, sl) := TwoSumF xhp y in
-let v:= BPLUS xl sl in
-let (zh, zl) := Fast2Sum sh v in (zh, zl).
-
 (** Algorithm 5 : Addition of two DW numbers *)
 Definition SloppyDWPlusDW (xh xl yh yl : ftype t) := 
 let (sh, sl) := TwoSumF xh yh in

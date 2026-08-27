@@ -62,7 +62,7 @@ int two_sum_check(double a, double b) {
 }
 
 int dw_plus_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWPlusDW_relative_error_input_cond: each component is finite, both pairs satisfy the
+    /* Verifies DWPlusDW_safe_input_cond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),
        and the high parts are bounded by Omega/4 = 2^1022.
        The DW relation (x->s + x->t == x->s) is well-defined as a comparison
@@ -284,7 +284,7 @@ int dw_div_fp_check(struct dword *x, double y) {
 }
 
 int dw_plus_fp_check(struct dword *x, double y) {
-    /* Verifies DWPlusFP_relative_error_input_cond: xh, xl, y are finite, (x->s, x->t) is a
+    /* Verifies DWPlusFP_safe_input_cond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
        does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
        so fin_xl is asserted, even though x->s + x->t == x->s implies it

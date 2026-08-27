@@ -2,16 +2,13 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 Require Import vcfloat.VCFloat.
-Require Import float_acc_lems op_defs dd_tactics common.
-Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas DW_acc_lemmas.
+Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DDConds DWord_defs.
 Require DWPlus.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
-
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
-Require Import Logic.FunctionalExtensionality.
 
 Section DWPlusDWFinite.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -25,7 +22,7 @@ Hypothesis HFINxl : is_finite xl = true.
 Hypothesis HFINyh : is_finite yh = true.
 Hypothesis HFINyl : is_finite yl = true.
 
-(* Tight magnitude bounds on the high words, matching DWPlusDW_relative_error_input_cond.
+(* Tight magnitude bounds on the high words, matching DWPlusDW_safe_input_cond.
    These are weaker than the older `|xh + xl| < Omega/4` form (which is
    used in the paper) but suffice for every downstream use here. *)
 Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
@@ -56,18 +53,6 @@ Proof. exact Hxh. Qed.
 
 Lemma Hyh_tight_bnd : Rabs (FT2R yh) <= /4 * Omega.
 Proof. exact Hyh. Qed.
-
-Lemma Hxh_bnd : Rabs (FT2R xh) <= /2 * Omega.
-Proof.
-have HO : 0 <= Omega by apply bpow_ge_0.
-apply (Rle_trans _ _ _ Hxh). lra.
-Qed.
-
-Lemma Hyh_bnd : Rabs (FT2R yh) <= /2 * Omega.
-Proof.
-have HO : 0 <= Omega by apply bpow_ge_0.
-apply (Rle_trans _ _ _ Hyh). lra.
-Qed.
 
 (* Helper: 2 * bpow e = bpow (e+1), used to discharge the overflow bounds
    for the (small) low-word sums without relying on a concrete precision. *)
@@ -208,32 +193,6 @@ Lemma FIN_sh : is_finite sh = true.
 Proof.
 unfold sh, TwoSumF_sum, TwoSumF, fst.
 exact (no_overflow_sum_is_finite t xh yh HFINxh HFINyh no_ov_sh).
-Qed.
-
-(* /4 * Omega < pred Omega: representable values just below 2^femax leave
-   plenty of room above 2^(femax-2). Holds whenever fprec >= 2. *)
-Lemma Omega4_lt_predOmega : /4 * Omega < Ulp.pred radix2 fexp Omega.
-Proof.
-have Hvalid : Valid_exp fexp by (apply FLT.FLT_exp_valid; apply fprec_gt_0).
-have HpredEq : Ulp.pred radix2 fexp Omega = Omega - bpow radix2 (fexp (femax t)).
-{ change Omega with (bpow radix2 (femax t)).
-  apply Ulp.pred_bpow. }
-rewrite HpredEq.
-have Hfexp : fexp (femax t) = (femax t - fprec t)%Z.
-{ unfold SpecFloat.fexp, SpecFloat.emin.
-  pose proof fprec_lb t; pose proof femax_lb t; lia. }
-rewrite Hfexp.
-have Heq14 : /4 * Omega = bpow radix2 (femax t - 2).
-{ have H14 : (/ 4 : R) = bpow radix2 (-2) by (simpl; lra).
-  rewrite H14 -bpow_plus. f_equal; lia. }
-rewrite Heq14.
-have H1 : bpow radix2 (femax t - fprec t) <= bpow radix2 (femax t - 2).
-{ apply bpow_le. pose proof fprec_lb t; lia. }
-have H2 : bpow radix2 (femax t) = 4 * bpow radix2 (femax t - 2).
-{ have H4 : (4 : R) = bpow radix2 2 by (simpl; lra).
-  rewrite H4 -bpow_plus. f_equal; lia. }
-have H3 : 0 < bpow radix2 (femax t - 2) by apply bpow_gt_0.
-nra.
 Qed.
 
 (* FIN_sl: is_finite_TwoSum xh yh requires:
@@ -1151,45 +1110,6 @@ unfold w.
 exact (no_overflow_sum_is_finite t tl vl FIN_tl FIN_vl no_ov_w).
 Qed.
 
-(* For any double-word (a, b) with both words nonzero, cexp b <= cexp a.
-   Reason: |b| <= /2 ulp(a) = /2 bpow(cexp a) < bpow(cexp a), so
-   mag b <= cexp a, hence cexp b = max(mag b - prec, emin) <= cexp a. *)
-Lemma cexp_dw_le (a b : ftype t) :
-  double_word a b -> FT2R a <> 0 -> FT2R b <> 0 ->
-  (Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
-   Generic_fmt.cexp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%Z.
-Proof.
-move=> DWab Ha_nz Hb_nz.
-have Hbnd := dw_ulp a b DWab.
-have Hulp : Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a) =
-            bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
-              (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))
-  by rewrite ulp_neq_0.
-rewrite Hulp in Hbnd.
-have Hlt : Rabs (FT2R b) <
-           bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
-             (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)).
-{ have Hpow : 0 < bpow Zaux.radix2 (Generic_fmt.cexp Zaux.radix2
-                (SpecFloat.fexp (fprec t) (femax t)) (FT2R a)) by apply: bpow_gt_0.
-  lra. }
-have Hmag := mag_le_bpow Zaux.radix2 (FT2R b) _ Hb_nz Hlt.
-have Hp0 : (0 < fprec t)%Z by apply fprec_gt_0.
-unfold Generic_fmt.cexp, SpecFloat.fexp, FLT.FLT_exp in *.
-apply Z.max_lub; [lia | apply Z.le_max_r].
-Qed.
-
-(* For any double-word (a, b) with both words nonzero, ulp b <= ulp a.
-   This is the ulp analog of cexp_dw_le, used as the closer in the
-   ulp-form (vh, w) disjunction. *)
-Lemma ulp_dw_le (a b : ftype t) :
-  double_word a b -> FT2R a <> 0 -> FT2R b <> 0 ->
-  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R b) <=
-   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R a))%R.
-Proof.
-intros DWab Ha Hb.
-rewrite !ulp_neq_0 //. apply bpow_le. exact (cexp_dw_le a b DWab Ha Hb).
-Qed.
-
 (* DWPlusDW_vh_w_disjunction (closed version, placed after FIN_w which the proof
    uses for BPLUS_round_correct on w = BPLUS tl vl).
    Mirrors DWPlusDW_sh_c_disjunction: applies DWPlus.DWPlusDW_w_le_vh_aux
@@ -1205,7 +1125,16 @@ Qed.
    rnd_plus_FLT_FLX_eq' and converted to ulp via ulp_le_abs.  The boundary
    sub-cases (xh + yh = 0; xh = 0) are closed by ulp_dw_le on the input
    double-word (th, tl) or (yh, yl). *)
-Lemma DWPlusDW_vh_w_disjunction :
+Lemma DWPlusDW_vh_w_disjunction_core
+    (Fsh : is_finite sh = true)
+    (Fsl : is_finite sl = true)
+    (Fth : is_finite th = true)
+    (Ftl : is_finite tl = true)
+    (Fc : is_finite c = true)
+    (Fvh : is_finite vh = true)
+    (Fz : is_finite (BMINUS (BPLUS sh c) sh) = true)
+    (Fvl : is_finite vl = true)
+    (Fw : is_finite w = true) :
   (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R w) <=
    Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R vh))%R
   \/ FT2R vh = 0%R.
@@ -1215,46 +1144,46 @@ destruct (Req_dec (FT2R w) 0) as [Hw0 | Hw_nz];
   [left; rewrite Hw0; apply ulp_le_abs; rewrite Rabs_R0; apply Rabs_pos|].
 left.
 have HFIN_sh : is_finite (BPLUS xh yh) = true.
-{ change (is_finite (TwoSumF_sum xh yh) = true); exact FIN_sh. }
+{ change (is_finite (TwoSumF_sum xh yh) = true); exact Fsh. }
 destruct (Req_dec (FT2R xh + FT2R yh) 0) as [Hxhyh_zero | Hxhyh_nz].
 { (* xh + yh = 0: sh = 0, sl = 0, c = th, vh = th, vl = 0, w = tl.
      vh, w already known nonzero, so reduce to cexp tl <= cexp th on the
      double word (th, tl) = TwoSumF xl yl, closed by cexp_dw_le. *)
-  have Fth := generic_format_FLT_FT2R th.
+  have Fmt_th := generic_format_FLT_FT2R th.
   have Hsh0 : FT2R sh = 0.
   { change (FT2R sh) with (FT2R (BPLUS xh yh)).
     rewrite -(BPLUS_round_correct t xh yh HFIN_sh) Hxhyh_zero round_0 //. }
   have Hsl0 : FT2R sl = 0.
   { change (FT2R sl) with (FT2R (TwoSumF_err xh yh)).
-    rewrite (TwoSumF_correct xh yh (conj FIN_sh FIN_sl)).
+    rewrite (TwoSumF_correct xh yh (conj Fsh Fsl)).
     change (FT2R (TwoSumF_sum xh yh)) with (FT2R sh).
     rewrite Hxhyh_zero Hsh0; ring. }
   have Hc_th : FT2R c = FT2R th.
   { change (FT2R c) with (FT2R (BPLUS sl th)).
-    rewrite -(BPLUS_round_correct t sl th FIN_c) Hsl0 Rplus_0_l.
+    rewrite -(BPLUS_round_correct t sl th Fc) Hsl0 Rplus_0_l.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hvh_th : FT2R vh = FT2R th.
   { change (FT2R vh) with (FT2R (BPLUS sh c)).
-    rewrite -(BPLUS_round_correct t sh c FIN_vh) Hsh0 Rplus_0_l Hc_th.
+    rewrite -(BPLUS_round_correct t sh c Fvh) Hsh0 Rplus_0_l Hc_th.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hz_th : FT2R (BMINUS (BPLUS sh c) sh) = FT2R th.
-  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh FIN_z).
+  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh Fz).
     change (FT2R (BPLUS sh c)) with (FT2R vh).
     rewrite Hvh_th Hsh0 Rminus_0_r.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hvl0 : FT2R vl = 0.
   { change (FT2R vl) with (FT2R (BMINUS c (BMINUS (BPLUS sh c) sh))).
-    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) FIN_vl).
+    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) Fvl).
     rewrite Hz_th Hc_th.
     have ->: FT2R th - FT2R th = 0 by ring.
     rewrite round_0 //. }
   have Hw_tl : FT2R w = FT2R tl.
   { change (FT2R w) with (FT2R (BPLUS tl vl)).
-    rewrite -(BPLUS_round_correct t tl vl FIN_w) Hvl0 Rplus_0_r.
+    rewrite -(BPLUS_round_correct t tl vl Fw) Hvl0 Rplus_0_r.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   rewrite Hw_tl Hvh_th.
   apply: ulp_dw_le.
-  - exact (TwoSum_is_DW xl yl (conj FIN_th FIN_tl)).
+  - exact (TwoSum_is_DW xl yl (conj Fth Ftl)).
   - rewrite -Hvh_th; exact Hvh_nz.
   - rewrite -Hw_tl; exact Hw_nz. }
 destruct (Req_dec (FT2R xh) 0) as [Hxh_zero | Hxh_nz].
@@ -1268,40 +1197,40 @@ destruct (Req_dec (FT2R xh) 0) as [Hxh_zero | Hxh_nz].
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hsl0 : FT2R sl = 0.
   { change (FT2R sl) with (FT2R (TwoSumF_err xh yh)).
-    rewrite (TwoSumF_correct xh yh (conj FIN_sh FIN_sl)).
+    rewrite (TwoSumF_correct xh yh (conj Fsh Fsl)).
     change (FT2R (TwoSumF_sum xh yh)) with (FT2R sh).
     rewrite Hxh_zero Hsh_yh; ring. }
   have Hth_yl : FT2R th = FT2R yl.
   { change (FT2R th) with (FT2R (BPLUS xl yl)).
-    rewrite -(BPLUS_round_correct t xl yl FIN_th) Hxl0 Rplus_0_l.
+    rewrite -(BPLUS_round_correct t xl yl Fth) Hxl0 Rplus_0_l.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Htl0 : FT2R tl = 0.
   { change (FT2R tl) with (FT2R (TwoSumF_err xl yl)).
-    rewrite (TwoSumF_correct xl yl (conj FIN_th FIN_tl)).
+    rewrite (TwoSumF_correct xl yl (conj Fth Ftl)).
     change (FT2R (TwoSumF_sum xl yl)) with (FT2R th).
     rewrite Hxl0 Hth_yl; ring. }
   have Hc_yl : FT2R c = FT2R yl.
   { change (FT2R c) with (FT2R (BPLUS sl th)).
-    rewrite -(BPLUS_round_correct t sl th FIN_c) Hsl0 Rplus_0_l Hth_yl.
+    rewrite -(BPLUS_round_correct t sl th Fc) Hsl0 Rplus_0_l Hth_yl.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hvh_yh : FT2R vh = FT2R yh.
   { change (FT2R vh) with (FT2R (BPLUS sh c)).
-    rewrite -(BPLUS_round_correct t sh c FIN_vh) Hsh_yh Hc_yl.
+    rewrite -(BPLUS_round_correct t sh c Fvh) Hsh_yh Hc_yl.
     move: DWy; rewrite /double_word /rounded => HDWy; symmetry; exact HDWy. }
   have Hz0 : FT2R (BMINUS (BPLUS sh c) sh) = 0.
-  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh FIN_z).
+  { rewrite -(BMINUS_round_correct t (BPLUS sh c) sh Fz).
     change (FT2R (BPLUS sh c)) with (FT2R vh).
     rewrite Hvh_yh Hsh_yh.
     have ->: FT2R yh - FT2R yh = 0 by ring.
     rewrite round_0 //. }
   have Hvl_yl : FT2R vl = FT2R yl.
   { change (FT2R vl) with (FT2R (BMINUS c (BMINUS (BPLUS sh c) sh))).
-    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) FIN_vl).
+    rewrite -(BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) Fvl).
     rewrite Hz0 Hc_yl Rminus_0_r.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   have Hw_yl : FT2R w = FT2R yl.
   { change (FT2R w) with (FT2R (BPLUS tl vl)).
-    rewrite -(BPLUS_round_correct t tl vl FIN_w) Htl0 Rplus_0_l Hvl_yl.
+    rewrite -(BPLUS_round_correct t tl vl Fw) Htl0 Rplus_0_l Hvl_yl.
     rewrite round_generic; [done | apply: generic_format_FLT_FT2R]. }
   rewrite Hw_yl Hvh_yh.
   apply: ulp_dw_le.
@@ -1312,12 +1241,12 @@ have DWx_R : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
   by apply (dw_word_DWdouble xh xl xh DWx).
 have DWy_R : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
   by apply (dw_word_DWdouble yh yl yh DWy).
-have fin_tsxhyh : is_finite_p (TwoSumF xh yh) by split; [exact FIN_sh | exact FIN_sl].
-have fin_tsxlyl : is_finite_p (TwoSumF xl yl) by split; [exact FIN_th | exact FIN_tl].
+have fin_tsxhyh : is_finite_p (TwoSumF xh yh) by split; [exact Fsh | exact Fsl].
+have fin_tsxlyl : is_finite_p (TwoSumF xl yl) by split; [exact Fth | exact Ftl].
 have fin_f2s_shc : is_finite_p (DDModels.Fast2Sum sh c).
 { split.
-  - change (is_finite (Fast2Sum_sum sh c) = true); exact FIN_vh.
-  - exact FIN_vl. }
+  - change (is_finite (Fast2Sum_sum sh c) = true); exact Fvh.
+  - exact Fvl. }
 have heq_xhyh : DWPlus.TwoSum (fprec t) choice (FT2R xh) (FT2R yh) = F2Rp (TwoSumF xh yh)
   by exact (TwoSumEq_FLT xh yh fin_tsxhyh).
 have heq_xlyl : DWPlus.TwoSum (fprec t) choice (FT2R xl) (FT2R yl) = F2Rp (TwoSumF xl yl)
@@ -1339,7 +1268,7 @@ have Hc_eq :
      DWPlus.TwoSum_sum (fprec t) choice (FT2R xl) (FT2R yl)) = FT2R c.
 { rewrite Hsl_eq Hth_eq rnd_plus_FLT_FLX_eq'.
   change (FT2R c) with (FT2R (BPLUS sl th)).
-  apply BPLUS_round_correct. exact FIN_c. }
+  apply BPLUS_round_correct. exact Fc. }
 have Hvh_eq : fst (F2Sum.Fast2Sum (fprec t) choice (FT2R sh) (FT2R c)) = FT2R vh.
 { rewrite heq_f2s /F2Rp /fst //. }
 have Hvl_eq : snd (F2Sum.Fast2Sum (fprec t) choice (FT2R sh) (FT2R c)) = FT2R vl.
@@ -1361,7 +1290,7 @@ case: (@DWPlus.DWPlusDW_w_le_vh_aux (fprec t) (fprec_gt_one t) choice (eq_refl _
     FT2R w.
   { rewrite Htl_eq Hsh_eq Hc_eq Hvl_eq rnd_plus_FLT_FLX_eq'.
     change (FT2R w) with (FT2R (BPLUS tl vl)).
-    apply BPLUS_round_correct. exact FIN_w. }
+    apply BPLUS_round_correct. exact Fw. }
   have Hvh_FT2R : fst (F2Sum.Fast2Sum (fprec t) choice
                         (DWPlus.TwoSum_sum (fprec t) choice (FT2R xh) (FT2R yh))
                         (round Zaux.radix2 (FLX_exp (fprec t)) (Znearest choice)
@@ -1385,129 +1314,17 @@ case: (@DWPlus.DWPlusDW_w_le_vh_aux (fprec t) (fprec_gt_one t) choice (eq_refl _
     FT2R w.
   { rewrite Htl_eq Hsh_eq Hc_eq Hvl_eq rnd_plus_FLT_FLX_eq'.
     change (FT2R w) with (FT2R (BPLUS tl vl)).
-    apply BPLUS_round_correct. exact FIN_w. }
+    apply BPLUS_round_correct. exact Fw. }
   by rewrite -Hw_FT2R.
 Qed.
 
-(* vh = BPLUS sh c. Bound |vh| via BPLUS_accurate' + sh_bnd, c_bnd. *)
-Lemma vh_bnd : Rabs (FT2R vh) <=
-  (Rabs (FT2R sh) + Rabs (FT2R c)) * (1 + default_rel t).
+Lemma DWPlusDW_vh_w_disjunction :
+  (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R w) <=
+   Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (FT2R vh))%R
+  \/ FT2R vh = 0%R.
 Proof.
-have HFIN_BPLUS : is_finite (BPLUS sh c) = true.
-{ have HFIN_vh := FIN_vh.
-  unfold vh, Fast2Sum_sum, Fast2Sum, fst in HFIN_vh; exact HFIN_vh. }
-change (FT2R vh) with (FT2R (BPLUS sh c)).
-destruct (BPLUS_accurate' t sh c HFIN_BPLUS) as (d & Hd & Heq).
-rewrite Heq Rabs_mult.
-apply Rmult_le_compat; try apply Rabs_pos.
-- apply Rabs_triang.
-- have Hd1 : Rabs (1 + d) <= 1 + Rabs d.
-  { apply (Rle_trans _ (Rabs 1 + Rabs d)); [apply Rabs_triang|].
-    rewrite Rabs_R1. apply Rle_refl. }
-  apply (Rle_trans _ _ _ Hd1). apply Rplus_le_compat_l. exact Hd.
-Qed.
-
-(* vl bound via direct expansion through Fast2Sum_err structure.
-   Form: vl = (c - (sh*d1 + c*(1+d1))*(1+d2)) * (1+d3) with each |di| <= default_rel. *)
-Lemma vl_bnd_eq : exists d1 d2 d3,
-  Rabs d1 <= default_rel t /\ Rabs d2 <= default_rel t /\ Rabs d3 <= default_rel t /\
-  FT2R vl =
-    (FT2R c - (FT2R sh * d1 + FT2R c * (1 + d1)) * (1 + d2)) * (1 + d3).
-Proof.
-have HFIN1 : is_finite (BPLUS sh c) = true.
-{ have HFIN_vh := FIN_vh.
-  unfold vh, Fast2Sum_sum, Fast2Sum, fst in HFIN_vh; exact HFIN_vh. }
-have HFIN_z := FIN_z.
-have HFIN_vl := FIN_vl.
-have Hvexp : Valid_exp (SpecFloat.fexp (fprec t) (femax t))
-  by (apply FLT.FLT_exp_valid; apply fprec_gt_0).
-have Hvrnd : Valid_rnd (Znearest choice) := Generic_fmt.valid_rnd_N choice.
-have u_ro_le : Relative.u_ro Zaux.radix2 (fprec t) / (1 + Relative.u_ro Zaux.radix2 (fprec t)) <= default_rel t.
-{ unfold default_rel, Relative.u_ro. simpl.
-  have Hu_pos : 0 < / 2 * bpow Zaux.radix2 (- fprec t + 1)
-    by (apply Rmult_lt_0_compat; [lra | apply bpow_gt_0]).
-  set x := / 2 * bpow Zaux.radix2 (- fprec t + 1) in Hu_pos *.
-  apply Rmult_le_reg_r with (1 + x); [lra|].
-  have Heq : x / (1 + x) * (1 + x) = x by (field; lra).
-  rewrite Heq. nra. }
-(* Outer: vl = round(c - z) *)
-have Hvl_eq : FT2R vl = round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))
-  (Znearest choice) (FT2R c - FT2R (BMINUS (BPLUS sh c) sh)).
-{ change (FT2R vl) with (FT2R (BMINUS c (BMINUS (BPLUS sh c) sh))).
-  symmetry. exact (BMINUS_round_correct t c (BMINUS (BPLUS sh c) sh) HFIN_vl). }
-have Hz_eq : FT2R (BMINUS (BPLUS sh c) sh) =
-  round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-    (FT2R (BPLUS sh c) - FT2R sh).
-{ symmetry. exact (BMINUS_round_correct t (BPLUS sh c) sh HFIN_z). }
-destruct (BPLUS_accurate' t sh c HFIN1) as (d1 & Hd1 & B1).
-rewrite Hz_eq B1 in Hvl_eq.
-(* Outer Plus_error: vl = (c - z') * (1 + d3) *)
-have Hfmt_z' : Generic_fmt.generic_format Zaux.radix2
-  (SpecFloat.fexp (fprec t) (femax t))
-  (round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-     ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh))
-  by apply Generic_fmt.generic_format_round.
-pose proof (Plus_error.FLT_plus_error_N_ex Zaux.radix2
-  (SpecFloat.emin (fprec t) (femax t)) (fprec t)
-  (fun x0 : Z => negb (Z.even x0)) (FT2R c)
-  (- round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-       ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh))) as Houter.
-destruct Houter as (d3 & Hd3 & B3).
-- rewrite -B2R_float_of_ftype. apply Binary.generic_format_B2R.
-- apply Generic_fmt.generic_format_opp. exact Hfmt_z'.
-- have Heq3 : FT2R c +
-    - round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-        ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) =
-    FT2R c -
-    round Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
-        ((FT2R sh + FT2R c) * (1 + d1) - FT2R sh) by ring.
-  rewrite Heq3 in B3.
-  rewrite B3 in Hvl_eq. clear B3 Heq3.
-  (* Inner Plus_error for round((sh+c)(1+d1) - sh) *)
-  pose proof (Plus_error.FLT_plus_error_N_ex Zaux.radix2
-    (SpecFloat.emin (fprec t) (femax t)) (fprec t)
-    (fun x0 : Z => negb (Z.even x0))
-    ((FT2R sh + FT2R c) * (1 + d1)) (- FT2R sh)) as Hinner.
-  destruct Hinner as (d2 & Hd2 & B2).
-  + have Heq_BPLUS : (FT2R sh + FT2R c) * (1 + d1) = FT2R (BPLUS sh c).
-    { rewrite -B1. reflexivity. }
-    rewrite Heq_BPLUS. rewrite -B2R_float_of_ftype.
-    apply Binary.generic_format_B2R.
-  + rewrite -B2R_float_of_ftype.
-    apply Generic_fmt.generic_format_opp. apply Binary.generic_format_B2R.
-  + have Heq2 : (FT2R sh + FT2R c) * (1 + d1) + - FT2R sh =
-                (FT2R sh + FT2R c) * (1 + d1) - FT2R sh by ring.
-    rewrite Heq2 in B2. rewrite B2 in Hvl_eq. clear B2 Heq2.
-    exists d1, d2, d3.
-    have Habs_d1 : Rabs d1 <= default_rel t.
-    { apply (Rle_trans _ _ _ Hd1). apply Req_le. unfold default_rel.
-      rewrite /Relative.u_ro //=. }
-    have Habs_d2 : Rabs d2 <= default_rel t.
-    { apply (Rle_trans _ _ _ Hd2). exact u_ro_le. }
-    have Habs_d3 : Rabs d3 <= default_rel t.
-    { apply (Rle_trans _ _ _ Hd3). exact u_ro_le. }
-    split; [exact Habs_d1|]. split; [exact Habs_d2|]. split; [exact Habs_d3|].
-    rewrite Hvl_eq.
-    have Heq_alg : (FT2R sh + FT2R c) * (1 + d1) - FT2R sh =
-                   FT2R sh * d1 + FT2R c * (1 + d1) by ring.
-    rewrite Heq_alg. reflexivity.
-Qed.
-
-(* w = BPLUS tl vl. Bound |w| via BPLUS_accurate' + tl_bnd. *)
-Lemma w_bnd : Rabs (FT2R w) <=
-  (Rabs (FT2R tl) + Rabs (FT2R vl)) * (1 + default_rel t).
-Proof.
-have HFIN_BPLUS : is_finite (BPLUS tl vl) = true.
-{ change (is_finite w = true); exact FIN_w. }
-change (FT2R w) with (FT2R (BPLUS tl vl)).
-destruct (BPLUS_accurate' t tl vl HFIN_BPLUS) as (d & Hd & Heq).
-rewrite Heq Rabs_mult.
-apply Rmult_le_compat; try apply Rabs_pos.
-- apply Rabs_triang.
-- have Hd1 : Rabs (1 + d) <= 1 + Rabs d.
-  { apply (Rle_trans _ (Rabs 1 + Rabs d)); [apply Rabs_triang|].
-    rewrite Rabs_R1. apply Rle_refl. }
-  apply (Rle_trans _ _ _ Hd1). apply Rplus_le_compat_l. exact Hd.
+exact (DWPlusDW_vh_w_disjunction_core
+         FIN_sh FIN_sl FIN_th FIN_tl FIN_c FIN_vh FIN_z FIN_vl FIN_w).
 Qed.
 
 (* Final Fast2Sum vh w.  Key fact: Fast2Sum(sh,c) is exact under the cexp
@@ -1624,21 +1441,6 @@ destruct H as (d5 & Hd5 & B).
 Qed.
 
 
-(* Main result for FIN_zh: the fst component of AccurateDWPlusDW is finite.
-   This is provable under our hypotheses (DWx, DWy, finiteness of inputs,
-   |xh + xl|, |yh + yl| < Omega/4) WITHOUT needing Hc_le_sh or Hw_le_vh. *)
-Theorem AccurateDWPlusDW_fst_finite :
-  is_finite (fst (AccurateDWPlusDW xh xl yh yl)) = true.
-Proof.
-rewrite /AccurateDWPlusDW.
-replace (TwoSumF xh yh) with (sh, sl) => //.
-replace (TwoSumF xl yl) with (th, tl) => //.
-rewrite /fst /snd.
-replace (Fast2Sum sh c) with (vh, vl) => //.
-unfold Fast2Sum, fst.
-exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
-Qed.
-
 Theorem AccurateDWPlusDW_finite :
   is_finite_p (AccurateDWPlusDW xh xl yh yl).
 Proof.
@@ -1657,127 +1459,20 @@ split.
   + exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
 Qed.
 
-(* Bridge lemmas exposed for VST verification of dw_plus_dw2:
-   each forward_call to two_sum / fast_2sum needs the appropriate cond. *)
-
-Lemma TwoSum_exact_cond_xh_yh_inner : TwoSum_exact_cond xh yh.
-Proof.
-  unfold TwoSum_exact_cond; split; [|split].
-  - exact FIN_sh.
-  - exact (no_overflow_minus_is_finite t xh yh HFINxh HFINyh no_ov_minus_xhyh).
-  - apply (Rle_lt_trans _ (/4 * Omega));
-      [exact Hyh_tight_bnd | exact Omega4_lt_predOmega].
-Qed.
-
-Lemma TwoSum_exact_cond_xl_yl_inner : TwoSum_exact_cond xl yl.
-Proof.
-  unfold TwoSum_exact_cond; split; [|split].
-  - exact FIN_th.
-  - exact (no_overflow_minus_is_finite t xl yl HFINxl HFINyl no_ov_minus_xlyl).
-  - apply (Rle_lt_trans _ (/4 * Omega));
-      [exact yl_le_qOmega | exact Omega4_lt_predOmega].
-Qed.
-
-(* Fast2Sum_exact_cond is the generalized ulp/zero disjunction (not the magnitude
-   ordering |b| <= |a|, which is false here in the cancellation regime); it is
-   discharged by DWPlusDW_sh_c_disjunction / DWPlusDW_vh_w_disjunction. *)
-Lemma Fast2Sum_exact_cond_sh_c_inner : Fast2Sum_exact_cond sh c.
-Proof.
-  unfold Fast2Sum_exact_cond; split.
-  - change (is_finite (BPLUS sh c) = true).
-    change (is_finite vh = true). exact FIN_vh.
-  - exact DWPlusDW_sh_c_disjunction.
-Qed.
-
-Lemma Fast2Sum_exact_cond_vh_w_inner : Fast2Sum_exact_cond vh w.
-Proof.
-  unfold Fast2Sum_exact_cond; split.
-  - change (is_finite (BPLUS vh w) = true).
-    exact (no_overflow_sum_is_finite t vh w FIN_vh FIN_w no_ov_zh).
-  - exact DWPlusDW_vh_w_disjunction.
-Qed.
-
 End DWPlusDWFinite.
 
-(* Bridge: DWPlusDW_relative_error_input_cond directly implies finiteness of the fst component.
-   This packages the DWPlusDWFinite section's hypotheses as a single Prop
-   suitable for use as a VST PRE-condition. *)
+(* Package the input-only safe condition into result finiteness. *)
 Section DWPlusDWCondBridge.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl yh yl : ftype t).
 
-(* DWPlusDW genuinely requires fprec >= 3 (the Fast2Sum-stage overflow bounds
-   need headroom below Omega).  VCFloat only guarantees fprec >= 2, so this is
-   supplied as an explicit hypothesis; at any concrete real type (binary16 has
-   fprec = 11) it is discharged by computation. *)
-Theorem AccurateDWPlusDW_sum_finite_from_cond :
+Theorem AccurateDWPlusDW_finite_from_safe_input_cond :
   (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl ->
-  is_finite (fst (AccurateDWPlusDW xh xl yh yl)) = true.
-Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply AccurateDWPlusDW_fst_finite; first [eassumption | cbv; intros; try discriminate].
-Qed.
-
-Theorem AccurateDWPlusDW_finite_from_cond :
-  (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl ->
+  DWPlusDW_safe_input_cond xh xl yh yl ->
   is_finite_p (AccurateDWPlusDW xh xl yh yl).
 Proof.
-intros Hp3 Hcond.
-rewrite /is_finite_p; split.
--
-exact (AccurateDWPlusDW_sum_finite_from_cond Hp3 Hcond).
--
-destruct Hcond as [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
+intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
 eapply AccurateDWPlusDW_finite; first [eassumption | cbv; intros; try discriminate].
-Qed.
-
-(* Forwarders for the C-level VST forward_calls inside body_dw_plus_dw2:
-   - two_sum(&sh, x->s, y->s) needs TwoSum_exact_cond xh yh
-   - two_sum(&th, x->t, y->t) needs TwoSum_exact_cond xl yl
-   - fast_2sum(&vh, sh.s, c) needs Fast2Sum_exact_cond (BPLUS xh yh) (BPLUS sl th)
-   - fast_2sum(st,  vh.s, w) needs Fast2Sum_exact_cond vh w
-*)
-Theorem TwoSum_exact_cond_from_DWPlusDW_cond_xh_yh :
-  (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_exact_cond xh yh.
-Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_exact_cond_xh_yh_inner; first [eassumption | cbv; intros; discriminate].
-Qed.
-
-Theorem TwoSum_exact_cond_from_DWPlusDW_cond_xl_yl :
-  (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl -> TwoSum_exact_cond xl yl.
-Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply TwoSum_exact_cond_xl_yl_inner; first [eassumption | cbv; intros; discriminate].
-Qed.
-
-(* These two discharge the Fast2Sum_exact_cond disjunction via the *_disjunction lemmas. *)
-Theorem Fast2Sum_exact_cond_from_DWPlusDW_cond_sh_c :
-  (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl ->
-  Fast2Sum_exact_cond (TwoSumF_sum xh yh)
-                (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)).
-Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_exact_cond_sh_c_inner; first [eassumption | cbv; intros; discriminate].
-Qed.
-
-Theorem Fast2Sum_exact_cond_from_DWPlusDW_cond_vh_w :
-  (3 <= fprec t)%Z ->
-  DWPlusDW_relative_error_input_cond xh xl yh yl ->
-  Fast2Sum_exact_cond
-    (Fast2Sum_sum (TwoSumF_sum xh yh)
-                  (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))
-    (BPLUS (TwoSumF_err xl yl)
-           (Fast2Sum_err (TwoSumF_sum xh yh)
-                         (BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl)))).
-Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply Fast2Sum_exact_cond_vh_w_inner; first [eassumption | cbv; intros; discriminate].
 Qed.
 
 End DWPlusDWCondBridge.

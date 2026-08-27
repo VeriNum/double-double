@@ -1,18 +1,20 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Accuracy / relative-error proofs for AccurateDWPlusDW.
-   Split from DWPlusDW.v so the finiteness-bridge file (DWPlusDW.v)
-   does not need to depend on the paper_proofs/DWPlus chain. *)
+(** Pure relative-error and output-closure results for [AccurateDWPlusDW].
+
+    The operation has no separate mixed-error tier: under two input
+    double-word properties and finiteness of the computed pair, its relative
+    error is at most [3u^2/(1-4u)] over the whole range.  The input-only safe
+    condition proves result finiteness and reaches the same guarantee as a
+    corollary. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
-Require Import Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DWPlus DDConds DWord_defs DWPlusDW_acc_helpers.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
-Require Import Logic.FunctionalExtensionality.
-
 Set Bullet Behavior "Strict Subproofs".
 
 Section AccuracyDWPlusDW.
@@ -33,7 +35,7 @@ Let yhr := (FT2R yh).
 Let ylr := (FT2R yl).
 
 (* connect paper proofs to local defs *)
-Definition DWPlusDW :=
+Local Definition DWPlusDW_FLX :=
   F2Sum.Fast2Sum p choice
            (fst
               (F2Sum.Fast2Sum p choice (TwoSum_sum p choice xhr yhr)
@@ -49,12 +51,12 @@ Definition DWPlusDW :=
 
 
 (* start section hypotheses *)
-Hypothesis Hcond: DWPlusDW_relative_error_input_cond xh xl yh yl.
+Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 (* end section hypotheses *)
 
 Let FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl) :=
-  (AccurateDWPlusDW_finite_from_cond xh xl yh yl Hp3 Hcond).
+  (proj2 Hcond).
 
 Ltac prove_finite :=
   move : FIN;
@@ -70,25 +72,25 @@ Let y1 := BPLUS xl yl.
 Let f1 := BPLUS x1 y1.
 Let y  := snd (Fast2Sum f0 f1).
 
-Fact FIN1 : is_finite_p (Fast2Sum f0 f1).
+Local Fact FIN1 : is_finite_p (Fast2Sum f0 f1).
 Proof. prove_finite. Qed.
 
-Fact FIN2 : is_finite_p (TwoSumF xh yh).
+Local Fact FIN2 : is_finite_p (TwoSumF xh yh).
 Proof. prove_finite. Qed.
 
-Fact FIN3 : is_finite (BPLUS x1 y1) = true.
+Local Fact FIN3 : is_finite (BPLUS x1 y1) = true.
 Proof. prove_finite. Qed.
 
-Fact FIN4 : is_finite_p (TwoSumF xl yl).
+Local Fact FIN4 : is_finite_p (TwoSumF xl yl).
 Proof. prove_finite. Qed.
 
-Fact FIN5 : is_finite (BPLUS x y) = true.
+Local Fact FIN5 : is_finite (BPLUS x y) = true.
 Proof. prove_finite. Qed.
 
 (* the result of the FLT format algorithm and the FLX format algorithm are
   equal, regardless of underflow. *)
-Lemma DWPlusDWEq_FLT :
-  DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl).
+Local Lemma DWPlusDWEq_FLT :
+  DWPlusDW_FLX = F2Rp (AccurateDWPlusDW xh xl yh yl).
 Proof.
 pose proof FIN1 as fin1.
 pose proof FIN2 as fin2.
@@ -96,7 +98,7 @@ pose proof FIN3 as fin3.
 pose proof FIN4 as fin4.
 pose proof FIN5 as fin5.
 move: FIN.
-rewrite /AccurateDWPlusDW/is_finite_p/DWPlusDW.
+rewrite /AccurateDWPlusDW/is_finite_p/DWPlusDW_FLX.
 move => [].
 replace (TwoSumF xh yh) with (BPLUS xh yh, TwoSumF_err xh yh) => //.
 replace (TwoSumF xl yl) with (BPLUS xl yl, TwoSumF_err xl yl) => //.
@@ -182,33 +184,20 @@ Let zl := (FT2R (snd (AccurateDWPlusDW xh xl yh yl))).
 Definition relative_error_DWPlusDW :=
   Rabs ((zh + zl - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)).
 
-Definition errorDWDW := ((xhr + xlr + yhr + ylr) - (zh + zl)).
-
-Definition rnd :=
-  (round radix2 (SpecFloat.fexp (fprec t) (femax t)) (Generic_fmt.Znearest choice)).
-
-(* connect paper proofs to local defs *)
-Fact rel_errorE: relative_error_DWPlusDW =
-    Rabs errorDWDW * (Rabs (/( xhr + xlr + yhr + ylr))).
-Proof.
-rewrite /relative_error_DWPlusDW
-  /Rdiv !Rabs_mult -Ropp_minus_distr Rabs_Ropp //.
-Qed.
-
-Lemma relative_errorDWDW_eq :
+Local Lemma relative_errorDWDW_eq :
   relative_errorDWDW p choice xhr xlr yhr ylr = relative_error_DWPlusDW.
 Proof.
 rewrite /relative_errorDWDW/relative_error_DWPlusDW.
 f_equal. f_equal; try nra. f_equal; try nra.
 unfold zh, zl.
-fold DWPlusDW.
+fold DWPlusDW_FLX.
 rewrite DWPlusDWEq_FLT => //.
 Qed.
 
-Theorem relative_errorDWPlusDW_correct :
+Theorem DWPlusDW_relative_accuracy_from_cond :
   relative_error_DWPlusDW <= (3 * u^2) / (1 - 4 * u).
 Proof.
-have [_ [_ [_ [_ [DWx [DWy _]]]]]] := Hcond.
+have [DWx DWy] := proj1 Hcond.
 have HDWx : DWPlus.double_word p choice xhr xlr by apply (dw_word_DWdouble xh xl xh DWx).
 have HDWy : DWPlus.double_word p choice yhr ylr by apply (dw_word_DWdouble yh yl yh DWy).
 pose proof @DWPlusDW_relerr_bound (fprec t)
@@ -217,123 +206,110 @@ pose proof @DWPlusDW_relerr_bound (fprec t)
 move: H. by rewrite relative_errorDWDW_eq.
 Qed.
 
-Lemma DWPlusDW_0 : (xhr + xlr + yhr + ylr) = 0 -> zh + zl = 0.
-Proof.
-have [_ [_ [_ [_ [DWx [DWy _]]]]]] := Hcond.
-unfold zh, zl.
-have: DWPlusDW = F2Rp (AccurateDWPlusDW xh xl yh yl) by
-  apply DWPlusDWEq_FLT => //.
-rewrite /F2Rp.
-replace DWPlusDW with
-  (fst DWPlusDW, snd DWPlusDW) => //.
-move => H1.
-inversion H1. rewrite -H0 -H2; clear H1 H0 H2.
-destruct (Req_dec (xhr + xlr) 0).
-- have xh0: xhr = 0.
-  + move: DWx; rewrite /double_word_prop.
-    by rewrite H /rounded round_0.
-  + rewrite H Rplus_0_l.
-    move => Hy.
-    have yh0: yhr = 0.
-    * move: DWy; rewrite /double_word_prop.
-      by rewrite Hy /rounded round_0.
-    * have xl0 : xlr = 0 by apply (double_word_0 xh).
-      have yl0 : ylr = 0 by apply (double_word_0 yh).
-      rewrite xh0 yh0 xl0 yl0.
-      rewrite /TwoSum_err/TwoSum_sum //=.
-      repeat (try rewrite !Rplus_0_l;
-              try rewrite !Rminus_0_r;
-              try rewrite !round_0;
-              try nra).
-- move => H1.
-  have : yhr + ylr = - (xhr + xlr) by nra.
-  move => H3.
-  have Hxy : (yhr = -xhr).
-  + move: DWx DWy; rewrite /double_word_prop.
-    rewrite H3 /rounded round_NE_opp.
-    move => HxE HyE.
-    rewrite /yhr/xhr HxE HyE //=.
-  + have Hxyl : (ylr = -xlr) by nra.
-    have : TwoSum_sum p choice xhr yhr = 0 /\
-             TwoSum_err p choice xhr yhr = 0.
-    { apply null_case_pre => //; try nra.
-      apply generic_format_FLX_FT2R. }
-    have : TwoSum_sum p choice xlr ylr = 0 /\
-             TwoSum_err p choice xlr ylr = 0.
-    { apply null_case_pre => //; try nra.
-      apply generic_format_FLX_FT2R. }
-    move => [] HA HB [] HC HD. rewrite HA HB HC HD.
-    repeat (try rewrite !Rplus_0_l;
-            try rewrite !Rminus_0_r;
-            try rewrite !round_0;
-            try nra).
-Qed.
-
-Theorem relative_errorDWPlusFP_correct' :
-  exists del, (zh + zl) = (xhr + xlr + yhr + ylr) * (1 + del) /\
-    Rabs del <= (3 * u^2) / (1 - 4 * u).
-Proof.
-destruct (Req_dec (xhr + xlr + yhr + ylr) 0) as [Hx0|Hx0].
-- exists 0; rewrite Hx0; split.
-  + field_simplify; by apply DWPlusDW_0.
-  + rewrite Rabs_R0 /u //=.
-    apply Rdiv_le_0_compat_Raux; try nra.
-    move : Hp3.
-    rewrite fprec_eq.
-    move => Hp3'.
-    apply Rlt_Rminus.
-    refine (Rle_lt_trans _
-      (4 * / IZR (Z.pow_pos 2 3)) _ _ _); try nra.
-    apply Generic_proof.Rdiv_le_mult_pos; try nra.
-    rewrite !Zpower_pos_powerRZ power_RZ_inv; try nra.
-    rewrite Rmult_assoc.
-    rewrite -powerRZ_add; try nra.
-    suff : powerRZ 2 (- Z.pos (fprecp t) + 3) <= 1;
-      try nra. rewrite -( @powerRZ_O 2).
-    apply Pff.Rle_powerRZ; try nra; lia.
-- exists (((zh + zl) - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)); split.
-  + now field_simplify.
-  + apply relative_errorDWPlusDW_correct.
-Qed.
-
-
 End AccuracyDWPlusDW.
 
-Section MixedCondBridgeDWPlusDW.
+Section RelativeGuaranteeDWPlusDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Lemma DWPlusDW_inputs_finite_of_result_finite
-    (xh xl yh yl : ftype t) :
-  DWPlusDW_result_finite xh xl yh yl ->
-  is_finite xh = true /\
-  is_finite xl = true /\
-  is_finite yh = true /\
-  is_finite yl = true.
-Proof.
-unfold DWPlusDW_result_finite.
-move => [Hzh Hzl].
-unfold AccurateDWPlusDW, TwoSumF, Fast2Sum in Hzh.
-cbn in Hzh.
-match type of Hzh with
-| is_finite ?e = true => subexpr_finite_H0 e Hzh
-end.
-repeat split; assumption.
-Qed.
+Definition DWPlusDW_relative_guarantee
+    (xh xl yh yl : ftype t) : Prop :=
+  let '(zh, zl) := AccurateDWPlusDW xh xl yh yl in
+  Rabs
+    ((FT2R zh + FT2R zl -
+        (FT2R xh + FT2R xl + FT2R yh + FT2R yl)) /
+       (FT2R xh + FT2R xl + FT2R yh + FT2R yl))
+    <= (3 * bpow Zaux.radix2 (- fprec t) ^ 2) /
+         (1 - 4 * bpow Zaux.radix2 (- fprec t)) /\
+  double_word_prop zh zl.
 
-Lemma DWPlusDW_mixed_cond_of_safe_input_cond
+Theorem DWPlusDW_double_word_from_cond
     (xh xl yh yl : ftype t) :
   (3 <= fprec t)%Z ->
-  DWPlusDW_mixed_safe_input_cond xh xl yh yl ->
-  DWPlusDW_mixed_cond xh xl yh yl.
+  DWPlusDW_cond xh xl yh yl ->
+  double_word_prop (fst (AccurateDWPlusDW xh xl yh yl))
+                   (snd (AccurateDWPlusDW xh xl yh yl)).
+Proof.
+intros Hp3 [[DWx DWy] Hfin].
+unfold DWPlusDW_output_finite_cond in Hfin.
+set sh := TwoSumF_sum xh yh.
+set c := BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl).
+set vh := Fast2Sum_sum sh c.
+set vl := Fast2Sum_err sh c.
+set w := BPLUS (TwoSumF_err xl yl) vl.
+Ltac finite_from_result H :=
+  move: H;
+  rewrite /is_finite_p /AccurateDWPlusDW /Fast2Sum /TwoSumF /snd /fst;
+  move=>[]; repeat subexpr_finite=> //.
+have Fsh : is_finite sh = true by unfold sh; finite_from_result Hfin.
+have Fsl : is_finite (TwoSumF_err xh yh) = true by finite_from_result Hfin.
+have Fth : is_finite (TwoSumF_sum xl yl) = true by finite_from_result Hfin.
+have Ftl : is_finite (TwoSumF_err xl yl) = true by finite_from_result Hfin.
+have Fc : is_finite c = true by unfold c; finite_from_result Hfin.
+have Fvh : is_finite vh = true by unfold vh, sh, c; finite_from_result Hfin.
+have Fz : is_finite (BMINUS (BPLUS sh c) sh) = true
+  by unfold sh, c; finite_from_result Hfin.
+have Fvl : is_finite vl = true by unfold vl, sh, c; finite_from_result Hfin.
+have Fw : is_finite w = true
+  by unfold w, vl, sh, c; finite_from_result Hfin.
+have Fzh : is_finite (BPLUS vh w) = true
+  by unfold vh, w, vl, sh, c; finite_from_result Hfin.
+have Horder :=
+  @DWPlusDW_vh_w_disjunction_core
+    NANS t STD xh xl yh yl DWx DWy Hp3
+    Fsh Fsl Fth Ftl Fc Fvh Fz Fvl Fw.
+have Hexact : Fast2Sum_exact_cond vh w := conj Fzh Horder.
+change (double_word_prop (Fast2Sum_sum vh w) (Fast2Sum_err vh w)).
+have Hsum := FastTwoSum_correct_from_exact_cond vh w Hexact.
+unfold double_word_prop, rounded.
+rewrite Hsum.
+replace
+  (FT2R (Fast2Sum_sum vh w) +
+     (FT2R vh + FT2R w - FT2R (Fast2Sum_sum vh w)))
+  with (FT2R vh + FT2R w) by ring.
+symmetry.
+exact (BPLUS_round_correct t vh w Fzh).
+Qed.
+
+Theorem DWPlusDW_relative_guarantee_from_cond
+    (xh xl yh yl : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_relative_guarantee xh xl yh yl.
+Proof.
+intros Hp3 Hcond.
+have Hacc := @DWPlusDW_relative_accuracy_from_cond
+               NANS t STD xh xl yh yl Hcond Hp3.
+have Hdw := DWPlusDW_double_word_from_cond xh xl yh yl Hp3 Hcond.
+unfold relative_error_DWPlusDW in Hacc.
+unfold DWPlusDW_relative_guarantee.
+revert Hacc Hdw.
+destruct (AccurateDWPlusDW xh xl yh yl) as [zh zl].
+cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
+Qed.
+
+Lemma DWPlusDW_cond_of_safe_input_cond
+    (xh xl yh yl : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWPlusDW_safe_input_cond xh xl yh yl ->
+  DWPlusDW_cond xh xl yh yl.
 Proof.
 intros Hp3 Hsafe.
-unfold DWPlusDW_mixed_safe_input_cond in Hsafe.
-have Hfin := AccurateDWPlusDW_finite_from_cond xh xl yh yl Hp3 Hsafe.
+have Hfin := AccurateDWPlusDW_finite_from_safe_input_cond xh xl yh yl Hp3 Hsafe.
 specialize (Hfin NANS STD).
-destruct Hsafe as (Hfxh & Hfxl & Hfyh & Hfyl & Hdx & Hdy & Hxh & Hyh).
-unfold DWPlusDW_mixed_cond, DWPlusDW_mixed_input_cond,
-       DWPlusDW_result_finite.
+destruct Hsafe as (_ & _ & _ & _ & Hdx & Hdy & _ & _).
+unfold DWPlusDW_cond, DWPlusDW_input_cond, DWPlusDW_output_finite_cond.
 exact (conj (conj Hdx Hdy) Hfin).
 Qed.
 
-End MixedCondBridgeDWPlusDW.
+Theorem DWPlusDW_relative_guarantee_from_safe_input_cond
+    (xh xl yh yl : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWPlusDW_safe_input_cond xh xl yh yl ->
+  DWPlusDW_relative_guarantee xh xl yh yl.
+Proof.
+intros Hp3 Hsafe.
+apply DWPlusDW_relative_guarantee_from_cond; [exact Hp3|].
+exact (DWPlusDW_cond_of_safe_input_cond xh xl yh yl Hp3 Hsafe).
+Qed.
+
+End RelativeGuaranteeDWPlusDW.
