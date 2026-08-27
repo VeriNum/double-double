@@ -58,22 +58,6 @@ Definition Fast2Mult_exact_cond (a b : ftype t) : Prop :=
    bpow Zaux.radix2 (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t - 1)
    <= Rabs (FT2R a * FT2R b)).
 
-(* Fast2Mult_acc_only_cond requires only that the rounded product be finite.
-   Compared with Fast2Mult_exact_cond, it drops the underflow condition (the `a*b = 0 \/
-   threshold <= |a*b|` disjunction).  By itself it suffices for the bound
-   |Fast2Mult_err a b| <= 1/2 ulp(a*b) — which holds in every regime — but does
-   not prove that mul + err = a*b or that (mul, err) is a valid double-word.
-   Those conclusions need the underflow disjunct of the full Fast2Mult_exact_cond.
-   See Fast2Mult_acc.v:
-   Fast2Mult_accuracy_from_acc_only_cond (this cond) vs Fast2Mult_correct_from_exact_cond
-   (the full cond). *)
-Definition Fast2Mult_acc_only_cond (a b : ftype t) : Prop :=
-  is_finite (BMULT a b) = true.
-
-Lemma Fast2Mult_acc_only_cond_of_exact_cond (a b : ftype t) :
-  Fast2Mult_exact_cond a b -> Fast2Mult_acc_only_cond a b.
-Proof. intros [Hfin _]; exact Hfin. Qed.
-
 End Fast2MultCond.
 
 
@@ -163,8 +147,8 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   Fast2Mult_exact_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
-(* Safe input condition for the mixed guarantee on [DWTimesFP3].  It uses
-   [Fast2Mult_acc_only_cond], so it permits the leading product underflow gap.
+(* Safe input condition for the mixed guarantee on [DWTimesFP3].  It requires
+   only finiteness of the rounded leading product, so it permits its underflow gap.
    Together with input finiteness, the double-word relation, and the product
    ceiling, it proves result finiteness and hence the mixed error bound and
    output validity.  [dw_mult_fp_check] establishes this condition.  The pure
@@ -172,7 +156,7 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
 Definition DWTimesFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
   double_word_prop xh xl /\
-  Fast2Mult_acc_only_cond xh y /\
+  is_finite (BMULT xh y) = true /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
 Definition DWTimesFP_mixed_input_cond
@@ -195,7 +179,7 @@ Lemma DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond
 Proof.
   intros (Hfxl & Hdwp & Hf2m & Hreal).
   repeat split; try assumption.
-  exact (Fast2Mult_acc_only_cond_of_exact_cond xh y Hf2m).
+  exact (proj1 Hf2m).
 Qed.
 
 End DWTimesFPCond.
@@ -218,8 +202,8 @@ Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : 
   Fast2Mult_exact_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-(* Safe input condition for the mixed guarantee on [DWTimesDW3].  It uses
-   [Fast2Mult_acc_only_cond], so it permits the leading product underflow gap.
+(* Safe input condition for the mixed guarantee on [DWTimesDW3].  It requires
+   only finiteness of the rounded leading product, so it permits its underflow gap.
    The remaining conjuncts require finite double-word inputs and enough
    overflow headroom to prove result finiteness.  The mixed guarantee then
    supplies the [4u^2|P| + 5/2*eta] bound and output validity.
@@ -229,7 +213,7 @@ Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite yl = true /\
   double_word_prop xh xl /\
   double_word_prop yh yl /\
-  Fast2Mult_acc_only_cond xh yh /\
+  is_finite (BMULT xh yh) = true /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
 (* Input condition for the sharp normal range relative bound.  The mixed
@@ -266,7 +250,7 @@ Lemma DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
 Proof.
   intros (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hreal).
   repeat split; try assumption.
-  exact (Fast2Mult_acc_only_cond_of_exact_cond xh yh Hf2m).
+  exact (proj1 Hf2m).
 Qed.
 
 Lemma DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond

@@ -122,7 +122,7 @@ start_function.
 forward_call (a,b).
 Intros vret_fin.
 set (Post_if :=
-  PROP (Fast2Mult_acc_only_cond a b)
+  PROP (is_finite (BMULT a b) = true)
   LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
   SEP (data_at_ Tsh dword st)).
 forward_if Post_if.
@@ -132,8 +132,8 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (Fast2Mult_acc_only_cond a b) as HFC by entailer!.
+  assert_PROP (is_finite (BMULT a b) = true) as HFC by entailer!.
   forward_call (st, a, b).
   entailer!!.
-  apply Fast2Mult_accuracy_from_acc_only_cond, HFC.
+  apply Fast2Mult_accuracy_norm, HFC.
 Qed.

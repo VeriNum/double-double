@@ -215,7 +215,7 @@ Qed.
 Local Lemma sub_Pil : Rabs Pil <= 5/8 * M.
 Proof.
 have Hacc : Rabs Pil <= /2 * ulp A
-  by exact (Fast2Mult_accuracy_from_acc_only_cond (BDIV xh y) y sub_fin_pih).
+  by exact (Fast2Mult_accuracy_norm (BDIV xh y) y sub_fin_pih).
 have Hulp : ulp A <= 2 * u * Rabs A + eta
   by apply ulp_le_relative_plus_emin.
 have HuA := sub_uA. have HeM := sub_eta_uM.
@@ -852,7 +852,7 @@ Local Lemma fin_Pil_bnd :
 Proof.
 have Hacc : Rabs (FT2R (Fast2Mult_err (BDIV xh y) y))
           <= /2 * ulp (FT2R (BDIV xh y) * FT2R y)
-  by exact (Fast2Mult_accuracy_from_acc_only_cond (BDIV xh y) y fin_pih).
+  by exact (Fast2Mult_accuracy_norm (BDIV xh y) y fin_pih).
 have HA := fin_A_bnd. have HO := fin_Om32.
 have Hlt : Rabs (FT2R (BDIV xh y) * FT2R y) < Om by lra.
 have Hu := fin_half_ulp _ Hlt. lra.

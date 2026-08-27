@@ -393,9 +393,8 @@ Definition fast2_mult_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
-(* This Tier B check confirms that the rounded product is finite and therefore
-   certifies the weaker Fast2Mult_acc_only_cond.  Mirrors
-   fp_utils_specs.fast2_mult_acc_check_spec. *)
+(* This Tier B check confirms that the rounded product is finite.  It mirrors
+   [fp_utils_specs.fast2_mult_acc_check_spec]. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
   WITH x : ftype Tdouble, y : ftype Tdouble
@@ -403,7 +402,7 @@ Definition fast2_mult_acc_check_spec :=
     PROP() PARAMS ( Vfloat x; Vfloat y ) SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_acc_only_cond x y)
+    PROP(b = true -> is_finite (BMULT x y) = true)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 

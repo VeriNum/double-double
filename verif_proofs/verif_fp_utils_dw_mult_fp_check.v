@@ -175,6 +175,6 @@ Proof.
            destruct (prod_bnd_facts (fst xh) y)
              as [Hbmul_fin Hprodb].
            { unfold bpb in Hbpbt; exact Hbpbt. }
-           unfold DDConds.DWTimesFP_mixed_safe_input_cond, DDConds.Fast2Mult_acc_only_cond.
+           unfold DDConds.DWTimesFP_mixed_safe_input_cond.
            repeat (split; try assumption).
 Qed.

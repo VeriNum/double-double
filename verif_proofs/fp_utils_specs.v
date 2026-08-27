@@ -45,10 +45,10 @@ Definition fast2_mult_check_spec :=
     SEP().
 
 
-(* This Tier B check confirms that the rounded product is finite and therefore
-   certifies Fast2Mult_acc_only_cond.  That condition suffices for the bound on the
-   returned error component, but not for exact reconstruction or for proving
-   that the output is a valid double-word.  Mirrors fast2_mult_check_spec. *)
+(* This Tier B check confirms that the rounded product is finite.  That fact
+   suffices for the bound on the returned error component, but not for exact
+   reconstruction or for proving that the output is a valid double-word.  It
+   mirrors [fast2_mult_check_spec]. *)
 Definition fast2_mult_acc_check_spec :=
   DECLARE _fast2_mult_acc_check
   WITH x : ftype Tdouble, y : ftype Tdouble
@@ -58,7 +58,7 @@ Definition fast2_mult_acc_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> Fast2Mult_acc_only_cond x y)
+    PROP(b = true -> is_finite (BMULT x y) = true)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 

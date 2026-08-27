@@ -282,7 +282,6 @@ Lemma DWTimesFP3_finite_from_safe_input_cond (xh xl y : ftype t) :
   is_finite_p (DWTimesFP3 xh xl y).
 Proof.
 intros (Hfxl & Hdwp & Hfmul & Hreal).
-unfold Fast2Mult_acc_only_cond in Hfmul.
 have [Hfxh Hfy] := BMULT_finite_e t xh y Hfmul.
 have HyΩ : Rabs (FT2R y) <= Omega
   by (apply Rlt_le; exact (is_finite_no_overflow t y Hfy)).

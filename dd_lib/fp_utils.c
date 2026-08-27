@@ -41,8 +41,7 @@ int fast2_mult_acc_check(double x, double y) {
        exactly what the bound |err| <= 1/2 ulp(x*y) needs in every regime, so the
        check omits fast2_mult_check's underflow zero/threshold test.  It does
        NOT certify that mul + err == x*y or that the result is a valid double
-       word; use fast2_mult_check for those guarantees.
-       Discharges DDConds.Fast2Mult_acc_only_cond. */
+       word; use fast2_mult_check for those guarantees. */
     return isfinite_double(x * y);
 }
 
@@ -238,8 +237,8 @@ int dw_div_fp_check(struct dword *x, double y) {
        represent, and the exported postcondition did not weaken.
 
        WHAT REPLACES THE FLOOR.  The cond's fifth conjunct is now
-       `is_finite (BDIV x->s y)` -- the division analogue of Fast2Mult_acc_only_cond,
-       which is likewise just `is_finite (BMULT a b)`.  It is established here by
+       `is_finite (BDIV x->s y)` -- the division analogue of requiring
+       `is_finite (BMULT a b)`.  It is established here by
        qt_hi alone: a STRICT comparison against a finite constant rejects NaN
        (unordered) and +Inf, so it forces RN(x->s/y) finite, which in turn forces
        y != 0 in R (BDIV_denom_ne0).  That is exactly what the old floor was
