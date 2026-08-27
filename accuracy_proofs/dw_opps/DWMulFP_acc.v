@@ -6,9 +6,12 @@
     Public results:
     - [DWTimesFP_relative_accuracy]: the pure [2u^2] relative bound under
       [DWTimesFP_relative_error_input_cond];
+    - [DWTimesFP_mixed_accuracy_from_cond]: the whole-range
+      [2u^2|P| + 2.51 eta] bound under [DWTimesFP_mixed_cond];
+    - [DWTimesFP_double_word_from_cond]: output closure under the same
+      condition;
     - [DWTimesFP_mixed_guarantee_from_cond]: the whole-range
-      [2u^2|P| + 2.51 eta] bound and output closure under
-      [DWTimesFP_mixed_cond];
+      accuracy-and-closure bundle assembled from those two results;
     - [DWTimesFP_mixed_guarantee_from_safe_input_cond]: the same bundle after
       an input-only sufficient condition establishes result finiteness.
 
@@ -1182,8 +1185,9 @@ Qed.
    PUBLIC WHOLE-RANGE INTERFACE.
 
    DWTimesFP_mixed_cond contains exactly the input double-word property and
-   finiteness of the computed pair.  From it, the theorem below proves the
-   bundled mixed bound and output closure.
+   finiteness of the computed pair.  From it, the first two theorems below
+   expose accuracy and output closure separately; the guarantee theorem
+   combines them.
    A caller using only pre-operation checks may instead establish
    DWTimesFP_mixed_safe_input_cond, derive mixed_cond via result finiteness,
    and obtain the same bundle.  No underflow disjunct is needed in either
@@ -1203,6 +1207,43 @@ unfold DWTimesFP_mixed_cond, DWTimesFP_mixed_input_cond,
 exact (conj Hdw Hfin).
 Qed.
 
+Theorem DWTimesFP_mixed_accuracy_from_cond
+    {NANS : Nans} {t : type} {STD : is_standard t}
+    (xh xl y : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWTimesFP_mixed_cond xh xl y ->
+  Rabs
+    (FT2R (fst (DWTimesFP3 xh xl y)) +
+       FT2R (snd (DWTimesFP3 xh xl y)) -
+       (FT2R xh + FT2R xl) * FT2R y)
+    <= 2 * bpow Zaux.radix2 (- fprec t) ^ 2 *
+         Rabs ((FT2R xh + FT2R xl) * FT2R y) +
+       251 / 100 * bpow Zaux.radix2 (@common.emin t).
+Proof.
+move => Hp3 [DWa FIN].
+have Hguarantee :=
+  DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
+unfold DWTimesFP_mixed_guarantee in Hguarantee.
+destruct (DWTimesFP3 xh xl y) as [zh zl].
+exact (proj1 Hguarantee).
+Qed.
+
+Theorem DWTimesFP_double_word_from_cond
+    {NANS : Nans} {t : type} {STD : is_standard t}
+    (xh xl y : ftype t) :
+  (3 <= fprec t)%Z ->
+  DWTimesFP_mixed_cond xh xl y ->
+  double_word_prop (fst (DWTimesFP3 xh xl y))
+                   (snd (DWTimesFP3 xh xl y)).
+Proof.
+move => Hp3 [DWa FIN].
+have Hguarantee :=
+  DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
+unfold DWTimesFP_mixed_guarantee in Hguarantee.
+destruct (DWTimesFP3 xh xl y) as [zh zl].
+exact (proj2 Hguarantee).
+Qed.
+
 Theorem DWTimesFP_mixed_guarantee_from_cond
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
@@ -1210,8 +1251,15 @@ Theorem DWTimesFP_mixed_guarantee_from_cond
   DWTimesFP_mixed_cond xh xl y ->
   DWTimesFP_mixed_guarantee xh xl y.
 Proof.
-move => Hp3 [DWa FIN].
-exact (DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN).
+intros Hp3 Hcond.
+have Hacc :=
+  DWTimesFP_mixed_accuracy_from_cond xh xl y Hp3 Hcond.
+have Hdw :=
+  DWTimesFP_double_word_from_cond xh xl y Hp3 Hcond.
+unfold DWTimesFP_mixed_guarantee.
+revert Hacc Hdw.
+destruct (DWTimesFP3 xh xl y) as [zh zl].
+cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
 Theorem DWTimesFP_mixed_guarantee_from_safe_input_cond

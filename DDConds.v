@@ -175,7 +175,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
        power-of-two that is provably sufficient: at |xh*y| ~ Omega the closing
        correction (a few ulp) tips RN(ch.s + c3) over Omega.  A caller may
        establish it from the square-root-scale factor bounds |xh|,|y| <=
-       2^(femax/2-1) (aux_factor_prod gives the stronger |xh*y| <= Omega/4). *)
+       2^(femax/2-1), which give the stronger |xh*y| <= Omega/4. *)
 Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
   double_word_prop xh xl /\
@@ -242,16 +242,20 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Precondition for DWTimesDW3 (Algorithm 12).  Double-word analog of
-   DWTimesFP_relative_error_input_cond, in the same minimal form:
+(* Exact-leading-product condition retained for the closing multiplication
+   inside DWDivDW.  It excludes the Fast2Mult underflow gap, but permits
+   subnormal low-order multiplication nodes and therefore is not the public
+   normal-range relative-error condition for DWTimesDW3.
+
+   Its conjuncts are:
      - Fast2Mult_exact_cond xh yh : leaf condition on the high product (also supplies
        is_finite xh and is_finite yh via BMULT_finite_e, so those are not listed);
      - is_finite xl, is_finite yl and the double-word relations on both pairs;
      - the product-magnitude bound |xh*yh| <= Omega/2 = 2^(femax-1) for overflow
        headroom (Omega/2 is the largest clean power-of-two that keeps the closing
-       Fast2Sum finite; established by a caller from |xh|,|yh| <= 2^(femax/2-1)
-       via aux_factor_prod, which gives the stronger |xh*yh| <= Omega/4). *)
-Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
+       Fast2Sum finite; callers may establish it from separate factor bounds,
+       which imply the stronger |xh*yh| <= Omega/4). *)
+Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xl = true /\
   is_finite yl = true /\
   double_word_prop xh xl /\
@@ -274,16 +278,13 @@ Definition DWTimesDW_relative_error_input_cond (xh xl yh yl : ftype t) : Prop :=
    and proves that the output is a valid double word.  Both conclusions hold in
    every regime given only the two input double-word relations and finiteness of
    the computed pair.  The conjuncts below are what a runtime guard needs to
-   establish that finiteness (DWMulDW_acc.DWTimesDW3_finite_acc).  It does NOT
-   suffice for the
-   pure 8u^2 relative bound (DWTimesDW_relative_accuracy), which is available
-   only when the nonzero underflow gap is excluded; that remains the province of
-   the full DWTimesDW_relative_error_input_cond.
+   establish that finiteness
+   (DWMulDW_acc.DWTimesDW_mixed_cond_of_safe_input_cond).
 
    This is the cond discharged by the runtime guard dw_mult_dw_check and carried
    by the exported funspec dw_mult_dw12_guarded_spec, exactly as
    DWTimesFP_mixed_safe_input_cond is for dw_mult_fp_check and
-   dw_mult_fp9_guarded_spec.  DWTimesDW_relative_error_input_cond remains in use
+   dw_mult_fp9_guarded_spec.  DWTimesDW_exact_leading_product_input_cond remains in use
    inside DWDivDW_acc, whose reciprocal refinement needs the underflow disjunct
    for the exact product step. *)
 Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
@@ -293,6 +294,19 @@ Definition DWTimesDW_mixed_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   double_word_prop yh yl /\
   Fast2Mult_acc_only_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
+
+(* Input-only condition for the sharp normal-range relative bound.  The mixed
+   safe-input condition supplies overflow headroom and input double-word
+   properties.  Normality of the leading product and the low-low product is
+   sufficient: the remaining low-order nodes are then either exact on the
+   physical FLT lattice or normal. *)
+Definition DWTimesDW_relative_error_input_cond
+    (xh xl yh yl : ftype t) : Prop :=
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl /\
+  bpow Zaux.radix2 (@common.emin t + 2 * fprec t - 1) <=
+    Rabs (FT2R xh * FT2R yh) /\
+  bpow Zaux.radix2 (@common.emin t + fprec t - 1) <=
+    Rabs (FT2R xl * FT2R yl).
 
 Definition DWTimesDW_mixed_input_cond
     (xh xl yh yl : ftype t) : Prop :=
@@ -308,15 +322,21 @@ Definition DWTimesDW_mixed_cond
   DWTimesDW_mixed_input_cond xh xl yh yl /\
   DWTimesDW_result_finite xh xl yh yl.
 
-Lemma DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond
+Lemma DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
     (xh xl yh yl : ftype t) :
-  DWTimesDW_relative_error_input_cond xh xl yh yl ->
+  DWTimesDW_exact_leading_product_input_cond xh xl yh yl ->
   DWTimesDW_mixed_safe_input_cond xh xl yh yl.
 Proof.
   intros (Hfxl & Hfyl & Hdwx & Hdwy & Hf2m & Hreal).
   repeat split; try assumption.
   exact (Fast2Mult_acc_only_cond_of_exact_cond xh yh Hf2m).
 Qed.
+
+Lemma DWTimesDW_mixed_safe_input_cond_of_relative_error_input_cond
+    (xh xl yh yl : ftype t) :
+  DWTimesDW_relative_error_input_cond xh xl yh yl ->
+  DWTimesDW_mixed_safe_input_cond xh xl yh yl.
+Proof. intros [Hsafe _]. exact Hsafe. Qed.
 
 End DWTimesDWCond.
 
@@ -338,7 +358,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    precise no-overflow condition and rejects only inputs that actually overflow.
    The underflow bound on the quotient is the analog of the product underflow
    bound in DWTimesFP_relative_error_input_cond and
-   DWTimesDW_relative_error_input_cond, and it forces y <> 0.
+   DWTimesDW_exact_leading_product_input_cond, and it forces y <> 0.
 
    This is the STRONG cond: its quotient floor 2^(emin+2p-1) is what buys the
    pure relative 6u^2 bound (DWDivFP_acc.DWDivFP3_accuracy).  The runtime guard

@@ -177,12 +177,12 @@ Section CorrectDWDivDW.
   (** The high component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
   Fact FIN_mh : is_finite mh = true.
-  Proof. exact (DWMulDW_acc.FINyh xh xl mh ml FIN_mul). Qed.
+  Proof. exact (DWMulDW_acc.DWTimesDW3_yh_finite xh xl mh ml FIN_mul). Qed.
 
   (** The low component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
   Fact FIN_ml : is_finite ml = true.
-  Proof. exact (DWMulDW_acc.FINyl xh xl mh ml FIN_mul). Qed.
+  Proof. exact (DWMulDW_acc.DWTimesDW3_yl_finite xh xl mh ml FIN_mul). Qed.
 
   (** Pair finiteness of the reciprocal-renormalization block. *)
   Fact FIN_plus : is_finite_p (DWPlusFP dh dl th).
@@ -2579,7 +2579,7 @@ Lemma DWDivDW_final_cond_from_cond_normal (xh xl yh yl : ftype t) :
   let m := DWPlusFP (fst d) (snd d) th in
   bpow radix2 (@common.emin t + 2 * fprec t - 1)
     <= Rabs (FT2R xh * FT2R (fst m)) ->
-  DWTimesDW_relative_error_input_cond xh xl (fst m) (snd m).
+  DWTimesDW_exact_leading_product_input_cond xh xl (fst m) (snd m).
 Proof.
 move => Hp14 COND /= UFprod.
 set th := BDIV (Zconst t 1) yh.
@@ -2655,7 +2655,7 @@ Qed.
 
 (** In the complementary closing-product regime, all nodes of the final
     [DWTimesDW3] are absolutely small.  This supplies finiteness without the
-    normal-product disjunct required by [DWTimesDW_relative_error_input_cond]. *)
+    normal-product disjunct required by [DWTimesDW_exact_leading_product_input_cond]. *)
 Lemma DWDivDW3_finite_from_cond_zprod_underflow (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_mixed_safe_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -2842,11 +2842,11 @@ destruct (Rle_or_lt
   (Rabs (FT2R xh * FT2R (fst m)))) as [Hnormal | Hsmall].
 - have Hfinal := DWDivDW_final_cond_from_cond_normal xh xl yh yl
     Hp14 COND Hnormal.
-  split.
-  + exact (DWMulDW_acc.DWTimesDW3_fst_finite xh xl (fst m) (snd m)
-      ltac:(lia) Hfinal).
-  + exact (DWMulDW_acc.DWTimesDW3_snd_finite xh xl (fst m) (snd m)
-      ltac:(lia) Hfinal).
+  have Hsafe :=
+    DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
+      xh xl (fst m) (snd m) Hfinal.
+  exact (proj2 (DWMulDW_acc.DWTimesDW_mixed_cond_of_safe_input_cond
+    xh xl (fst m) (snd m) ltac:(lia) Hsafe)).
 - exact (DWDivDW3_finite_from_cond_zprod_underflow xh xl yh yl
     Hp14 COND Hsmall).
 Qed.
@@ -2938,8 +2938,8 @@ Lemma DWTimesDW3_double_word {NANS: Nans} {t : type} {STD: is_standard t}
   double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
 Proof.
 intros Hp3 DWx DWy Hnorm FIN.
-have Hch  := DWMulDW_acc.FINmul  xh xl yh yl FIN.
-have Hcl3 := DWMulDW_acc.FINcl3  xh xl yh yl FIN.
+have Hch  := DWMulDW_acc.DWTimesDW3_mul_finite  xh xl yh yl FIN.
+have Hcl3 := DWMulDW_acc.DWTimesDW3_correction_finite  xh xl yh yl FIN.
 have Hle  := DWMulDW_acc.aux_cl3_le_ch xh xl yh yl Hp3 DWx DWy Hch Hcl3 Hnorm.
 change (double_word
           (Fast2Sum_sum (BMULT xh yh)
@@ -4392,7 +4392,7 @@ set tl1 := BFMA xh ml tl0.
 set cl2 := BFMA xl mh tl1.
 set cl3 := BPLUS cl1 cl2.
 have Fch : is_finite ch=true by
-  (unfold ch;exact (DWMulDW_acc.FINmul xh xl mh ml FIN)).
+  (unfold ch;exact (DWMulDW_acc.DWTimesDW3_mul_finite xh xl mh ml FIN)).
 (* The whole guard-free error chain that used to be inlined here (five
    rounding nodes, ~210 lines) is DWMulDW_acc's operand-generic gap lemma,
    instantiated at the two double words (xh,xl) and (mh,ml).  Nothing in it
@@ -5128,16 +5128,18 @@ Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
 (** The complete division is finite as soon as its closing multiplication
-    satisfies the already-proved [DWTimesDW_relative_error_input_cond]. *)
+    satisfies the already-proved [DWTimesDW_exact_leading_product_input_cond]. *)
 Lemma DWDivDW3_finite_from_final_cond :
   (4 <= fprec t)%Z ->
-  DWTimesDW_relative_error_input_cond xh xl mh ml ->
+  DWTimesDW_exact_leading_product_input_cond xh xl mh ml ->
   is_finite_p (DWDivDW3 xh xl yh yl).
 Proof.
 move => Hp4 Hfinal.
-split.
-- exact (DWMulDW_acc.DWTimesDW3_fst_finite xh xl mh ml Hp4 Hfinal).
-- exact (DWMulDW_acc.DWTimesDW3_snd_finite xh xl mh ml Hp4 Hfinal).
+have Hsafe :=
+  DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
+    xh xl mh ml Hfinal.
+exact (proj2 (DWMulDW_acc.DWTimesDW_mixed_cond_of_safe_input_cond
+  xh xl mh ml Hp4 Hsafe)).
 Qed.
 
 End FiniteDWDivDWFromFinalBlock.
@@ -5512,8 +5514,8 @@ Proof.
 unfold DWDivDW_result_finite.
 move => Hfin.
 have Hmul := FIN_mul xh xl yh yl Hfin.
-exact (conj (DWMulDW_acc.FINxh xh xl _ _ Hmul)
-       (conj (DWMulDW_acc.FINxl xh xl _ _ Hmul)
+exact (conj (DWMulDW_acc.DWTimesDW3_xh_finite xh xl _ _ Hmul)
+       (conj (DWMulDW_acc.DWTimesDW3_xl_finite xh xl _ _ Hmul)
        (conj (FIN_yh xh xl yh yl Hfin)
              (FIN_yl xh xl yh yl Hfin)))).
 Qed.
