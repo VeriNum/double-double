@@ -198,7 +198,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 }
 
 int dw_div_fp_check(struct dword *x, double y) {
-    /* Verifies DWDivFP_mixed_error_input_cond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
+    /* Verifies DWDivFP_mixed_safe_input_cond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
        double-word; RN(x->s / y) finite; |x->s| in [2^(emin+2p), Omega/4]; and
        |x->s / y| <= Omega/4.  There is NO quotient lower bound.
 
@@ -212,7 +212,7 @@ int dw_div_fp_check(struct dword *x, double y) {
                                   DWDivFP_acc.v, which is what Layer 1's
                                   FLX->FLT bridge for the leading quotient
                                   node needs;
-         (none)                   DWDivFP_mixed_error_input_cond, this guard.
+         (none)                   DWDivFP_mixed_safe_input_cond, this guard.
 
        The last step is not a bridge relaxation but a separate proof: below
        2^(emin+p-1) the leading node RN(x->s/y) is subnormal and Layer 1 does
@@ -224,10 +224,9 @@ int dw_div_fp_check(struct dword *x, double y) {
 
          |(zh+zl) - (x->s + x->t)/y| <= 3u^2 |(x->s + x->t)/y| + 2^emin
 
-       (DWDivFP_subnormal.DWDivFP_mixed_accuracy_from_safe_input_cond), plus
-       output double-word closure
-       (DWDivFP_subnormal.DWDivFP_double_word_from_safe_input_cond) and
-       finiteness of the computed pair (bundled into DWDivFP3_subnormal_leg).
+       (DWDivFP_mixed_acc.DWDivFP_mixed_guarantee_from_safe_input_cond), which
+       bundles the accuracy bound and output double-word closure; finiteness of
+       the computed pair is established while deriving the mixed condition.
 
        The PURE relative bound 3u^2 is a separate, NORMAL-RANGE tier
        (DWDivFP_acc.DWDivFP_relative_accuracy); its condition constrains the
@@ -300,7 +299,7 @@ int dw_plus_fp_check(struct dword *x, double y) {
 }
 
 int dw_div_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWDivDW_mixed_error_input_cond (DDModels.v), the guard for the
+    /* Verifies DWDivDW_mixed_safe_input_cond (DDConds.v), the guard for the
        reciprocal-bootstrap double-word division dw_div_dw18.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
        (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
@@ -332,7 +331,7 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
          quotient ceiling already covers every node it reaches.
 
        - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_relative_error_input_cond's conjunct 8,
-         which DWDivDW_mixed_error_input_cond drops; it bought the sharper 2*eta closing floor
+         which DWDivDW_mixed_safe_input_cond drops; it bought the sharper 2*eta closing floor
          (and with it the pure 13.9u^2 relative bound), at the cost of rejecting
          every quotient below 2^-969.  The exported guarantee here is the
          whole-range mixed bound 9.8u^2|Q| + 2.5*eta plus double-word closure,

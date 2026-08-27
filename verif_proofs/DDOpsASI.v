@@ -19,8 +19,7 @@ Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulFP_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWMulDW_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWDivFP_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWDivFP_subnormal.
+Require Import DD.accuracy_proofs.dw_opps.DWDivFP_mixed_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivDW_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 

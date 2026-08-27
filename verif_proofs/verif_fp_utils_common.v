@@ -29,6 +29,13 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
+(** Convert the boolean-as-[Z] representation used by comparison lemmas to
+    the CompCert integer representation used by C conditionals. *)
+Lemma Vint_b2z_if : forall b : bool,
+  Vint (Int.repr (Z.b2z b)) =
+  Vint (if b then Int.one else Int.zero).
+Proof. intros [|]; reflexivity. Qed.
+
 (* ldexp_val defines the IEEE-754 float for ldexp(1.0, 53) = 2^53.
    Used by body_fast2_mult_check.
    Bit pattern 4607182418800017408 = 0x3FF0000000000000 is the encoding

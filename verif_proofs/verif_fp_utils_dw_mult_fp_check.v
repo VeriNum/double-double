@@ -10,18 +10,14 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
    Each such temp equals a `Float.cmp Cle ...` value; case-splitting the
    comparison closes both sides by reflexivity. *)
 (* Int.repr (Z.b2z b) is exactly the if-form used in the invariants. *)
-Lemma Vint_b2z_if : forall b : bool,
-  Vint (Int.repr (Z.b2z b)) = Vint (if b then Int.one else Int.zero).
-Proof. intros [|]; reflexivity. Qed.
-
 (* The stored xh_bnd / y_bnd temp is `Vint (Int.repr (Z.b2z c))` where c is the
    raw Float.cmp Cle comparison; the invariant carries `Vint (if bxh ..)` with
    bxh := that same comparison (up to convertibility of q_sqrt_val / femax).
    Rewriting both to the b2z form lets `reflexivity` close them by conversion. *)
-Ltac cmp_val_eq :=
+Local Ltac cmp_val_eq :=
   rewrite Vint_b2z_if; reflexivity.
 
-Ltac fix_cmp_locals :=
+Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 

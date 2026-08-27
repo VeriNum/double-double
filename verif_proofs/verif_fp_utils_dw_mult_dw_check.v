@@ -4,17 +4,13 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* Local-matching helpers (copied from verif_fp_utils_dw_mult_fp_check): a stored
+(* Local-matching helpers: a stored
    comparison temp is `Vint (Int.repr (Z.b2z c))`, while the forward_if invariant
    carries `Vint (if c then Int.one else Int.zero)`; the two are convertible. *)
-Lemma Vint_b2z_if : forall b : bool,
-  Vint (Int.repr (Z.b2z b)) = Vint (if b then Int.one else Int.zero).
-Proof. intros [|]; reflexivity. Qed.
-
-Ltac cmp_val_eq :=
+Local Ltac cmp_val_eq :=
   rewrite Vint_b2z_if; reflexivity.
 
-Ltac fix_cmp_locals :=
+Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 

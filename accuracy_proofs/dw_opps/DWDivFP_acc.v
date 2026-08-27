@@ -43,8 +43,8 @@
                                      quotient
 
       The runtime guard dw_div_fp_check discharges the canonical whole-range
-      DWDivFP_mixed_safe_input_cond.  DWDivFP_subnormal.v first proves result
-      finiteness and hence DWDivFP_mixed_cond, then exposes the public ladder
+      DWDivFP_mixed_safe_input_cond.  DWDivFP_mixed_acc.v combines this file
+      with the subnormal proof and exposes the public ladder
       DWDivFP_mixed_accuracy_from_cond / DWDivFP_double_word_from_cond /
       DWDivFP_mixed_guarantee_from_cond.  The safe-input guarantee is a
       corollary of that ladder.
@@ -60,14 +60,14 @@
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
-Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc Fast2Sum_acc
+               Fast2Sum_acc_helpers.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 From Flocq Require Relative Sterbenz.
 
 Require Import mathcomp.ssreflect.ssreflect.
-From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Set Bullet Behavior "Strict Subproofs".
 
@@ -84,7 +84,7 @@ Set Bullet Behavior "Strict Subproofs".
 (* One rounding step (via round_ub_emin): if |z| <= K*W + M*E then the rounded
    node |round z| <= |z| + |z|*u + E/2 is at most (K+1)*W + (M+1)*E, provided
    u <= 1/16 and the coefficients stay in the used range. *)
-Lemma abst_round_step (W u E B R0 K M : R) :
+Local Lemma abst_round_step (W u E B R0 K M : R) :
   0 <= u -> u <= /16 -> 0 <= E -> 0 <= B -> 0 <= W ->
   0 <= K -> K <= 16 -> 0 <= M -> M <= 8 ->
   B <= K*W + M*E ->
@@ -94,7 +94,7 @@ Proof. intros; nra. Qed.
 
 (* Product-error node (via round_err_emin): |pih - th*y| <= |th*y|*u + E/2 with
    |th*y| <= X + X*u yields the 2*W + E bound (W = X*u). *)
-Lemma abst_pih_err (X u E B R0 : R) :
+Local Lemma abst_pih_err (X u E B R0 : R) :
   0 <= X -> 0 <= u -> u <= /16 -> 0 <= E -> 0 <= B ->
   B <= X + X*u ->
   R0 <= B*u + /2*E ->
@@ -112,12 +112,12 @@ lra.
 Qed.
 
 (* |xl| <= 1/2 ulp(xh) <= 1/2 (X*(2u) + E) = W + E/2 <= W + E. *)
-Lemma abst_xl (X u E V UL : R) :
+Local Lemma abst_xl (X u E V UL : R) :
   0 <= E -> V <= /2*UL -> UL <= X*(2*u) + E -> V <= X*u + E.
 Proof. intros; nra. Qed.
 
 (* A node in canonical affine form c0*X + c1*W + c2*E stays below Omega. *)
-Lemma abst_lt_Om (V Om X W E c0 c1 c2 : R) :
+Local Lemma abst_lt_Om (V Om X W E c0 c1 c2 : R) :
   0 <= c0 -> c0 <= 1 -> 0 <= c1 -> c1 <= 10 -> 0 <= c2 -> c2 <= 7 ->
   32 <= Om -> X <= /4*Om -> W <= /64*Om -> E <= 1 -> 0 <= X -> 0 <= W -> 0 <= E ->
   V <= c0*X + c1*W + c2*E ->
@@ -126,7 +126,7 @@ Proof. intros; nra. Qed.
 
 (* Finiteness closing: |round v| <= |v| + 1/2 ulp v, with |v| affine and
    1/2 ulp v <= Om/16, stays below the overflow threshold Om. *)
-Lemma abst_fin (RV UV Om X W E c0 c1 c2 : R) :
+Local Lemma abst_fin (RV UV Om X W E c0 c1 c2 : R) :
   0 <= c0 -> c0 <= 1 -> 0 <= c1 -> c1 <= 10 -> 0 <= c2 -> c2 <= 7 ->
   32 <= Om -> X <= /4*Om -> W <= /64*Om -> E <= 1 -> 0 <= X -> 0 <= W -> 0 <= E ->
   RV <= c0*X + c1*W + c2*E ->
@@ -135,7 +135,7 @@ Lemma abst_fin (RV UV Om X W E c0 c1 c2 : R) :
 Proof. intros; nra. Qed.
 
 (* The two arithmetic facts for the |d/y| residual bound. *)
-Lemma abst_H1 (L Om Y u : R) :
+Local Lemma abst_H1 (L Om Y u : R) :
   0 <= Om -> 0 <= Y -> 0 <= u -> u <= /16 ->
   L <= (/4*Om*Y)*u*10 ->
   L <= 5/32*Om*Y.
@@ -149,24 +149,24 @@ apply Rle_trans with ((/4*Om*Y)*(/16)*10).
 - apply Req_le; field.
 Qed.
 
-Lemma abst_dy_lt (V Om : R) : 32 <= Om -> V <= 5/32*Om + 7 -> V < Om.
+Local Lemma abst_dy_lt (V Om : R) : 32 <= Om -> V <= 5/32*Om + 7 -> V < Om.
 Proof. intros; lra. Qed.
 
-Lemma abst_fin_dy (RV UV Om : R) :
+Local Lemma abst_fin_dy (RV UV Om : R) :
   32 <= Om -> RV <= 5/32*Om + 7 -> UV <= /16*Om -> RV + UV < Om.
 Proof. intros; lra. Qed.
 
 (* Closing Fast2Sum node: |th| and |tl| are each round_ub_emin bounds of the two
    quotients (Q1 = |xh/y| <= Om/4, Q2 = |d/y| <= 5/32 Om + 7), so |th + tl| (and
    the rounded sum, adding 1/2 ulp <= Om/16) stays below the overflow threshold. *)
-Lemma abst_fst_sum (S Q1 Q2 Om u E : R) :
+Local Lemma abst_fst_sum (S Q1 Q2 Om u E : R) :
   0 <= u -> u <= /16 -> 0 <= E -> E <= 1 -> 32 <= Om ->
   0 <= Q1 -> Q1 <= /4*Om -> 0 <= Q2 -> Q2 <= 5/32*Om + 7 ->
   S <= (Q1 + Q1*u + /2*E) + (Q2 + Q2*u + /2*E) ->
   S < Om.
 Proof. intros; nra. Qed.
 
-Lemma abst_fst_fin (S UV Q1 Q2 Om u E : R) :
+Local Lemma abst_fst_fin (S UV Q1 Q2 Om u E : R) :
   0 <= u -> u <= /16 -> 0 <= E -> E <= 1 -> 32 <= Om ->
   0 <= Q1 -> Q1 <= /4*Om -> 0 <= Q2 -> Q2 <= 5/32*Om + 7 ->
   S <= (Q1 + Q1*u + /2*E) + (Q2 + Q2*u + /2*E) ->
@@ -175,7 +175,7 @@ Lemma abst_fst_fin (S UV Q1 Q2 Om u E : R) :
 Proof. intros; nra. Qed.
 
 (* |th| <= Om/2: th = round(xh/y), |xh/y| <= Om/4. *)
-Lemma abst_th_half (X u E Om : R) :
+Local Lemma abst_th_half (X u E Om : R) :
   0<=X -> X<=/4*Om -> 0<=u -> u<=/16 -> 0<=E -> E<=1 -> 32<=Om ->
   X + X*u + /2*E <= /2*Om.
 Proof.
@@ -185,7 +185,7 @@ intros. assert (X*u <= /4*Om*/16)
 Qed.
 
 (* |tl| <= Om/2: tl = round(d/y), |d/y| <= 5/32 Om + 7. *)
-Lemma abst_tl_half (Q u E Om : R) :
+Local Lemma abst_tl_half (Q u E Om : R) :
   0<=Q -> Q<=5/32*Om+7 -> 0<=u -> u<=/16 -> 0<=E -> E<=1 -> 32<=Om ->
   Q + Q*u + /2*E <= /2*Om.
 Proof.
@@ -195,16 +195,16 @@ intros. assert (Q*u <= (5/32*Om+7)*/16)
 Qed.
 
 (* Closing Fast2Sum-error nodes stay below Omega (all residual ulps <= Om/16). *)
-Lemma abst_z (D U1 U2 Tl Om : R) :
+Local Lemma abst_z (D U1 U2 Tl Om : R) :
   32<=Om -> U1<=/16*Om -> Tl<=/2*Om -> U2<=/16*Om -> D <= U1+Tl -> D+U2 < Om.
 Proof. intros; lra. Qed.
 
-Lemma abst_snd (D U1 U2 U3 Om : R) :
+Local Lemma abst_snd (D U1 U2 U3 Om : R) :
   32<=Om -> U1<=/16*Om -> U2<=/16*Om -> U3<=/16*Om -> D <= U1+U2 -> D+U3 < Om.
 Proof. intros; lra. Qed.
 
 (* Closeness of the product node to xh: 2u + u^2 <= 1/2 for u <= 1/16. *)
-Lemma abst_pih_close (X u : R) :
+Local Lemma abst_pih_close (X u : R) :
   0 <= X -> 0 <= u -> u <= /16 -> u * (X + u * X) + u * X <= /2 * X.
 Proof.
 intros HX Hu Hu16.
@@ -216,16 +216,11 @@ Qed.
 
 (* Reverse-triangle rearrangement and the product lower-bound arithmetic used by
    cond_UF_prod (stated over plain reals so lra applies cleanly). *)
-Lemma abst_revtri (A B C : R) : A - B <= C -> A - C <= B.
+Local Lemma abst_revtri (A B C : R) : A - B <= C -> A - C <= B.
 Proof. lra. Qed.
 
-Lemma abst_prod_lb (P R X B2 : R) :
+Local Lemma abst_prod_lb (P R X B2 : R) :
   R <= X * / 2 -> X - R <= P -> B2 <= X -> / 2 * B2 <= P.
-Proof. lra. Qed.
-
-(* triangle + ulp bookkeeping for the tl single-node underflow perturbation *)
-Lemma abst_diff_ulp (A B UF UX : R) :
-  A <= / 2 * UF -> B <= / 2 * UX -> UX <= UF -> A + B <= UF.
 Proof. lra. Qed.
 
 (* Keep the paper's two-product folded; proofs expose it via DWTimesFP.TwoProdE. *)
@@ -788,164 +783,6 @@ Qed.
 Local Instance valid_fexp_inst_div : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 
-Local Instance valid_flx_inst_div : Generic_fmt.Valid_exp (FLX_exp (fprec t)).
-Proof. apply FLX.FLX_exp_valid, fprec_gt_0. Qed.
-
-(* The tl single-node underflow perturbation: FLT and FLX rounding of the same
-   real v differ by at most one ulp at the underflow floor, 2^emin.  This is the
-   ONLY place the runtime DWDivFP3 can diverge from its FLX model when the cond
-   holds (all other nodes are exact or FLX-insensitive), so it bounds the whole
-   underflow-leg perturbation of the result. *)
-Lemma round_FLT_FLX_diff (v : R) :
-  Rabs (round radix2 fexp (Znearest choice) v
-        - round radix2 (FLX_exp (fprec t)) (Znearest choice) v)
-    <= bpow radix2 emin.
-Proof.
-destruct (Rle_lt_dec (bpow radix2 (@common.emin t + fprec t - 1)) (Rabs v)) as [Hn | Hs].
-- (* normal: FLT rounding coincides with FLX rounding *)
-  rewrite round_FLT_FLX; [| exact Hn].
-  rewrite Rminus_diag Rabs_R0. apply bpow_ge_0.
-- destruct (Req_dec v 0) as [Hv0 | Hvn].
-  + subst v. rewrite !round_0 Rminus_diag Rabs_R0. apply bpow_ge_0.
-  + have Ef : Rabs (round radix2 fexp (Znearest choice) v - v) <= /2 * ulp v
-      by apply (@error_le_half_ulp radix2 fexp valid_fexp_inst_div choice v).
-    have Ex : Rabs (round radix2 (FLX_exp (fprec t)) (Znearest choice) v - v)
-              <= /2 * Ulp.ulp radix2 (FLX_exp (fprec t)) v
-      by apply (@error_le_half_ulp radix2 (FLX_exp (fprec t)) valid_flx_inst_div choice v).
-    have Hle : Ulp.ulp radix2 (FLX_exp (fprec t)) v <= ulp v.
-    { rewrite !ulp_neq_0 //. apply bpow_le.
-      unfold cexp, FLX_exp, SpecFloat.fexp. apply Z.le_max_l. }
-    have Hbnd : Rabs v < bpow radix2 (@common.emin t + fprec t).
-    { eapply Rlt_le_trans; [ exact Hs |]. apply bpow_le. unfold common.emin. lia. }
-    have Hulp : ulp v = bpow radix2 (@common.emin t)
-      by apply (@ulp_FLT_small radix2 (@common.emin t) (fprec t) (fprec_gt_0 t) v Hbnd).
-    have Htri : Rabs (round radix2 fexp (Znearest choice) v
-                      - round radix2 (FLX_exp (fprec t)) (Znearest choice) v)
-                <= Rabs (round radix2 fexp (Znearest choice) v - v)
-                   + Rabs (round radix2 (FLX_exp (fprec t)) (Znearest choice) v - v).
-    { replace (round radix2 fexp (Znearest choice) v
-               - round radix2 (FLX_exp (fprec t)) (Znearest choice) v)
-        with ((round radix2 fexp (Znearest choice) v - v)
-              + - (round radix2 (FLX_exp (fprec t)) (Znearest choice) v - v)) by ring.
-      eapply Rle_trans; [ apply Rabs_triang |]. rewrite Rabs_Ropp. apply Rle_refl. }
-    rewrite -Hulp. eapply Rle_trans; [ exact Htri |].
-    apply (abst_diff_ulp _ _ (ulp v) (Ulp.ulp radix2 (FLX_exp (fprec t)) v));
-      [ exact Ef | exact Ex | exact Hle ].
-Qed.
-
-(* FLX Fast2Sum preserves the sum exactly, given the magnitude ordering. *)
-Lemma flx_f2s_sum (a b : R) :
-  generic_format radix2 (FLX_exp (fprec t)) a ->
-  generic_format radix2 (FLX_exp (fprec t)) b ->
-  Rabs b <= Rabs a ->
-  fst (F2Sum.Fast2Sum (fprec t) choice a b)
-  + snd (F2Sum.Fast2Sum (fprec t) choice a b) = a + b.
-Proof.
-intros Fa Fb Hle.
-have Hsym : forall x, round radix2 (FLX_exp (fprec t)) (Znearest choice) (- x)
-                    = - round radix2 (FLX_exp (fprec t)) (Znearest choice) x
-  by (intro x; apply round_NE_opp).
-have Hb3 : (radix2 <= 3)%Z by (simpl; lia).
-have H := F2Sum.F2Sum_correct_abs (fprec_gt_one t) Hsym Hb3 Fa Fb Hle.
-unfold F2Sum.Fast2Sum_correct in H. lra.
-Qed.
-
-(* Omega/4 = bpow(femax-2). *)
-Lemma aux_quarter_Omega : bpow radix2 (femax t - 2) = /4 * Omega.
-Proof.
-have -> : Omega = (bpow radix2 (femax t - 2) * bpow radix2 2)%R
-  by rewrite -bpow_plus; f_equal; lia.
-have -> : bpow radix2 2 = 4%R by reflexivity. lra.
-Qed.
-
-(* Case-free linear upper bound on ulp: ulp(v) <= |v|*2^(1-p) + 2^emin.
-   (Normal: <= |v|*2^(1-p) by ulp_FLT_le; subnormal/zero: = 2^emin.)  This lets
-   the finiteness bounds avoid a normal/subnormal split at every node. *)
-Lemma ulp_le_lin (v : R) :
-  ulp v <= Rabs v * bpow radix2 (1 - fprec t) + bpow radix2 emin.
-Proof.
-have HB := bpow_ge_0 radix2 (@common.emin t).
-have HA := bpow_ge_0 radix2 (1 - fprec t).
-have Hp := Rabs_pos v.
-destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1)) (Rabs v)) as [Hn|Hs].
-- have Hle : ulp v <= Rabs v * bpow radix2 (1 - fprec t) by apply ulp_FLT_le; exact Hn.
-  lra.
-- have -> : ulp v = bpow radix2 (@common.emin t).
-  { apply ulp_FLT_small; [apply fprec_gt_0 |].
-    eapply Rlt_trans; [exact Hs | apply bpow_lt; lia]. }
-  nra.
-Qed.
-
-(* A nonzero float has magnitude at least the smallest positive float 2^emin:
-   2^emin = ulp(0) <= ulp(y) <= |y|. *)
-Lemma y_ge_emin (y : ftype t) :
-  FT2R y <> 0 -> bpow radix2 emin <= Rabs (FT2R y).
-Proof.
-move => Hy.
-have H1 : ulp (FT2R y) <= Rabs (FT2R y)
-  by apply ulp_le_abs; [ exact Hy | apply generic_format_FLT_FT2R ].
-have Hlb : bpow radix2 (@common.emin t) <= ulp (FT2R y).
-{ rewrite (Ulp.ulp_neq_0 radix2 fexp _ Hy). apply bpow_le.
-  unfold cexp, SpecFloat.fexp, common.emin, SpecFloat.emin. apply Z.le_max_r. }
-lra.
-Qed.
-
-(* Round upper bound that keeps the tiny (subnormal) term proportional to Y:
-   |round(v)| <= |v| + 1/2*|v|*2^(1-p) + 1/2*Y, given 2^emin <= Y.  Applied with
-   Y = |y| this makes every node's bound divisible by |y| for the d/y estimate. *)
-Lemma round_ub_Y (v Y : R) :
-  bpow radix2 emin <= Y ->
-  Rabs (round radix2 fexp (Znearest choice) v)
-    <= Rabs v + / 2 * (Rabs v * bpow radix2 (1 - fprec t)) + / 2 * Y.
-Proof.
-move => HY.
-have He := @error_le_half_ulp radix2 fexp valid_fexp_inst_div choice v.
-have Hu := ulp_le_lin v.
-have HB := bpow_ge_0 radix2 (@common.emin t).
-have Ht : Rabs (round radix2 fexp (Znearest choice) v)
-        <= Rabs (round radix2 fexp (Znearest choice) v - v) + Rabs v.
-{ have H := Rabs_triang (round radix2 fexp (Znearest choice) v - v) v.
-  replace (round radix2 fexp (Znearest choice) v - v + v)
-     with (round radix2 fexp (Znearest choice) v) in H by ring.
-  exact H. }
-lra.
-Qed.
-
-(* Round upper bound keeping the tiny term as bpow(emin) (NOT bounded by |y|):
-   |round v| <= |v| + 1/2*|v|*2^(1-p) + 1/2*2^emin.  Because the additive part is
-   genuinely tiny, dividing a node bound by |y| >= 2^emin yields a constant, so
-   the finiteness bounds hold for all femax (no Omega >= 24 constraint). *)
-Lemma round_ub_emin (v : R) :
-  Rabs (round radix2 fexp (Znearest choice) v)
-    <= Rabs v + Rabs v * bpow radix2 (- fprec t) + / 2 * bpow radix2 emin.
-Proof.
-have He := @error_le_half_ulp radix2 fexp valid_fexp_inst_div choice v.
-have Hu := ulp_le_lin v.
-have Hb1p : bpow radix2 (1 - fprec t) = 2 * bpow radix2 (- fprec t).
-{ replace (1 - fprec t)%Z with (1 + - fprec t)%Z by lia.
-  rewrite bpow_plus. have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
-have Ht : Rabs (round radix2 fexp (Znearest choice) v)
-        <= Rabs (round radix2 fexp (Znearest choice) v - v) + Rabs v.
-{ have H := Rabs_triang (round radix2 fexp (Znearest choice) v - v) v.
-  replace (round radix2 fexp (Znearest choice) v - v + v)
-     with (round radix2 fexp (Znearest choice) v) in H by ring.
-  exact H. }
-rewrite Hb1p in Hu. lra.
-Qed.
-
-(* Rounding-error companion of round_ub_emin: |round v - v| <= |v|*2^-p + 1/2*2^emin. *)
-Lemma round_err_emin (v : R) :
-  Rabs (round radix2 fexp (Znearest choice) v - v)
-    <= Rabs v * bpow radix2 (- fprec t) + / 2 * bpow radix2 emin.
-Proof.
-have He := @error_le_half_ulp radix2 fexp valid_fexp_inst_div choice v.
-have Hu := ulp_le_lin v.
-have Hb1p : bpow radix2 (1 - fprec t) = 2 * bpow radix2 (- fprec t).
-{ replace (1 - fprec t)%Z with (1 + - fprec t)%Z by lia.
-  rewrite bpow_plus. have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
-rewrite Hb1p in Hu. lra.
-Qed.
-
 (* Residual of the quotient node: th*y is within |xh|*2^-p of xh, since
    th = round(xh/y) and the quotient is in the normal range. *)
 Lemma thy_residual (xh y : ftype t) :
@@ -998,7 +835,7 @@ have Hlt : Rabs (FT2R xh / FT2R y) < Omega.
 apply (no_overflow_div_is_finite t xh y Hfxh Hyne).
 eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp|].
 have Hu := ulp_below_overflow _ Hlt.
-have H4 := aux_quarter_Omega.
+have H4 := @bpow_femax_minus_two t.
 have Hhalf : bpow radix2 (femax t - fprec t) <= /2 * Omega.
 { have -> : (/2 * Omega = bpow radix2 (femax t - 1))%R.
   { have -> : Omega = (bpow radix2 (femax t - 1) * bpow radix2 1)%R
@@ -1068,12 +905,14 @@ have Hu16 : (bpow radix2 (- fprec t)) <= / 16.
   apply bpow_le; lia. }
 have Hu0 : 0 <= (bpow radix2 (- fprec t)) by (apply bpow_ge_0).
 have He0 : 0 <= bpow radix2 (@common.emin t) by apply bpow_ge_0.
-have H4Ω : bpow radix2 (femax t - 2) = / 4 * Omega by apply aux_quarter_Omega.
+have H4Ω : bpow radix2 (femax t - 2) = / 4 * Omega
+  by apply bpow_femax_minus_two.
 have Hyne : FT2R y <> 0.
 { intro H0.
   have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
   move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
-have HYe : bpow radix2 emin <= Rabs (FT2R y) by apply y_ge_emin, Hyne.
+have HYe : bpow radix2 emin <= Rabs (FT2R y)
+  by apply nonzero_float_abs_ge_emin, Hyne.
 have HYpos : 0 < Rabs (FT2R y)
   by (eapply Rlt_le_trans; [apply bpow_gt_0 | exact HYe]).
 have Hxh4 : Rabs (FT2R xh) <= / 4 * Omega by (rewrite -H4Ω; exact Hxhb).
@@ -1129,7 +968,7 @@ have Hpiherr : Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R y)
                       (Rabs (FT2R (BDIV xh y) * FT2R y)));
     [ exact Hxhp | apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | apply Rabs_pos
     | exact Hthy_xh
-    | exact (round_err_emin (FT2R (BDIV xh y) * FT2R y)) ]. }
+    | exact (@round_err_emin t (FT2R (BDIV xh y) * FT2R y)) ]. }
 have Hpih_b : Rabs (FT2R (BMULT (BDIV xh y) y))
             <= Rabs (FT2R xh) + Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 3 + bpow radix2 emin.
 { apply Rle_trans with (Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R y)
@@ -1192,7 +1031,8 @@ have Hpil_b : Rabs (FT2R (Fast2Mult_err (BDIV xh y) y)) <= Rabs (FT2R xh) * (bpo
       [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | apply Rabs_pos | exact HW0
       | lra | lra | lra | lra
       | (rewrite Hsym; eapply Rle_trans; [ exact Hpiherr |]; apply Req_le; ring)
-      | exact (round_ub_emin (FT2R (BDIV xh y) * FT2R y - FT2R (BMULT (BDIV xh y) y))) ].
+      | exact (@round_ub_emin t
+          (FT2R (BDIV xh y) * FT2R y - FT2R (BMULT (BDIV xh y) y))) ].
   - apply Req_le; ring. }
 (* ---- dh = BMINUS xh pih ---- *)
 have Hxhpih_b : Rabs (FT2R xh - FT2R (BMULT (BDIV xh y) y)) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 3 + bpow radix2 emin.
@@ -1241,7 +1081,8 @@ have Hdh_b : Rabs (FT2R (BMINUS xh (BMULT (BDIV xh y) y)))
       [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | apply Rabs_pos | exact HW0
       | lra | lra | lra | lra
       | (eapply Rle_trans; [ exact Hxhpih_b |]; apply Req_le; ring)
-      | exact (round_ub_emin (FT2R xh - FT2R (BMULT (BDIV xh y) y))) ].
+      | exact (@round_ub_emin t
+          (FT2R xh - FT2R (BMULT (BDIV xh y) y))) ].
   - apply Req_le; ring. }
 (* ---- dt = BMINUS dh pil ---- *)
 have Hdtarg_b : Rabs (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
@@ -1285,13 +1126,13 @@ have Hdt_b : Rabs (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err
       [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | apply Rabs_pos | exact HW0
       | lra | lra | lra | lra
       | (eapply Rle_trans; [ exact Hdtarg_b |]; apply Req_le; ring)
-      | exact (round_ub_emin (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
+      | exact (@round_ub_emin t (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
                               - FT2R (Fast2Mult_err (BDIV xh y) y))) ].
   - apply Req_le; ring. }
 (* ---- xl ---- *)
 have Hxl_b : Rabs (FT2R xl) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) + bpow radix2 emin.
 { have Hdwu := DW_acc_lemmas.dw_low_le_half_ulp xh xl Hdwp.
-  have Hul := ulp_le_lin (FT2R xh).
+  have Hul := @ulp_le_lin t (FT2R xh).
   have Hb1p : bpow radix2 (1 - fprec t) = 2 * (bpow radix2 (- fprec t)).
   { replace (1 - fprec t)%Z with (1 + - fprec t)%Z by lia.
     rewrite bpow_plus. have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
@@ -1343,7 +1184,7 @@ have Hd_b : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
       [ apply bpow_ge_0 | exact Hu16 | apply bpow_ge_0 | apply Rabs_pos | exact HW0
       | lra | lra | lra | lra
       | (eapply Rle_trans; [ exact Hdarg_b |]; apply Req_le; ring)
-      | exact (round_ub_emin
+      | exact (@round_ub_emin t
                  (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y))
                   + FT2R xl)) ].
   - apply Req_le; ring. }
@@ -1393,7 +1234,7 @@ have Hxhy4 : Rabs (FT2R xh / FT2R y) <= / 4 * Omega by (rewrite -H4Ω; exact Hqu
 have Hthv : Rabs (FT2R (BDIV xh y))
           <= Rabs (FT2R xh / FT2R y) + Rabs (FT2R xh / FT2R y) * bpow radix2 (- fprec t)
              + / 2 * bpow radix2 emin
-  by (rewrite -Hth_r; apply round_ub_emin).
+  by (rewrite -Hth_r; apply (@round_ub_emin t)).
 have Htlv : Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                     (Fast2Mult_err (BDIV xh y) y)) xl) y))
           <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
@@ -1402,7 +1243,7 @@ have Htlv : Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                          (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
                * bpow radix2 (- fprec t)
              + / 2 * bpow radix2 emin
-  by (rewrite -Htl_r; apply round_ub_emin).
+  by (rewrite -Htl_r; apply (@round_ub_emin t)).
 have Hsum_le : Rabs (FT2R (BDIV xh y)
                      + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                          (Fast2Mult_err (BDIV xh y) y)) xl) y))
@@ -1861,7 +1702,7 @@ move => Hpaper.
 (* paper sum = th + round_FLX(v0) *)
 have Hsum_p : zhp + zlp = FT2R (BDIV xh y)
               + round radix2 (FLX_exp (fprec t)) (Znearest choice) v0.
-{ have Hs := flx_f2s_sum (FT2R (BDIV xh y))
+{ have Hs := @flx_f2s_sum t (FT2R (BDIV xh y))
               (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0) Fth Ftls Hord_p.
   rewrite Ep /= in Hs. exact Hs. }
 (* runtime sum = th + tl *)
@@ -1870,7 +1711,8 @@ have Hrun : F2Sum.Fast2Sum (fprec t) choice (FT2R (BDIV xh y)) (FT2R (BDIV d y))
 { apply (FastTwoSumEq_FLT (BDIV xh y) (BDIV d y)). exact FIN. }
 have Hsum_r : FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
               = FT2R (BDIV xh y) + FT2R (BDIV d y).
-{ have Hs := flx_f2s_sum (FT2R (BDIV xh y)) (FT2R (BDIV d y)) Fth Ftl Hord_r.
+{ have Hs := @flx_f2s_sum t
+    (FT2R (BDIV xh y)) (FT2R (BDIV d y)) Fth Ftl Hord_r.
   have Heqr : DWDivFP3 xh xl y = DDModels.Fast2Sum (BDIV xh y) (BDIV d y)
     by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
   rewrite Hrun /F2Rp /= in Hs. rewrite Heqr. exact Hs. }
@@ -1941,7 +1783,7 @@ have Htl_r : FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                  (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                       (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
   by rewrite (BDIV_round_correct t _ y Hyne (FINtl xh xl y FIN)).
-rewrite Htl_r. exact (round_FLT_FLX_diff _).
+rewrite Htl_r. exact (@round_FLT_FLX_diff t _).
 Qed.
 
 (* The exact-division case: the correction d is zero, so BOTH roundings at the
@@ -2004,7 +1846,7 @@ Qed.
 
      |zh+zl - X/y| <= 3u^2 |X/y| + 2^emin.
 
-   The runtime API is one level up: DWDivFP_subnormal.v case-splits
+   The runtime API is one level up: DWDivFP_mixed_acc.v case-splits
    DWDivFP_mixed_safe_input_cond into this theorem and the
    subnormal-leading-quotient leg.
    ============================================================ *)
@@ -2078,7 +1920,7 @@ End CondAccuracyDWDivFP_mixed.
    NOTHING is absorbed here.  The constant is 3u^2 because in this regime there
    is no floor ulp to charge, not because a quotient magnitude window pays for
    one; the whole-range statement remains the mixed
-   3u^2|Q| + eta of DWDivFP_subnormal.DWDivFP_mixed_accuracy_from_cond.
+   3u^2|Q| + eta of DWDivFP_mixed_acc.DWDivFP_mixed_accuracy_from_cond.
    ============================================================ *)
 Section RelativeAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.

@@ -4,20 +4,13 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* A stored comparison temp is `Vint (Int.repr (Z.b2z c))`, while the forward_if
-   invariants below carry `Vint (if c then Int.one else Int.zero)`; the two are
-   convertible.  Same helper as verif_fp_utils_dw_mult_dw_check. *)
-Lemma Vint_b2z_if : forall b : bool,
-  Vint (Int.repr (Z.b2z b)) = Vint (if b then Int.one else Int.zero).
-Proof. intros [|]; reflexivity. Qed.
-
 (* Collect the facts the cascade threads forward.  entailer! substitutes the
    `remember` equations back, so a stage's premise can arrive either as
    `HbN : bN = true -> ...` alongside `bN = true`, or with bN already replaced by
    `true` (making the antecedent provable by eq_refl).  Both are instantiated
    here, and the resulting conjunctions are flattened so every conjunct the goal
    needs is literally a hypothesis. *)
-Ltac cascade_gather :=
+Local Ltac cascade_gather :=
   repeat match goal with
          | H : ?A = true -> _, H2 : ?A = true |- _ => specialize (H H2)
          end;
@@ -37,7 +30,7 @@ Ltac cascade_gather :=
    cascade_gather runs up front so that bare `b6 = true`-style conjuncts close by
    assumption, and again after the intro so an implication goal exposed only by
    `repeat split` is handled too. *)
-Ltac cascade_close :=
+Local Ltac cascade_close :=
   cascade_gather;
   repeat split;
   repeat first
@@ -66,9 +59,8 @@ Ltac cascade_close :=
      so this is a plain non-strict comparison on an input: no rounded reciprocal
      node, no rounded->exact transfer, and the test is exactly as strong as the
      conjunct rather than stronger.  (The equivalent reciprocal form, for
-     yh <> 0, is 2^(emin+2p+2) <= |1/FT2R yh|; recip_lower_from_bpow_upper
-     states that equivalence and DWDivDW_acc.DWDivDW_cond_recip_lower is the
-     Coq-side bridge, but neither is needed here.)
+     yh <> 0, is 2^(emin+2p+2) <= |1/FT2R yh|; the proof derives that bridge
+     internally, but it is not needed by this body proof.)
      The exponent is load-bearing for the exported CONSTANT, not just for
      soundness: conjunct 7 says eta*|yh| <= u^2/4, which is what pays for the
      reciprocal reconstruction's underflow floor after the closing multiply by
@@ -76,8 +68,8 @@ Ltac cascade_close :=
      the exported bound from 9.8u^2|Q| back toward 12.33u^2|Q|.
      The same clause also gives |yh| <= Omega/4 by bpow_le (966 <= 1022); that
      used to be a separate conjunct discharged for free here, and is now simply
-     absent from DWDivDW_mixed_safe_input_cond (recoverable as
-     DWDivDW_cond_yh_upper), so the check has no q_omega test on y->s either.
+     absent from DWDivDW_mixed_safe_input_cond because conjunct 7 is already
+     stronger, so the check has no q_omega test on y->s either.
 
    Two tests this check used to have and no longer does, because their conjuncts
    are gone from the cond:

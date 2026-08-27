@@ -508,8 +508,8 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
     - |yh| <= 2^(femax-2) was REDUNDANT.  Conjunct 7 below is an upper bound on
       |yh|, and a strictly stronger one: it is the same bound tightened by p
-      binades.  [DWDivDW_acc.DWDivDW_cond_yh_upper] recovers the weaker form
-      for clients that want it.  The runtime guard [dw_div_dw_check] already
+      binades and therefore also implies the weaker quarter-overflow bound.
+      The runtime guard [dw_div_dw_check] already
       exploited this -- it tests |y->s| <= 2^969 and derived |y->s| <= 2^1022
       from it -- so the two conjuncts were never independent.
 

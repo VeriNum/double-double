@@ -434,6 +434,61 @@ Qed.
 
 End FastTwoSumCorrect.
 
+Section FastTwoSumFLXExact.
+Context {NANS: Nans} {t : type} {STD: is_standard t}.
+
+(** FLX Fast2Sum preserves the sum under the usual magnitude ordering. *)
+Lemma flx_f2s_sum (a b : R) :
+  generic_format radix2 (FLX_exp (fprec t)) a ->
+  generic_format radix2 (FLX_exp (fprec t)) b ->
+  Rabs b <= Rabs a ->
+  fst (F2Sum.Fast2Sum (fprec t) choice a b) +
+    snd (F2Sum.Fast2Sum (fprec t) choice a b) = a + b.
+Proof.
+intros Fa Fb Hle.
+have Hsym : forall x,
+    round radix2 (FLX_exp (fprec t)) (Znearest choice) (-x) =
+    - round radix2 (FLX_exp (fprec t)) (Znearest choice) x
+  by (intro x; apply round_NE_opp).
+have Hb3 : (radix2 <= 3)%Z by (simpl; lia).
+have H := F2Sum.F2Sum_correct_abs
+  (fprec_gt_one t) Hsym Hb3 Fa Fb Hle.
+unfold F2Sum.Fast2Sum_correct in H. lra.
+Qed.
+
+(** A fixed-point representation of the leading operand is sufficient for
+    exact FLX Fast2Sum even when magnitude ordering is unavailable. *)
+Lemma flx_f2s_sum_of_fix_left (a b : R) (e : Z) :
+  generic_format radix2 (FLX_exp (fprec t)) a ->
+  generic_format radix2 (FLX_exp (fprec t)) b ->
+  generic_format radix2 (FIX_exp e) a ->
+  (cexp radix2 (FLX_exp (fprec t)) b <= e)%Z ->
+  let z := F2Sum.Fast2Sum (fprec t) choice a b in
+  fst z + snd z = a + b.
+Proof.
+move => Fa Fb Fixa Hbe.
+have Fixa' := FIX_format_generic radix2 e a Fixa.
+destruct Fixa' as [fa Hfa Hexp].
+have Hcorr := @F2SumFLX.F2Sum_correct_proof
+  radix2 (fprec t) (fprec_gt_one t) choice.
+specialize (Hcorr (fun x => round_NE_opp _ _ x) ltac:(simpl; lia)
+  a b Fa Fb).
+have Hrep : exists fa0 : float radix2,
+    a = F2R fa0 /\
+    (cexp radix2 (FLX_exp (fprec t)) b <= Fexp fa0)%Z.
+{ exists fa. split; [exact Hfa |]. rewrite Hexp. exact Hbe. }
+specialize (Hcorr Hrep).
+unfold F2SumFLX.Fast2Sum_correct in Hcorr.
+cbv zeta in Hcorr.
+unfold F2Sum.Fast2Sum.
+set z := F2SumFLX.Fast2Sum radix2 (fprec t) choice a b in Hcorr |- *.
+destruct z as [s r].
+change (r = a + b - s) in Hcorr.
+change (s + r = a + b). lra.
+Qed.
+
+End FastTwoSumFLXExact.
+
 Section FastTwoSumSmallExact.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

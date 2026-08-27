@@ -1057,6 +1057,121 @@ Qed.
 
 End Minus.
 
+Section PowerOfTwoBounds.
+
+Local Instance valid_fexp_bpow_bounds :
+  Generic_fmt.Valid_exp (SpecFloat.fexp (fprec t) (femax t)).
+Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
+
+(** A representable power-of-two envelope simultaneously proves operation
+    finiteness and bounds the rounded result. *)
+Lemma BPLUS_finite_bpow_bound {NAN: Nans} {STD: is_standard t}
+      (a b : ftype t) (k : Z) :
+  is_finite a = true -> is_finite b = true ->
+  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
+  (k < femax t)%Z ->
+  Rabs (FT2R a + FT2R b) <= bpow radix2 k ->
+  is_finite (BPLUS a b) = true /\
+  Rabs (FT2R (BPLUS a b)) <= bpow radix2 k.
+Proof.
+move => Fa Fb Hlow Hk Hab.
+have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
+              (bpow radix2 k).
+{ apply generic_format_bpow.
+  unfold SpecFloat.fexp. apply Z.max_lub;
+    [pose proof (fprec_lb t); lia | exact Hlow]. }
+have Hrnd : Rabs (rounded t (FT2R a + FT2R b)) <= bpow radix2 k.
+{ unfold rounded. apply abs_round_le_generic;
+    first [exact valid_fexp_bpow_bounds | apply valid_rnd_N |
+           exact Hfmt | exact Hab]. }
+have Fsum : is_finite (BPLUS a b) = true.
+{ apply no_overflow_sum_is_finite; [exact Fa | exact Fb |].
+  unfold Bplus_no_overflow.
+  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
+split; [exact Fsum |].
+rewrite -(BPLUS_round_correct a b Fsum). exact Hrnd.
+Qed.
+
+Lemma BMINUS_finite_bpow_bound {NAN: Nans} {STD: is_standard t}
+      (a b : ftype t) (k : Z) :
+  is_finite a = true -> is_finite b = true ->
+  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
+  (k < femax t)%Z ->
+  Rabs (FT2R a - FT2R b) <= bpow radix2 k ->
+  is_finite (BMINUS a b) = true /\
+  Rabs (FT2R (BMINUS a b)) <= bpow radix2 k.
+Proof.
+move => Fa Fb Hlow Hk Hab.
+have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
+              (bpow radix2 k).
+{ apply generic_format_bpow.
+  unfold SpecFloat.fexp. apply Z.max_lub;
+    [pose proof (fprec_lb t); lia | exact Hlow]. }
+have Hrnd : Rabs (rounded t (FT2R a - FT2R b)) <= bpow radix2 k.
+{ unfold rounded. apply abs_round_le_generic;
+    first [exact valid_fexp_bpow_bounds | apply valid_rnd_N |
+           exact Hfmt | exact Hab]. }
+have Fdiff : is_finite (BMINUS a b) = true.
+{ apply no_overflow_minus_is_finite; [exact Fa | exact Fb |].
+  unfold Bminus_no_overflow.
+  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
+split; [exact Fdiff |].
+rewrite -(BMINUS_round_correct a b Fdiff). exact Hrnd.
+Qed.
+
+Lemma BMULT_finite_bpow_bound {NAN: Nans} {STD: is_standard t}
+      (a b : ftype t) (k : Z) :
+  is_finite a = true -> is_finite b = true ->
+  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
+  (k < femax t)%Z ->
+  Rabs (FT2R a * FT2R b) <= bpow radix2 k ->
+  is_finite (BMULT a b) = true /\
+  Rabs (FT2R (BMULT a b)) <= bpow radix2 k.
+Proof.
+move => Fa Fb Hlow Hk Hab.
+have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
+              (bpow radix2 k).
+{ apply generic_format_bpow. unfold SpecFloat.fexp. apply Z.max_lub;
+    [pose proof (fprec_lb t); lia | exact Hlow]. }
+have Hrnd : Rabs (rounded t (FT2R a * FT2R b)) <= bpow radix2 k.
+{ unfold rounded. apply abs_round_le_generic;
+    first [exact valid_fexp_bpow_bounds | apply valid_rnd_N |
+           exact Hfmt | exact Hab]. }
+have Fmul : is_finite (BMULT a b) = true.
+{ apply no_overflow_mult_is_finite; [exact Fa | exact Fb |].
+  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
+split; [exact Fmul |].
+rewrite -(BMULT_round_correct a b Fmul). exact Hrnd.
+Qed.
+
+Lemma BFMA_finite_bpow_bound {NAN: Nans} {STD: is_standard t}
+      (a b c : ftype t) (k : Z) :
+  is_finite a = true -> is_finite b = true -> is_finite c = true ->
+  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
+  (k < femax t)%Z ->
+  Rabs (FT2R a * FT2R b + FT2R c) <= bpow radix2 k ->
+  is_finite (BFMA a b c) = true /\
+  Rabs (FT2R (BFMA a b c)) <= bpow radix2 k.
+Proof.
+move => Fa Fb Fc Hlow Hk Hab.
+have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
+              (bpow radix2 k).
+{ apply generic_format_bpow. unfold SpecFloat.fexp. apply Z.max_lub;
+    [pose proof (fprec_lb t); lia | exact Hlow]. }
+have Hrnd : Rabs (rounded t (FT2R a * FT2R b + FT2R c)) <= bpow radix2 k.
+{ unfold rounded. apply abs_round_le_generic;
+    first [exact valid_fexp_bpow_bounds | apply valid_rnd_N |
+           exact Hfmt | exact Hab]. }
+have Ffma : is_finite (BFMA a b c) = true.
+{ apply no_overflow_fma_is_finite;
+    [exact Fa | exact Fb | exact Fc |].
+  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
+split; [exact Ffma |].
+rewrite -(BFMA_round_correct a b c Ffma). exact Hrnd.
+Qed.
+
+End PowerOfTwoBounds.
+
 Section Opp.
 
 (** Relate BOPP to Binary.Bopp. *)
@@ -1080,3 +1195,8 @@ Qed.
 
 End Opp.
 End TVar. 
+
+Arguments BPLUS_finite_bpow_bound {t NAN STD}.
+Arguments BMINUS_finite_bpow_bound {t NAN STD}.
+Arguments BMULT_finite_bpow_bound {t NAN STD}.
+Arguments BFMA_finite_bpow_bound {t NAN STD}.

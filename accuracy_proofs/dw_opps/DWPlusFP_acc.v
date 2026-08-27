@@ -85,6 +85,34 @@ Qed.
 
 End FiniteAccuracyDWPlusFP.
 
+(** Absolute form of the paper-tight multiplicative theorem. *)
+Lemma DWPlusFP_error_paper_tight {NANS : Nans} {t : type}
+    {STD : is_standard t} (ah al b : ftype t) :
+  (3 <= fprec t)%Z -> double_word_prop ah al ->
+  is_finite_p (DWPlusFP ah al b) ->
+  Rabs ((FT2R (fst (DWPlusFP ah al b)) +
+         FT2R (snd (DWPlusFP ah al b))) -
+        (FT2R ah + FT2R al + FT2R b))
+    <= 2 * bpow radix2 (-fprec t)^2 *
+         Rabs (FT2R ah + FT2R al + FT2R b).
+Proof.
+move => Hp3 DWa FIN.
+have H := @DWPlusFP_multiplicative_accuracy_core
+  NANS t STD ah al b DWa FIN Hp3.
+destruct H as [del [Heq Hdel]].
+cbv zeta in Heq.
+set q := (FT2R ah + FT2R al + FT2R b)%R.
+set u := bpow radix2 (-fprec t).
+fold q in Heq. fold u in Hdel.
+change (Rabs ((FT2R (fst (DWPlusFP ah al b)) +
+  FT2R (snd (DWPlusFP ah al b))) - q) <= 2 * u^2 * Rabs q).
+rewrite Heq.
+replace (q * (1 + del) - q)%R with (q * del)%R by ring.
+rewrite Rabs_mult.
+have Hmul := Rmult_le_compat_l (Rabs q) _ _ (Rabs_pos q) Hdel.
+eapply Rle_trans; [exact Hmul |]. right; ring.
+Qed.
+
 Section RelativeInterfaceDWPlusFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

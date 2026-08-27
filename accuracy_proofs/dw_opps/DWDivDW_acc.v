@@ -38,13 +38,8 @@
 
     Main results:
 
-      - [FIN_mul], [FIN_mh], [FIN_ml], and [FIN_th] recover useful finiteness
-        facts about intermediate computations from finiteness of the result.
-      - [DWTimesDW3_double_word] proves that the multiplication subroutine
-        returns a valid double-word under finiteness and normal-range
-        assumptions.
-      - [DWDivDW3_double_word] applies that representation result to the final
-        multiplication performed by division.
+      - Intermediate finiteness facts recover the nodes of the reciprocal and
+        closing multiplication from finiteness of the result.
       - [DWDivDW3_FLX_FLT] identifies the runtime result with the paper's FLX
         result under explicit no-underflow assumptions.
       - [relative_errorDWDivDW3_correct] transfers the paper's analysis to the
@@ -69,65 +64,19 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
-               Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
+               Fast2Mult_acc TwoSum_acc Fast2Sum_acc Fast2Sum_acc_helpers.
 (* paper_proofs/DWDivDW.v now compiles and is in _CoqProject, so its tight FLX
    bound DWDivDW.DWDDW3_correct is available and instantiated below.  DWDivDW.v
    sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
    into this file's proofs by re-asserting transparency after the Require. *)
 Require Import DWDivDW.
 Require Import DWPlusFP_acc_helpers DWMulFP_acc DWPlusFP_acc DWMulDW_acc
-               DWDivFP_acc DWPlusDW_acc_helpers DW_acc_lemmas.
+               DWDivFP_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error.
 
 Require Import mathcomp.ssreflect.ssreflect.
-From Stdlib Require Import Logic.FunctionalExtensionality.
-
 Set Bullet Behavior "Strict Subproofs".
-Lemma no_overflow_fma_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
-  forall (a b c : ftype t),
-  is_finite a = true -> is_finite b = true -> is_finite c = true ->
-  Rabs (rounded t (FT2R a * FT2R b + FT2R c)) < bpow Zaux.radix2 (femax t) ->
-  is_finite (BFMA a b c) = true.
-Proof.
-  intros a b c Ha Hb Hc Hov.
-  rewrite !is_finite_Binary in Ha, Hb, Hc.
-  rewrite is_finite_Binary /BFMA float_of_ftype_of_float.
-  pose proof (Binary.Bfma_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (fma_nan (fprec t) (femax t) (fprec_gt_one t))
-    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b) (float_of_ftype c)
-    Ha Hb Hc) as H.
-  cbv zeta in H.
-  rewrite !B2R_float_of_ftype in H.
-  unfold rounded in Hov.
-  apply Rlt_bool_true in Hov.
-  rewrite Hov in H.
-  destruct H as (_ & HF & _).
-  exact HF.
-Qed.
-
-(* Analog of no_overflow_fma_is_finite for BMULT: a real product whose rounded
-   value stays below the overflow threshold yields a finite BMULT. *)
-Lemma no_overflow_mult_is_finite {NANS: Nans} {t : type} {STD: is_standard t} :
-  forall (a b : ftype t),
-  is_finite a = true -> is_finite b = true ->
-  Rabs (rounded t (FT2R a * FT2R b)) < bpow Zaux.radix2 (femax t) ->
-  is_finite (BMULT a b) = true.
-Proof.
-  intros a b Ha Hb Hov.
-  rewrite !is_finite_Binary in Ha, Hb.
-  rewrite is_finite_Binary /BMULT/BINOP float_of_ftype_of_float.
-  pose proof (Binary.Bmult_correct (fprec t) (femax t)
-    (fprec_gt_0 t) (fprec_lt_femax t) (mult_nan (fprec t) (femax t) (fprec_gt_one t))
-    BinarySingleNaN.mode_NE (float_of_ftype a) (float_of_ftype b)) as H.
-  cbv zeta in H.
-  rewrite !B2R_float_of_ftype in H.
-  unfold rounded in Hov.
-  apply Rlt_bool_true in Hov.
-  rewrite Hov in H.
-  destruct H as (_ & HF & _).
-  rewrite HF Ha Hb //.
-Qed.
 
 (* Keep the paper's two-product folded; proofs expose it via DWTimesFP.TwoProdE. *)
 Opaque DWTimesFP.TwoProd.
@@ -175,55 +124,55 @@ Section CorrectDWDivDW.
       double-word multiplication also returns finite components.  This fact
       lets multiplication lemmas be applied directly to the final stage of
       [DWDivDW3]. *)
-  Fact FIN_mul : is_finite_p (DWTimesDW3 xh xl mh ml).
+  Local Fact FIN_mul : is_finite_p (DWTimesDW3 xh xl mh ml).
   Proof. exact FIN. Qed.
 
   (** The high component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
-  Fact FIN_mh : is_finite mh = true.
+  Local Fact FIN_mh : is_finite mh = true.
   Proof. exact (DWMulDW_acc.DWTimesDW3_yh_finite xh xl mh ml FIN_mul). Qed.
 
   (** The low component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
-  Fact FIN_ml : is_finite ml = true.
+  Local Fact FIN_ml : is_finite ml = true.
   Proof. exact (DWMulDW_acc.DWTimesDW3_yl_finite xh xl mh ml FIN_mul). Qed.
 
   (** Pair finiteness of the reciprocal-renormalization block. *)
-  Fact FIN_plus : is_finite_p (DWPlusFP dh dl th).
+  Local Fact FIN_plus : is_finite_p (DWPlusFP dh dl th).
   Proof. split; [exact FIN_mh | exact FIN_ml]. Qed.
 
   (** The two components produced by the reciprocal-times-error block are
       finite.  These are recovered through the finite-input projections of
       the enclosing [DWPlusFP]. *)
-  Fact FIN_dh : is_finite dh = true.
+  Local Fact FIN_dh : is_finite dh = true.
   Proof. exact (DWPlusFP_acc_helpers.FINxh dh dl th FIN_plus). Qed.
 
-  Fact FIN_dl : is_finite dl = true.
+  Local Fact FIN_dl : is_finite dl = true.
   Proof. exact (DWPlusFP_acc_helpers.FINxl dh dl th FIN_plus). Qed.
 
-  Fact FIN_timesfp : is_finite_p (DWTimesFP3 eh el th).
+  Local Fact FIN_timesfp : is_finite_p (DWTimesFP3 eh el th).
   Proof. split; [exact FIN_dh | exact FIN_dl]. Qed.
 
   (** The Fast2Sum components of the reciprocal residual are finite, obtained
       by projecting backward through [DWTimesFP3]. *)
-  Fact FIN_eh : is_finite eh = true.
+  Local Fact FIN_eh : is_finite eh = true.
   Proof. exact (DWMulFP_acc.DWTimesFP3_xh_finite eh el th FIN_timesfp). Qed.
 
-  Fact FIN_el : is_finite el = true.
+  Local Fact FIN_el : is_finite el = true.
   Proof. exact (DWMulFP_acc.DWTimesFP3_xl_finite eh el th FIN_timesfp). Qed.
 
-  Fact FIN_fast2sum : is_finite_p (Fast2Sum rh rl).
+  Local Fact FIN_fast2sum : is_finite_p (Fast2Sum rh rl).
   Proof. split; [exact FIN_eh | exact FIN_el]. Qed.
 
   (** Finiteness of the two explicit reciprocal-residual operands. *)
-  Fact FIN_rh : is_finite rh = true.
+  Local Fact FIN_rh : is_finite rh = true.
   Proof.
     have Hsum := FIN_eh.
     change (is_finite (BPLUS rh rl) = true) in Hsum.
     exact (proj1 (BPLUS_finite_e t rh rl Hsum)).
   Qed.
 
-  Fact FIN_rl : is_finite rl = true.
+  Local Fact FIN_rl : is_finite rl = true.
   Proof.
     have Hsum := FIN_eh.
     change (is_finite (BPLUS rh rl) = true) in Hsum.
@@ -232,14 +181,14 @@ Section CorrectDWDivDW.
 
   (** Finiteness of the denominator components, exposed for the leaf rounding
       bridges. *)
-  Fact FIN_yh : is_finite yh = true.
+  Local Fact FIN_yh : is_finite yh = true.
   Proof.
     destruct (BFMA_finite_e t (BOPP yh) th (Zconst t 1) FIN_rh)
       as [Hyh_opp _].
     exact (proj1 (BOPP_is_finite t yh) Hyh_opp).
   Qed.
 
-  Fact FIN_yl : is_finite yl = true.
+  Local Fact FIN_yl : is_finite yl = true.
   Proof.
     have Hmul : is_finite (BMULT yl th) = true.
     { exact (proj1 (BOPP_is_finite t (BMULT yl th)) FIN_rl). }
@@ -249,7 +198,7 @@ Section CorrectDWDivDW.
   (** The initial rounded reciprocal [1/yh] is finite whenever the complete
       division result is finite.  This is useful when reasoning backward from
       the final result to the reciprocal-construction steps. *)
-  Fact FIN_th : is_finite th = true.
+  Local Fact FIN_th : is_finite th = true.
   Proof.
     have Hmh := FIN_mh.
     change (is_finite (BPLUS (BPLUS dh th) (BPLUS dl (snd (TwoSumF dh th)))) = true)
@@ -262,7 +211,7 @@ Section CorrectDWDivDW.
   (** Structural bridge for the residual [Fast2Sum].  Finiteness alone cannot
       imply nonoverlap: the required magnitude ordering is exposed explicitly
       for the later normal-range analysis. *)
-  Fact DW_e
+  Local Fact DW_e
       (Hord : Rabs (FT2R rl) <= Rabs (FT2R rh)) :
     double_word eh el.
   Proof. exact (Fast2Sum_is_DW rh rl FIN_eh Hord). Qed.
@@ -270,7 +219,7 @@ Section CorrectDWDivDW.
   (** Structural bridge for [DWTimesFP3].  Its closing correction ordering is
       likewise an explicit premise, to be discharged by the bridge's range
       hypotheses rather than hidden in the finiteness layer. *)
-  Fact DW_d
+  Local Fact DW_d
       (Hord :
          Rabs (FT2R (BFMA el th (Fast2Mult_err eh th)))
            <= Rabs (FT2R (Fast2Mult_mul eh th))) :
@@ -282,7 +231,7 @@ Section CorrectDWDivDW.
 
   (** Once [(dh,dl)] is a double word, [DWPlusFP] renormalizes its result into
       the double-word pair [(mh,ml)]. *)
-  Fact DW_m (Hp3 : (3 <= fprec t)%Z) (DWd : double_word dh dl) :
+  Local Fact DW_m (Hp3 : (3 <= fprec t)%Z) (DWd : double_word dh dl) :
     double_word mh ml.
   Proof.
     exact (DWPlusFP_acc_helpers.DWPlusFP_double_word dh dl th
@@ -290,110 +239,6 @@ Section CorrectDWDivDW.
   Qed.
 
 End CorrectDWDivDW.
-
-(* Small, reusable overflow combinators for the forward cascade.  A
-   representable power-of-two envelope is preserved by round-to-nearest, so
-   it simultaneously proves operation finiteness and a bound on its result. *)
-Lemma BPLUS_finite_bpow_bound {NANS: Nans} {t : type} {STD: is_standard t}
-      (a b : ftype t) (k : Z) :
-  is_finite a = true -> is_finite b = true ->
-  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
-  (k < femax t)%Z ->
-  Rabs (FT2R a + FT2R b) <= bpow radix2 k ->
-  is_finite (BPLUS a b) = true /\
-  Rabs (FT2R (BPLUS a b)) <= bpow radix2 k.
-Proof.
-move => Fa Fb Hlow Hk Hab.
-have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
-              (bpow radix2 k).
-{ apply generic_format_bpow.
-  unfold SpecFloat.fexp. apply Z.max_lub;
-    [pose proof (fprec_lb t); lia | exact Hlow]. }
-have Hrnd : Rabs (rounded t (FT2R a + FT2R b)) <= bpow radix2 k.
-{ unfold rounded. apply abs_round_le_generic;
-    first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
-have Fsum : is_finite (BPLUS a b) = true.
-{ apply no_overflow_sum_is_finite; [exact Fa | exact Fb |].
-  unfold Bplus_no_overflow.
-  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
-split; [exact Fsum |].
-rewrite -(BPLUS_round_correct t a b Fsum). exact Hrnd.
-Qed.
-
-Lemma BMINUS_finite_bpow_bound {NANS: Nans} {t : type} {STD: is_standard t}
-      (a b : ftype t) (k : Z) :
-  is_finite a = true -> is_finite b = true ->
-  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
-  (k < femax t)%Z ->
-  Rabs (FT2R a - FT2R b) <= bpow radix2 k ->
-  is_finite (BMINUS a b) = true /\
-  Rabs (FT2R (BMINUS a b)) <= bpow radix2 k.
-Proof.
-move => Fa Fb Hlow Hk Hab.
-have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
-              (bpow radix2 k).
-{ apply generic_format_bpow.
-  unfold SpecFloat.fexp. apply Z.max_lub;
-    [pose proof (fprec_lb t); lia | exact Hlow]. }
-have Hrnd : Rabs (rounded t (FT2R a - FT2R b)) <= bpow radix2 k.
-{ unfold rounded. apply abs_round_le_generic;
-    first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
-have Fdiff : is_finite (BMINUS a b) = true.
-{ apply no_overflow_minus_is_finite; [exact Fa | exact Fb |].
-  unfold Bminus_no_overflow.
-  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
-split; [exact Fdiff |].
-rewrite -(BMINUS_round_correct t a b Fdiff). exact Hrnd.
-Qed.
-
-Lemma BMULT_finite_bpow_bound {NANS: Nans} {t : type} {STD: is_standard t}
-      (a b : ftype t) (k : Z) :
-  is_finite a = true -> is_finite b = true ->
-  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
-  (k < femax t)%Z ->
-  Rabs (FT2R a * FT2R b) <= bpow radix2 k ->
-  is_finite (BMULT a b) = true /\
-  Rabs (FT2R (BMULT a b)) <= bpow radix2 k.
-Proof.
-move => Fa Fb Hlow Hk Hab.
-have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
-              (bpow radix2 k).
-{ apply generic_format_bpow. unfold SpecFloat.fexp. apply Z.max_lub;
-    [pose proof (fprec_lb t); lia | exact Hlow]. }
-have Hrnd : Rabs (rounded t (FT2R a * FT2R b)) <= bpow radix2 k.
-{ unfold rounded. apply abs_round_le_generic;
-    first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
-have Fmul : is_finite (BMULT a b) = true.
-{ apply no_overflow_mult_is_finite; [exact Fa | exact Fb |].
-  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
-split; [exact Fmul |].
-rewrite -(BMULT_round_correct t a b Fmul). exact Hrnd.
-Qed.
-
-Lemma BFMA_finite_bpow_bound {NANS: Nans} {t : type} {STD: is_standard t}
-      (a b c : ftype t) (k : Z) :
-  is_finite a = true -> is_finite b = true -> is_finite c = true ->
-  (SpecFloat.emin (fprec t) (femax t) <= k)%Z ->
-  (k < femax t)%Z ->
-  Rabs (FT2R a * FT2R b + FT2R c) <= bpow radix2 k ->
-  is_finite (BFMA a b c) = true /\
-  Rabs (FT2R (BFMA a b c)) <= bpow radix2 k.
-Proof.
-move => Fa Fb Fc Hlow Hk Hab.
-have Hfmt : generic_format radix2 (SpecFloat.fexp (fprec t) (femax t))
-              (bpow radix2 k).
-{ apply generic_format_bpow. unfold SpecFloat.fexp. apply Z.max_lub;
-    [pose proof (fprec_lb t); lia | exact Hlow]. }
-have Hrnd : Rabs (rounded t (FT2R a * FT2R b + FT2R c)) <= bpow radix2 k.
-{ unfold rounded. apply abs_round_le_generic;
-    first [exact valid_fexp_inst | apply valid_rnd_N | exact Hfmt | exact Hab]. }
-have Ffma : is_finite (BFMA a b c) = true.
-{ apply no_overflow_fma_is_finite;
-    [exact Fa | exact Fb | exact Fc |].
-  eapply Rle_lt_trans; [exact Hrnd | apply bpow_lt; exact Hk]. }
-split; [exact Ffma |].
-rewrite -(BFMA_round_correct t a b c Ffma). exact Hrnd.
-Qed.
 
 (* The generic Algorithm-9 / Fast2Mult / Fast2Sum underflow-floor lemmas that
    used to sit here now live in DWMulFP_acc.v, where they belong: they are
@@ -409,35 +254,6 @@ Qed.
      DWTimesFP3_sum_exact_of_ord     DWTimesFP3_double_word_of_sum
      Fast2Sum_double_word_of_sum
      DWTimesFP_mixed_guarantee_from_cond *)
-
-(** Absolute form of the paper-tight DWPlusFP theorem, including the zero-sum
-    case through its multiplicative-error witness. *)
-Lemma DWPlusFP_error_paper_tight {NANS : Nans} {t : type}
-    {STD : is_standard t} (ah al b : ftype t) :
-  (3 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWPlusFP ah al b) ->
-  Rabs ((FT2R (fst (DWPlusFP ah al b))+
-         FT2R (snd (DWPlusFP ah al b)))-
-        (FT2R ah+FT2R al+FT2R b))
-    <= 2*bpow radix2 (-fprec t)^2*
-         Rabs (FT2R ah+FT2R al+FT2R b).
-Proof.
-move => Hp3 DWa FIN.
-have H := @DWPlusFP_acc.DWPlusFP_multiplicative_accuracy_core
-  NANS t STD ah al b DWa FIN Hp3.
-destruct H as [del [Heq Hdel]].
-cbv zeta in Heq.
-set q := (FT2R ah+FT2R al+FT2R b)%R.
-set u := bpow radix2 (-fprec t).
-fold q in Heq. fold u in Hdel.
-change (Rabs ((FT2R (fst (DWPlusFP ah al b))+
-  FT2R (snd (DWPlusFP ah al b)))-q)<=2*u^2*Rabs q).
-rewrite Heq.
-replace (q*(1+del)-q)%R with (q*del)%R by ring.
-rewrite Rabs_mult.
-have Hmul := Rmult_le_compat_l (Rabs q) _ _ (Rabs_pos q) Hdel.
-eapply Rle_trans; [exact Hmul|]. right; ring.
-Qed.
 
 (* ============================================================
    Immediate consequences of the public division condition
@@ -462,7 +278,7 @@ Definition DWDivDW_internal_input_cond (xh xl yh yl : ftype t) : Prop :=
   Rabs (FT2R yh) <= bpow radix2 (femax t - fprec t - 5) /\
   bpow radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh).
 
-Lemma DWDivDW_internal_input_cond_of_safe_input_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_internal_input_cond_of_safe_input_cond (xh xl yh yl : ftype t) :
   DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
   DWDivDW_internal_input_cond xh xl yh yl.
 Proof.
@@ -470,7 +286,7 @@ move => [Fxh [Fxl [Fyh [Fyl [DWx [DWy [Hyhi [Hylo _]]]]]]]].
 repeat split; assumption.
 Qed.
 
-Lemma DWDivDW_inputs_finite_of_result_finite
+Local Lemma DWDivDW_inputs_finite_of_result_finite
     (xh xl yh yl : ftype t) :
   DWDivDW_result_finite xh xl yh yl ->
   is_finite xh = true /\
@@ -487,7 +303,7 @@ exact (conj (DWMulDW_acc.DWTimesDW3_xh_finite xh xl _ _ Hmul)
              (FIN_yl xh xl yh yl Hfin)))).
 Qed.
 
-Lemma DWDivDW_internal_input_cond_of_mixed_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_internal_input_cond_of_mixed_cond (xh xl yh yl : ftype t) :
   DWDivDW_mixed_cond xh xl yh yl ->
   DWDivDW_internal_input_cond xh xl yh yl.
 Proof.
@@ -498,7 +314,7 @@ have [Fxh [Fxl [Fyh Fyl]]] :=
 repeat split; assumption.
 Qed.
 
-Lemma DWDivDW_cond_yh_nonzero (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_yh_nonzero (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl -> FT2R yh <> 0.
 Proof.
 move => [_ [_ [_ [_ [_ [_ [_ Hyhlo]]]]]]].
@@ -515,7 +331,7 @@ Qed.
     whichever side the runtime guard can test more cheaply -- and it states the
     [|yh|] side, which needs no [1.0/y->s] node and no rounded-to-exact
     transfer. *)
-Lemma DWDivDW_cond_recip_lower (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_recip_lower (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   bpow radix2 (emin + 2 * fprec t + 2) <= Rabs (1 / FT2R yh).
 Proof.
@@ -530,26 +346,13 @@ rewrite -bpow_opp. apply Req_le; f_equal.
 unfold emin, SpecFloat.emin. lia.
 Qed.
 
-(** Conjunct 7 also subsumes the [2^(femax-2)] no-overflow bound on [|yh|]
-    that the cond used to carry as a separate conjunct: the stated exponent
-    [femax-p-5] is [p+3] binades tighter.  This lemma recovers the weaker form
-    for clients that want it. *)
-Lemma DWDivDW_cond_yh_upper (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
-  Rabs (FT2R yh) <= bpow radix2 (femax t - 2).
-Proof.
-move => [_ [_ [_ [_ [_ [_ [Hyhhi _]]]]]]].
-eapply Rle_trans; [exact Hyhhi |].
-apply bpow_le. pose proof (fprec_lb t). lia.
-Qed.
-
 (** The divisor window of conjuncts 7 and 9 is nonempty, so
     [emin+2p <= femax-p-5], i.e. [p <= femax-4] once [emin = 3-femax-p] is
     substituted -- and then [emin+2p = 3-femax+p <= -1].  Every scale
     conversion below inherits this: the underflow floor is at most [u^2], not
     the format-generic [4*u^2].  (Only [p < femax] is available without the
     window, and [eta <= 4u^2] does not fit the arm budgets.) *)
-Lemma DWDivDW_cond_emin_le (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_emin_le (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   (emin + 2 * fprec t <= 0)%Z.
 Proof.
@@ -568,7 +371,7 @@ Qed.
     ([DWDivDW_residual_value_error_tight_floor]): the max of the relative term
     and [eta/2] collapses to the relative one.  The format-generic
     [eta <= 4*u^2] of [DWDivDW_eta_scales_from_cond_tight] would not do. *)
-Lemma DWDivDW_cond_eta_le_u2 (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_eta_le_u2 (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   bpow radix2 emin <= bpow radix2 (- fprec t) ^ 2.
 Proof.
@@ -579,7 +382,7 @@ replace (bpow radix2 (- fprec t) ^ 2)
 rewrite -bpow_plus. apply bpow_le. lia.
 Qed.
 
-Lemma DWDivDW_cond_UF_th (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_UF_th (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Proof.
@@ -590,7 +393,7 @@ Qed.
 
 (** The public lower bound on [|yh|] also keeps the initial reciprocal far
     below overflow. *)
-Lemma DWDivDW_cond_reciprocal_upper (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_reciprocal_upper (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (1 / FT2R yh) <= bpow radix2 (femax t - 2).
 Proof.
@@ -611,7 +414,7 @@ eapply Rle_trans.
   unfold emin, SpecFloat.emin; pose proof (fprec_lb t); lia.
 Qed.
 
-Lemma DWDivDW_cond_reciprocal_upper_tight (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_cond_reciprocal_upper_tight (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (1 / FT2R yh) <= bpow radix2 (femax t - fprec t - 3).
 Proof.
@@ -629,7 +432,7 @@ Qed.
 
 (** Finiteness of the reciprocal bootstrap node, obtained by reusing the
     quotient-node proof from DW/FP division at numerator [1]. *)
-Lemma DWDivDW_th_finite_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_th_finite_from_cond (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite (BDIV (Zconst t 1) yh) = true.
 Proof.
@@ -655,7 +458,7 @@ apply DWDivFP_acc.th_finite.
 - rewrite Hone; exact (DWDivDW_cond_reciprocal_upper xh xl yh yl COND).
 Qed.
 
-Lemma DWDivDW_th_abs_upper_tight (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_th_abs_upper_tight (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R (BDIV (Zconst t 1) yh))
     <= bpow radix2 (femax t - fprec t - 3).
@@ -682,7 +485,7 @@ apply abs_round_le_generic.
 - exact (DWDivDW_cond_reciprocal_upper_tight xh xl yh yl COND).
 Qed.
 
-Lemma DWDivDW_th_yh_residual_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_th_yh_residual_from_cond (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R (BDIV (Zconst t 1) yh) * FT2R yh - 1)
     <= bpow radix2 (- fprec t).
@@ -704,7 +507,7 @@ rewrite Hone in Hres. specialize (Hres UFth).
 rewrite Rabs_R1 Rmult_1_l in Hres. exact Hres.
 Qed.
 
-Lemma DWDivDW_th_relative_bounds_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_th_relative_bounds_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
@@ -781,7 +584,7 @@ repeat split.
 - exact Heta_uT.
 Qed.
 
-Lemma DWDivDW_yl_th_abs_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_yl_th_abs_from_cond (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R yl * FT2R (BDIV (Zconst t 1) yh))
     <= bpow radix2 (- fprec t) * (1 + bpow radix2 (- fprec t)).
@@ -811,7 +614,7 @@ Qed.
 
 (** The exact FMA residual [1-yh*th] is at most one unit roundoff, hence its
     rounded value cannot overflow. *)
-Lemma DWDivDW_rh_finite_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rh_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1)) = true.
@@ -866,14 +669,14 @@ have Hquarter : bpow radix2 (femax t - fprec t)
                 <= /4 * bpow radix2 (femax t).
 { have -> : (/4 * bpow radix2 (femax t))%R =
       bpow radix2 (femax t - 2).
-  { symmetry; exact (@DWDivFP_acc.aux_quarter_Omega t). }
+  { symmetry; exact (@bpow_femax_minus_two t). }
   apply bpow_le; lia. }
 lra.
 Qed.
 
 (** The low divisor product is of order [u]: double-word nonoverlap gives
     [|yl| <= u|yh|], while reciprocal rounding gives [|th*yh| <= 1+u]. *)
-Lemma DWDivDW_yl_th_finite_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_yl_th_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite (BMULT yl (BDIV (Zconst t 1) yh)) = true.
@@ -929,12 +732,12 @@ eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp |].
 have Hulp := ulp_below_overflow (FT2R yl * FT2R th) Hvlt.
 have Hquarter : bpow radix2 (femax t - fprec t)
                 <= /4 * bpow radix2 (femax t).
-{ rewrite -(@DWDivFP_acc.aux_quarter_Omega t).
+{ rewrite -(@bpow_femax_minus_two t).
   apply bpow_le; lia. }
 nra.
 Qed.
 
-Lemma DWDivDW_rl_finite_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rl_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite (BOPP (BMULT yl (BDIV (Zconst t 1) yh))) = true.
@@ -944,7 +747,7 @@ apply (proj2 (BOPP_is_finite t _)).
 exact (DWDivDW_yl_th_finite_from_cond xh xl yh yl Hp4 COND).
 Qed.
 
-Lemma DWDivDW_rh_abs_le_one (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rh_abs_le_one (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))) <= 1.
 Proof.
@@ -984,7 +787,7 @@ apply abs_round_le_generic.
   rewrite Heq Rabs_Ropp. lra.
 Qed.
 
-Lemma DWDivDW_rl_abs_le_one (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rl_abs_le_one (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R (BOPP (BMULT yl (BDIV (Zconst t 1) yh)))) <= 1.
 Proof.
@@ -1020,7 +823,7 @@ Qed.
 (** The low residual remains strictly below [2u], including in the
     subnormal regime.  This sharper exponent fact, rather than a magnitude
     ordering between [rh] and [rl], is what the paper's Fast2Sum proof uses. *)
-Lemma DWDivDW_rl_abs_lt_two_u (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rl_abs_lt_two_u (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   Rabs (FT2R (BOPP (BMULT yl (BDIV (Zconst t 1) yh)))) <
     2*bpow radix2 (-fprec t).
@@ -1076,7 +879,7 @@ have Hop : FT2R rl = -FT2R q.
 rewrite Hop Rabs_Ropp. eapply Rle_lt_trans; [exact Hqabs|]. nra.
 Qed.
 
-Lemma DWDivDW_rl_cexp_le (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rl_cexp_le (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rl := BOPP (BMULT yl th) in
@@ -1108,7 +911,7 @@ Qed.
 (** All three operations of the residual [Fast2Sum] stay within tiny
     power-of-two envelopes.  This proof does not require the Fast2Sum
     magnitude-ordering condition. *)
-Lemma DWDivDW_fast2sum_cascade_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_fast2sum_cascade_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let e := Fast2Sum
        (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))
@@ -1166,7 +969,7 @@ change (Rabs (FT2R (BMINUS rl z)) <= 8) in He.
 exact (conj (conj Fs Fe) (conj Hs He)).
 Qed.
 
-Corollary DWDivDW_fast2sum_finite_from_cond (xh xl yh yl : ftype t) :
+Local Corollary DWDivDW_fast2sum_finite_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   is_finite_p
     (Fast2Sum
@@ -1180,7 +983,7 @@ Qed.
 (** Forward overflow cascade for the reciprocal-times-residual block.  The
     deliberately coarse [|eh| <= 2], [|el| <= 8] bounds are sufficient because
     [th] is at scale [2^(femax-p-3)]. *)
-Lemma DWDivDW_timesfp_cascade_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_timesfp_cascade_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let e := Fast2Sum
@@ -1318,7 +1121,7 @@ exact (conj Hs Herr).
 Qed.
 
 (** Forward overflow cascade for the reciprocal renormalization [DWPlusFP]. *)
-Lemma DWDivDW_plusfp_cascade_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_plusfp_cascade_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let e := Fast2Sum
@@ -1388,7 +1191,7 @@ have [Fminus _] := BMINUS_finite_bpow_bound dh th
   (Hlow (femax t - fprec t + 3)%Z ltac:(lia))
   (Hhigh (femax t - fprec t + 3)%Z ltac:(lia)) Hminus_in.
 have Hthq : Rabs (FT2R th) <= /4 * bpow radix2 (femax t).
-{ rewrite -(@DWDivFP_acc.aux_quarter_Omega t).
+{ rewrite -(@bpow_femax_minus_two t).
   eapply Rle_trans; [exact Hth |]. apply bpow_le; lia. }
 have Hthpred : Rabs (FT2R th) <
     Ulp.pred radix2 (SpecFloat.fexp (fprec t) (femax t)) (bpow radix2 (femax t)).
@@ -1483,7 +1286,7 @@ Qed.
 
 (** Relational reconstruction bounds.  Unlike the coarse exponent envelopes
     used only for overflow, these bounds retain the scale of [th]. *)
-Lemma DWDivDW_reciprocal_relative_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_reciprocal_relative_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -1868,7 +1671,7 @@ have Hmhlo : (1-86*u)*T <= Rabs (FT2R mh) by nra.
 repeat split; [exact Hmhlo | exact Hmh | exact Hml | exact HDW | exact Hord].
 Qed.
 
-Lemma DWDivDW_eta_scales_from_cond_tight (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_eta_scales_from_cond_tight (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
@@ -1950,7 +1753,7 @@ nra.
 Qed.
 
 (** Compatibility form with the older factor [3]. *)
-Lemma DWDivDW_eta_scales_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_eta_scales_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
@@ -1966,7 +1769,7 @@ have Hnonneg : 0 <= bpow radix2 (-fprec t)^2 *
 eapply Rle_trans; [exact Ht|]. nra.
 Qed.
 
-Lemma DWDivDW_residual_value_error_floor (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_residual_value_error_floor (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -2155,7 +1958,7 @@ Qed.
 (** Compatibility form obtained by absorbing the two explicit residual-floor
     terms.  New denormal proofs should use
     [DWDivDW_residual_value_error_floor] instead. *)
-Lemma DWDivDW_residual_value_error (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_residual_value_error (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -2198,7 +2001,7 @@ Qed.
     Fast2Sum is ordered, its sum is exact and the refinement costs one floor
     ulp.  Otherwise the general two-floor bound holds and the Newton residual
     is itself second order. *)
-Lemma DWDivDW_refinement_product_value_error_tight_floor
+Local Lemma DWDivDW_refinement_product_value_error_tight_floor
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -2462,7 +2265,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   nra.
 Qed.
 
-Lemma DWDivDW_final_cond_from_cond_normal (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_final_cond_from_cond_normal (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z ->
   DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -2551,7 +2354,7 @@ Qed.
 (** In the complementary closing-product regime, all nodes of the final
     [DWTimesDW3] are absolutely small.  This supplies finiteness without the
     normal-product disjunct required by [DWTimesDW_exact_leading_product_input_cond]. *)
-Lemma DWDivDW3_finite_from_cond_zprod_underflow (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW3_finite_from_cond_zprod_underflow (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -2721,7 +2524,7 @@ change (is_finite zh = true /\ is_finite zl = true).
 exact (conj Fzh Fzl).
 Qed.
 
-Lemma DWDivDW3_finite_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW3_finite_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z ->
   DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
   is_finite_p (DWDivDW3 xh xl yh yl).
@@ -2751,112 +2554,6 @@ Qed.
 End DWDivDWCondFacts.
 
 (* ============================================================
-   Double-word representation of the multiplication result
-
-   The closing operation of DWTimesDW3 is Fast2Sum ch cl3, with high product
-   ch = BMULT xh yh and correction cl3 = BPLUS (Fast2Mult_err xh yh)
-   (BFMA xl yh (BFMA xh yl (BMULT xl yl))).  A Fast2Sum output is a double-word
-   once (a) the high sum BPLUS ch cl3 is finite and (b) the operands are ordered
-   |cl3| <= |ch| (Fast2Sum_is_DW).  The ordering is DWMulDW_acc.aux_cl3_le_ch.
-
-   NOTE (contrast with DWPlusFP_double_word, which is unconditional): the
-   ordering here needs the product to be in the NORMAL range,
-   bpow(emin+2p-1) <= |xh*yh| -- in deep underflow the correction is not forced
-   below the (subnormal) high product, so a Fast2Sum-of-a-multiply result is
-   NOT unconditionally a double-word.  This normal-range fact is exactly what
-   the closing-product clause of DDConds.DWDivDW_normal supplies for the
-   closing multiply.
-   ============================================================ *)
-(** [DWTimesDW3] returns a nonoverlapping double-word representation provided
-    both operands satisfy [double_word_prop], the computed result is finite,
-    and the leading product is large enough to avoid deep underflow.
-
-    The normal-range assumption ensures that the correction supplied to the
-    final [Fast2Sum] is no larger than its leading component.  This lemma is
-    used below for the final multiplication in [DWDivDW3].  The premise uses
-    the Prop-valued [double_word_prop], while the conclusion uses the
-    Type-valued [double_word]; both express the same nonoverlap equation. *)
-Lemma DWTimesDW3_double_word {NANS: Nans} {t : type} {STD: is_standard t}
-      (xh xl yh yl : ftype t) :
-  (3 <= fprec t)%Z ->
-  double_word_prop xh xl ->
-  double_word_prop yh yl ->
-  bpow radix2 (@common.emin t + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh) ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
-  double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
-Proof.
-intros Hp3 DWx DWy Hnorm FIN.
-have Hch  := DWMulDW_acc.DWTimesDW3_mul_finite  xh xl yh yl FIN.
-have Hcl3 := DWMulDW_acc.DWTimesDW3_correction_finite  xh xl yh yl FIN.
-have Hle  := DWMulDW_acc.aux_cl3_le_ch xh xl yh yl Hp3 DWx DWy Hch Hcl3 Hnorm.
-change (double_word
-          (Fast2Sum_sum (BMULT xh yh)
-             (BPLUS (Fast2Mult_err xh yh)
-                    (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
-          (Fast2Sum_err (BMULT xh yh)
-             (BPLUS (Fast2Mult_err xh yh)
-                    (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))).
-apply Fast2Sum_is_DW; [ exact (proj1 FIN) | exact Hle ].
-Qed.
-
-(* ============================================================
-   Double-word representation of the division result
-
-   fst/snd (DWDivDW3 xh xl yh yl) are, by definition, fst/snd of the closing
-   DWTimesDW3 xh xl mh ml (where (mh,ml) is the refined reciprocal), so result-DW
-   reduces directly to DWTimesDW3_double_word at (xh, xl, mh, ml).
-
-   Its three obligations are the honest remaining content:
-     - double_word_prop xh xl : the dividend is a DW (a cond field);
-     - double_word_prop mh ml : the refined reciprocal (mh,ml) = DWPlusFP dh dl th
-       is a DW.  DWPlusFP's result is a DW unconditionally (DWPlusFP_double_word),
-       given its DW input (dh,dl) = DWTimesFP3 eh el th -- so this unfolds to the
-       reciprocal-reconstruction DW cascade (DWTimesFP3 -> Fast2Sum(rh,rl)), each
-       level a multiply-Fast2Sum needing its own normal-range, as in
-       DWTimesDW3_double_word;
-     - the closing-multiply normal range bpow(emin+2p-1) <= |xh*mh| (mh ~ 1/yh,
-       so this is the quotient normal-range that DDConds.DWDivDW_normal's
-       closing-product clause states directly).
-   Both DW-ness and the normal range are taken here as explicit hypotheses, the
-   same "split-line" discipline the DWDivFP development uses for UF_tl.
-   ============================================================ *)
-Section ResultDWDivDW.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-
-Variables (xh xl yh yl : ftype t).
-
-Notation th  := (BDIV (Zconst t 1) yh).
-Notation eh  := (fst (Fast2Sum (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)))).
-Notation el  := (snd (Fast2Sum (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)))).
-Notation dh  := (fst (DWTimesFP3 eh el th)).
-Notation dl  := (snd (DWTimesFP3 eh el th)).
-Notation mh  := (fst (DWPlusFP dh dl th)).
-Notation ml  := (snd (DWPlusFP dh dl th)).
-
-Hypothesis Hp3   : (3 <= fprec t)%Z.
-Hypothesis FIN   : is_finite_p (DWDivDW3 xh xl yh yl).
-Hypothesis DWx   : double_word_prop xh xl.
-Hypothesis DWm   : double_word_prop mh ml.
-Hypothesis Hnorm : bpow radix2 (@common.emin t + 2 * fprec t - 1)
-                   <= Rabs (FT2R xh * FT2R mh).
-
-(** The two components returned by [DWDivDW3] form a valid double-word.
-
-    Besides finiteness and a double-word dividend, the theorem assumes that
-    the reconstructed reciprocal [(mh,ml)] satisfies [double_word_prop] and
-    that the final product [xh*mh] avoids deep underflow.  Separate range
-    analysis can establish these assumptions from a public precondition for
-    the division operation. *)
-Lemma DWDivDW3_double_word :
-  double_word (fst (DWDivDW3 xh xl yh yl)) (snd (DWDivDW3 xh xl yh yl)).
-Proof.
-have FINmul : is_finite_p (DWTimesDW3 xh xl mh ml) by exact FIN.
-exact (DWTimesDW3_double_word xh xl mh ml Hp3 DWx DWm Hnorm FINmul).
-Qed.
-
-End ResultDWDivDW.
-
-(* ============================================================
    Agreement between the FLX paper model and the FLT runtime model
 
    Collapses the FLT runtime model DDModels.DWDivDW3 onto the paper's
@@ -2884,7 +2581,7 @@ Notation rnd_p := (round radix2 (FLX_exp (fprec t)) (Znearest choice)).
     [(yh/2)u], while the double-word low part contributes [u/yh].  Their
     coefficients sum to at most [3/2] over [1,2], and the cross term is at
     most [u^2/2]. *)
-Lemma flx_newton_residual_normalized (yh yl : R) :
+Local Lemma flx_newton_residual_normalized (yh yl : R) :
   DWPlus.double_word (fprec t) choice yh yl ->
   1 <= yh <= 2-2*bpow radix2 (-fprec t) ->
   let th := rnd_p (/yh) in
@@ -2966,7 +2663,7 @@ Qed.
 (** Squaring the normalized residual recovers the Newton contribution used
     by the paper.  At the bridge's standing precision [p >= 14], the small
     [u/2] cross term fits below the paper constant [2.298]. *)
-Lemma flx_newton_residual_normalized_sq (yh yl : R) :
+Local Lemma flx_newton_residual_normalized_sq (yh yl : R) :
   (14 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice yh yl ->
   1 <= yh <= 2-2*bpow radix2 (-fprec t) ->
@@ -3002,7 +2699,7 @@ Qed.
     product [(yh+yl)*round(1/yh)] is unchanged by a power-of-two scaling of
     the divisor pair, so the normalized result applies to every nonzero
     double word. *)
-Lemma flx_newton_residual_sq (yh yl : R) :
+Local Lemma flx_newton_residual_sq (yh yl : R) :
   (14 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice yh yl -> yh <> 0 ->
   Rabs ((yh+yl)*rnd_p (/yh)-1)^2 <=
@@ -3052,7 +2749,7 @@ replace (((yh*bpow radix2 ey)+(yl*bpow radix2 ey))*
   simpl; ring.
 Qed.
 
-Lemma flx_newton_step_error (yh yl : R) :
+Local Lemma flx_newton_step_error (yh yl : R) :
   (14 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice yh yl -> yh <> 0 ->
   let th := rnd_p (/yh) in
@@ -3088,7 +2785,7 @@ Qed.
     residual is that small), which makes this contribution fourth order and
     removes the [2.298] term from that arm's ordinary budget.  No precision
     bound is needed -- this is pure algebra over the exact identity. *)
-Lemma flx_newton_step_error_of_residual (yh yl r : R) :
+Local Lemma flx_newton_step_error_of_residual (yh yl r : R) :
   DWPlus.double_word (fprec t) choice yh yl -> yh <> 0 ->
   let th := rnd_p (/yh) in
   let Y := yh+yl in
@@ -3114,55 +2811,11 @@ have H0 : 0 <= Rabs (1-Y*th) by apply Rabs_pos.
 nra.
 Qed.
 
-(** A fixed-point representation of the leading operand is the precise
-    structural premise needed by Fast2Sum when magnitude ordering is not
-    available.  This is the form used by the paper for the reciprocal
-    residual: [rh] lies on a [2*u^2] lattice even when [rl] is larger. *)
-Lemma flx_f2s_sum_of_fix_left (a b : R) (e : Z) :
-  generic_format radix2 (FLX_exp (fprec t)) a ->
-  generic_format radix2 (FLX_exp (fprec t)) b ->
-  generic_format radix2 (FIX_exp e) a ->
-  (cexp radix2 (FLX_exp (fprec t)) b <= e)%Z ->
-  let z := F2Sum.Fast2Sum (fprec t) choice a b in
-  fst z + snd z = a + b.
-Proof.
-move => Fa Fb Fixa Hbe.
-have Fixa' := FIX_format_generic radix2 e a Fixa.
-destruct Fixa' as [fa Hfa Hexp].
-have Hcorr := @F2SumFLX.F2Sum_correct_proof
-  radix2 (fprec t) (fprec_gt_one t) choice.
-specialize (Hcorr (fun x => round_NE_opp _ _ x) ltac:(simpl; lia)
-  a b Fa Fb).
-have Hrep : exists fa0 : float radix2,
-    a = F2R fa0 /\
-    (cexp radix2 (FLX_exp (fprec t)) b <= Fexp fa0)%Z.
-{ exists fa. split; [exact Hfa|]. rewrite Hexp. exact Hbe. }
-specialize (Hcorr Hrep).
-unfold F2SumFLX.Fast2Sum_correct in Hcorr.
-cbv zeta in Hcorr.
-unfold F2Sum.Fast2Sum.
-set z := F2SumFLX.Fast2Sum radix2 (fprec t) choice a b in Hcorr |- *.
-destruct z as [s r].
-change (r = a+b-s) in Hcorr.
-change (s+r=a+b). lra.
-Qed.
-
-Lemma fix_format_lower (x : R) (e1 e2 : Z) :
-  (e1<=e2)%Z ->
-  generic_format radix2 (FIX_exp e2) x ->
-  generic_format radix2 (FIX_exp e1) x.
-Proof.
-move => He Fx.
-eapply (@generic_inclusion_mag radix2 (FIX_exp e2) (FIX_exp e1) x).
-- move => _. unfold FIX_exp. exact He.
-- exact Fx.
-Qed.
-
 (** The reciprocal residual is an integer multiple of [2*u^2], independently
     of the exponent of [y].  Scaling [y] into [1,2) also scales its reciprocal
     in the opposite direction, so their product—and hence the residual—is
     unchanged. *)
-Lemma flx_reciprocal_residual_fix (y : R) :
+Local Lemma flx_reciprocal_residual_fix (y : R) :
   generic_format radix2 (FLX_exp (fprec t)) y -> y <> 0 ->
   generic_format radix2 (FIX_exp (1-2*fprec t))
     (1-y*rnd_p (/y)).
@@ -3276,7 +2929,7 @@ Qed.
 (** Runtime residual Fast2Sum is exact once its leading residual is placed on
     the same [2*u^2] lattice used in the paper proof.  Notice that no
     magnitude ordering between [rh] and [rl] is assumed. *)
-Lemma DWDivDW_residual_fast2sum_exact_from_fix
+Local Lemma DWDivDW_residual_fast2sum_exact_from_fix
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3314,7 +2967,7 @@ destruct (Req_dec (FT2R rl) 0) as [Hrl0|Hrl0].
   have Hce := DWDivDW_rl_cexp_le xh xl yh yl Hp14 COND.
   specialize (Hce NANS STD).
   fold th rl in Hce. cbv zeta in Hce. specialize (Hce Hrl0).
-  have Hp := flx_f2s_sum_of_fix_left
+  have Hp := @flx_f2s_sum_of_fix_left t
     (FT2R rh) (FT2R rl) (1-2*fprec t) Frh Frl Frhfix Hce.
   cbv zeta in Hp.
   have Hb := FastTwoSumEq_FLT rh rl Fe.
@@ -3323,7 +2976,7 @@ Qed.
 
 (** The public condition makes the leading reciprocal normal, so this node is
     shared literally by the runtime FLT computation and the paper FLX model. *)
-Lemma DWDivDW_th_FLT_FLX_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_th_FLT_FLX_from_cond (xh xl yh yl : ftype t) :
   DWDivDW_internal_input_cond xh xl yh yl ->
   rnd_p (/ FT2R yh) = FT2R (BDIV (Zconst t 1) yh).
 Proof.
@@ -3348,7 +3001,7 @@ Qed.
     representable and the FMA does not round.  If the FLT minimum exponent is
     coarser, the rounded result lies on that coarser lattice, which is itself
     included in the [2*u^2] lattice. *)
-Lemma DWDivDW_rh_fix_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rh_fix_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -3431,7 +3084,7 @@ Qed.
     contributes no signed delta whatsoever -- neither an ordinary [u]-relative
     term nor an underflow floor -- so the [~UF_rh] arm of the regime cascade
     carries no error of its own. *)
-Lemma DWDivDW_rh_exact_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rh_exact_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   FT2R (BFMA (BOPP yh) th (Zconst t 1)) = 1 - FT2R yh * FT2R th.
@@ -3499,7 +3152,7 @@ Qed.
 
 (** Under the division precondition the fixed-point premise above is
     automatic, so the residual Fast2Sum contributes no rounding error. *)
-Lemma DWDivDW_residual_fast2sum_exact_from_cond
+Local Lemma DWDivDW_residual_fast2sum_exact_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3516,7 +3169,7 @@ Qed.
 
 (** Reciprocal-refinement multiplication with exactly the paper's [2*u^2]
     ordinary term and only the Fast2Mult-gap floor term. *)
-Lemma DWDivDW_refinement_product_error_mixed_paper
+Local Lemma DWDivDW_refinement_product_error_mixed_paper
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3559,7 +3212,7 @@ cbn [fst snd] in H |- *.
 exact H.
 Qed.
 
-Lemma DWDivDW_reciprocal_plus_error_paper_tight
+Local Lemma DWDivDW_reciprocal_plus_error_paper_tight
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3594,7 +3247,7 @@ Qed.
 
 (** The low-divisor product is the second and only other reciprocal-prologue
     node that may initially differ; it also costs at most one floor ulp. *)
-Lemma DWDivDW_rl_FLT_FLX_diff_from_cond (xh xl yh yl : ftype t) :
+Local Lemma DWDivDW_rl_FLT_FLX_diff_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   Rabs (FT2R (BOPP (BMULT yl th)) -
@@ -3620,13 +3273,13 @@ change (Rabs (- vr - - vp) <= bpow radix2 (@common.emin t)).
 replace (- vr - - vp)%R with (- (vr-vp))%R by ring.
 rewrite Rabs_Ropp.
 unfold vr, vp.
-exact (DWDivFP_acc.round_FLT_FLX_diff (t:=t) (FT2R yl * FT2R th)).
+exact (round_FLT_FLX_diff (t:=t) (FT2R yl * FT2R th)).
 Qed.
 
 (** Consequently the real sum entering reciprocal refinement differs from
     the paper input by at most two floor ulps.  This is the perturbation that
     must be propagated; the normal [u^2] analysis is deliberately absent. *)
-Lemma DWDivDW_residual_sum_FLT_FLX_diff_from_cond
+Local Lemma DWDivDW_residual_sum_FLT_FLX_diff_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3665,7 +3318,7 @@ Qed.
 (** The complete runtime residual pair therefore costs nothing for the exact
     residual projection ([DWDivDW_rh_exact_from_cond]) and at most one ulp for
     the low double round. *)
-Lemma DWDivDW_fast2sum_sum_FLT_FLX_diff_from_cond
+Local Lemma DWDivDW_fast2sum_sum_FLT_FLX_diff_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3691,49 +3344,6 @@ cbv zeta in Hex, Hres.
 rewrite Hex. exact Hres.
 Qed.
 
-(** Rounding error as a MAX of the relative term and the subnormal floor
-    rather than their sum -- the [DWMulDW_acc.aux_err_step2] idiom.  In the
-    normal range the half-ulp is at most [u*|v|]; in the subnormal range
-    [ulp v = eta] and the relative term is the smaller of the two.  Charging
-    the max is what lets the reciprocal residual below cost no [eta] at all:
-    with [eta <= u^2] ([DWDivDW_cond_eta_le_u2]) the floor branch is dominated
-    by the relative branch at the scales this file works at.
-
-    Operation-independent; it belongs in [common/FLT_helpers.v] next to
-    [round_FLT_error_rel_emin] (the additive version), and is kept local here
-    only to avoid a hot-file rebuild. *)
-Lemma round_FLT_error_max_emin (v c : R) :
-  Rabs v <= c ->
-  Rabs (round radix2 (SpecFloat.fexp (fprec t) (femax t))
-          (Znearest choice) v - v)
-    <= Rmax (c * bpow radix2 (-fprec t))
-            (/2 * bpow radix2 (@common.emin t)).
-Proof.
-move => Hv.
-have He := @Ulp.error_le_half_ulp radix2
-  (SpecFloat.fexp (fprec t) (femax t)) valid_fexp_inst choice v.
-have Hvp := Rabs_pos v.
-have Hu0 : 0 <= bpow radix2 (-fprec t) by apply bpow_ge_0.
-destruct (Rle_lt_dec (bpow radix2 (@common.emin t + fprec t - 1))
-  (Rabs v)) as [Hn|Hs].
-- (* normal: half an ulp is at most u|v| <= u*c, so the floor never enters *)
-  have Hle : Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) v
-      <= Rabs v * bpow radix2 (1 - fprec t) by apply ulp_FLT_le.
-  have HBe : bpow radix2 (1 - fprec t) = 2 * bpow radix2 (-fprec t).
-  { replace (1 - fprec t)%Z with (1 + - fprec t)%Z by lia.
-    rewrite bpow_plus.
-    have -> : bpow radix2 1 = 2%R by reflexivity. ring. }
-  rewrite HBe in Hle.
-  eapply Rle_trans; [exact He|].
-  eapply Rle_trans; [|apply Rmax_l]. nra.
-- (* subnormal: ulp v = eta and the relative term is the smaller one *)
-  have Heq : Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t)) v
-      = bpow radix2 (@common.emin t).
-  { apply ulp_FLT_small; first [apply fprec_gt_0 |
-      eapply Rlt_trans; [exact Hs | apply bpow_lt; lia]]. }
-  eapply Rle_trans; [exact He|]. rewrite Heq. apply Rmax_r.
-Qed.
-
 (** Tight distance from the runtime residual pair to the exact Newton
     residual.
 
@@ -3752,7 +3362,7 @@ Qed.
     relative error.  Those two are never simultaneously live -- above
     [2^(emin+p-1)] the FLT and FLX roundings are equal, below it the relative
     term is dominated -- but the additive split could not see that. *)
-Lemma DWDivDW_residual_value_error_tight_floor
+Local Lemma DWDivDW_residual_value_error_tight_floor
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3804,7 +3414,7 @@ specialize (Hvb NANS STD).
 fold th u in Hvb. fold v in Hvb.
 have Herr : Rabs (FT2R (BMULT yl th) - v)
     <= Rmax (u*(1+u)*u) (/2*eta).
-{ rewrite -Hrun. exact (round_FLT_error_max_emin v (u*(1+u)) Hvb). }
+{ rewrite -Hrun. exact (@round_FLT_error_max_emin t v (u*(1+u)) Hvb). }
 have Hetau2 : eta <= u^2.
 { unfold eta, u, common.emin.
   exact (DWDivDW_cond_eta_le_u2 xh xl yh yl COND). }
@@ -3812,7 +3422,7 @@ eapply Rle_trans; [exact Herr|].
 apply Rmax_lub; nra.
 Qed.
 
-Lemma DWDivDW_newton_step_error_tight_from_cond
+Local Lemma DWDivDW_newton_step_error_tight_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3835,7 +3445,7 @@ Qed.
 
 (** The exact scale that propagates a reciprocal-residual perturbation to the
     quotient is essentially one: [|(xh+xl)*th| <= 1.001*|Q|]. *)
-Lemma DWDivDW_X_th_quotient_scale_from_cond
+Local Lemma DWDivDW_X_th_quotient_scale_from_cond
     (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
@@ -3912,7 +3522,7 @@ Qed.
     scale.  The third-order coefficient [c3] is absorbed into [1/100*u^2] for
     any [c3 <= 140] at [p >= 14], so both arms of the refinement split share
     this step; only the floor coefficient [fl] is carried through. *)
-Lemma DWDivDW_refinement_product_error_scaled_param
+Local Lemma DWDivDW_refinement_product_error_scaled_param
     (xh xl yh yl : ftype t) (c3 fl : R) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   0 <= c3 -> c3 <= 140 -> 0 <= fl ->
@@ -3998,7 +3608,7 @@ Qed.
 
     The conclusion is an exact identity in [fr] and [nw] -- nothing is rounded
     up here, which is what lets each arm keep its own sharp constants. *)
-Lemma DWDivDW_reciprocal_error_scaled_floor_param
+Local Lemma DWDivDW_reciprocal_error_scaled_floor_param
     (xh xl yh yl : ftype t) (fr nw : R) :
   (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
   0 <= fr -> 0 <= nw ->
@@ -4219,7 +3829,7 @@ Qed.
     ([DWDivDW_residual_value_error_tight_floor] now charges its one rounding
     as a max rather than as relative + floor), so the parameter is gone with
     it -- worth [1.001] on the exported [u^2] coefficient. *)
-Lemma DWDivDW_mixed_closing_composition_param
+Local Lemma DWDivDW_mixed_closing_composition_param
     (u eta X Y Q M zr a bx fc : R) :
   0 <= u -> u <= /16384 -> 0 <= eta -> Y <> 0 -> Q = X/Y ->
   Rabs (X*(M-/Y)) <=
@@ -4263,7 +3873,7 @@ Qed.
     turns the mixed bound into a relative one by absorbing its floor term.  The
     [bq] parameter is gone too; see
     [DWDivDW_mixed_closing_composition_param].) *)
-Lemma DWDivDW_absolute_of_mixed_param
+Local Lemma DWDivDW_absolute_of_mixed_param
     (u eta X Q zr a bx r c fc : R) :
   0 <= eta -> 0 <= bx ->
   Rabs (zr-Q) <=
@@ -4778,7 +4388,7 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
 
 (** The complete division is finite as soon as its closing multiplication
     satisfies the already-proved [DWTimesDW_exact_leading_product_input_cond]. *)
-Lemma DWDivDW3_finite_from_final_cond :
+Local Lemma DWDivDW3_finite_from_final_cond :
   (4 <= fprec t)%Z ->
   DWTimesDW_exact_leading_product_input_cond xh xl mh ml ->
   is_finite_p (DWDivDW3 xh xl yh yl).
