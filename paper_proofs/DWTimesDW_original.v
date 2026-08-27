@@ -196,7 +196,7 @@ Fact  DWTimesDW_Asym_r xh xl yh yl :
 Proof.
 have rn_sym:= (rnd_p_sym p _ (choiceP ZNE)).
 rewrite /DWTimesDW TwoProdE /=.
-(* case=> <- <-. *)
+
 rewrite ZNE !(=^~Ropp_mult_distr_r, round_NE_opp,  Fast2Sum_asym) -ZNE //.
 have->: (- (xh * yh) - - rnd_p (xh * yh)) = -((xh * yh) - rnd_p (xh * yh)) by ring.
 by rewrite ZNE !(=^~Ropp_plus_distr, round_NE_opp,  Fast2Sum_asym) ?Ropp_involutive  -ZNE.
@@ -569,8 +569,7 @@ have  cl1u: Rabs cl1 <= u.
   clear - xh1 y1;  nra.
  have hsxhyh: xh + yh <= 3 by apply:l5_2; nra. 
 
-(* have hsxhyh: xh + yh <= 3- 2*u by apply:l5_2F. *)
-(* (* have hsxhyh: xh + yh <= 3 by apply:l5_2; nra. *) *)
+
 have tl1u: Rabs tl1 <= xh * u.
   rewrite /tl1  ZNE -round_NE_abs -ZNE.
  suff -> : xh * u = rnd_p (xh * u).
@@ -654,7 +653,7 @@ have hcl1: cl1 = 0 -> Rabs eta < 7 * (u * u) * ((xh + xl) * (yh + yl)).
     move/Rabs_le_inv:  ylu; move/Rabs_le_inv :xlu=> ylu xlu.
     apply:Rmult_le_compat; lra.
   clear - upos u2pos ult1 Hp4.
-(* suff : 21 * u < 4 by nra. *)
+
   suff :  u < / 8  by nra.
   have -> : /8 = pow (-3) by [].
    rewrite /u; apply: bpow_lt;  lia.
@@ -694,7 +693,7 @@ Qed.
 Notation Hp1 := Hp1_5_10.
 
 Notation Fast2Mult := (Fast2Mult p choice).
-(* Notation F2S_err a b  :=  (F2Sum_err  p choice a b). *)
+
 
 
 Notation Fast2Sum   := (Fast2Sum  p choice).
@@ -725,8 +724,8 @@ Lemma  DWTimesDW11C (xh xl yh yl : R):  DWTimesDW11 xh xl yh yl = DWTimesDW11  y
 Proof.
 rewrite /DWTimesDW11 TwoProdE Fast2MultC /=.
 suff ->: rnd_p(rnd_p (xh * yl) + xl * yh) =  rnd_p (rnd_p (yh * xl) + yl * xh) by [].
-(* rewrite (Rmult_comm xh) (Rmult_comm yh); ring. *)
-(* Qed. *)
+
+
 Abort.
 
 
@@ -753,7 +752,7 @@ Fact  DWTimesDW11_Asym_r xh xl yh yl:
 Proof.
 have rn_sym:= (rnd_p_sym p _ (choiceP ZNE)).
  rewrite /DWTimesDW11 TwoProdE /=.
-(* case=> <- <-. *)
+
 rewrite ZNE !(=^~Ropp_mult_distr_r, round_NE_opp,  Fast2Sum_asym) -ZNE //.
 have->: (- (xh * yh) - - rnd_p (xh * yh)) = -((xh * yh) - rnd_p (xh * yh)) by ring.
 by rewrite ZNE !(=^~Ropp_plus_distr, round_NE_opp,  Fast2Sum_asym) ?Ropp_involutive -ZNE .
@@ -1004,7 +1003,7 @@ have ->: zh + zl =  (xh + xl) * (yh + yl) + eta.
   have-> : ch = xh*yh -cl1 by rewrite /cl1;   ring.
   have->: cl3 = cl1 + cl2 + e4 by rewrite /e4; ring.
   have->: cl2 = tl + xl * yh  + e3 by rewrite /e3; ring.
-  (* have->: tl2 = xl * yh + e2 by rewrite /e2; ring. *)
+
   have->: tl = xh * yl + e1 by rewrite /e1; ring.
   rewrite /eta ; ring.
 have etaub: Rabs eta <= 8 *(u * u).
@@ -1161,7 +1160,7 @@ case: xh1 => xh1; last first.
   apply: (Rle_lt_trans _ (Rabs (- (xl * yl))   + Rabs e3)).
     apply: (Rle_trans  _ _ _ (Rabs_triang _ _)).
     apply:Rplus_le_compat_r; lra.
-  (* apply: (Rle_trans  _ _ _ (Rabs_triang _ _)); apply:Rplus_le_compat_r; lra. *)
+
   rewrite Rabs_Ropp Rabs_mult.
   apply:(Rle_lt_trans _ (3 * (u * u))); try lra.
     clear - ylu xlu e3ub upos.
@@ -1184,8 +1183,8 @@ case: xh1 => xh1; last first.
 case: y1 => yh1; last first.
  have che: ch = xh by rewrite /ch -yh1 Rmult_1_r round_generic.
   have cl1e : cl1 = 0 by rewrite /cl1 -yh1  Rmult_1_r che ; ring.
-  (* have tl2e: tl2 = xl  by rewrite /tl2  -yh1 Rmult_1_r round_generic. *)
-  (* have e20: e2= 0 by rewrite /e2 tl2e -yh1;  ring. *)
+
+
   have cl3e: cl3 = cl2.
     rewrite /cl3 cl1e Rplus_0_l /cl2 round_generic //;  apply: generic_format_round.
   have e40: e4 = 0 by  rewrite /e4  cl1e cl3e; ring.
@@ -2149,8 +2148,7 @@ have eta_ub1: (xh = 1)\/ (yh = 1)->
   by rewrite e30 Rabs_R0;lra.
 have hxylb: (1 -u) ^ 2 <= ((xh + xl) * (yh + yl)).
   apply:Rmult_le_compat; try lra; clear - xh1 y1 x1mu y1mu  ult1 ; nra.
-(* apply:(Rlt_le_trans _ (4 * (u * u) *(1 - u) ^ 2)); last first.
-  by apply:Rmult_le_compat_l => //;  clear -upos;  nra. *)
+
 have h2: xh = 1 \/ yh = 1 ->  Rabs eta < 4 * (u * u) * (1 - u) ^ 2.
   move/  eta_ub1=>h1;apply/ (Rle_lt_trans _ _ _ h1).
   have->: (1 - u) ^ 2 = 1 -2*u + u*u by ring.
@@ -2380,4 +2378,3 @@ End Algo12.
 
 
 End Times.
-

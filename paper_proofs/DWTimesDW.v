@@ -34,7 +34,7 @@ exact: (Z.lt_trans _ 1 _ _ hp1).
 Qed.
 
 Variable choice : Z -> bool.
-(* Hypothesis ZNE : choice = fun n => negb (Z.even n). *)
+
 Hypothesis choice_sym: forall x, choice x  = negb (choice (- (x + 1))).
 
 Local Notation fexp := (FLX_exp p).
@@ -203,7 +203,7 @@ Fact  DWTimesDW1_Asym_r xh xl yh yl :
 Proof.
 have rnd_p_sym := rnd_p_sym.
 rewrite /DWTimesDW1 TwoProdE /=.
-(* case=> <- <-. *)
+
 rewrite !(=^~Ropp_mult_distr_r, rnd_p_sym,  Fast2Sum_asym)//.
 have->: (- (xh * yh) - - rnd_p (xh * yh)) = -((xh * yh) - rnd_p (xh * yh)) by ring.
 
@@ -962,9 +962,9 @@ Proof.
 move=> xhyhe1.
 case:DWx =>[[Fxh Fxl] _].
 case:DWy =>[[Fyh Fyl] _].
-(* have upos:= upos. *)
+
 have u2pos:= u2pos.
-(* have ult1 : u < 1 by rewrite /u ; apply:bpow_lt_1; lia. *)
+
 have cl10: cl1 = 0 by case : xhyhe1 => ->; rewrite ?Rmult_1_l ? Rmult_1_r round_generic //; ring.
 have e40: e4 = 0.
   rewrite cl10 Rplus_0_l round_generic; first ring.
@@ -987,7 +987,7 @@ have u2pos:= u2pos.
   case: (Zeven_ex (Mtl))=>M  Me.
   have {Me} ME : (Mtl)%Z = (2 * M + 1)%Z.
    by rewrite Me; rewrite Zeven.Zeven_odd_bool Hodd.
-  (* rewrite tl12Mu2  ME => tl12lb. *)
+
   have hub: IZR (2*M) < IZR (2 * M + 1) <IZR (2*M+2) by split; apply/IZR_lt; lia.
   have nFs: ~ format (IZR (2 * M + 1)).
     apply: (generic_format_discrete _ _ _ M).
@@ -1131,12 +1131,12 @@ have tl12Mu2: tl1 + tl2 = IZR (Mtl1 + Mtl2) * (u *u).
  by rewrite tl1Mu2 tl2Mu2 plus_IZR; ring.
 
 
-(* case:(tl12ub hcl2)=>tl12ub; last first. *)
-(* have Ftl12: format (tl1+tl2). *)
-(* move: tl12ub; rewrite -(Rabs_pos_eq (2 * u)); last lra. *)
-(* have ->: 2*u = (pow (1 -p)) by rewrite bpow_plus. *)
-(* case/Rabs_eq_Rabs =>->; (try apply/generic_format_opp); apply/format_bpow; lia. *)
-(* by move : rabs_eta xlylub   e4ub' e2ub; rewrite Ftl12_e30  // Rabs_R0; lra. *)
+
+
+
+
+
+
 
 
 case:(Rle_lt_dec (u) (Rabs tl1)) => tl1u.
@@ -1144,17 +1144,16 @@ case:(Rle_lt_dec (u) (Rabs tl1)) => tl1u.
     apply/(Rle_trans _ (5*(u*u)))=> //;
     by apply/tl12leu.
 
-(*   case:(Zeven_odd_dec   (Mtl1 + Mtl2)). *)
-(*      move/hFtl12=> Ftl12. *)
-(*     move : rabs_eta xlylub   e4ub' e1ub; rewrite Ftl12_e30  // ?Rabs_R0; try  lra. *)
-(*     by apply:Ftl12. *)
-(*   move => hodd. *)
-(* move/Zodd_bool_iff : hodd  => Hodd. *)
 
-(* rewrite /bound. *)
-(* case e:(Z.odd (Ztrunc (mant cl2))). *)
-(*   move : rabs_eta xlylub   e4ub' e1ub ; rewrite (e3Eu2 (Mtl1 + Mtl2));  try lra. *)
-(* by apply/Zodd_bool_iff. *)
+
+
+
+
+
+
+
+
+
 
   have  e2ub: Rabs e2 <= /2 * u * u.
     have ->:  / 2 * u * u =  /2 * u * (pow ( -p)).
@@ -1427,7 +1426,7 @@ have upos:= upos.
 
 have ult1 : u < 1 by rewrite /u ; apply:bpow_lt_1; lia.
 have u2pos: 0 < u * u by apply:Rmult_lt_0_compat.
-(* have b1ltb2:  5 * (u * u)  < 55 / 10 * (u * u) by lra. *)
+
 
 have [[Fxh Fxl] Exh] := DWx.
 have [[Fyh Fyl] Eyh] := DWy.
@@ -1726,7 +1725,7 @@ case:(Rle_lt_dec 2 (xh * yh))=>xhyh2.
     rewrite /Rdiv Rmult_assoc Rinv_l; last by clear -ult1; nra.
     have ->: (2 * (1 - u) * (1 - u)) = 2 - 4 * u + 2* (u*u) by ring.
     suff: 0 < u*u -20* u^3 + 10* (u*u) * (u * u)  by lra.
-    (* suff: 0 <= u*u -20* u^3 by clear -u2pos; nra. *)
+
     suff : u <= /32 by  clear -u2pos; nra.
     change (pow (-p) <= pow (- 5)); apply/bpow_le;lia.
   rewrite /Rdiv Rabs_mult.
@@ -1808,7 +1807,7 @@ have etaub7: Rabs eta <= 7 *(u * u).
 
   suff : Rabs (- (xl * yl)) <= u * u by lra.
   rewrite Rabs_Ropp Rabs_mult; apply:Rmult_le_compat; try apply:Rabs_pos ; lra.
-(* ring_simplify (((xh + xl) * (yh + yl) + eta - (xh + xl) * (yh + yl))). *)
+
 have xlb: 1-u <= xh + xl  by move/Rabs_le_inv: xlu; lra.
 have ylb: 1-u <= yh + yl  by move/Rabs_le_inv: ylu; lra.
 pose x := xh + xl; pose y := yh + yl.
@@ -1887,8 +1886,8 @@ have haux : Rabs eta <= 5 * (u * u) -> Rabs eta < 5 * (u * u) * (x * y).
   apply:(Rle_lt_trans _ ( 5 * (u * u))) =>//.
   rewrite -[X in X < _] Rmult_1_r.
   by apply: Rmult_lt_compat_l; lra.
-(* have b1ltb2':   5 * (u * u) * (x * y) < 55/10 * (u * u) * (x * y). *)
-(*   by apply/Rmult_lt_compat_r; lra. *)
+
+
 
 
 
@@ -2508,7 +2507,7 @@ case:(Rle_lt_dec 2 (xh * yh))=>xhyh2.
     rewrite /Rdiv Rmult_assoc Rinv_l; last by clear -ult1; nra.
     have ->: (2 * (1 - u) * (1 - u)) = 2 - 4 * u + 2* (u*u) by ring.
     suff: 0 < u*u -20* u^3 + 10* (u*u) * (u * u)  by lra.
-    (* suff: 0 <= u*u -20* u^3 by clear -u2pos; nra. *)
+
     suff : u <= /32 by  clear -u2pos; nra.
     change (pow (-p) <= pow (- 5)); apply/bpow_le;lia.
   rewrite /Rdiv Rabs_mult.
@@ -2590,7 +2589,7 @@ have etaub7: Rabs eta <= 7 *(u * u).
 
   suff : Rabs (- (xl * yl)) <= u * u by lra.
   rewrite Rabs_Ropp Rabs_mult; apply:Rmult_le_compat; try apply:Rabs_pos ; lra.
-(* ring_simplify (((xh + xl) * (yh + yl) + eta - (xh + xl) * (yh + yl))). *)
+
 have xlb: 1-u <= xh + xl  by move/Rabs_le_inv: xlu; lra.
 have ylb: 1-u <= yh + yl  by move/Rabs_le_inv: ylu; lra.
 pose x := xh + xl; pose y := yh + yl.
@@ -3283,7 +3282,7 @@ case:(Rle_lt_dec 2 (xh * yh))=>xhyh2.
     rewrite /Rdiv Rmult_assoc Rinv_l; last by clear -ult1; nra.
     have ->: (2 * (1 - u) * (1 - u)) = 2 - 4 * u + 2* (u*u) by ring.
     suff: 0 < u*u -20* u^3 + 10* (u*u) * (u * u)  by lra.
-    (* suff: 0 <= u*u -20* u^3 by clear -u2pos; nra. *)
+
     suff : u <= /32 by  clear -u2pos; nra.
     change (pow (-p) <= pow (- 5)); apply/bpow_le;lia.
 
@@ -3320,7 +3319,7 @@ have  cl1u: Rabs cl1 <= u.
   have ->: u = / 2 * u * (pow 1)  by rewrite /= IZR_Zpower_pos /=; field.
   rewrite /u; apply: error_le_half_ulp'; first lia.
   rewrite Rabs_pos_eq  /= ?IZR_Zpower_pos /= ?Rmult_1_r //; try lra.
-  (* clear - xh1 y1;  nra. *)
+
 
  have hsxhyh: xh + yh <= 3 -2*u by apply:l5_2F=>//; lra.
 
@@ -3406,9 +3405,9 @@ case:(xh1)=>[xhgt1| xhe1]; last first.
   have h: Rabs eta <= 4 * (u * u) 
    by move : rabs_eta; rewrite e40 e10 !Rabs_R0 ; lra.
 apply:(Rle_lt_trans _ (4 * (u * u))) =>//.
-(* apply:(Rlt_trans _ (5  * (u * u) * (x * y))); last first. *)
-(* apply/Rmult_lt_compat_r =>//. *)
-(* apply/Rmult_lt_compat_r =>//; lra. *)
+
+
+
 
 apply: (Rlt_le_trans _ (55/10 * (u * u) * ((1 - u) * (1 - u)))); last first.
 by clear -upos u2pos xylb ; nra.
@@ -3729,7 +3728,7 @@ move/Zodd_bool_iff  => Hodd.
   case: (Zeven_ex (Mtl1 +Mtl2))=>M  Me.
   have {Me} ME : (Mtl1 + Mtl2)%Z = (2 * M + 1)%Z.
    by rewrite Me; rewrite Zeven.Zeven_odd_bool Hodd.
-  (* rewrite tl12Mu2  ME => tl12lb. *)
+
   have hub: IZR (2*M) < IZR (2 * M + 1) <IZR (2*M+2) by split; apply/IZR_lt; lia.
   have nFs: ~ format (IZR (2 * M + 1)).
     apply: (generic_format_discrete _ _ _ M).
@@ -3743,15 +3742,15 @@ move/Zodd_bool_iff  => Hodd.
       by [].
     by ring_simplify(1 + p - 1)%Z.
 
-    (* rewrite bpow_plus;  *)
-    (* rewrite plus_IZR; apply:(Rle_lt_trans _ _ _ (Rabs_triang _ _)). *)
-    (*  have ->: pow 1 = 2 by [];  lra. *)
+
+
+
   have cexpf :  (ce (IZR (2 * M + 1)) = 1)%Z.
     rewrite /cexp /fexp (mag_unique _ _  (1 +p)); first ring.
       have->:  (1 + p - 1 = p)%Z by ring.
       by rewrite -ME.
-    (* rewrite -ME plus_IZR bpow_plus; apply:(Rle_lt_trans _ _ _ (Rabs_triang _ _)). *)
-    (* by have ->: pow 1 = 2 by []; lra. *)
+
+
   have rDN: round two  fexp Zfloor (IZR (2 * M + 1))  =  IZR (2 * M).
     rewrite /round /scaled_mantissa .
     rewrite cexpf (Zfloor_imp M) /F2R.
@@ -3927,7 +3926,7 @@ End DWTimesDW1.
 
 Section DWTimesDW2.
 
-(* Hypothesis ZNE : choice = fun n => negb (Z.even n). *)
+
 
 
 Hypothesis Hp5 : Z.le 5 p.
@@ -3945,7 +3944,7 @@ Notation Hp1 := Hp1_5_10.
 
 Notation Fast2Mult := (Fast2Mult p choice).
 Notation TwoProd := (TwoProd p choice).
-(* Notation F2S_err a b  :=  (F2Sum_err  p choice a b). *)
+
 
 
 Notation Fast2Sum   := (Fast2Sum  p choice).
@@ -3993,7 +3992,7 @@ Fact  DWTimesDW11_Asym_r xh xl yh yl:
      pair_opp   (DWTimesDW11 xh xl yh yl).
 Proof.
  rewrite /DWTimesDW11 TwoProdE /=.
-(* case=> <- <-. *)
+
 rewrite  !(=^~Ropp_mult_distr_r, rnd_p_sym,  Fast2Sum_asym)  //.
 have->: (- (xh * yh) - - rnd_p (xh * yh)) = -((xh * yh) - rnd_p (xh * yh)) by ring.
 rewrite !(=^~Ropp_plus_distr, rnd_p_sym,  Fast2Sum_asym) ?Ropp_involutive //.
@@ -4278,7 +4277,7 @@ have ->: zh + zl =  (xh + xl) * (yh + yl) + eta.
   have-> : ch = xh*yh -cl1 by rewrite /cl1;   ring.
   have->: cl3 = cl1 + cl2 + e4 by rewrite /e4; ring.
   have->: cl2 = tl + xl * yh  + e3 by rewrite /e3; ring.
-  (* have->: tl2 = xl * yh + e2 by rewrite /e2; ring. *)
+
   have->: tl = xh * yl + e1 by rewrite /e1; ring.
   rewrite /eta ; ring.
 have etaub: Rabs eta <= 8 *(u * u).
@@ -4406,10 +4405,10 @@ have scl12u: Rabs (cl1 + cl2) <= 4*u.
 
 
 
-(*   have ->: cl2 = (tl + xl * yh) + e3 by rewrite /e3; ring. *)
-(*   apply: (Rle_trans _ _ _ (Rabs_triang _ _)); lra. *)
-(* have scl12u: Rabs (cl1 + cl2) <= 4*u + 2* u *u. *)
-(*   apply: (Rle_trans _ _ _ (Rabs_triang _ _)); lra. *)
+
+
+
+
 have e4u: Rabs e4 <= 2 * u *u.
   rewrite /e4 /cl3.
   have-> :  2 * u * u = / 2 * pow (- p) * pow (2 - p).
@@ -4444,7 +4443,7 @@ case: xh1 => xh1; last first.
   apply: (Rle_lt_trans _ (Rabs (- (xl * yl))   + Rabs e3)).
     apply: (Rle_trans  _ _ _ (Rabs_triang _ _)).
     apply:Rplus_le_compat_r; lra.
-  (* apply: (Rle_trans  _ _ _ (Rabs_triang _ _)); apply:Rplus_le_compat_r; lra. *)
+
   rewrite Rabs_Ropp Rabs_mult.
   apply:(Rle_lt_trans _ (3 * (u * u))); try lra.
     clear - ylu xlu e3ub upos.
@@ -4464,8 +4463,8 @@ change (pow (-p) <= pow (-3)); by apply/bpow_le; lia.
 case: y1 => yh1; last first.
  have che: ch = xh by rewrite /ch -yh1 Rmult_1_r round_generic.
   have cl1e : cl1 = 0 by rewrite /cl1 -yh1  Rmult_1_r che ; ring.
-  (* have tl2e: tl2 = xl  by rewrite /tl2  -yh1 Rmult_1_r round_generic. *)
-  (* have e20: e2= 0 by rewrite /e2 tl2e -yh1;  ring. *)
+
+
   have cl3e: cl3 = cl2.
     rewrite /cl3 cl1e Rplus_0_l /cl2 round_generic //;  apply: generic_format_round.
   have e40: e4 = 0 by  rewrite /e4  cl1e cl3e; ring.
@@ -4597,7 +4596,7 @@ End DWTimesDW2.
 
 
 Section DWTimesDW3.
-(* Hypothesis ZNE : choice = fun n => negb (Z.even n). *)
+
 
 
 Hypothesis Hp5 : Z.le 5 p.
@@ -4696,7 +4695,7 @@ by rewrite  !(=^~Rmult_assoc, round_bpow, =^~Rmult_plus_distr_r,Fast2SumS,=^~Rmu
    apply:generic_format_round.
 Qed.
 
-(* Notation double_lpart_u := (double_lpart_u Hp4). *)
+
 
 Fact DWTimesDW12f0 xh xl :   (DWTimesDW12 xh xl   0 0) =(0 , 0).
 Proof.
@@ -5339,4 +5338,3 @@ End DWTimesDW3.
 
 
 End Times.
-

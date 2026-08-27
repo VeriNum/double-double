@@ -49,7 +49,6 @@ by rewrite /round /F2R /= mant_bpow  cexp_bpow // bpow_plus Rmult_assoc.
 Qed.
 
 
-(* (* to move .... MoreFLXFlocq *) *)
 
 (* cf FLX_format *)
 Theorem FLX_mant_le  x (Fx: format x): Z.abs (Ztrunc (mant x)) <= beta^p - 1.
@@ -125,7 +124,7 @@ by apply:bpow_le; lia.
 Qed.
 
 
-(* Hypothesis ZNE : choice = fun n => negb (Z.even n). *)
+
 
 Theorem Fast2Sum_correct_proof_aux : t = (a + b - s)%R.
 Proof.
@@ -159,7 +158,7 @@ have emin_sma: (pow (emin + p - 1) <= Rabs (s-a))%R.
   apply:Rle_pmabs=>//.
   by repeat (apply: Z.le_min_l || apply: (Z.le_trans _ _ _ (Z.le_min_r _ _))). 
 case:(Req_dec (b - z) 0)=>bmz0.
-  (* pose emin := (Z.min (ubemin a)  *)
+
   (* (Z.min (ubemin b) (Z.min (ubemin (a + b))   (ubemin (s -a))))). *)
   rewrite bmz0 round_0 -!(round_FLT_FLX _ emin)//.
   have ->: (0%R = round beta (FLT_exp emin p) (Znearest choice) (b -z))%R.

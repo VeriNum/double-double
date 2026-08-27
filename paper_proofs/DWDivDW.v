@@ -52,9 +52,8 @@ Notation double_word xh xl := (double_word  p choice xh xl).
 
 
 Definition TwoSum x y := (rnd_p (x + y), TwoSum_err p choice  x y).
-(* Notation F2S_err a b := (F2Sum_err p choice a b). *)
+
 Notation Fast2Sum := (Fast2Sum  p choice).
-(* (a b :R) := (rnd_p (a +b), F2S_err a b). *)
 Notation Fast2Mult := (Fast2Mult p choice).
 Notation TwoProd := (TwoProd p choice).
 Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
@@ -469,7 +468,7 @@ Notation dl := (rnd_p (xl - rl)).
 Notation  d := (rnd_p (pih + dl)).
 Notation tl := (rnd_p (d/yh)).
 
-(* Notation  DWDivDW2 := (Fast2Sum th tl). *)
+
 Hypothesis yhn0: yh <> 0.
 Hypotheses (DWx:double_word xh xl) (DWy:double_word yh yl).
 
@@ -557,7 +556,6 @@ rewrite ZNE round_NE_opp -ZNE.
 by rewrite Fast2Sum_asym.
 Qed.
 
-(* to move *)
 Fact  DWTimesFP_0_r xh xl : DWTimesFP xh xl 0 = (0, 0).
 Proof.
 by rewrite /DWTimesFP TwoProdE  F2P_errorE /=
@@ -637,7 +635,6 @@ have ypos:= (dw_pos DWy yhpos); rewrite -/y in ypos.
 have iypos: 0 < /y.
   by rewrite /y; apply:Rinv_0_lt_compat.
 
-(* from previous th*)
 
 case:(rnd_epsr Hp1 choice (yh + yl)) =>  ey;  rewrite -yE. 
 rewrite -/y -/u;
@@ -649,7 +646,6 @@ move=> [exhu xhE].
 have posep1 e: Rabs e <= u -> 0 < 1+e by case/Rabs_le_inv; lra.
 rewrite (surjective_pairing (DWDivDW2 xh xl yh yl)).
 move=> xy.
-(* from previous th*)
 have yyhE: y/yh = 1 + ey.
   rewrite yhE; field; split=>//.
   move/Rabs_le_inv: eyhu.
@@ -882,7 +878,7 @@ have bub: Rabs beta <= (12* u^2 + 39* u^3 + 44 * u^4 + 17* u^5)* x/y.
     have->: - th * (1 + ey) * eta = -( th * (1 + ey) * eta) by ring.
     rewrite Rabs_Ropp 2!Rabs_mult.
 (*th prec *)
-    (* have  h44a: Rabs eta <= 3 / 2 * (u * u) + 4 * (u * (u * u)). *)
+
 
     move:(h44a  xh yhn0 DWy Hp4 ).
     rewrite /eta.
@@ -1287,35 +1283,35 @@ have ehlE: el = rh + rl  -eh.
   rewrite /u bpow_plus.
   change (pow (-p) < 2 * (pow (-p))).
   move:(bpow_gt_0 two (-p) ); lra.
-  (* move:(rhu). *)
-  (* rewrite rhE' Rabs_mult -abs_IZR. *)
-  (* have ->: (Fnum frh) = (m1 - myh * mth) %Z by rewrite /frh. *)
-  (* move/(Rmult_le_compat_r (pow (2*p -1)) _ _ (bpow_ge_0 two (2*p -1))). *)
-  (* rewrite Rabs_pos_eq;  last by clear - upos; nra. *)
-  (* rewrite Rmult_assoc. *)
-  (* have ->:  (2 * u ^ 2 * pow (2 * p - 1)) = 1. *)
-  (*   have->: (2 * p - 1 = p + p -1)%Z by ring. *)
-  (*   rewrite /u !bpow_plus. *)
-  (*   have->:   2 * pow (- p) ^ 2 * (pow p * pow p * pow (- (1))) =  *)
+
+
+
+
+
+
+
+
+
+
   (*                     2 * (pow(-p) *(pow p)) * (pow(-p) *(pow p)) * pow (- (1)) by ring. *)
-  (*   rewrite -bpow_plus. *)
-  (*   have->: (-p + p = 0)%Z by ring. *)
-  (*   have ->: pow (- (1)) = /2 by []. *)
-  (*   rewrite /=; field. *)
-  (* rewrite Rmult_1_r. *)
-  (* have ->: u * pow (2 * p - 1) = pow (p -1). *)
-  (*   have->: (2*p = p + p)%Z by ring. *)
-  (*   rewrite /u -bpow_plus; congr bpow; ring. *)
-  (* move=>h. *)
-  (* apply:le_IZR; rewrite minus_IZR. *)
-  (* apply:(Rle_trans _ (pow (p - 1)))=>//. *)
-  (* rewrite bpow_plus IZR_Zpower; last lia. *)
-  (* have->:pow(-1) = /2 by []. *)
-  (* suff: 1 <= (pow p)/2  by nra. *)
-  (* apply:(Rmult_le_reg_r 2); first lra. *)
-  (* have->:  pow p / 2 * 2 = pow p by field. *)
-  (* rewrite Rmult_1_l. *)
-  (* change (pow 1 <= pow p); apply:bpow_le; lia. *)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 have h58:  eh + el = 1 - yh*th -yl*th + eta by rewrite /eta ehlE; ring.
 have rhlu: Rabs (rh + rl) <= 2 *u  by apply:(Rle_trans _ _  _  (Rabs_triang _ _)); lra.
 have ehu: Rabs eh <= 2*u.
@@ -1414,9 +1410,9 @@ have h60a: mh + ml = (th + dh +dl)*(1 + omega2).
   by rewrite /omega2; field.
 rewrite -/u.
 move=>  h59' DWm.
-(* have  h60b: Rabs omega2 <=  2*u^2 + 5*u^3. *)
-(*   apply: (Rle_trans _  (pow (1 - 2 * p) / (1 - pow (1 - p))))=>//. *)
-(*   apply: DWPlusFP_baux; lia. *)
+
+
+
  
  pose alpha := e*omega1 + omega2 + omega2*e + omega2*omega1*e.
 have h61: mh + ml = th + e*th + alpha *th.
@@ -1541,7 +1537,7 @@ have h2: Rabs ((y -yh) / (y * yh)) <= u/(y * (y -u)).
       ring.
     have->: (1 -1)%Z = 0%Z by ring.
     change (1 <= yh < 2); lra.
-(* clear - ymupos upos  ult1   yb hiy2  hiy1 yE ZNE. *)
+
 
     rewrite Rabs_Rinv;  last by clear - ymupos upos  ult1   yb hiy2  hiy1 yE ZNE;   nra.
     
@@ -2075,7 +2071,6 @@ Qed.
 Fact  DWDivDW3_Asym_r (xh xl yh yl :R)  (yhn0: yh <> 0):
   (DWDivDW3  xh xl (-yh)  (-yl)) = pair_opp (DWDivDW3  xh xl yh yl).
 Proof.
-  (* case H: (DWDivDW3  xh )=> [zh zl]. *)
   rewrite /DWDivDW3  ml_Asym // mh_Asym //.
   by apply: (DWTimesDW12_Asym_r p choice (choiceP ZNE)).
 Qed.
@@ -2084,7 +2079,6 @@ Fact DWDivDW3Sy (xh xl yh yl :R) e (yhn0: yh <> 0) (Hp5 : (5 <= p)%Z):
   (DWDivDW3  xh xl (yh * pow e)  (yl * pow e)) =  map_pair (fun x => x * pow (-e))
       (DWDivDW3   xh xl  yh yl).
 Proof.
-  (* case H:  (DWDivDW3  xh )=> [zh zl]. *)
   rewrite /DWDivDW3.  (* mhlS.  DWTimesDW12Sy. *)
 
 

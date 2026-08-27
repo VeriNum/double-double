@@ -1,6 +1,6 @@
 (* Copyright (c) ENS de Lyon and Inria. All rights reserved. *)
 
-(* Require Import ROmega.*)
+
 From Stdlib Require Import Reals Psatz ZArith.
 Set Warnings "-deprecated-syntactic-definition".
 From Flocq Require Import Core Relative Sterbenz Operations.
@@ -110,13 +110,13 @@ Qed.
 Notation DN x := (round beta fexp Zfloor x).
 Notation UP x := (round beta fexp Zceil x).
 
-(* move ? *)
+
 Theorem ulp_pos : forall x, (x <> 0%R) ->(0 < ulp beta fexp x)%R.
 Proof.
 now intros x xneq0; rewrite ulp_neq_0; trivial; apply bpow_gt_0.
 Qed.
 
-(* move ?*)
+
 Theorem round_DN_UP_le :
   forall x, ( round beta fexp Zfloor x <= x <= round beta fexp Zceil x )%R.
 Proof.
@@ -246,7 +246,7 @@ Qed.
 
 
 (* Lemma 1.3 part 2*)
-(* move, tester s'il est utilisé *)
+
 
 Lemma rnd_epsr (t:R) : 
   exists (e2:R) , ((Rabs e2) <= u)%R /\ (rnd_p t) = (t / (1 + e2))%R.
@@ -269,12 +269,11 @@ field; split=>//;ring_simplify( rnd_p t + (t - rnd_p t)).
 by move=>t0 ; apply: rt0; rewrite t0 round_0.
 Qed.
 
-(* move *)
+
 Lemma round_round x: rnd_p (rnd_p x )= rnd_p x.
 Proof. by rewrite round_generic //; apply:generic_format_round. Qed.
 
-(* a generaliser, et bouger *)
-(* Hypothesis ZNE : choice = fun n => negb (Z.even n). *)
+
 Lemma r1pu  (ZNE : choice = fun n => negb (Z.even n)): rnd_p (1 + u) = 1.
 Proof.
 rewrite /round  /ulp /scaled_mantissa /cexp /fexp /= /F2R /=.

@@ -82,7 +82,7 @@ Local Notation TwoProd := (DWTimesFP.TwoProd p choice).
 Section Algo14.
 
 Definition TwoSum x y := (rnd_p (x + y), TwoSum_err p choice  x y).
-(* Notation F2S_err a b := (F2Sum_err p choice a b). *)
+
 Notation Fast2Sum := (Fast2Sum   p choice).
 Notation Fast2Mult := (Fast2Mult p choice).
 Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
@@ -320,7 +320,7 @@ case:(Req_dec (rnd_p (a/b) - a/b) 0)=> Hab.
     have->: /2 = pow (-1) by [].
     rewrite /u; split; try lra; apply:bpow_lt; lia.
   move =>[ u0 u2].
-  (* suff: u <= 1 - 2/b * u by nra. *)
+
   suff: (2 * u)/ b <= 1 by nra.
   apply:(Rmult_le_reg_r b); try nra.
   rewrite Rmult_assoc Rinv_l ?Rmult_1_l ?Rmult_1_r; lra.
@@ -451,7 +451,7 @@ case: (Req_dec err  0)=> rn0.
   apply :(Rmult_le_reg_r b).
     lra.
   field_simplify.
-    (* rewrite /Rdiv Rinv_1 !Rmult_1_r. *)
+
     suff : u  <= /2 by nra.
     have ->: /2 = pow (-1) by [].
     rewrite /u; apply bpow_le; lia.
@@ -492,7 +492,7 @@ case:(Req_dec (rnd_p (a/b) - a/b) 0)=> Hab.
     have->: /2 = pow (-1) by [].
     rewrite /u; split; try lra; apply:bpow_lt; lia.
   move =>[ u0 u2].
-  (* suff: u <= 1 - 2/b * u by nra. *)
+
   suff: (2 * u)/ b <= 1 by nra.
   apply:(Rmult_le_reg_r b); try nra.
   rewrite Rmult_assoc Rinv_l ?Rmult_1_l ?Rmult_1_r; lra.
@@ -621,7 +621,7 @@ case: (Req_dec err  0)=> rn0.
   apply :(Rmult_le_reg_r b).
     lra.
   field_simplify.
-    (* rewrite /Rdiv Rinv_1 !Rmult_1_r. *)
+
     suff : u  <= /2 by nra.
     have ->: /2 = pow (-1) by [].
     rewrite /u; apply bpow_le; lia.
@@ -655,13 +655,13 @@ Qed.
 Fact l6_2_aux b :  1 <= b ->  u/2 -  /b *(u * u)<=  u - (2 /b) *(u * u).
 Proof.
 move=> ble1.
-(* suff: 0 <= u/2 - /b * (u * u) by nra. *)
+
 have upos : 0 < u by apply:upos.
 
 suff: u/b <= /2 by nra.
 apply:(Rmult_le_reg_r (2*b)); first lra.
 field_simplify ; try lra.
-(* rewrite /Rdiv Rinv_1 !Rmult_1_r. *)
+
 apply:(Rle_trans _ 1)=>//.
 have->: 1 = pow 0 by [].
 
@@ -706,7 +706,7 @@ case:(is_pow_dec two y).
   case: (DWx)=> [[Fxh Fxl] xE].
   rewrite (rq xh).
   have->: rnd_p xh = xh by rewrite round_generic.
-  (* rewrite TwoProdE /=. *)
+
  rewrite /Fast2Mult.
   have->:  xh / y * y  = xh by field.
   have->: rnd_p xh = xh by rewrite round_generic.
@@ -1117,7 +1117,6 @@ have th0: th <> 0.
   rewrite /th; apply:round_neq_0_negligible_exp.
     by apply:negligible_exp_FLX.
   rewrite /Rdiv; apply:Rmult_integral_contrapositive; split; lra.
-(* cas e=> zhE zlE. *)
 move=>E2.
 have h39g: zh + zl = th + tl.
   move:E2;  rewrite (surjective_pairing (Fast2Sum  _ _))
@@ -1740,7 +1739,7 @@ End Algo14.
 
 Section Algo15.
 
-(* Notation F2S_err a b := (F2Sum_err p choice a b). *)
+
 Notation Fast2Sum := (Fast2Sum   p choice).
 Notation Fast2Mult := (Fast2Mult p choice).
 Notation F2P_prod a b  :=  (fst (Fast2Mult a b)).
@@ -1877,7 +1876,7 @@ case:(is_pow_dec two y).
     rewrite ZNE round_NE_opp -ZNE  round_bpow; ring.
   rewrite (rq xh).
   have->: rnd_p xh = xh by rewrite round_generic.
-  (* rewrite TwoProdE /=. *)
+
  rewrite /Fast2Mult.
   have->:  xh / y * y  = xh by field.
   have->: rnd_p xh = xh by rewrite round_generic.
@@ -2199,13 +2198,13 @@ clear -upos y2; nra.
  
 
 
-(* have h35: Rabs (th*y -xh) <= 2*u -4* (u * u). *)
-(*   apply:(Rle_trans _ (u*y -2* (u *u))). *)
-(*     have ->: (th * y - xh) = (th - xh / y)*y by field. *)
-(*     rewrite Rabs_mult (Rabs_pos_eq y); last by  lra. *)
-(*     have->:  u * y - 2 * (u * u) = ( u - 2 / y * (u * u)) * y by field; lra. *)
-(*     apply:Rmult_le_compat_r; lra. *)
-(*   clear - y1 y2 upos; nra. *)
+
+
+
+
+
+
+
 
 have e1ub: Rabs e1 <= 2*u^2.
 have ->: 2*u^2 = /2* pow (-p) * pow (2 -p).
@@ -2440,18 +2439,18 @@ change (pow (-p) < pow 1); apply: bpow_lt; lia.
 have xipos : 0< /x by apply:Rinv_0_lt_compat .
 
 
-(* have ->:  (e1 / x + e2 * y / x) = (e1 + e2 *y) /x by field; lra. *)
-(* rewrite Rabs_mult (Rabs_pos_eq (/x)); last lra. *)
-
-
-(* apply : (Rmult_le_reg_r x)=>//. *)
-(* rewrite Rmult_assoc Rinv_l ?Rmult_1_r; last lra. *)
 
 
 
 
 
-(*  apply/(Rle_trans _ _  _  (Rabs_triang _ _)). *)
+
+
+
+
+
+
+
 
 
 have h4 : Rabs (e1 /x) <= u^2* (/(1 -u/2)).

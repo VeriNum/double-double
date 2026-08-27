@@ -24,24 +24,10 @@ Open Scope logic.
    factored into dd_float_reconcile (imported above); body_dw_div_dw18 uses
    them to make the stored value and the postcondition syntactically equal. *)
 
-(* body_dw_div_dw18: the callees (fma from MathASI, fast_2sum, dw_mult_fp9,
-   dw_plus_fp, dw_mult_dw12) are all precondition-free -- each returns its
-   functional-model result -- so the forward_call cascade needs no cond
-   discharge.  The stored value is exactly the composition
-
-     DWTimesDW3 xh xl (fst (DWPlusFP dh dl th)) (snd (DWPlusFP dh dl th))
-
-   with (dh,dl) = DWTimesFP3 eh el th, (eh,el) = Fast2Sum rh rl,
-   th = BDIV 1 yh, rh = BFMA (-yh) th 1, rl = BOPP (yl*th),
-   i.e. DWDivDW3.  Mirrors body_dw_mult_dw12 / body_dw_mult_fp9.
-
-   The three double-word calls (dw_mult_fp9 / dw_plus_fp / dw_mult_dw12) each
-   take a struct argument whose contents were produced by the previous call.
-   Their WITH-clause pair (xh) cannot be inferred automatically: unifying the
-   spec's `f2val xh` against the stored `f2val <pair>` degenerates into a
-   projection unification (`fst xh = fst <pair>`) that Coq leaves open.  We
-   therefore read the produced pair (and the divisor th) straight out of the
-   goal with `match ... context` and pass them as explicit witnesses. *)
+(* Verification of the call sequence implementing [DWDivDW3].  Each callee
+   returns its model result without an arithmetic precondition.  The struct
+   arguments produced by earlier calls are passed as explicit witnesses
+   because Coq cannot infer them through projections of [f2val]. *)
 Lemma body_dw_div_dw18: semax_body Vprog Gprog f_dw_div_dw18 dw_div_dw18_spec.
 Proof.
 start_function.

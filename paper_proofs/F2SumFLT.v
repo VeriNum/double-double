@@ -55,7 +55,6 @@ apply:(Z.min_glb_r (mag beta x + e - p) )=>//.
 apply:(Z.min_glb_l _  (mag beta x - p) )=>//.
 Qed.
 
-(* to move; vrai sans hyp pour FLX *) 
 Theorem round_bpow_flt  x e (emin_le: emin <= Z.min (mag beta x + e - p) (mag beta x - p)) :  
     rnd_p (x * pow e) = (rnd_p x * pow e)%R.
 Proof.
@@ -64,7 +63,6 @@ by rewrite /round /F2R /= mant_bpow_flt //  cexp_bpow_flt // bpow_plus Rmult_ass
 Qed.
 
 
-(* to move .... MoreFLXFlocq *)
 
 (* cf FLX_format *)
 Theorem FLT_mant_le  x (Fx: format x): Z.abs (Ztrunc (mant x)) <= beta^p - 1.
@@ -81,7 +79,7 @@ lia.
 Qed.
 
 
-(* move ??*) 
+
 Theorem FLT_Rabs_le x (Fx: format x) : (Rabs x <= (pow p - 1) * pow (ce x))%R.
 Proof.
 move:(Fx).

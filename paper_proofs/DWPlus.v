@@ -654,20 +654,19 @@ case: (Zeven_ex b) => b2 be.
 rewrite be evenb Zplus_0_r Zmult_comm Z.div_mul; last lia.
 rewrite mult_IZR ; field.
 Qed.
-(* a bouger dans bayleyaux et a enlever de DWTimesFP*)
 
-(* From Flocq Require Import Plus_error. *)
 
-(* Lemma ex_mul z k : (pow k)  <= Rabs z  -> format z ->   *)
-(*    exists (mz:Z), z = IZR mz * (2 * (pow (- p))  * (pow k)). *)
-(* Proof. *)
-(* move=>  hle Fz. *)
-(* case:(ex_shift two fexp z (1 -p + k)) =>//. *)
-(*   rewrite /cexp /fexp. *)
-(*   suff:( 1 + k <= mag radix2 z)%Z by lia. *)
-(*   by apply:mag_ge_bpow; ring_simplify (1 + k -1)%Z. *)
-(* move=>mz zE; by exists mz; rewrite zE !bpow_plus. *)
-(* Qed. *)
+
+
+
+
+
+
+
+
+
+
+
 Notation ulp := (ulp two fexp).
 
 Definition sign x := if  (Rlt_bool x 0) then  (-1) else 1.
@@ -1164,18 +1163,18 @@ suff: rnd_p x <> 0 by [].
 by apply: round_neq_0_negligible_exp => //; rewrite negligible_exp_FLX.
 Qed.
 
-(* Lemma  boundDWFP_ge_0: 0 <= (pow (1 - 2*p)%Z) /(1 - (pow (1 -p)%Z)). *)
-(* Proof. *)
-(* have ppow := bpow_gt_0 two (1 -2*p). *)
-(* have ppo1 :  pow (1 - p) < 1. *)
-(*   have -> : (1 - p = -(p -1))%Z by ring. *)
-(*   apply:(bpow_lt_1  two). *)
-(*   by lia. *)
-(*  have ppo11 : 0 < (1 - pow (1 -  p)) by lra. *)
-(* rewrite /Rdiv. *)
-(* apply: Rmult_le_pos; try lra. *)
-(* by apply: Rlt_le; apply: Rinv_0_lt_compat. *)
-(* Qed. *)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1271,7 +1270,7 @@ case:(is_pow_dec two y)=> hy.
 by rewrite rulp2p //; lra.
 Qed.
 
-(* rewrite relative_error_DWFPC //DWPlusFPC // ; split; case:  (Hwlog xh y)=>//; try lra. *)
+
 Notation  DWFP_Plus_correct  xh xl y :=  (relative_errorDWFP xh xl y<= 2 * u^2 /\
     (double_word (fst (DWPlusFP xh xl y) )(snd (DWPlusFP xh xl y)))).
 
@@ -1295,15 +1294,15 @@ case:(Req_dec xh 0)=> hxh0.
   by rewrite xl0 Rplus_0_r round_0.
 case: (Req_dec  (xh + y) 0)=> xhy0.
   rewrite (null_case_rel  Fy DWx  xhy0).
-  (* have ppow := bpow_gt_0 two (1 -2*p). *)
-  (* have ppo1 :  pow (1 -  p) < 1. *)
-  (*   have -> : (1 - p = -( p -1))%Z by lia. *)
-  (*   apply:(bpow_lt_1  two). *)
-  (*   lia. *)
-  (* have ppo11 : 0 < (1 - pow (1 - p)) by lra. *)
-  (* rewrite /Rdiv; split. *)
-  (*   apply: Rmult_le_pos; try lra. *)
-  (*   by apply: Rlt_le; apply: Rinv_0_lt_compat. *)
+
+
+
+
+
+
+
+
+
   split; first by apply:  boundDWFP_ge_0.
   rewrite /DWPlusFP TwoSum_sumE  xhy0 round_0  Fast2Sum0f /=; last apply:Fv.
   split; [split |] =>//; try apply:generic_format_0; try apply:Fv.
@@ -1410,7 +1409,6 @@ wlog [xh1 xh2]: xl xh y   DWx Fy  xhy0 xhy  xhpos hxh0
   have hy: y = - (xh + xl) by lra.
   have : rnd_p y = - rnd_p (xh + xl) by rewrite hy ZNE -round_NE_opp.
   by rewrite -h !round_generic //; lra.
-(* c'est là que ça commence vraiment...*) 
 have hpxh: pow (1-1) <= Rabs xh < pow 1.
    rewrite Rabs_pos_eq //; move:xh2; rewrite /u /=; last lra.
     rewrite IZR_Zpower_pos /=; move:(bpow_gt_0 two (-p));  try lra.
@@ -1457,7 +1455,7 @@ apply:(Rle_trans _ (Rmax (ulp  xh / 2) (ulp  y / 2))); try lra.
 by apply:Rmax_l.
 rewrite -shE TwoSum_sumE; lra.
 
-(* case 2 *)
+
 have hled: 1/2 <= xh/2 by lra.
 have hltle: xh/2 < xh + y <= 2* xh by lra.
 have shge: /2 <= sh xh y.
@@ -1652,28 +1650,28 @@ lra.
 apply:Rinv_le;  lra.
 
 
-(* suff : 1 <= 2- u by nra. have *)
+
 (*  ->: 1 = /1 by field. *)
 
 
-(*   have denp: 0 < (1 - pow ( 1 -p )). *)
-(*     suff  : (pow ( 1 - p)) < 1 by lra. *)
-(*     have ->: ((1 - p ) = -( p -1))%Z by ring. *)
-(*     by apply: bpow_lt_1;  lia. *)
-(*   apply:(Rmult_le_reg_r (2 -u))=>//. *)
-(*   have ->: ((2 * u ^ 2 / (2 - u))  * (2 - u)) =  2 * u ^ 2 by field ; lra. *)
-(*   apply:(Rmult_le_reg_r (1 - pow (1 - p)) )=>//. *)
-(*   have ->: pow (1 - 2 * p) / (1 - pow (1 - p)) * (2 - u) * (1 - pow (1 - p))=  pow (1 - 2 * p) * (2 - u). *)
-(*     by field ; lra. *)
-(*   rewrite !bpow_plus. *)
-(*   have ->: pow 1 = 2 by []. *)
-(*   have ->:( -( 2 * p ) = -p + -p)%Z by lia. *)
-(*   rewrite bpow_plus -/u. *)
-(*   have -> : u * u = u ^ 2 by ring. *)
-(*   apply: Rmult_le_compat_l. *)
-(*     by move:(pow2_ge_0 u); set uu := u ^ 2; lra. *)
-(*   have : 0 <= u by rewrite /u; apply: bpow_ge_0. *)
-(*   by lra. *)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 rewrite Rabs_mult; apply: Rmult_le_compat => //; try apply: Rabs_pos.
 have bdxy: 2 - u <= Rabs (xh + xl + y).
   apply: Rabs_ge.
@@ -1706,7 +1704,7 @@ have ->: pow (1 - p) = 2 * u.
  by rewrite bpow_plus /u.
 ring_simplify.
 suff: 0<= (1  - 10 * u) * u^3 by lra.
-(* clear - Hp4. *)
+
 have upos : 0 < u by apply:bpow_gt_0.
 apply: Rmult_le_pos; last nra.
 suff: u <= /10 by lra.
@@ -1855,8 +1853,7 @@ Qed.
 Notation relative_error_DWFP :=   (relative_errorDWFP  xh yh yl).
 
 
-(* Hypothesis  xyn0 : xh + xl + (yh + yl) <> 0. 
-removed by AEK Dec 20, 2023 *)
+
 Hypothesis   xhy : Rabs yh <= Rabs xh.
 Hypothesis   s0 : xh + yh <> 0.
 Hypothesis  x0 : xh <> 0.
@@ -1898,9 +1895,9 @@ rewrite /fx /F2R /cexp (mag_unique_pos _ _ 1); last first.
   move=> xhy'.
   
 case/Rabs_le_inv: (xhy')=> xhyh yhxh.
-(* set sh := (rnd_p (xh + yh)); set sl := (TwoSum_err xh yh). *)
-(* pose th :=  (rnd_p( xl + yl)). *)
-(* pose tl :=  (TwoSum_err xl yl). *)
+
+
+
 have thu: Rabs th <= 2 * u.
   rewrite   TwoSum_sumE ZNE -round_NE_abs -ZNE.
   have -> : 2 * u = rnd_p (pow 1 * u).
@@ -1921,8 +1918,8 @@ case: (Rle_lt_dec yh (-xh/2) )=> hyx.
     have ->:  (xh + yh ) = (xh - (- yh)) by ring.
     apply: sterbenz'; (try apply:generic_format_opp) =>//.
     by split; lra.
-  have sl0: sl = 0 by  rewrite TwoSum_correct //  she; ring.  (* rewrite sl0 Rplus_0_l (round_round Hp). *)
-  (* set  c := (rnd_p (sl + th)). *)
+  have sl0: sl = 0 by  rewrite TwoSum_correct //  she; ring.
+
   have ce: c = th 
     by rewrite  sl0 Rplus_0_l round_generic /th // ; apply:  generic_format_round.
 (* need boolean comparison here ... *)
@@ -1982,7 +1979,7 @@ case: (Rle_lt_dec yh (-xh/2) )=> hyx.
     move:(Rmult_lt_0_compat _ (/(IZR sigma * u)) hpos hinv).
     rewrite Rmult_assoc Rinv_r;try lra.
     rewrite Rmult_1_r -plus_IZR.
-    (* have ->: 0 = IZR 0 by [].*)
+
     change 1 with (IZR 1).
     by move/lt_IZR => ?; apply: IZR_le; lia.
   have sle: Rabs (xl + yl) <= (1 + IZR sigma / 2) * u.
@@ -2464,7 +2461,7 @@ lra.
     have ->:  rnd_p tl = tl by rewrite round_generic //; apply: generic_format_round.
     rewrite  Rabs0; last by ring.
     by rewrite Rmult_0_l;move=>*; apply : boundDWDW_ge_0 .
-  (* move=> hrel; *) apply:(Rle_trans _ (2* u^2)); last first.
+   apply:(Rle_trans _ (2* u^2)); last first.
     have h4u: 0 < 1 - 4 * u.
       have->: 4 = pow 2 by [].
       rewrite -bpow_plus.
@@ -2521,7 +2518,7 @@ lra.
     apply: (Rle_trans _  (/ 2 * ulp (xl + yl) +   ulp (x + y))).
       lra.
     apply:(Rle_trans _  (/ 2 * ulp (x + y) + ulp (x + y))); try lra.
-(* move out *)
+
   have ulp32: forall r, ulp (3/2* (ulp r)) = ulp (ulp r).
     move=>r.
     case:(Req_dec r 0)=>[->|hr0].
@@ -3128,8 +3125,8 @@ have wu: Rabs w <= 2 * u.
   (* a remonter: duplication *)
   have -> : (2 * u + u * u) = (1 + u/2) * (pow (1 -p)) by rewrite bpow_plus -/u /= IZR_Zpower_pos /=; field.
   by rewrite round_bpow r1pu2 bpow_plus -/u /= IZR_Zpower_pos /= ; ring.
-(* pose zh :=  (rnd_p (vh +  w)). *)
-(* pose  zl :=  (F2Sum_err vh w). *)
+
+
 have wlevh: Rabs w <= Rabs vh.
   apply:(Rle_trans _ (2 * u)) =>//.
   apply:(Rle_trans _ (2 - 8 * u)).
@@ -3237,9 +3234,9 @@ rewrite /fx /F2R /cexp (mag_unique_pos _ _ 1); last first.
   move=> xhy'.
   
 case/Rabs_le_inv: (xhy')=> xhyh yhxh.
-(* set sh := (rnd_p (xh + yh)); set sl := (TwoSum_err xh yh). *)
-(* pose th :=  (rnd_p( xl + yl)). *)
-(* pose tl :=  (TwoSum_err xl yl). *)
+
+
+
 have thu: Rabs th <= 2 * u.
   rewrite   TwoSum_sumE ZNE -round_NE_abs -ZNE.
   have -> : 2 * u = rnd_p (pow 1 * u).
@@ -3260,8 +3257,8 @@ case: (Rle_lt_dec yh (-xh/2) )=> hyx.
     have ->:  (xh + yh ) = (xh - (- yh)) by ring.
     apply: sterbenz'; (try apply:generic_format_opp) =>//.
     by split; lra.
-  have sl0: sl = 0 by  rewrite TwoSum_correct //  she; ring.  (* rewrite sl0 Rplus_0_l (round_round Hp). *)
-  (* set  c := (rnd_p (sl + th)). *)
+  have sl0: sl = 0 by  rewrite TwoSum_correct //  she; ring.
+
   have ce: c = th 
     by rewrite  sl0 Rplus_0_l round_generic /th // ; apply:  generic_format_round.
 (* need boolean comparison here ... *)
@@ -3321,7 +3318,7 @@ case: (Rle_lt_dec yh (-xh/2) )=> hyx.
     move:(Rmult_lt_0_compat _ (/(IZR sigma * u)) hpos hinv).
     rewrite Rmult_assoc Rinv_r;try lra.
     rewrite Rmult_1_r -plus_IZR.
-    (* have ->: 0 = IZR 0 by [].*)
+
     change 1 with (IZR 1).
     by move/lt_IZR => ?; apply: IZR_le; lia.
   have sle: Rabs (xl + yl) <= (1 + IZR sigma / 2) * u.
@@ -3839,7 +3836,7 @@ rewrite vl_eq Rplus_0_r tl0 round_0 //.
       by rewrite vl0 Rplus_0_r round_generic.
     rewrite -w_eq. exact: hf2S.
   split; [| split; [left; rewrite ce; exact: hcexp | by left; exact: hf2S]].
-    (* move=> hrel; *) apply:(Rle_trans _ (2* u^2)); last first.
+     apply:(Rle_trans _ (2* u^2)); last first.
     have h4u: 0 < 1 - 4 * u.
       have->: 4 = pow 2 by [].
       rewrite -bpow_plus.
@@ -3896,7 +3893,7 @@ rewrite vl_eq Rplus_0_r tl0 round_0 //.
     apply: (Rle_trans _  (/ 2 * ulp (xl + yl) +   ulp (x + y))).
       lra.
     apply:(Rle_trans _  (/ 2 * ulp (x + y) + ulp (x + y))); try lra.
-(* move out *)
+
   have ulp32: forall r, ulp (3/2* (ulp r)) = ulp (ulp r).
     move=>r.
     case:(Req_dec r 0)=>[->|hr0].
@@ -4506,8 +4503,8 @@ have wu: Rabs w <= 2 * u.
   (* a remonter: duplication *)
   have -> : (2 * u + u * u) = (1 + u/2) * (pow (1 -p)) by rewrite bpow_plus -/u /= IZR_Zpower_pos /=; field.
   by rewrite round_bpow r1pu2 bpow_plus -/u /= IZR_Zpower_pos /= ; ring.
-(* pose zh :=  (rnd_p (vh +  w)). *)
-(* pose  zl :=  (F2Sum_err vh w). *)
+
+
 have wlevh: Rabs w <= Rabs vh.
   apply:(Rle_trans _ (2 * u)) =>//.
   apply:(Rle_trans _ (2 - 8 * u)).
@@ -4677,7 +4674,6 @@ Proof.
 
   have TwoSumCh :=  (TwoSumC Fxh Fyh).
    have TwoSumCl :=  (TwoSumC Fxl Fyl).
-   (* case : (TwoSumC Fxl Fyl)=> TwoSum_sumCl TwoSum_errCl. *)
 rewrite /relative_errorDWDW /TwoSum_sum /TwoSum_err TwoSumCh TwoSumCl.
 by have ->: (yh  + yl + ( xh + xl)) = (xh + xl + (yh + yl)) by ring.
 Qed.
@@ -4696,7 +4692,7 @@ field.
  split =>//; move:(bpow_gt_0 two exp); lra.
 Qed.
 
-(* Notation TwoSum_sum a b := (rnd_p (a + b)). *)
+
 
 (* Helper facts: cexp(c) <= cexp(sh) \/ c = 0 is preserved by the three
    WLOG transformations used in DWPlusDW_relerr_bound. *)
@@ -4924,7 +4920,7 @@ wlog [xh1 xh2]: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy xhpos /
     lia.
   - exfalso. apply: hc_nz.
     case: (Rmult_integral _ _ h0); [done | lra]. }
-(* Now WLOG-normalized; invoke _pre' and extract third conjunct *)
+
 have xh1' : 1 <= xh by lra.
 have xh2' : xh <= 2 - 2*u by lra.
 by case: (DWPlusDW_relerr_bound_pre' Hp3' DWx DWy xhy Hnz Hxh_nz xhpos xh1' xh2')
@@ -4950,7 +4946,7 @@ Lemma DWPlusDW_w_le_vh_aux (xh xl yh yl: R)
             F2Sum_err (TwoSum_sum xh yh)
                        (rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl))) = 0%R.
 Proof.
-(* WLOG Rabs yh <= Rabs xh *)
+
 wlog xhy: xh xl yh yl DWx DWy Hxh_nz Hnz / Rabs yh <= Rabs xh.
 { move=> Hwlog.
   case: (Rle_lt_dec (Rabs yh) (Rabs xh)) => absyxh.
@@ -4967,7 +4963,7 @@ wlog xhy: xh xl yh yl DWx DWy Hxh_nz Hnz / Rabs yh <= Rabs xh.
                   (Rlt_le _ _ absyxh).
     by rewrite Esh Esl Eth Etl.
 }
-(* WLOG 0 < xh *)
+
 case: (DWx) => [[Fxh Fxl] hx]; case: (DWy) => [[Fyh Fyl] hy].
 wlog xhpos: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy / 0 < xh.
 { move=> Hwlog.
@@ -5057,7 +5053,7 @@ wlog xhpos: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy / 0 < xh.
     + by right; left; lra.
     + by right; right; lra.
 }
-(* WLOG 1 <= xh <= 2 - 2*u *)
+
 wlog [xh1 xh2]: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy xhpos /
                   1 <= xh <= 2 - 2*u.
 { move=> Hwlog.
@@ -5173,7 +5169,7 @@ wlog [xh1 xh2]: xh xl yh yl DWx DWy Hxh_nz Hnz xhy Fxh Fxl Fyh Fyl hx hy xhpos /
   - right; right.
     case: (Rmult_integral _ _ Hw); [done | lra].
 }
-(* Apply _pre' and extract conjunct 4 *)
+
 have xh1' : 1 <= xh by lra.
 have xh2' : xh <= 2 - 2*u by lra.
 by case: (DWPlusDW_relerr_bound_pre' Hp3' DWx DWy xhy Hnz Hxh_nz xhpos xh1' xh2')
@@ -5184,7 +5180,7 @@ Theorem  DWPlusDW_relerr_bound (xh xl yh yl: R)
          (DWx: double_word xh xl)(DWy: double_word yh yl)  (* (xyn0: (xh+xl + (yh + yl) <> 0)) *): 
          (relative_errorDWDW xh xl yh yl )<=  (3 * u^2) / (1 - 4 * u).
 Proof.
-(* pose ulp:= (ulp two fexp). *)
+
 wlog xhy : xh xl yh yl  DWx DWy (* xyn0 *) /  Rabs yh <= Rabs xh.
   move=> Hwlog.
   case:(Rle_lt_dec (Rabs yh) (Rabs xh) )=> absyxh.
@@ -5242,7 +5238,7 @@ apply Rplus_opp_r_uniq in H.
 have Hr: (rnd_p (yh + yl) = rnd_p (-(xh + xl))) by f_equal.
 apply s0. rewrite hx hy. rewrite Hr.
 rewrite (rnd_p_sym _ _ choiceP). nra.
-(* end AEK *)
+
 wlog [xh1 xh2]:  xh xl yh yl DWx DWy (* xyn0 *) xhy s0 x0 xhpos
              / 1 <= xh  <= 2-2*u.
   move=> Hwlog.
@@ -5313,7 +5309,7 @@ case:(Req_dec xh 0) => [Hxh0 | Hxh_nz].
   have ce_eq : rnd_p (TwoSum_err xh yh + TwoSum_sum xl yl) = yl.
     by rewrite sl0 the Rplus_0_l round_generic.
   rewrite ce_eq she.
-  (* Goal: cexp yl <= cexp yh.  We have yl <> 0 from Hc_nz. *)
+
   have yl_nz : yl <> 0.
     move=> Hyl0; apply Hc_nz; rewrite ce_eq Hyl0; reflexivity.
   (* From DW(yh, yl): |yl| <= /2 ulp yh = bpow (cexp yh - 1).

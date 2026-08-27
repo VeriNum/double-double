@@ -7,7 +7,7 @@ From Flocq Require Import Core Relative Sterbenz Operations Plus_error Mult_erro
 Require Import mathcomp.ssreflect.ssreflect.
 Require Import Bayleyaux.
 Require Import DWPlus.
-(* From Flocq Require Import Pff2Flocq.*)
+
 
 Require Import F2Sum (* ToSum.*).
 
@@ -261,7 +261,7 @@ have che: ch =  (xh * y).
     by rewrite TwoProdE /=  round_generic //; apply:FP.
   have cl10: cl1 = 0.
    by move: che; rewrite TwoProdE /= => che; rewrite   che Rminus_diag_eq // round_0.
-    (* rewrite cl10. *)
+
     have cl2e: cl2 =  (xl * y).
       by rewrite  round_generic //; apply:FP.
   have the : th = xh * y.
@@ -600,7 +600,7 @@ case:(Rle_lt_dec 2 (xh * y))=> xhy2.
   suff: 0 <=  3 * / 2 * u * u * ( 1 - / (1 - u)) +  4 * u * u * u by lra.
   apply:(Rmult_le_reg_r (1 -u)); try lra.
   field_simplify; try lra.
-  (* rewrite /Rdiv Rmult_0_l. *)
+
   suff : 0 <= (-8 * u ^ 4 + 5 * u ^ 3) by lra.
   have->: -8 * u ^ 4 + 5 * u ^ 3 = (-8  *u + 5) * (u ^ 3) by ring.
   apply:Rmult_le_pos; try lra.
@@ -930,7 +930,6 @@ rewrite -(Rmult_assoc xl) round_bpow Fast2SumS //;  try apply:generic_format_rou
 rewrite  Fast2SumS //; apply:generic_format_round.
 Qed.
 
-(* to remove *)
 Definition errorDWTFP' xh xl y := let (zh, zl) := DWTimesFP xh xl y in
   let xy := ((xh + xl) * y)%R in (Rabs ((zh + zl) - xy)).
 
@@ -1067,7 +1066,7 @@ rewrite -(Rmult_1_r zh)  -(Rmult_1_r zl).
   apply:(Rmult_eq_reg_r (pow ey)).
     by rewrite -round_bpow Rmult_plus_distr_r.
   move:(bpow_gt_0 two ey); lra.
-  (* case:(DWTimesFP_correct_pre Fy DWx (conj xh1 xh2)  (conj y1 y2) ypow). *)
+
   move:(E1); rewrite /DWTimesFP.
   case=> <- <-.
   apply:DWTimesFP_correct_pre =>//; lra.
@@ -1210,7 +1209,6 @@ rewrite  !(=^~Rmult_assoc, round_bpow, =^~Rmult_plus_distr_r,Fast2SumS,=^~Rmult_
    apply:generic_format_round.
 Qed.
 
-(* to remove *)
 Definition errorDWTFP8' xh xl y := let (zh, zl) := DWTimesFP8 xh xl y in
   let xy := ((xh + xl) * y)%R in (Rabs ((zh + zl) - xy)).
 
