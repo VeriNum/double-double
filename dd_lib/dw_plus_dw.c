@@ -1,13 +1,23 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
-void dw_plus_dw2(struct dword *st, struct dword *x, struct dword *y) {
-  double c; double w;  
-  struct dword sh; struct dword th; struct dword vh;
-  two_sum(&sh,x->s,y->s);
-  two_sum(&th,x->t,y->t);
-  c	  = sh.t + th.s;
-  fast_2sum(&vh,sh.s,c);
-  w	  = th.t + vh.t;
-  fast_2sum(st,vh.s,w);
+/* Default interface: check the mathematical input condition, run the kernel,
+   then reject a nonfinite result. */
+void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y) {
+   if (!dw_plus_dw_input_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_plus_dw_kernel(st, x, y);
+   if (!dword_finite_check(st)) {
+      exit(EXIT_FAILURE);
+   }
+}
+
+/* Strong interface: the input check proves output finiteness in advance. */
+void dw_plus_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
+   if (!dw_plus_dw_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_plus_dw_kernel(st, x, y);
 }

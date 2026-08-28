@@ -12,9 +12,9 @@ int main(void) {
     struct dword three = {3.0,0.0};
     double t = 3.0;
     dw_div_fp15(&EPS1,&four,t);
-    dw_plus_dw2(&EPS2,&one,&EPS1);
+    dw_plus_dw(&EPS2,&one,&EPS1);
     dw_mult_dw12(&EPS3,&three,&EPS2);
-    dw_plus_dw2(&EPS,&one,&EPS3);
+    dw_plus_dw(&EPS,&one,&EPS3);
     printf("%1.16g\n",EPS.s);
     printf("%1.16g\n",EPS.t);
     return 0;

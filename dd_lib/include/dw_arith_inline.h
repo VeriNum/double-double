@@ -61,7 +61,7 @@ static inline void dw_plus_fp_kernel(struct dword *st, struct dword *x, double y
    fast_2sum(st, sh.s, v);
 }
 
-static inline void dw_plus_dw2(struct dword *st, struct dword *x, struct dword *y) {
+static inline void dw_plus_dw_kernel(struct dword *st, struct dword *x, struct dword *y) {
    double c; double w;
    struct dword sh; struct dword th; struct dword vh;
    two_sum(&sh, x->s, y->s);

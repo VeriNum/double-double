@@ -66,7 +66,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(** Sufficient input condition used by the guarded C interface. *)
+(** Sufficient input condition used by the strong C interface. *)
 Definition DWPlusDW_safe_input_cond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -105,7 +105,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    The DW relation forces |xl| <= ulp(xh)/2, so no separate magnitude bound
    on xl is required.  is_finite xl is not implied by double_word_prop
    (which lives in R via FT2R), so it must be asserted explicitly. *)
-(** Sufficient input condition used by the guarded C interface. *)
+(** Sufficient input condition used by the strong C interface. *)
 Definition DWPlusFP_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\

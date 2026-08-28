@@ -1,10 +1,9 @@
 /* dw_arith_guarded_inline.h
  *
- * Header-inline distribution of the GUARDED double-word ops -- the exported,
- * verified interface (each op runtime-checks its precondition and aborts rather
- * than return an uncertifiable result). Bodies (checks + wrappers) copied verbatim
- * from dd_lib/fp_utils.c and dd_lib *_guarded.c, so the algorithm and the runtime
- * check are identical to the verified/linked library.
+ * Header-inline distribution of the checked double-word operations.  The
+ * addition defaults check their mathematical inputs and reject nonfinite
+ * outputs; strong and guarded interfaces use sufficient input checks.  The
+ * bodies mirror fp_utils.c and the public wrapper sources.
  *
  * All EFTs retain their guarded variants.  DW + FP additionally exposes the
  * default input-check/kernel/output-check interface and a strong-input
@@ -91,6 +90,16 @@ static inline int dw_plus_dw_check(struct dword *x, struct dword *y) {
     int xh_bnd = fabs(x->s) <= q_omega;
     int yh_bnd = fabs(y->s) <= q_omega;
     return dwx && dwy && xh_bnd && yh_bnd;
+}
+
+static inline int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_yh = isfinite_double(y->s);
+    int fin_yl = isfinite_double(y->t);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
+    return dwx && dwy;
 }
 
 /* DWTimesFP_mixed_error_input_cond: no underflow disjunction -- the exported contract is the
@@ -191,9 +200,14 @@ static inline void dw_plus_fp_strong(struct dword *st, struct dword *x, double y
     if (!dw_plus_fp_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_fp_kernel(st, x, y);
 }
-static inline void dw_plus_dw2_guarded(struct dword *st, struct dword *x, struct dword *y) {
+static inline void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y) {
+    if (!dw_plus_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    dw_plus_dw_kernel(st, x, y);
+    if (!dword_finite_check(st)) exit(EXIT_FAILURE);
+}
+static inline void dw_plus_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
     if (!dw_plus_dw_check(x, y)) exit(EXIT_FAILURE);
-    dw_plus_dw2(st, x, y);
+    dw_plus_dw_kernel(st, x, y);
 }
 static inline void dw_mult_fp9_guarded(struct dword *st, struct dword *x, double y) {
     if (!dw_mult_fp_check(x, y)) exit(EXIT_FAILURE);

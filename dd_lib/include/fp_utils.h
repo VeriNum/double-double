@@ -18,6 +18,8 @@ int fast2_mult_acc_check(double x, double y);
 
 int dw_plus_dw_check(struct dword *x, struct dword *y);
 
+int dw_plus_dw_input_check(struct dword *x, struct dword *y);
+
 int dw_plus_fp_check(struct dword *x, double y);
 
 int dw_plus_fp_input_check(struct dword *x, double y);

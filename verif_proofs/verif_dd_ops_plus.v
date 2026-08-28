@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for double-word addition operations and guarded wrappers. *)
+(* Body proofs for double-word addition kernels and public wrappers. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -25,7 +25,7 @@ Open Scope logic.
      fast_2sum(s, sh.s, v);   (zh,zl) = Fast2Sum sh.s v
    The inner two_sum / fast_2sum specs have empty preconditions, so the
    forward_call cascade discharges no side conditions -- identical in shape
-   to body_dw_plus_dw2 and body_dw_mult_fp9. *)
+   to body_dw_plus_dw_kernel and body_dw_mult_fp9. *)
 Lemma body_dw_plus_fp_kernel:
   semax_body Vprog Gprog f_dw_plus_fp_kernel dw_plus_fp_kernel_spec.
 Proof.
@@ -44,7 +44,8 @@ Proof.
   entailer!.
 Qed.
 
-Lemma body_dw_plus_dw2: semax_body Vprog Gprog f_dw_plus_dw2 dw_plus_dw2_spec.
+Lemma body_dw_plus_dw_kernel:
+  semax_body Vprog Gprog f_dw_plus_dw_kernel dw_plus_dw_kernel_spec.
 Proof.
   start_function.
   forward.  forward.
@@ -149,8 +150,65 @@ forward_if Post_if.
   entailer!!.
 Qed.
 
-Lemma body_dw_plus_dw2_guarded :
-  semax_body Vprog Gprog f_dw_plus_dw2_guarded dw_plus_dw2_guarded_spec.
+Lemma body_dw_plus_dw :
+  semax_body Vprog Gprog f_dw_plus_dw dw_plus_dw_spec.
+Proof.
+start_function.
+forward_call (x, y, xh, yh).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWPlusDW_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  LOCAL (temp _st s; temp _x x; temp _y y)
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x;
+       data_at Tsh dword (f2val yh) y)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP
+    (DWPlusDW_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
+    by entailer!.
+  forward_call (s, x, y, xh, yh).
+  forward_call
+    (s, AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)).
+  Intros vret_out.
+  set (Post_out :=
+    PROP (DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    LOCAL (temp _st s; temp _x x; temp _y y)
+    SEP (data_at Tsh dword
+           (f2val (AccurateDWPlusDW
+                     (fst xh) (snd xh) (fst yh) (snd yh))) s;
+         data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y)).
+  forward_if Post_out.
+  + forward_call (Int.repr 1).
+    unfold Post_out. entailer!.
+  + forward.
+    unfold Post_out, DWPlusDW_cond, DWPlusDW_output_finite_cond.
+    entailer!.
+    match goal with
+    | Hfin : vret_out = true -> is_finite_p _ |- _ =>
+        apply Hfin; destruct vret_out; auto
+    end.
+  + unfold Post_out.
+    assert_PROP
+      (DWPlusDW_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
+      by entailer!.
+    assert (Hfp : (3 <= fprec Tdouble)%Z)
+      by (unfold fprec, Tdouble; simpl; lia).
+    pose proof
+      (@DWPlusDW_relative_guarantee_from_cond
+         _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hfp Hcond)
+      as Hg.
+    entailer!!.
+Qed.
+
+Lemma body_dw_plus_dw_strong :
+  semax_body Vprog Gprog f_dw_plus_dw_strong dw_plus_dw_strong_spec.
 Proof.
 start_function.
 forward_call (x, y, xh, yh).

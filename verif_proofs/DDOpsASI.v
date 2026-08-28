@@ -113,8 +113,8 @@ Definition dw_plus_fp_strong_spec :=
     SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_plus_dw2_spec :=
-  DECLARE _dw_plus_dw2
+Definition dw_plus_dw_kernel_spec :=
+  DECLARE _dw_plus_dw_kernel
   WITH s: val, x : val, y: val,
       xh : ftype Tdouble * ftype Tdouble,
       yh : ftype Tdouble * ftype Tdouble
@@ -252,8 +252,28 @@ Definition fast_2mult_acc_guarded_spec :=
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
 
-Definition dw_plus_dw2_guarded_spec :=
-  DECLARE _dw_plus_dw2_guarded
+Definition dw_plus_dw_spec :=
+  DECLARE _dw_plus_dw
+  WITH s: val, x: val, y: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       yh: ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP(DWPlusDW_relative_guarantee
+           (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_plus_dw_strong_spec :=
+  DECLARE _dw_plus_dw_strong
   WITH s: val, x: val, y: val,
        xh: ftype Tdouble * ftype Tdouble,
        yh: ftype Tdouble * ftype Tdouble
@@ -478,6 +498,23 @@ Definition dw_plus_dw_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
+Definition dw_plus_dw_input_check_spec :=
+  DECLARE _dw_plus_dw_input_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS (x; y)
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWPlusDW_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check
   WITH x : val,
@@ -564,27 +601,30 @@ Definition Ops_Imports : funspecs :=
     two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
     fast2_mult_acc_check_spec;
     dword_finite_check_spec; dw_plus_fp_input_check_spec;
-    dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
+    dw_plus_fp_check_spec; dw_plus_dw_input_check_spec; dw_plus_dw_check_spec;
+    dw_mult_fp_check_spec;
     dw_mult_dw_check_spec; dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
-    dw_plus_dw2_spec; dw_mult_fp9_spec;
+    dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
+    dw_mult_fp9_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
-    dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_mult_fp9_guarded_spec;
     dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec;
     dw_div_dw18_guarded_spec;
     dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
 
-(* Public API exported by the ops VSU.  DW + FP exposes default and strong
-   interfaces with the same guarantee. *)
+(* Public API exported by the ops VSU.  The updated addition operations expose
+   default and strong interfaces with the same guarantee. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
-    dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_plus_dw_spec; dw_plus_dw_strong_spec;
+    dw_mult_fp9_guarded_spec;
     dw_mult_dw12_guarded_spec; dw_div_fp15_guarded_spec;
     dw_div_dw18_guarded_spec ].

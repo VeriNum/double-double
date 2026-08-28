@@ -78,6 +78,16 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && xh_bnd && yh_bnd;
 }
 
+int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_yh = isfinite_double(y->s);
+    int fin_yl = isfinite_double(y->t);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
+    return dwx && dwy;
+}
+
 int dw_mult_fp_check(struct dword *x, double y) {
     /* Verifies DWTimesFP_mixed_error_input_cond: x->t, y finite; (x->s, x->t) is a double-word;
        round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
