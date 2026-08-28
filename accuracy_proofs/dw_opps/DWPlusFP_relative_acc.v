@@ -12,6 +12,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import DWPlus DDConds DWord_defs TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_relative_acc_helpers.
+Require Import DD.accuracy_proofs.dw_opps.DWPlus_finite.
 From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -164,17 +165,17 @@ cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
 Lemma DWPlusFP_cond_of_safe_input_cond (xh xl y : ftype t) :
-  (3 <= fprec t)%Z ->
   DWPlusFP_safe_input_cond xh xl y ->
   DWPlusFP_cond xh xl y.
 Proof.
-intros Hp3 Hsafe.
-destruct Hsafe as (Hfxh & Hfxl & Hfy & Hdw & Hxh & Hy).
+intros Hsafe.
+have Hfin : is_finite_p (DWPlusFP xh xl y) :=
+  DWPlusFP_finite_from_safe_input_cond xh xl y Hsafe.
+specialize (Hfin NANS STD).
+destruct Hsafe as (_ & _ & _ & Hdw & _ & _).
 unfold DWPlusFP_cond, DWPlusFP_input_cond,
        DWPlusFP_output_finite_cond.
-split; [exact Hdw|].
-apply (DWPlusFP_finite xh xl) => //;
-rewrite -is_finite_Binary => //.
+exact (conj Hdw Hfin).
 Qed.
 
 Theorem DWPlusFP_relative_guarantee_from_safe_input_cond
@@ -185,7 +186,7 @@ Theorem DWPlusFP_relative_guarantee_from_safe_input_cond
 Proof.
 intros Hp3 Hsafe.
 apply DWPlusFP_relative_guarantee_from_cond; [exact Hp3 |].
-exact (DWPlusFP_cond_of_safe_input_cond xh xl y Hp3 Hsafe).
+exact (DWPlusFP_cond_of_safe_input_cond xh xl y Hsafe).
 Qed.
 
 End RelativeInterfaceDWPlusFP.

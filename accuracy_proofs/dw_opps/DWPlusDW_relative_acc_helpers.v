@@ -6,6 +6,7 @@
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas DW_acc_lemmas.
 Require Import TwoSum_acc Fast2Sum_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWPlus_finite.
 Require Import DDConds DWord_defs.
 Require DWPlus.
 From Flocq Require Import Pff2Flocq Core.
@@ -1469,12 +1470,10 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl yh yl : ftype t).
 
 Theorem AccurateDWPlusDW_finite_from_safe_input_cond :
-  (3 <= fprec t)%Z ->
   DWPlusDW_safe_input_cond xh xl yh yl ->
   is_finite_p (AccurateDWPlusDW xh xl yh yl).
 Proof.
-intros Hp3 [HFxh [HFxl [HFyh [HFyl [HDWx [HDWy [HBxh HByh]]]]]]].
-eapply AccurateDWPlusDW_finite; first [eassumption | cbv; intros; try discriminate].
+apply DWPlus_finite.AccurateDWPlusDW_finite_safe.
 Qed.
 
 End DWPlusDWCondBridge.

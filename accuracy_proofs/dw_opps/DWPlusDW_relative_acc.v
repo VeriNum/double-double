@@ -13,6 +13,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common.
 Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DWPlus DDConds DWord_defs DWPlusDW_relative_acc_helpers.
+Require Import DD.accuracy_proofs.dw_opps.DWPlus_finite.
 From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
 Set Bullet Behavior "Strict Subproofs".
@@ -287,12 +288,11 @@ Qed.
 
 Lemma DWPlusDW_cond_of_safe_input_cond
     (xh xl yh yl : ftype t) :
-  (3 <= fprec t)%Z ->
   DWPlusDW_safe_input_cond xh xl yh yl ->
   DWPlusDW_cond xh xl yh yl.
 Proof.
-intros Hp3 Hsafe.
-have Hfin := AccurateDWPlusDW_finite_from_safe_input_cond xh xl yh yl Hp3 Hsafe.
+intros Hsafe.
+have Hfin := AccurateDWPlusDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
 specialize (Hfin NANS STD).
 destruct Hsafe as (_ & _ & _ & _ & Hdx & Hdy & _ & _).
 unfold DWPlusDW_cond, DWPlusDW_input_cond, DWPlusDW_output_finite_cond.
@@ -307,7 +307,7 @@ Theorem DWPlusDW_relative_guarantee_from_safe_input_cond
 Proof.
 intros Hp3 Hsafe.
 apply DWPlusDW_relative_guarantee_from_cond; [exact Hp3|].
-exact (DWPlusDW_cond_of_safe_input_cond xh xl yh yl Hp3 Hsafe).
+exact (DWPlusDW_cond_of_safe_input_cond xh xl yh yl Hsafe).
 Qed.
 
 End RelativeGuaranteeDWPlusDW.
