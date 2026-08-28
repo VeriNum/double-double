@@ -78,7 +78,9 @@ Definition _b : ident := $"b".
 Definition _dw_div_dw_check : ident := $"dw_div_dw_check".
 Definition _dw_div_fp_check : ident := $"dw_div_fp_check".
 Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
+Definition _dw_mult_dw_input_check : ident := $"dw_mult_dw_input_check".
 Definition _dw_mult_fp_check : ident := $"dw_mult_fp_check".
+Definition _dw_mult_fp_input_check : ident := $"dw_mult_fp_input_check".
 Definition _dw_plus_dw_check : ident := $"dw_plus_dw_check".
 Definition _dw_plus_dw_input_check : ident := $"dw_plus_dw_input_check".
 Definition _dw_plus_fp_check : ident := $"dw_plus_fp_check".
@@ -763,6 +765,23 @@ Definition f_dw_mult_fp_check := {|
                 (Sreturn (Some (Etempvar _t'9 tint)))))))))))
 |}.
 
+Definition f_dw_mult_fp_input_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, (tptr (Tstruct _dword noattr))) :: (_y, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall (Some _t'1)
+    (Evar _dw_plus_fp_input_check (Tfunction
+                                    ((tptr (Tstruct _dword noattr)) ::
+                                     tdouble :: nil) tint cc_default))
+    ((Etempvar _x (tptr (Tstruct _dword noattr))) :: (Etempvar _y tdouble) ::
+     nil))
+  (Sreturn (Some (Etempvar _t'1 tint))))
+|}.
+
 Definition f_dw_mult_dw_check := {|
   fn_return := tint;
   fn_callconv := cc_default;
@@ -931,6 +950,25 @@ Definition f_dw_mult_dw_check := {|
                         (Sset _t'12 (Ecast (Etempvar _prod_bnd tint) tbool))
                         (Sset _t'12 (Econst_int (Int.repr 0) tint))))
                     (Sreturn (Some (Etempvar _t'12 tint)))))))))))))
+|}.
+
+Definition f_dw_mult_dw_input_check := {|
+  fn_return := tint;
+  fn_callconv := cc_default;
+  fn_params := ((_x, (tptr (Tstruct _dword noattr))) ::
+                (_y, (tptr (Tstruct _dword noattr))) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Scall (Some _t'1)
+    (Evar _dw_plus_dw_input_check (Tfunction
+                                    ((tptr (Tstruct _dword noattr)) ::
+                                     (tptr (Tstruct _dword noattr)) :: nil)
+                                    tint cc_default))
+    ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+  (Sreturn (Some (Etempvar _t'1 tint))))
 |}.
 
 Definition f_dw_div_fp_check := {|
@@ -1842,7 +1880,9 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_dw_plus_dw_check, Gfun(Internal f_dw_plus_dw_check)) ::
  (_dw_plus_dw_input_check, Gfun(Internal f_dw_plus_dw_input_check)) ::
  (_dw_mult_fp_check, Gfun(Internal f_dw_mult_fp_check)) ::
+ (_dw_mult_fp_input_check, Gfun(Internal f_dw_mult_fp_input_check)) ::
  (_dw_mult_dw_check, Gfun(Internal f_dw_mult_dw_check)) ::
+ (_dw_mult_dw_input_check, Gfun(Internal f_dw_mult_dw_input_check)) ::
  (_dw_div_fp_check, Gfun(Internal f_dw_div_fp_check)) ::
  (_dw_plus_fp_check, Gfun(Internal f_dw_plus_fp_check)) ::
  (_dw_plus_fp_input_check, Gfun(Internal f_dw_plus_fp_input_check)) ::
@@ -1851,13 +1891,14 @@ Definition global_definitions : list (ident * globdef fundef type) :=
 
 Definition public_idents : list ident :=
 (_dw_div_dw_check :: _dword_finite_check :: _dw_plus_fp_input_check ::
- _dw_plus_fp_check :: _dw_div_fp_check :: _dw_mult_dw_check ::
- _dw_mult_fp_check :: _dw_plus_dw_input_check :: _dw_plus_dw_check ::
- _two_sum_check :: _fast2_sum_check :: _fast2_mult_acc_check ::
- _fast2_mult_check :: _isfinite_double :: _fabs :: _ldexp ::
- ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+ _dw_plus_fp_check :: _dw_div_fp_check :: _dw_mult_dw_input_check ::
+ _dw_mult_dw_check :: _dw_mult_fp_input_check :: _dw_mult_fp_check ::
+ _dw_plus_dw_input_check :: _dw_plus_dw_check :: _two_sum_check ::
+ _fast2_sum_check :: _fast2_mult_acc_check :: _fast2_mult_check ::
+ _isfinite_double :: _fabs :: _ldexp :: ___builtin_debug ::
+ ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
+ ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
+ ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::

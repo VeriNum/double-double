@@ -102,7 +102,7 @@ int dw_mult_fp_check(struct dword *x, double y) {
        fast2_mult_check still does).  That disjunct buys the
        PURE relative bound 2u^2 by excluding the Fast2Mult underflow gap, at the
        cost of aborting on any input whose leading product lands in it -- ordinary
-       tiny-operand inputs.  The contract exported by dw_mult_fp9_guarded is
+       tiny-operand inputs.  The contract exported by dw_mult_fp_strong is
        instead the whole-range MIXED bound
 
          |(zh+zl) - (x->s + x->t)*y| <= 2u^2 |(x->s + x->t)*y| + 2.51*eta
@@ -152,6 +152,10 @@ int dw_mult_fp_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
+int dw_mult_fp_input_check(struct dword *x, double y) {
+    return dw_plus_fp_input_check(x, y);
+}
+
 int dw_mult_dw_check(struct dword *x, struct dword *y) {
     /* Verifies DWTimesDW_mixed_error_input_cond: x->t, y->t finite; (x->s, x->t) and
        (y->s, y->t) are each a double-word; round(x->s * y->s) finite; and the
@@ -171,7 +175,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
        fast2_mult_check still does).  That disjunct buys the PURE relative bound
        4u^2 by excluding the Fast2Mult underflow gap, at the cost of aborting on
        any input whose leading product lands in it -- ordinary tiny-operand
-       inputs.  The contract exported by dw_mult_dw12_guarded is instead the
+       inputs.  The contract exported by dw_mult_dw_strong is instead the
        whole-range MIXED bound
 
          |(zh+zl) - (x->s+x->t)*(y->s+y->t)|
@@ -206,6 +210,10 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
        |FT2R x->s * FT2R y->s| <= Omega/2 AND finiteness of z. */
     int prod_bnd = fabs(z) < q_prod;
     return dwx && dwy && prod_bnd;
+}
+
+int dw_mult_dw_input_check(struct dword *x, struct dword *y) {
+    return dw_plus_dw_input_check(x, y);
 }
 
 int dw_div_fp_check(struct dword *x, double y) {

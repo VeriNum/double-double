@@ -116,6 +116,10 @@ static inline int dw_mult_fp_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
+static inline int dw_mult_fp_input_check(struct dword *x, double y) {
+    return dw_plus_fp_input_check(x, y);
+}
+
 /* DWTimesDW_mixed_error_input_cond: no underflow disjunction -- the exported contract is the
    whole-range mixed bound 4u^2|P| + 2.5*eta, not the pure 8u^2 relative bound,
    so the Fast2Mult underflow gap is accepted.  See dd_lib/fp_utils.c. */
@@ -130,6 +134,10 @@ static inline int dw_mult_dw_check(struct dword *x, struct dword *y) {
     double q_prod = ldexp(1.0, 1023);           /* Omega/2 */
     int prod_bnd = fabs(z) < q_prod;
     return dwx && dwy && prod_bnd;
+}
+
+static inline int dw_mult_dw_input_check(struct dword *x, struct dword *y) {
+    return dw_plus_dw_input_check(x, y);
 }
 
 /* Discharges DWDivFP_mixed_safe_input_cond.  NO quotient floor: qt_hi alone gives both the
@@ -209,13 +217,23 @@ static inline void dw_plus_dw_strong(struct dword *st, struct dword *x, struct d
     if (!dw_plus_dw_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_dw_kernel(st, x, y);
 }
-static inline void dw_mult_fp9_guarded(struct dword *st, struct dword *x, double y) {
-    if (!dw_mult_fp_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_fp9(st, x, y);
+static inline void dw_mult_fp(struct dword *st, struct dword *x, double y) {
+    if (!dw_mult_fp_input_check(x, y)) exit(EXIT_FAILURE);
+    dw_mult_fp_kernel(st, x, y);
+    if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
-static inline void dw_mult_dw12_guarded(struct dword *st, struct dword *x, struct dword *y) {
+static inline void dw_mult_fp_strong(struct dword *st, struct dword *x, double y) {
+    if (!dw_mult_fp_check(x, y)) exit(EXIT_FAILURE);
+    dw_mult_fp_kernel(st, x, y);
+}
+static inline void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
+    if (!dw_mult_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    dw_mult_dw_kernel(st, x, y);
+    if (!dword_finite_check(st)) exit(EXIT_FAILURE);
+}
+static inline void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
     if (!dw_mult_dw_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_dw12(st, x, y);
+    dw_mult_dw_kernel(st, x, y);
 }
 static inline void dw_div_fp15_guarded(struct dword *z, struct dword *x, double y) {
     if (!dw_div_fp_check(x, y)) exit(EXIT_FAILURE);

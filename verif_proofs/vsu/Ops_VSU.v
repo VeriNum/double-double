@@ -37,14 +37,16 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_dw_kernel. }
   1:{ solve_SF_dd body_dw_plus_dw. }
   1:{ solve_SF_dd body_dw_plus_dw_strong. }
-  1:{ solve_SF_dd body_dw_mult_fp9. }
+  1:{ solve_SF_dd body_dw_mult_fp_kernel. }
   1:{ solve_SF_dd body_two_sum_guarded. }
   1:{ solve_SF_dd body_fast_2sum_guarded. }
   1:{ solve_SF_dd body_fast_2mult_guarded. }
   1:{ solve_SF_dd body_fast_2mult_acc_guarded. }
-  1:{ solve_SF_dd body_dw_mult_fp9_guarded. }
-  1:{ solve_SF_dd body_dw_mult_dw12. }
-  1:{ solve_SF_dd body_dw_mult_dw12_guarded. }
+  1:{ solve_SF_dd body_dw_mult_fp. }
+  1:{ solve_SF_dd body_dw_mult_fp_strong. }
+  1:{ solve_SF_dd body_dw_mult_dw_kernel. }
+  1:{ solve_SF_dd body_dw_mult_dw. }
+  1:{ solve_SF_dd body_dw_mult_dw_strong. }
   1:{ solve_SF_dd body_dw_div_dw18. }
   1:{ solve_SF_dd body_dw_div_dw18_guarded. }
   1:{ solve_SF_dd body_dw_div_fp15. }

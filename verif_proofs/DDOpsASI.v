@@ -132,8 +132,8 @@ Definition dw_plus_dw_kernel_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_mult_fp9_spec :=
-  DECLARE _dw_mult_fp9
+Definition dw_mult_fp_kernel_spec :=
+  DECLARE _dw_mult_fp_kernel
   WITH s: val, x : val,
       xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble ]
@@ -147,8 +147,8 @@ Definition dw_mult_fp9_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_dw12_spec := 
-  DECLARE _dw_mult_dw12
+Definition dw_mult_dw_kernel_spec :=
+  DECLARE _dw_mult_dw_kernel
   WITH s: val, x : val, y: val,
       xh : ftype Tdouble * ftype Tdouble, 
       yh : ftype Tdouble * ftype Tdouble
@@ -292,12 +292,8 @@ Definition dw_plus_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* Guarded DW by FP multiplication exports
-   [DWTimesFP_mixed_guarantee_from_safe_input_cond].  Its bound is
-   [2u^2|P| + 2.51*eta] and includes output validity.  The runtime check permits
-   the [Fast2Mult] underflow gap, unlike the pure relative interface. *)
-Definition dw_mult_fp9_guarded_spec :=
-  DECLARE _dw_mult_fp9_guarded
+Definition dw_mult_fp_spec :=
+  DECLARE _dw_mult_fp
   WITH s: val, x: val,
        xh: ftype Tdouble * ftype Tdouble,
        y : ftype Tdouble
@@ -312,13 +308,44 @@ Definition dw_mult_fp9_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-(* Guarded DW by DW multiplication exports
-   [DWTimesDW_mixed_guarantee_from_safe_input_cond].  Its bound is
-   [4u^2|P| + 2.5*eta] and includes output validity.  The runtime check permits
-   the [Fast2Mult] underflow gap.  In that gap, the final sum lies on the
-   FLT/FIX lattice and [Fast2Sum] remains exact. *)
-Definition dw_mult_dw12_guarded_spec :=
-  DECLARE _dw_mult_dw12_guarded
+Definition dw_mult_fp_strong_spec :=
+  DECLARE _dw_mult_fp_strong
+  WITH s: val, x: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP(DWTimesFP_mixed_guarantee (fst xh) (snd xh) y)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_mult_dw_spec :=
+  DECLARE _dw_mult_dw
+  WITH s: val, x: val, y: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       yh: ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP(DWTimesDW_mixed_guarantee
+           (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_mult_dw_strong_spec :=
+  DECLARE _dw_mult_dw_strong
   WITH s: val, x: val, y: val,
        xh: ftype Tdouble * ftype Tdouble,
        yh: ftype Tdouble * ftype Tdouble
@@ -528,6 +555,20 @@ Definition dw_mult_fp_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
+Definition dw_mult_fp_input_check_spec :=
+  DECLARE _dw_mult_fp_input_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val xh) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWTimesFP_mixed_input_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x).
+
 Definition dw_mult_dw_check_spec :=
   DECLARE _dw_mult_dw_check
   WITH x : val, y : val,
@@ -543,6 +584,23 @@ Definition dw_mult_dw_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
+
+Definition dw_mult_dw_input_check_spec :=
+  DECLARE _dw_mult_dw_input_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS (x; y)
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWTimesDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
 
 (* Minimal cond: no quotient floor at all; the caller gets the whole range
    mixed bound, not the normal range pure 3u^2 one.  See
@@ -602,29 +660,31 @@ Definition Ops_Imports : funspecs :=
     fast2_mult_acc_check_spec;
     dword_finite_check_spec; dw_plus_fp_input_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_input_check_spec; dw_plus_dw_check_spec;
-    dw_mult_fp_check_spec;
-    dw_mult_dw_check_spec; dw_div_fp_check_spec; dw_div_dw_check_spec ].
+    dw_mult_fp_input_check_spec; dw_mult_fp_check_spec;
+    dw_mult_dw_input_check_spec; dw_mult_dw_check_spec;
+    dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
-    dw_mult_fp9_spec;
+    dw_mult_fp_kernel_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
-    dw_mult_fp9_guarded_spec;
-    dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec;
+    dw_mult_fp_spec; dw_mult_fp_strong_spec;
+    dw_mult_dw_kernel_spec; dw_mult_dw_spec; dw_mult_dw_strong_spec;
+    dw_div_dw18_spec;
     dw_div_dw18_guarded_spec;
     dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
 
-(* Public API exported by the ops VSU.  The updated addition operations expose
-   default and strong interfaces with the same guarantee. *)
+(* Updated double-word operations expose default and strong interfaces with
+   the same guarantee. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
-    dw_mult_fp9_guarded_spec;
-    dw_mult_dw12_guarded_spec; dw_div_fp15_guarded_spec;
+    dw_mult_fp_spec; dw_mult_fp_strong_spec;
+    dw_mult_dw_spec; dw_mult_dw_strong_spec; dw_div_fp15_guarded_spec;
     dw_div_dw18_guarded_spec ].

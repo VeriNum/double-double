@@ -25,7 +25,7 @@ Open Scope logic.
      fast_2sum(s, sh.s, v);   (zh,zl) = Fast2Sum sh.s v
    The inner two_sum / fast_2sum specs have empty preconditions, so the
    forward_call cascade discharges no side conditions -- identical in shape
-   to body_dw_plus_dw_kernel and body_dw_mult_fp9. *)
+   to body_dw_plus_dw_kernel and body_dw_mult_fp_kernel. *)
 Lemma body_dw_plus_fp_kernel:
   semax_body Vprog Gprog f_dw_plus_fp_kernel dw_plus_fp_kernel_spec.
 Proof.

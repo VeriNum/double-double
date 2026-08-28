@@ -72,14 +72,14 @@ static inline void dw_plus_dw_kernel(struct dword *st, struct dword *x, struct d
    fast_2sum(st, vh.s, w);
 }
 
-static inline void dw_mult_fp9(struct dword *zh, struct dword *x, double y) {
+static inline void dw_mult_fp_kernel(struct dword *zh, struct dword *x, double y) {
    double c3; struct dword ch;
    fast_2mult(&ch, x->s, y);
    c3     = fma(x->t, y, ch.t);
    fast_2sum(zh, ch.s, c3);
 }
 
-static inline void dw_mult_dw12(struct dword *zh, struct dword *x, struct dword *y) {
+static inline void dw_mult_dw_kernel(struct dword *zh, struct dword *x, struct dword *y) {
    double t0; double t1; double c2; double c3;
    struct dword ch;
    fast_2mult(&ch, x->s, y->s);
@@ -108,9 +108,9 @@ static inline void dw_div_dw18(struct dword *z, struct dword *x, struct dword *y
    rh     = fma(-y->s, th, 1.0);      /* rh = 1 - yh*th (exact) */
    rl     = -(y->t * th);
    fast_2sum(&e, rh, rl);
-   dw_mult_fp9(&delta, &e, th);
+   dw_mult_fp_kernel(&delta, &e, th);
    dw_plus_fp_kernel(&m, &delta, th);
-   dw_mult_dw12(z, x, &m);
+   dw_mult_dw_kernel(z, x, &m);
 }
 
 #endif /* DWARITH_INLINE_DOT_H */

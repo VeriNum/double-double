@@ -1,14 +1,20 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
-void dw_mult_dw12(struct dword *zh, struct dword *x, struct dword *y) {
-   double t0; double t1; double c2; double c3; 
-   struct dword ch;
-   fast_2mult(&ch,x->s,y->s);
-   t0     = x->t * y->t;
-   t1	    = fma(x->s,y->t,t0);
-   c2     = fma(x->t,y->s,t1);
-   c3     = ch.t + c2; 
-   fast_2sum(zh,ch.s,c3);
+void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
+   if (!dw_mult_dw_input_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_mult_dw_kernel(st, x, y);
+   if (!dword_finite_check(st)) {
+      exit(EXIT_FAILURE);
+   }
 }
 
+void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
+   if (!dw_mult_dw_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_mult_dw_kernel(st, x, y);
+}

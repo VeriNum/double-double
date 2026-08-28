@@ -92,7 +92,8 @@ Definition Checks_Internal : funspecs :=
     fast2_sum_check_spec;
     two_sum_check_spec; dw_plus_dw_check_spec;
     dw_plus_dw_input_check_spec;
-    dw_mult_fp_check_spec; dw_mult_dw_check_spec; dw_plus_fp_check_spec;
+    dw_mult_fp_check_spec; dw_mult_fp_input_check_spec;
+    dw_mult_dw_check_spec; dw_mult_dw_input_check_spec; dw_plus_fp_check_spec;
     dw_plus_fp_input_check_spec; dword_finite_check_spec;
     dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
@@ -102,8 +103,9 @@ Definition Checks_Exports : funspecs :=
     fast2_mult_acc_check_spec;
     dword_finite_check_spec; dw_plus_fp_input_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_input_check_spec; dw_plus_dw_check_spec;
-    dw_mult_fp_check_spec;
-    dw_mult_dw_check_spec; dw_div_fp_check_spec; dw_div_dw_check_spec ].
+    dw_mult_fp_input_check_spec; dw_mult_fp_check_spec;
+    dw_mult_dw_input_check_spec; dw_mult_dw_check_spec;
+    dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Collect the function API specs together into Gprog: list funspec.
    Shared by all body proof files. *)

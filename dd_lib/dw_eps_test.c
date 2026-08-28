@@ -13,7 +13,7 @@ int main(void) {
     double t = 3.0;
     dw_div_fp15(&EPS1,&four,t);
     dw_plus_dw(&EPS2,&one,&EPS1);
-    dw_mult_dw12(&EPS3,&three,&EPS2);
+    dw_mult_dw(&EPS3,&three,&EPS2);
     dw_plus_dw(&EPS,&one,&EPS3);
     printf("%1.16g\n",EPS.s);
     printf("%1.16g\n",EPS.t);

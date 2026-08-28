@@ -234,3 +234,14 @@ Proof.
                     unfold DDConds.DWTimesDW_mixed_safe_input_cond.
                     repeat (split; try assumption).
 Qed.
+
+Lemma body_dw_mult_dw_input_check :
+  semax_body Vprog Gprog f_dw_mult_dw_input_check
+    dw_mult_dw_input_check_spec.
+Proof.
+  start_function.
+  forward_call (x, y, xh, yh).
+  Intros b; rename H into Hb.
+  forward.
+  Exists b; entailer!.
+Qed.

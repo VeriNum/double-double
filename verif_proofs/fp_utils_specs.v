@@ -211,7 +211,7 @@ Definition dw_div_fp_check_spec :=
    underflow gap.  It gives the caller the mixed bound
    (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
    output is a valid double-word.  It does not give the pure 2u^2 relative
-   bound; see dw_mult_fp9_guarded_spec in DDOpsASI.v. *)
+   bound; see dw_mult_fp_strong_spec in DDOpsASI.v. *)
 Definition dw_mult_fp_check_spec :=
   DECLARE _dw_mult_fp_check
   WITH x : val,
@@ -227,6 +227,20 @@ Definition dw_mult_fp_check_spec :=
          DWTimesFP_mixed_safe_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
+
+Definition dw_mult_fp_input_check_spec :=
+  DECLARE _dw_mult_fp_input_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val xh) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWTimesFP_mixed_input_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x).
 
 Definition dw_mult_dw_check_spec :=
   DECLARE _dw_mult_dw_check
@@ -245,6 +259,23 @@ Definition dw_mult_dw_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
+
+Definition dw_mult_dw_input_check_spec :=
+  DECLARE _dw_mult_dw_input_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS (x; y)
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWTimesDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
 
 Definition dw_div_dw_check_spec :=
   DECLARE _dw_div_dw_check

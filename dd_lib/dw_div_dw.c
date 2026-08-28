@@ -8,7 +8,7 @@ void dw_div_dw18(struct dword *z, struct dword *x, struct dword *y) {
    rh     = fma(-y->s,th,1.0);      /* rh = 1 - yh*th (exact) */
    rl     = -(y->t * th);
    fast_2sum(&e,rh,rl);
-   dw_mult_fp9(&delta,&e,th);
+   dw_mult_fp_kernel(&delta,&e,th);
    dw_plus_fp_kernel(&m,&delta,th);
-   dw_mult_dw12(z,x,&m);
+   dw_mult_dw_kernel(z,x,&m);
 }

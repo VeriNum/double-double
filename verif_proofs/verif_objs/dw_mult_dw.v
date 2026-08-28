@@ -73,134 +73,98 @@ Definition ___compcert_va_composite : ident := $"__compcert_va_composite".
 Definition ___compcert_va_float64 : ident := $"__compcert_va_float64".
 Definition ___compcert_va_int32 : ident := $"__compcert_va_int32".
 Definition ___compcert_va_int64 : ident := $"__compcert_va_int64".
-Definition _c2 : ident := $"c2".
-Definition _c3 : ident := $"c3".
-Definition _ch : ident := $"ch".
-Definition _dw_mult_dw12 : ident := $"dw_mult_dw12".
+Definition _dw_mult_dw : ident := $"dw_mult_dw".
+Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
+Definition _dw_mult_dw_input_check : ident := $"dw_mult_dw_input_check".
+Definition _dw_mult_dw_kernel : ident := $"dw_mult_dw_kernel".
+Definition _dw_mult_dw_strong : ident := $"dw_mult_dw_strong".
 Definition _dword : ident := $"dword".
-Definition _fast_2mult : ident := $"fast_2mult".
-Definition _fast_2sum : ident := $"fast_2sum".
-Definition _fma : ident := $"fma".
+Definition _dword_finite_check : ident := $"dword_finite_check".
+Definition _exit : ident := $"exit".
 Definition _main : ident := $"main".
 Definition _s : ident := $"s".
+Definition _st : ident := $"st".
 Definition _t : ident := $"t".
-Definition _t0 : ident := $"t0".
-Definition _t1 : ident := $"t1".
 Definition _x : ident := $"x".
 Definition _y : ident := $"y".
-Definition _zh : ident := $"zh".
 Definition _t'1 : ident := 128%positive.
-Definition _t'10 : ident := 137%positive.
-Definition _t'11 : ident := 138%positive.
-Definition _t'12 : ident := 139%positive.
 Definition _t'2 : ident := 129%positive.
-Definition _t'3 : ident := 130%positive.
-Definition _t'4 : ident := 131%positive.
-Definition _t'5 : ident := 132%positive.
-Definition _t'6 : ident := 133%positive.
-Definition _t'7 : ident := 134%positive.
-Definition _t'8 : ident := 135%positive.
-Definition _t'9 : ident := 136%positive.
 
-Definition f_dw_mult_dw12 := {|
+Definition f_dw_mult_dw := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
-  fn_params := ((_zh, (tptr (Tstruct _dword noattr))) ::
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
                 (_x, (tptr (Tstruct _dword noattr))) ::
                 (_y, (tptr (Tstruct _dword noattr))) :: nil);
-  fn_vars := ((_ch, (Tstruct _dword noattr)) :: nil);
-  fn_temps := ((_t0, tdouble) :: (_t1, tdouble) :: (_c2, tdouble) ::
-               (_c3, tdouble) :: (_t'2, tdouble) :: (_t'1, tdouble) ::
-               (_t'12, tdouble) :: (_t'11, tdouble) :: (_t'10, tdouble) ::
-               (_t'9, tdouble) :: (_t'8, tdouble) :: (_t'7, tdouble) ::
-               (_t'6, tdouble) :: (_t'5, tdouble) :: (_t'4, tdouble) ::
-               (_t'3, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'2, tint) :: (_t'1, tint) :: nil);
   fn_body :=
 (Ssequence
   (Ssequence
-    (Sset _t'11
-      (Efield
-        (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
-          (Tstruct _dword noattr)) _s tdouble))
-    (Ssequence
-      (Sset _t'12
-        (Efield
-          (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
-            (Tstruct _dword noattr)) _s tdouble))
-      (Scall None
-        (Evar _fast_2mult (Tfunction
-                            ((tptr (Tstruct _dword noattr)) :: tdouble ::
-                             tdouble :: nil) tvoid cc_default))
-        ((Eaddrof (Evar _ch (Tstruct _dword noattr))
-           (tptr (Tstruct _dword noattr))) :: (Etempvar _t'11 tdouble) ::
-         (Etempvar _t'12 tdouble) :: nil))))
+    (Scall (Some _t'1)
+      (Evar _dw_mult_dw_input_check (Tfunction
+                                      ((tptr (Tstruct _dword noattr)) ::
+                                       (tptr (Tstruct _dword noattr)) :: nil)
+                                      tint cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
   (Ssequence
-    (Ssequence
-      (Sset _t'9
-        (Efield
-          (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
-            (Tstruct _dword noattr)) _t tdouble))
-      (Ssequence
-        (Sset _t'10
-          (Efield
-            (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
-              (Tstruct _dword noattr)) _t tdouble))
-        (Sset _t0
-          (Ebinop Omul (Etempvar _t'9 tdouble) (Etempvar _t'10 tdouble)
-            tdouble))))
-    (Ssequence
-      (Ssequence
-        (Ssequence
-          (Sset _t'7
-            (Efield
-              (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
-                (Tstruct _dword noattr)) _s tdouble))
-          (Ssequence
-            (Sset _t'8
-              (Efield
-                (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
-                  (Tstruct _dword noattr)) _t tdouble))
-            (Scall (Some _t'1)
-              (Evar _fma (Tfunction (tdouble :: tdouble :: tdouble :: nil)
-                           tdouble cc_default))
-              ((Etempvar _t'7 tdouble) :: (Etempvar _t'8 tdouble) ::
-               (Etempvar _t0 tdouble) :: nil))))
-        (Sset _t1 (Etempvar _t'1 tdouble)))
-      (Ssequence
-        (Ssequence
-          (Ssequence
-            (Sset _t'5
-              (Efield
-                (Ederef (Etempvar _x (tptr (Tstruct _dword noattr)))
-                  (Tstruct _dword noattr)) _t tdouble))
-            (Ssequence
-              (Sset _t'6
-                (Efield
-                  (Ederef (Etempvar _y (tptr (Tstruct _dword noattr)))
-                    (Tstruct _dword noattr)) _s tdouble))
-              (Scall (Some _t'2)
-                (Evar _fma (Tfunction (tdouble :: tdouble :: tdouble :: nil)
-                             tdouble cc_default))
-                ((Etempvar _t'5 tdouble) :: (Etempvar _t'6 tdouble) ::
-                 (Etempvar _t1 tdouble) :: nil))))
-          (Sset _c2 (Etempvar _t'2 tdouble)))
-        (Ssequence
-          (Ssequence
-            (Sset _t'4
-              (Efield (Evar _ch (Tstruct _dword noattr)) _t tdouble))
-            (Sset _c3
-              (Ebinop Oadd (Etempvar _t'4 tdouble) (Etempvar _c2 tdouble)
-                tdouble)))
-          (Ssequence
-            (Sset _t'3
-              (Efield (Evar _ch (Tstruct _dword noattr)) _s tdouble))
-            (Scall None
-              (Evar _fast_2sum (Tfunction
+    (Scall None
+      (Evar _dw_mult_dw_kernel (Tfunction
                                  ((tptr (Tstruct _dword noattr)) ::
-                                  tdouble :: tdouble :: nil) tvoid
-                                 cc_default))
-              ((Etempvar _zh (tptr (Tstruct _dword noattr))) ::
-               (Etempvar _t'3 tdouble) :: (Etempvar _c3 tdouble) :: nil))))))))
+                                  (tptr (Tstruct _dword noattr)) ::
+                                  (tptr (Tstruct _dword noattr)) :: nil)
+                                 tvoid cc_default))
+      ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+    (Ssequence
+      (Scall (Some _t'2)
+        (Evar _dword_finite_check (Tfunction
+                                    ((tptr (Tstruct _dword noattr)) :: nil)
+                                    tint cc_default))
+        ((Etempvar _st (tptr (Tstruct _dword noattr))) :: nil))
+      (Sifthenelse (Eunop Onotbool (Etempvar _t'2 tint) tint)
+        (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+          ((Econst_int (Int.repr 1) tint) :: nil))
+        Sskip))))
+|}.
+
+Definition f_dw_mult_dw_strong := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) ::
+                (_y, (tptr (Tstruct _dword noattr))) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _dw_mult_dw_check (Tfunction
+                                ((tptr (Tstruct _dword noattr)) ::
+                                 (tptr (Tstruct _dword noattr)) :: nil) tint
+                                cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Scall None
+    (Evar _dw_mult_dw_kernel (Tfunction
+                               ((tptr (Tstruct _dword noattr)) ::
+                                (tptr (Tstruct _dword noattr)) ::
+                                (tptr (Tstruct _dword noattr)) :: nil) tvoid
+                               cc_default))
+    ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _x (tptr (Tstruct _dword noattr))) ::
+     (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil)))
 |}.
 
 Definition composites : list composite_definition :=
@@ -452,30 +416,40 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|}))
      (tint :: nil) tvoid
      {|cc_vararg:=(Some 1); cc_unproto:=false; cc_structret:=false|})) ::
- (_fma,
-   Gfun(External (EF_external "fma"
-                   (mksignature
-                     (AST.Xfloat :: AST.Xfloat :: AST.Xfloat :: nil)
-                     AST.Xfloat cc_default))
-     (tdouble :: tdouble :: tdouble :: nil) tdouble cc_default)) ::
- (_fast_2mult,
-   Gfun(External (EF_external "fast_2mult"
-                   (mksignature (AST.Xptr :: AST.Xfloat :: AST.Xfloat :: nil)
+ (_exit,
+   Gfun(External (EF_external "exit"
+                   (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
+     (tint :: nil) tvoid cc_default)) ::
+ (_dw_mult_dw_kernel,
+   Gfun(External (EF_external "dw_mult_dw_kernel"
+                   (mksignature (AST.Xptr :: AST.Xptr :: AST.Xptr :: nil)
                      AST.Xvoid cc_default))
-     ((tptr (Tstruct _dword noattr)) :: tdouble :: tdouble :: nil) tvoid
-     cc_default)) ::
- (_fast_2sum,
-   Gfun(External (EF_external "fast_2sum"
-                   (mksignature (AST.Xptr :: AST.Xfloat :: AST.Xfloat :: nil)
-                     AST.Xvoid cc_default))
-     ((tptr (Tstruct _dword noattr)) :: tdouble :: tdouble :: nil) tvoid
-     cc_default)) :: (_dw_mult_dw12, Gfun(Internal f_dw_mult_dw12)) :: nil).
+     ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
+      (tptr (Tstruct _dword noattr)) :: nil) tvoid cc_default)) ::
+ (_dword_finite_check,
+   Gfun(External (EF_external "dword_finite_check"
+                   (mksignature (AST.Xptr :: nil) AST.Xint cc_default))
+     ((tptr (Tstruct _dword noattr)) :: nil) tint cc_default)) ::
+ (_dw_mult_dw_check,
+   Gfun(External (EF_external "dw_mult_dw_check"
+                   (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
+      nil) tint cc_default)) ::
+ (_dw_mult_dw_input_check,
+   Gfun(External (EF_external "dw_mult_dw_input_check"
+                   (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
+      nil) tint cc_default)) :: (_dw_mult_dw, Gfun(Internal f_dw_mult_dw)) ::
+ (_dw_mult_dw_strong, Gfun(Internal f_dw_mult_dw_strong)) :: nil).
 
 Definition public_idents : list ident :=
-(_dw_mult_dw12 :: _fast_2sum :: _fast_2mult :: _fma :: ___builtin_debug ::
- ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
- ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
- ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+(_dw_mult_dw_strong :: _dw_mult_dw :: _dw_mult_dw_input_check ::
+ _dw_mult_dw_check :: _dword_finite_check :: _dw_mult_dw_kernel :: _exit ::
+ ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::

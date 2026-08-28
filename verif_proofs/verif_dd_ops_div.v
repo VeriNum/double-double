@@ -39,7 +39,8 @@ forward.            (* rh  = t'1 *)
 forward.            (* t'2 = y->t *)
 forward.            (* rl  = -(t'2 * th) *)
 forward_call.       (* fast_2sum(&e, rh, rl) *)
-(* dw_mult_fp9(&delta, &e, th): witness (s, x, xh, y) = (v_delta, v_e, e pair, th) *)
+(* dw_mult_fp_kernel(&delta, &e, th): witness (s, x, xh, y) =
+   (v_delta, v_e, e pair, th). *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?E) v_e] =>
    forward_call (v_delta, v_e, E, T) end end.
@@ -47,7 +48,7 @@ match goal with |- context [temp _th (Vfloat ?T)] =>
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?D) v_delta] =>
    forward_call (v_m, v_delta, D, T) end end.
-(* dw_mult_dw12(z, x, &m): witness (s, x, v_m, xh, m pair) *)
+(* dw_mult_dw_kernel(z, x, &m): witness (s, x, v_m, xh, m pair). *)
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
 (* Rewrite the postcondition's DWDivDW3 term into the exact composition the
@@ -68,7 +69,7 @@ Qed.
 (* body_dw_div_fp15: the callees (fast_2mult, fast_2sum) require no preconditions,
    so the forward cascade needs no cond discharge.  The C directly performs the
    subtractions/additions of Algorithm 15, so -- unlike body_dw_div_dw18, whose
-   arithmetic is hidden inside dw_mult_fp9 / dw_plus_fp / dw_mult_dw12 -- the
+   arithmetic is hidden inside the multiplication and addition kernels -- the
    stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
    BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert float
    composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
