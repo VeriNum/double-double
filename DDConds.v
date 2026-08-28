@@ -276,8 +276,10 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
 (* Safe input condition for the mixed guarantee on [DWDivFP3].  It requires
    finite inputs, a double-word dividend, and a finite leading quotient; the
    latter also implies a nonzero divisor.  Upper bounds on [|xh|] and
-   [|xh/y|] prevent overflow.  The lower bound on [|xh|] makes the division
-   residual accurate enough for the [u^2] bound.  There is no lower bound on
+   [|xh/y|] prevent overflow.  For a nonzero dividend, the lower bound on
+   [|xh|] makes the division residual accurate enough for the [u^2] bound.
+   The zero dividend is admitted separately: the double-word property then
+   forces [xl] to zero, so the residual vanishes.  There is no lower bound on
    the quotient, so the condition admits subnormal results.  The pure relative
    bound additionally requires [DWDivFP_relative_error_input_cond].
    [dw_div_fp_check] establishes this condition. *)
@@ -289,13 +291,15 @@ Definition DWDivFP_mixed_safe_input_cond (xh xl y : ftype t) : Prop :=
   is_finite (BDIV xh y) = true /\
   Rabs (FT2R xh)          <= bpow Zaux.radix2 (femax t - 2) /\
   Rabs (FT2R xh / FT2R y) <= bpow Zaux.radix2 (femax t - 2) /\
-  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+  (FT2R xh = 0 \/
+   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh)).
 
 (* Mathematical assumptions that must hold before the kernel is called. *)
 Definition DWDivFP_mixed_input_cond
     (xh xl y : ftype t) : Prop :=
   double_word_prop xh xl /\
-  bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
+  (FT2R xh = 0 \/
+   bpow Zaux.radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh)).
 
 (* Output validity: the computed pair is finite. *)
 Definition DWDivFP_result_finite

@@ -200,8 +200,9 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 
 int dw_div_fp_check(struct dword *x, double y) {
     /* Verifies DWDivFP_mixed_safe_input_cond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
-       double-word; RN(x->s / y) finite; |x->s| in [2^(emin+2p), Omega/4]; and
-       |x->s / y| <= Omega/4.  There is NO quotient lower bound.
+       double-word; RN(x->s / y) finite; |x->s| <= Omega/4; |x->s / y| <=
+       Omega/4; and either x->s is zero or |x->s| >= 2^(emin+2p).  There is NO
+       quotient lower bound.
 
        HISTORY, and why the floor is gone.  This test carried a quotient floor
        through two rounds of relaxation:
@@ -250,15 +251,11 @@ int dw_div_fp_check(struct dword *x, double y) {
        The check may reject the measure-zero boundary |x->s/y| = 2^1022 (a
        harmless false negative) but never accepts an input violating the cond.
 
-       CLAUSE 8 STAYS.  The |x->s| lower bound 2^(emin+2p) is NOT removable, and
-       is a different bound on a different node: it is what makes the division
-       residual (x->s + x->t) - th*y representable to relative accuracy u, hence
-       what makes DWDivFP3 a double-word algorithm rather than a single-word
-       one.  Concretely, x->s = 7*eta with y = 3*eta is a valid double word whose
-       quotient 7/3 is perfectly normal, and on which the algorithm returns
-       z->t = 0 with relative error u/2 -- violating 3u^2|Q| + c*eta for every
-       constant c.  In this branch it also forces |y| > 2^(p+1), without which
-       the closing division node has no bound at all.
+       CLAUSE 8 HAS A ZERO DISJUNCT.  For nonzero x->s, the lower bound
+       2^(emin+2p) remains load-bearing: it makes the division residual
+       representable to relative accuracy u.  Zero is different.  The
+       double-word property forces x->t to zero too, so the dividend and every
+       residual node are exactly zero; no product-node floor is needed.
 
        The DW prop alone does not pin down finiteness of x->t in R (FT2R sends
        NaN/Inf to 0), so fin_xl is asserted, even though x->s + x->t == x->s
@@ -271,9 +268,9 @@ int dw_div_fp_check(struct dword *x, double y) {
     double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
     double q_plo   = ldexp(1.0, -968);   /* 2^(emin+2*p)  product-node lower bound */
 
-    /* |x->s| window: 2^(emin+2p) <= |x->s| <= Omega/4 */
+    /* |x->s| window, with the exact-zero dividend admitted separately. */
     int xh_hi = fabs(x->s) <= q_omega;
-    int xh_lo = q_plo <= fabs(x->s);
+    int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
 
     /* Quotient CEILING only, on the rounded quotient q = RN(x->s / y).  There
        is deliberately no quotient floor: see the comment block above. */

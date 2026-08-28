@@ -125,7 +125,7 @@ static inline int dw_mult_dw_check(struct dword *x, struct dword *y) {
 
 /* Discharges DWDivFP_mixed_safe_input_cond.  NO quotient floor: qt_hi alone gives both the
    quotient ceiling and finiteness of RN(x->s/y) (hence y != 0), which is the
-   cond's fifth conjunct.  Clause 8 (xh_lo) stays -- see fp_utils.c. */
+   cond's fifth conjunct.  The xh floor admits exact zero separately. */
 static inline int dw_div_fp_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
@@ -134,7 +134,7 @@ static inline int dw_div_fp_check(struct dword *x, double y) {
     double q_omega = ldexp(1.0, 1022);           /* Omega/4 = 2^(femax-2) */
     double q_plo   = ldexp(1.0, -968);           /* 2^(emin+2p), product node */
     int xh_hi = fabs(x->s) <= q_omega;
-    int xh_lo = q_plo <= fabs(x->s);
+    int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
     double q = x->s / y;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: also forces q finite, hence y != 0 */
     return dwx && fin_y && xh_hi && xh_lo && qt_hi;

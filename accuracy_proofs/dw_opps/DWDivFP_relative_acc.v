@@ -686,9 +686,11 @@ Qed.
 
 Lemma DWDivFP_internal_input_cond_of_safe_input_cond (xh xl y : ftype t) :
   DWDivFP_mixed_safe_input_cond xh xl y ->
+  FT2R xh <> 0 ->
   DWDivFP_internal_input_cond xh xl y.
 Proof.
-intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & _ & _ & Hxhlb).
+intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & _ & _ & Hxhlb) Hxhne.
+destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 repeat split; assumption.
 Qed.
 
@@ -710,9 +712,11 @@ Qed.
 
 Lemma DWDivFP_internal_input_cond_of_mixed_cond (xh xl y : ftype t) :
   DWDivFP_mixed_cond xh xl y ->
+  FT2R xh <> 0 ->
   DWDivFP_internal_input_cond xh xl y.
 Proof.
-move => [[Hdwp Hxhlb] Hfin].
+move => [[Hdwp Hxhlb] Hfin] Hxhne.
+destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 have [Hfxh [Hfxl Hfy]] :=
   DWDivFP_inputs_finite_of_result_finite xh xl y Hfin.
 have Hfth : is_finite (BDIV xh y) = true.
@@ -1822,9 +1826,15 @@ Theorem DWDivFP_relative_accuracy :
   relative_error_DWDivFP xh xl y <= 3 * u ^ 2.
 Proof.
 move: (COND) => [SAFE [Hquot Hcorr]].
-have INTERNAL := DWDivFP_internal_input_cond_of_safe_input_cond xh xl y SAFE.
+have Hxhne : FT2R xh <> 0.
+{ intro Hxh0. move: Hquot. rewrite Hxh0 /Rdiv Rmult_0_l Rabs_R0.
+  intros Hbad. exact (Rlt_not_le _ _
+    (bpow_gt_0 radix2 (emin + fprec t - 1)) Hbad). }
+have INTERNAL :=
+  DWDivFP_internal_input_cond_of_safe_input_cond xh xl y SAFE Hxhne.
 have CONDn : DWDivFP_normal_quotient_input_cond xh xl y.
 { move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [_ [Hxhb [Hqub Hxhlb]]]]]]].
+  destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
   repeat split; assumption. }
 have FIN : is_finite_p (DWDivFP3 xh xl y).
 { split;
@@ -1836,13 +1846,11 @@ destruct Hcorr as [Hd0 | Hdyn]; last first.
 - (* exact division: the tl node is unperturbed, so the FLX bound transfers
      verbatim.  Convert the absolute form back to the relative one. *)
   move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth [Hxhb [Hqub Hxhlb]]]]]]].
+  destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
   have Hyne : FT2R y <> 0.
   { intro H0.
     have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
     move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
-  have Hxhne : FT2R xh <> 0.
-  { intro Hx0. move: Hquot; rewrite Hx0 /Rdiv Rmult_0_l Rabs_R0 => Hc.
-    have := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1). lra. }
   have Hsne : FT2R xh + FT2R xl <> 0.
   { intro Hs0. apply Hxhne. move: Hdwp; rewrite /double_word_prop Hs0.
     rewrite /rounded round_0 //. }

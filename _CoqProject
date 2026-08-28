@@ -40,6 +40,7 @@ accuracy_proofs/dw_opps/DWMulDW_relative_acc.v
 accuracy_proofs/dw_opps/DWMulDW_mixed_acc.v
 accuracy_proofs/dw_opps/DWDivFP_relative_acc.v
 accuracy_proofs/dw_opps/DWDivFP_subnormal.v
+accuracy_proofs/dw_opps/DWDivFP_finite.v
 accuracy_proofs/dw_opps/DWDivFP_mixed_acc.v
 accuracy_proofs/dw_opps/DWDivDW_relative_acc.v
 accuracy_proofs/dw_opps/DWDivDW_mixed_acc.v

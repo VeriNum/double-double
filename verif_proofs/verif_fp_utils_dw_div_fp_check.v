@@ -84,26 +84,52 @@ Proof.
       replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
       fold q_omega_val q_lo968_val.
       forward. forward_call (fst xh). forward.   (* xh_hi := fabs(x->s) <= q_omega *)
-      forward. forward_call (fst xh). forward.   (* xh_lo := q_plo <= fabs(x->s) *)
+      set (bxh_hi := Float.cmp Cle
+                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
+                       q_omega_val).
+      forward.                          (* t'17 := x->s for the zero test *)
+      set (bxh_zero := Float.cmp Ceq (float_of_ftype (fst xh))
+                         (Float.of_bits (Int64.repr 0))).
+      set (bxh_floor := Float.cmp Cle q_lo968_val
+                         (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
+                           (fst xh))).
+      set (Post_xh_lo :=
+        EX bxh_lo : bool,
+        PROP (bxh_lo = true -> bxh_zero = true \/ bxh_floor = true)
+        LOCAL (temp _t'9 (Vint (if bxh_lo then Int.one else Int.zero));
+               temp _q_plo (Vfloat q_lo968_val);
+               temp _q_omega (Vfloat q_omega_val);
+               temp _xh_hi (Vint (Int.repr (Z.b2z bxh_hi)));
+               temp _dwx (Vint (if b5 then Int.one else Int.zero));
+               temp _fin_y (Vint (if vret_fy then Int.one else Int.zero));
+               temp _x x; temp _y (Vfloat y))
+        SEP (data_at Tsh dword (f2val xh) x)).
+      forward_if Post_xh_lo.
+      * forward.
+        unfold Post_xh_lo; Exists true; entailer!.
+      * forward. forward_call (fst xh). forward.
+        unfold Post_xh_lo; Exists bxh_floor; entailer!.
+        unfold bool2val.
+        change (Vint (if bxh_floor then Int.one else Int.zero) =
+                Vint (Int.repr (Z.b2z bxh_floor))).
+        destruct bxh_floor; reflexivity.
+      * unfold Post_xh_lo; clear Post_xh_lo.
+        Intros bxh_lo; rename H into Hbxh_lo.
+        forward.                       (* xh_lo := t'9 *)
       forward.                          (* t'15 := x->s *)
       forward.                          (* q := t'18 / y *)
       forward_call (Float.div (fst xh) y). forward. (* qt_hi := fabs(q) < q_omega *)
 
-      set (bxh_hi := Float.cmp Cle
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
-                       q_omega_val).
-      set (bxh_lo := Float.cmp Cle q_lo968_val
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))).
       set (bqt_hi := Float.cmp Clt
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                           (Float.div (fst xh) y)) q_omega_val).
 
-      (* Return cascade: t'11 = dwx && fin_y; ... ; t'14 = t'13 && qt_hi.
+      (* Return cascade: t'12 = dwx && fin_y; ... ; t'15 = t'14 && qt_hi.
          One level shorter than before: the qt_lo conjunct is gone. *)
       set (Post_t11 :=
         EX b11 : bool,
         PROP (b11 = true -> b5 = true /\ vret_fy = true)
-        LOCAL (temp _t'11 (Vint (if b11 then Int.one else Int.zero));
+        LOCAL (temp _t'12 (Vint (if b11 then Int.one else Int.zero));
                temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
@@ -141,10 +167,10 @@ Proof.
         set (Post_t12 :=
           EX b12 : bool,
           PROP (b12 = true -> b5 = true /\ vret_fy = true /\ bxh_hi = true)
-          LOCAL (temp _t'12 (Vint (if b12 then Int.one else Int.zero));
+          LOCAL (temp _t'13 (Vint (if b12 then Int.one else Int.zero));
                  temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                  temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
-                 temp _t'11 (Vint (if b11 then Int.one else Int.zero));
+                 temp _t'12 (Vint (if b11 then Int.one else Int.zero));
                  temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                  temp _x x; temp _y (Vfloat y))
           SEP (data_at Tsh dword (f2val xh) x)).
@@ -180,9 +206,9 @@ Proof.
              EX b13 : bool,
              PROP (b13 = true -> b5 = true /\ vret_fy = true /\
                                  bxh_hi = true /\ bxh_lo = true)
-             LOCAL (temp _t'13 (Vint (if b13 then Int.one else Int.zero));
+             LOCAL (temp _t'14 (Vint (if b13 then Int.one else Int.zero));
                     temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                    temp _t'12 (Vint (if b12 then Int.one else Int.zero));
+                    temp _t'13 (Vint (if b12 then Int.one else Int.zero));
                     temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                     temp _x x; temp _y (Vfloat y))
              SEP (data_at Tsh dword (f2val xh) x)).
@@ -218,8 +244,8 @@ Proof.
                  EX b14 : bool,
                  PROP (b14 = true -> b5 = true /\ vret_fy = true /\
                                      bxh_hi = true /\ bxh_lo = true /\ bqt_hi = true)
-                 LOCAL (temp _t'14 (Vint (if b14 then Int.one else Int.zero));
-                        temp _t'13 (Vint (if b13 then Int.one else Int.zero));
+                 LOCAL (temp _t'15 (Vint (if b14 then Int.one else Int.zero));
+                        temp _t'14 (Vint (if b13 then Int.one else Int.zero));
                         temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
                         temp _x x; temp _y (Vfloat y))
                  SEP (data_at Tsh dword (f2val xh) x)).
@@ -263,11 +289,17 @@ Proof.
                               /4 * bpow Zaux.radix2 (femax Tdouble))
                       by (apply Float_cmp_Cle_bpow1022;
                           [exact Hfin_xh | unfold bxh_hi in Hbxhht; exact Hbxhht]).
-                    assert (Hxh_lo : bpow Zaux.radix2 (-968) <= Rabs (FT2R (fst xh))).
-                    { apply (Float_cmp_Cle_lo q_lo968_val (fst xh)
-                               (bpow Zaux.radix2 (-968)) Hfin_xh
-                               q_lo968_val_finite q_lo968_val_FT2R).
-                      unfold bxh_lo in Hbxhlt; exact Hbxhlt. }
+                    assert (Hxh_lo : FT2R (fst xh) = 0 \/
+                              bpow Zaux.radix2 (-968) <= Rabs (FT2R (fst xh))).
+                    { destruct (Hbxh_lo Hbxhlt) as [Hzero | Hfloor].
+                      - left. unfold bxh_zero in Hzero.
+                        pose proof (Float_cmp_Ceq_zero_FT2R _ Hzero) as Hz.
+                        rewrite ftype_of_float_of_ftype in Hz. exact Hz.
+                      - right.
+                        apply (Float_cmp_Cle_lo q_lo968_val (fst xh)
+                                 (bpow Zaux.radix2 (-968)) Hfin_xh
+                                 q_lo968_val_finite q_lo968_val_FT2R).
+                        unfold bxh_floor in Hfloor; exact Hfloor. }
            (* The single strict ceiling test serves both purposes: it gives the
               quotient upper bound and finiteness of RN(xh/y), which is
                        the cond's fifth conjunct (and forces y <> 0). *)

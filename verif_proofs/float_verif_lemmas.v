@@ -28,6 +28,21 @@ Proof.
     simpl in H; auto. 
 Qed.
 
+Lemma Float_cmp_Ceq_zero_FT2R:
+  forall a,
+    Float.cmp Ceq a (Float.of_bits (Int64.repr 0)) = true ->
+    FT2R (ftype_of_float a) = 0%R.
+Proof.
+  intros a Hcmp.
+  apply Rcompare_Eq_inv.
+  pose proof Float_cmp_Ceq_zero_finite a Hcmp as Hfin.
+  cbv [Float.cmp cmp_of_comparison Float.compare Float.of_bits] in Hcmp.
+  rewrite Binary.Bcompare_correct in Hcmp; simpl in Hcmp; auto.
+  rewrite FT2R_ftype_of_float; simpl.
+  cbv [fprec]. simpl.
+  destruct (Rcompare _ _); auto; discriminate.
+Qed.
+
 Lemma Float_cmp_Ceq_zero_mul_FT2R:
   forall x y,
     Float.cmp Ceq (Float.mul x y) (Float.of_bits (Int64.repr 0)) = true -> 

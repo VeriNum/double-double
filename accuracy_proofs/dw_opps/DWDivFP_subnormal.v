@@ -1186,6 +1186,7 @@ Notation u    := (bpow radix2 (- fprec t)).
 Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->
+  FT2R xh <> 0 ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
   Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
@@ -1193,7 +1194,9 @@ Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
   /\ double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y))
   /\ is_finite_p (DWDivFP3 xh xl y).
 Proof.
-intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb) Hsub.
+intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb)
+  Hxhne Hsub.
+destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 have Hyne : FT2R y <> 0 by
   exact (DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth).
 have FIN : is_finite_p (DWDivFP3 xh xl y) by (apply fin_main; assumption).
