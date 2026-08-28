@@ -189,7 +189,7 @@ Definition dw_plus_fp_check_spec :=
    the normal range pure 3u^2 relative bound
    (DWDivFP_relative_acc.DWDivFP_relative_accuracy), whose condition constrains the
    computed nodes and so is not an input test; see
-   dw_div_fp15_guarded_spec in DDOpsASI.v.
+   dw_div_fp_strong_spec in DDOpsASI.v.
    The product node floor on |xh| is retained. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
@@ -206,6 +206,20 @@ Definition dw_div_fp_check_spec :=
          DWDivFP_mixed_safe_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
+
+Definition dw_div_fp_input_check_spec :=
+  DECLARE _dw_div_fp_input_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val xh) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWDivFP_mixed_input_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x).
 
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
@@ -294,3 +308,20 @@ Definition dw_div_dw_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
+
+Definition dw_div_dw_input_check_spec :=
+  DECLARE _dw_div_dw_input_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS (x; y)
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).

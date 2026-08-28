@@ -298,6 +298,16 @@ int dw_div_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_hi && xh_lo && qt_hi;
 }
 
+int dw_div_fp_input_check(struct dword *x, double y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y = isfinite_double(y);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    double q_plo = ldexp(1.0, -968);
+    int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
+    return dwx && fin_y && xh_lo;
+}
+
 int dw_plus_fp_check(struct dword *x, double y) {
     /* Verifies DWPlusFP_safe_input_cond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
@@ -332,7 +342,7 @@ int dword_finite_check(struct dword *x) {
 
 int dw_div_dw_check(struct dword *x, struct dword *y) {
     /* Verifies DWDivDW_mixed_safe_input_cond (DDConds.v), the guard for the
-       reciprocal-bootstrap double-word division dw_div_dw18.  Nine conjuncts,
+       reciprocal-bootstrap double-word division kernel.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
        (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
        2^(emin+2p) <= |y->s|; and |x->s/y->s| <= Omega/4.
@@ -402,4 +412,18 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
     int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y->s| <= Omega/4; also forces q finite */
 
     return dwx && dwy && yh_hi && yh_lo && qt_hi;
+}
+
+int dw_div_dw_input_check(struct dword *x, struct dword *y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_yh = isfinite_double(y->s);
+    int fin_yl = isfinite_double(y->t);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
+    double q_yhi = ldexp(1.0, 966);
+    double q_ylo = ldexp(1.0, -968);
+    int yh_hi = fabs(y->s) <= q_yhi;
+    int yh_lo = q_ylo <= fabs(y->s);
+    return dwx && dwy && yh_hi && yh_lo;
 }

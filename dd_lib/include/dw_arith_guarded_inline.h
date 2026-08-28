@@ -157,6 +157,16 @@ static inline int dw_div_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_hi && xh_lo && qt_hi;
 }
 
+static inline int dw_div_fp_input_check(struct dword *x, double y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y = isfinite_double(y);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    double q_plo = ldexp(1.0, -968);
+    int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
+    return dwx && fin_y && xh_lo;
+}
+
 static inline int dw_div_dw_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
@@ -179,6 +189,21 @@ static inline int dw_div_dw_check(struct dword *x, struct dword *y) {
     double q = x->s / y->s;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: also forces q finite */
     return dwx && dwy && yh_hi && yh_lo && qt_hi;
+}
+
+
+static inline int dw_div_dw_input_check(struct dword *x, struct dword *y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_yh = isfinite_double(y->s);
+    int fin_yl = isfinite_double(y->t);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    int dwy = fin_yh && fin_yl && (y->s + y->t == y->s);
+    double q_yhi = ldexp(1.0, 966);
+    double q_ylo = ldexp(1.0, -968);
+    int yh_hi = fabs(y->s) <= q_yhi;
+    int yh_lo = q_ylo <= fabs(y->s);
+    return dwx && dwy && yh_hi && yh_lo;
 }
 
 /* ---- guarded wrappers (from dd_lib *_guarded.c) -------------------------- */
@@ -235,13 +260,23 @@ static inline void dw_mult_dw_strong(struct dword *st, struct dword *x, struct d
     if (!dw_mult_dw_check(x, y)) exit(EXIT_FAILURE);
     dw_mult_dw_kernel(st, x, y);
 }
-static inline void dw_div_fp15_guarded(struct dword *z, struct dword *x, double y) {
-    if (!dw_div_fp_check(x, y)) exit(EXIT_FAILURE);
-    dw_div_fp15(z, x, y);
+static inline void dw_div_fp(struct dword *z, struct dword *x, double y) {
+    if (!dw_div_fp_input_check(x, y)) exit(EXIT_FAILURE);
+    dw_div_fp_kernel(z, x, y);
+    if (!dword_finite_check(z)) exit(EXIT_FAILURE);
 }
-static inline void dw_div_dw18_guarded(struct dword *st, struct dword *x, struct dword *y) {
+static inline void dw_div_fp_strong(struct dword *z, struct dword *x, double y) {
+    if (!dw_div_fp_check(x, y)) exit(EXIT_FAILURE);
+    dw_div_fp_kernel(z, x, y);
+}
+static inline void dw_div_dw(struct dword *st, struct dword *x, struct dword *y) {
+    if (!dw_div_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    dw_div_dw_kernel(st, x, y);
+    if (!dword_finite_check(st)) exit(EXIT_FAILURE);
+}
+static inline void dw_div_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
     if (!dw_div_dw_check(x, y)) exit(EXIT_FAILURE);
-    dw_div_dw18(st, x, y);
+    dw_div_dw_kernel(st, x, y);
 }
 
 #endif /* DWARITH_GUARDED_INLINE_DOT_H */

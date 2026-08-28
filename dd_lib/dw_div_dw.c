@@ -1,14 +1,20 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
-void dw_div_dw18(struct dword *z, struct dword *x, struct dword *y) {
-   double th; double rh; double rl;
-   struct dword e; struct dword delta; struct dword m;
-   th     = 1.0/y->s;
-   rh     = fma(-y->s,th,1.0);      /* rh = 1 - yh*th (exact) */
-   rl     = -(y->t * th);
-   fast_2sum(&e,rh,rl);
-   dw_mult_fp_kernel(&delta,&e,th);
-   dw_plus_fp_kernel(&m,&delta,th);
-   dw_mult_dw_kernel(z,x,&m);
+void dw_div_dw(struct dword *z, struct dword *x, struct dword *y) {
+   if (!dw_div_dw_input_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_div_dw_kernel(z, x, y);
+   if (!dword_finite_check(z)) {
+      exit(EXIT_FAILURE);
+   }
+}
+
+void dw_div_dw_strong(struct dword *z, struct dword *x, struct dword *y) {
+   if (!dw_div_dw_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_div_dw_kernel(z, x, y);
 }

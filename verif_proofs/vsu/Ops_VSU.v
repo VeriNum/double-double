@@ -47,8 +47,10 @@ Proof.
   1:{ solve_SF_dd body_dw_mult_dw_kernel. }
   1:{ solve_SF_dd body_dw_mult_dw. }
   1:{ solve_SF_dd body_dw_mult_dw_strong. }
-  1:{ solve_SF_dd body_dw_div_dw18. }
-  1:{ solve_SF_dd body_dw_div_dw18_guarded. }
-  1:{ solve_SF_dd body_dw_div_fp15. }
-  1:{ solve_SF_dd body_dw_div_fp15_guarded. }
+  1:{ solve_SF_dd body_dw_div_dw_kernel. }
+  1:{ solve_SF_dd body_dw_div_dw. }
+  1:{ solve_SF_dd body_dw_div_dw_strong. }
+  1:{ solve_SF_dd body_dw_div_fp_kernel. }
+  1:{ solve_SF_dd body_dw_div_fp. }
+  1:{ solve_SF_dd body_dw_div_fp_strong. }
 Qed.

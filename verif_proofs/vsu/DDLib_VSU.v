@@ -1,10 +1,9 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* The linked double-word library VSU.  linkVSUs merges the ops and checks
-   translation units, discharging the guarded -> check calls (the one genuine
-   boundary between modules).  The result exports the six guarded wrappers; its
-   only remaining imports are the libc/libm externals fma, exit, fabs, ldexp. *)
+(* The linked double-word library VSU.  linkVSUs merges the operation and check
+   translation units and discharges their internal calls.  The only remaining
+   imports are the libc and libm functions fma, exit, fabs, and ldexp. *)
 
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.

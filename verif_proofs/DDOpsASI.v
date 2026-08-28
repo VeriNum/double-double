@@ -2,7 +2,7 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (* Abstract Spec Interface (ASI) for the double-word *operations* translation
-   unit (dd_ops.c / verif_objs/dd_ops.v).  Every op / guarded wrapper funspec is
+   unit (dd_ops.c / verif_objs/dd_ops.v).  Every kernel and public wrapper funspec is
    DECLAREd here exactly once, under the dd_ops program's CompSpecs, so that the
    body proof file (verif_dd_ops.v) and the VSU builder (Ops_VSU.v) reference
    the *same* funspec terms.  The check_* funspecs mirror fp_utils_specs.v
@@ -166,8 +166,8 @@ Definition dw_mult_dw_kernel_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y). 
 
-Definition dw_div_dw18_spec :=
-  DECLARE _dw_div_dw18
+Definition dw_div_dw_kernel_spec :=
+  DECLARE _dw_div_dw_kernel
   WITH s: val, x : val, y: val,
       xh : ftype Tdouble * ftype Tdouble,
       yh : ftype Tdouble * ftype Tdouble
@@ -185,8 +185,8 @@ Definition dw_div_dw18_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_div_fp15_spec :=
-  DECLARE _dw_div_fp15
+Definition dw_div_fp_kernel_spec :=
+  DECLARE _dw_div_fp_kernel
   WITH s: val, x : val,
       xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble ]
@@ -364,13 +364,8 @@ Definition dw_mult_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* Guarded DW by FP division exports
-   [DWDivFP_mixed_guarantee_from_safe_input_cond].  Its bound is
-   [3u^2|Q| + eta] and includes output validity.  The condition has no lower
-   quotient bound, so it admits subnormal quotients.  The pure relative theorem
-   requires normality facts about computed nodes and is not exported here. *)
-Definition dw_div_fp15_guarded_spec :=
-  DECLARE _dw_div_fp15_guarded
+Definition dw_div_fp_spec :=
+  DECLARE _dw_div_fp
   WITH s: val, x: val,
        xh: ftype Tdouble * ftype Tdouble,
        y : ftype Tdouble
@@ -385,15 +380,43 @@ Definition dw_div_fp15_guarded_spec :=
     SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-(* Guarded DW by DW division exports
-   [DWDivDW_mixed_guarantee_from_safe_input_cond].  Its bound is
-   [9.8u^2|Q| + 2.5*eta] and includes output validity.  The named guarantee
-   keeps repeated occurrences of the large [DWDivDW3] term out of the VST
-   specification.  The runtime check establishes the safe input condition;
-   the format condition [14 <= fprec Tdouble] is discharged in the body proof.
-   The pure relative theorem requires normality facts about computed nodes. *)
-Definition dw_div_dw18_guarded_spec :=
-  DECLARE _dw_div_dw18_guarded
+Definition dw_div_fp_strong_spec :=
+  DECLARE _dw_div_fp_strong
+  WITH s: val, x: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP(DWDivFP_mixed_guarantee (fst xh) (snd xh) y)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_div_dw_spec :=
+  DECLARE _dw_div_dw
+  WITH s: val, x: val, y: val,
+       xh: ftype Tdouble * ftype Tdouble,
+       yh: ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword, tptr dword ]
+    PROP()
+    PARAMS (s; x; y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tvoid ]
+    PROP(DWDivDW_mixed_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN()
+    SEP(data_at Tsh dword
+          (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+        data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
+
+Definition dw_div_dw_strong_spec :=
+  DECLARE _dw_div_dw_strong
   WITH s: val, x: val, y: val,
        xh: ftype Tdouble * ftype Tdouble,
        yh: ftype Tdouble * ftype Tdouble
@@ -602,9 +625,7 @@ Definition dw_mult_dw_input_check_spec :=
     SEP(data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* Minimal cond: no quotient floor at all; the caller gets the whole range
-   mixed bound, not the normal range pure 3u^2 one.  See
-   dw_div_fp15_guarded_spec above and DDConds.DWDivFP_mixed_safe_input_cond. *)
+(* Minimal condition for the strong whole-range mixed interface. *)
 Definition dw_div_fp_check_spec :=
   DECLARE _dw_div_fp_check
   WITH x : val,
@@ -617,6 +638,20 @@ Definition dw_div_fp_check_spec :=
     PROP(b = true -> DWDivFP_mixed_safe_input_cond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
+
+Definition dw_div_fp_input_check_spec :=
+  DECLARE _dw_div_fp_input_check
+  WITH x : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       y  : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP() PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val xh) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWDivFP_mixed_input_cond (fst xh) (snd xh) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x).
 
 Definition dw_div_dw_check_spec :=
   DECLARE _dw_div_dw_check
@@ -635,6 +670,23 @@ Definition dw_div_dw_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
+
+Definition dw_div_dw_input_check_spec :=
+  DECLARE _dw_div_dw_input_check
+  WITH x : val, y : val,
+       xh : ftype Tdouble * ftype Tdouble,
+       yh : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword, tptr dword ]
+    PROP() PARAMS (x; y)
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true ->
+         DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val xh) x;
+        data_at Tsh dword (f2val yh) y).
 
 (* ======================================================================== *)
 (*  libc external.                                                           *)
@@ -662,7 +714,8 @@ Definition Ops_Imports : funspecs :=
     dw_plus_fp_check_spec; dw_plus_dw_input_check_spec; dw_plus_dw_check_spec;
     dw_mult_fp_input_check_spec; dw_mult_fp_check_spec;
     dw_mult_dw_input_check_spec; dw_mult_dw_check_spec;
-    dw_div_fp_check_spec; dw_div_dw_check_spec ].
+    dw_div_fp_input_check_spec; dw_div_fp_check_spec;
+    dw_div_dw_input_check_spec; dw_div_dw_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
@@ -674,9 +727,8 @@ Definition Ops_Internal : funspecs :=
     fast_2mult_acc_guarded_spec;
     dw_mult_fp_spec; dw_mult_fp_strong_spec;
     dw_mult_dw_kernel_spec; dw_mult_dw_spec; dw_mult_dw_strong_spec;
-    dw_div_dw18_spec;
-    dw_div_dw18_guarded_spec;
-    dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
+    dw_div_dw_kernel_spec; dw_div_dw_spec; dw_div_dw_strong_spec;
+    dw_div_fp_kernel_spec; dw_div_fp_spec; dw_div_fp_strong_spec ].
 
 (* Updated double-word operations expose default and strong interfaces with
    the same guarantee. *)
@@ -686,5 +738,6 @@ Definition Ops_Exports : funspecs :=
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_mult_fp_spec; dw_mult_fp_strong_spec;
-    dw_mult_dw_spec; dw_mult_dw_strong_spec; dw_div_fp15_guarded_spec;
-    dw_div_dw18_guarded_spec ].
+    dw_mult_dw_spec; dw_mult_dw_strong_spec;
+    dw_div_fp_spec; dw_div_fp_strong_spec;
+    dw_div_dw_spec; dw_div_dw_strong_spec ].

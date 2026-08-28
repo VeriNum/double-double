@@ -47,5 +47,7 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_fp_input_check. }
   1:{ solve_SF_dd body_dword_finite_check. }
   1:{ solve_SF_dd body_dw_div_fp_check. }
+  1:{ solve_SF_dd body_dw_div_fp_input_check. }
   1:{ solve_SF_dd body_dw_div_dw_check. }
+  1:{ solve_SF_dd body_dw_div_dw_input_check. }
 Qed.

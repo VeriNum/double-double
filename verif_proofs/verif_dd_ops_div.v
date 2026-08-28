@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for double-word division operations and guarded wrappers. *)
+(* Body proofs for double-word division kernels and public wrappers. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -21,14 +21,15 @@ Set Bullet Behavior "Strict Subproofs".
 Open Scope logic.
 
 (* Leaf reconciliation lemmas BDIV_Td/BMULT_Td/BOPP_Td/BFMA_Td/Zconst1_Td are
-   factored into dd_float_reconcile (imported above); body_dw_div_dw18 uses
+   factored into dd_float_reconcile (imported above); body_dw_div_dw_kernel uses
    them to make the stored value and the postcondition syntactically equal. *)
 
 (* Verification of the call sequence implementing [DWDivDW3].  Each callee
    returns its model result without an arithmetic precondition.  The struct
    arguments produced by earlier calls are passed as explicit witnesses
    because Coq cannot infer them through projections of [f2val]. *)
-Lemma body_dw_div_dw18: semax_body Vprog Gprog f_dw_div_dw18 dw_div_dw18_spec.
+Lemma body_dw_div_dw_kernel:
+  semax_body Vprog Gprog f_dw_div_dw_kernel dw_div_dw_kernel_spec.
 Proof.
 start_function.
 forward.            (* t'4 = y->s *)
@@ -44,7 +45,7 @@ forward_call.       (* fast_2sum(&e, rh, rl) *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?E) v_e] =>
    forward_call (v_delta, v_e, E, T) end end.
-(* dw_plus_fp(&m, &delta, th): witness (v_m, v_delta, delta pair, th) *)
+(* dw_plus_fp_kernel(&m, &delta, th): witness (v_m, v_delta, delta pair, th) *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?D) v_delta] =>
    forward_call (v_m, v_delta, D, T) end end.
@@ -66,15 +67,16 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* body_dw_div_fp15: the callees (fast_2mult, fast_2sum) require no preconditions,
+(* The callees (fast_2mult, fast_2sum) require no preconditions,
    so the forward cascade needs no cond discharge.  The C directly performs the
-   subtractions/additions of Algorithm 15, so -- unlike body_dw_div_dw18, whose
+   subtractions/additions of Algorithm 15, so -- unlike the DW/DW kernel, whose
    arithmetic is hidden inside the multiplication and addition kernels -- the
    stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
    BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert float
    composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
    data_at values become syntactically identical for the closing entailer. *)
-Lemma body_dw_div_fp15: semax_body Vprog Gprog f_dw_div_fp15 dw_div_fp15_spec.
+Lemma body_dw_div_fp_kernel:
+  semax_body Vprog Gprog f_dw_div_fp_kernel dw_div_fp_kernel_spec.
 Proof.
 start_function.
 forward.            (* t'5 = x->s *)
@@ -105,15 +107,59 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* DWDivFP (Algorithm 15) guarded wrapper.  Call the check, exit on failure,
-   otherwise recover DWDivFP_mixed_safe_input_cond and call
-   the unguarded op.  The exported accuracy postcondition is the
-   bundled guarantee, which is independent of the regime
-   (DWDivFP_mixed_guarantee_from_safe_input_cond), which the safe input cond
-   discharges unconditionally; see
-   dw_div_fp15_guarded_spec. *)
-Lemma body_dw_div_fp15_guarded :
-  semax_body Vprog Gprog f_dw_div_fp15_guarded dw_div_fp15_guarded_spec.
+Lemma body_dw_div_fp :
+  semax_body Vprog Gprog f_dw_div_fp dw_div_fp_spec.
+Proof.
+start_function.
+forward_call (x, xh, y).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWDivFP_mixed_input_cond (fst xh) (snd xh) y)
+  LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP (DWDivFP_mixed_input_cond (fst xh) (snd xh) y) as Hin
+    by entailer!.
+  forward_call (s, x, xh, y).
+  forward_call (s, DWDivFP3 (fst xh) (snd xh) y).
+  Intros vret_out.
+  set (Post_out :=
+    PROP (DWDivFP_mixed_cond (fst xh) (snd xh) y)
+    LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
+    SEP (data_at Tsh dword
+           (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+         data_at Tsh dword (f2val xh) x)).
+  forward_if Post_out.
+  + forward_call (Int.repr 1).
+    unfold Post_out. entailer!.
+  + forward.
+    unfold Post_out, DWDivFP_mixed_cond, DWDivFP_result_finite.
+    entailer!.
+    match goal with
+    | Hfin : vret_out = true -> is_finite_p _ |- _ =>
+        apply Hfin; destruct vret_out; auto
+    end.
+  + unfold Post_out.
+    assert_PROP (DWDivFP_mixed_cond (fst xh) (snd xh) y) as Hcond
+      by entailer!.
+    assert (Hp4 : (4 <= fprec Tdouble)%Z)
+      by (unfold fprec, Tdouble; simpl; lia).
+    pose proof
+      (@DWDivFP_mixed_guarantee_from_cond
+         _ Tdouble _ (fst xh) (snd xh) y Hp4 Hcond)
+      as Hg.
+    entailer!!.
+Qed.
+
+Lemma body_dw_div_fp_strong :
+  semax_body Vprog Gprog f_dw_div_fp_strong dw_div_fp_strong_spec.
 Proof.
 start_function.
 forward_call (x, xh, y).
@@ -141,25 +187,70 @@ forward_if Post_if.
   entailer!!.
 Qed.
 
-(* DWDivDW (Algorithm 18) guarded wrapper.  Same skeleton as
-   body_dw_div_fp15_guarded, with a second dword operand: call the check, exit on
-   failure (whose PROP(False) postcondition makes that branch vacuously satisfy
-   the accuracy claim), otherwise recover DWDivDW_mixed_safe_input_cond from the check's
-   boolean and call the unguarded op.  Hp14 is the format side condition
-   14 <= fprec Tdouble = 53, discharged here, so the exported mixed bound and the
-   output validity both rest on DWDivDW_mixed_safe_input_cond alone -- the condition with no quotient
-   underflow floor, which is what dw_div_dw_check establishes.  See
-   dw_div_dw18_guarded_spec for why a pure relative form is not the exported
-   one. *)
-Lemma body_dw_div_dw18_guarded :
-  semax_body Vprog Gprog f_dw_div_dw18_guarded dw_div_dw18_guarded_spec.
+Lemma body_dw_div_dw :
+  semax_body Vprog Gprog f_dw_div_dw dw_div_dw_spec.
+Proof.
+start_function.
+forward_call (x, y, xh, yh).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  LOCAL (temp _z s; temp _x x; temp _y y)
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x;
+       data_at Tsh dword (f2val yh) y)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP
+    (DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
+    by entailer!.
+  forward_call (s, x, y, xh, yh).
+  forward_call (s, DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh)).
+  Intros vret_out.
+  set (Post_out :=
+    PROP (DWDivDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    LOCAL (temp _z s; temp _x x; temp _y y)
+    SEP (data_at Tsh dword
+           (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+         data_at Tsh dword (f2val xh) x;
+         data_at Tsh dword (f2val yh) y)).
+  forward_if Post_out.
+  + forward_call (Int.repr 1).
+    unfold Post_out. entailer!.
+  + forward.
+    unfold Post_out, DWDivDW_mixed_cond, DWDivDW_result_finite.
+    entailer!.
+    match goal with
+    | Hfin : vret_out = true -> is_finite_p _ |- _ =>
+        apply Hfin; destruct vret_out; auto
+    end.
+  + unfold Post_out.
+    assert_PROP
+      (DWDivDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
+      by entailer!.
+    assert (Hp14 : (14 <= fprec Tdouble)%Z)
+      by (unfold fprec, Tdouble; simpl; lia).
+    pose proof
+      (@DWDivDW_mixed_guarantee_from_cond
+         _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp14 Hcond)
+      as Hg.
+    entailer!!.
+Qed.
+
+Lemma body_dw_div_dw_strong :
+  semax_body Vprog Gprog f_dw_div_dw_strong dw_div_dw_strong_spec.
 Proof.
 start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
   PROP (DWDivDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
-  LOCAL (temp _st s; temp _x x; temp _y y)
+  LOCAL (temp _z s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
        data_at Tsh dword (f2val yh) y)).
@@ -175,9 +266,6 @@ forward_if Post_if.
   forward_call (s, x, y, xh, yh).
   assert (Hp14 : (14 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
-(* Accuracy and output validity, bundled under a single match on
-     the result pair -- see dw_div_dw18_guarded_spec for why the two facts are
-     not stated separately here. *)
   pose proof
     (DWDivDW_mixed_guarantee_from_safe_input_cond
        (fst xh) (snd xh) (fst yh) (snd yh) Hp14 HFC)

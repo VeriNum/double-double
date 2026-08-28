@@ -90,7 +90,7 @@ static inline void dw_mult_dw_kernel(struct dword *zh, struct dword *x, struct d
    fast_2sum(zh, ch.s, c3);
 }
 
-static inline void dw_div_fp15(struct dword *z, struct dword *x, double y) {
+static inline void dw_div_fp_kernel(struct dword *z, struct dword *x, double y) {
    double th; struct dword p; double dh; double dt; double d; double tl;
    th = x->s / y;
    fast_2mult(&p, th, y);
@@ -101,7 +101,7 @@ static inline void dw_div_fp15(struct dword *z, struct dword *x, double y) {
    fast_2sum(z, th, tl);
 }
 
-static inline void dw_div_dw18(struct dword *z, struct dword *x, struct dword *y) {
+static inline void dw_div_dw_kernel(struct dword *z, struct dword *x, struct dword *y) {
    double th; double rh; double rl;
    struct dword e; struct dword delta; struct dword m;
    th     = 1.0 / y->s;
