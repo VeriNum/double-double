@@ -28,9 +28,11 @@ void fast_2sum(struct dword *st, double a, double b);
 
 void fast_2sum_guarded(struct dword *st, double a, double b);
 
-void dw_plus_fp(struct dword *st, struct dword *x, double a);
+void dw_plus_fp_kernel(struct dword *st, struct dword *x, double y);
 
-void dw_plus_fp_guarded(struct dword *st, struct dword *x, double y);
+void dw_plus_fp(struct dword *st, struct dword *x, double y);
+
+void dw_plus_fp_strong(struct dword *st, struct dword *x, double y);
 
 void dw_plus_dw2(struct dword *st, struct dword *x, struct dword *y);
 

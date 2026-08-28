@@ -9,6 +9,6 @@ void dw_div_dw18(struct dword *z, struct dword *x, struct dword *y) {
    rl     = -(y->t * th);
    fast_2sum(&e,rh,rl);
    dw_mult_fp9(&delta,&e,th);
-   dw_plus_fp(&m,&delta,th);
+   dw_plus_fp_kernel(&m,&delta,th);
    dw_mult_dw12(z,x,&m);
 }

@@ -104,8 +104,8 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* DWDivFP (Algorithm 15) guarded wrapper.  Mirrors body_dw_plus_fp_guarded:
-   call the check, exit on failure, otherwise recover DWDivFP_mixed_safe_input_cond and call
+(* DWDivFP (Algorithm 15) guarded wrapper.  Call the check, exit on failure,
+   otherwise recover DWDivFP_mixed_safe_input_cond and call
    the unguarded op.  The exported accuracy postcondition is the
    bundled guarantee, which is independent of the regime
    (DWDivFP_mixed_guarantee_from_safe_input_cond), which the safe input cond

@@ -299,6 +299,22 @@ int dw_plus_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_bnd && y_bnd;
 }
 
+int dw_plus_fp_input_check(struct dword *x, double y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y  = isfinite_double(y);
+    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
+    return dwx && fin_y;
+}
+
+int dword_finite_check(struct dword *x) {
+    int fin_s = isfinite_double(x->s);
+    int fin_t = isfinite_double(x->t);
+    if (!fin_s) return 0;
+    if (!fin_t) return 0;
+    return 1;
+}
+
 int dw_div_dw_check(struct dword *x, struct dword *y) {
     /* Verifies DWDivDW_mixed_safe_input_cond (DDConds.v), the guard for the
        reciprocal-bootstrap double-word division dw_div_dw18.  Nine conjuncts,

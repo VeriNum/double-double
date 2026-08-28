@@ -1,9 +1,23 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
-void dw_plus_fp(struct dword *st,struct dword *x, double y) {
-   double v; struct dword sh;
-   two_sum(&sh,x->s,y);
-   v      = x->t + sh.t;
-   fast_2sum(st,sh.s,v);
+/* Default interface: check the mathematical input condition, run the kernel,
+   then reject a nonfinite result. */
+void dw_plus_fp(struct dword *st, struct dword *x, double y) {
+   if (!dw_plus_fp_input_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_plus_fp_kernel(st, x, y);
+   if (!dword_finite_check(st)) {
+      exit(EXIT_FAILURE);
+   }
+}
+
+/* Strong interface: the input check proves output finiteness in advance. */
+void dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
+   if (!dw_plus_fp_check(x, y)) {
+      exit(EXIT_FAILURE);
+   }
+   dw_plus_fp_kernel(st, x, y);
 }

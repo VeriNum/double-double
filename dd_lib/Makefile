@@ -1,7 +1,7 @@
 CC = ccomp
 
 SRCS1 = two_sum.c fast_2sum.c fast_2mult.c fast_2mult_guarded.c
-SRCS1 += dw_plus_fp.c dw_plus_dw.c 
+SRCS1 += fp_utils.c dw_plus_fp_kernel.c dw_plus_fp.c dw_plus_dw.c
 SRCS1 += dw_mult_fp.c dw_mult_fp_guarded.c dw_mult_dw.c
 SRCS1 += dw_div_fp.c dw_div_dw.c
 OBJS1 = ${SRCS1:.c=.o}

@@ -68,8 +68,8 @@ Definition fast_2mult_spec :=
 (*  Composite operations                                                     *)
 (* ======================================================================== *)
 
-Definition dw_plus_fp_spec :=
-  DECLARE _dw_plus_fp
+Definition dw_plus_fp_kernel_spec :=
+  DECLARE _dw_plus_fp_kernel
   WITH s: val, x : val,
       xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble ]
@@ -79,6 +79,36 @@ Definition dw_plus_fp_spec :=
           data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
     PROP()
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_plus_fp_spec :=
+  DECLARE _dw_plus_fp
+  WITH s: val, x : val,
+      xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
+  PRE [tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP(DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
+    RETURN()
+    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+        data_at Tsh dword (f2val xh) x).
+
+Definition dw_plus_fp_strong_spec :=
+  DECLARE _dw_plus_fp_strong
+  WITH s: val, x : val,
+      xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
+  PRE [tptr dword, tptr dword, tdouble ]
+    PROP()
+    PARAMS (s; x; Vfloat y)
+    SEP(data_at_ Tsh dword s;
+        data_at Tsh dword (f2val xh) x)
+  POST [ tvoid ]
+    PROP(DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
     RETURN()
     SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
@@ -221,22 +251,6 @@ Definition fast_2mult_acc_guarded_spec :=
     PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
     RETURN()
     SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
-
-Definition dw_plus_fp_guarded_spec :=
-  DECLARE _dw_plus_fp_guarded
-  WITH s: val, x: val,
-       xh: ftype Tdouble * ftype Tdouble,
-       y : ftype Tdouble
-  PRE [ tptr dword, tptr dword, tdouble ]
-    PROP()
-    PARAMS (s; x; Vfloat y)
-    SEP(data_at_ Tsh dword s;
-        data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
-        data_at Tsh dword (f2val xh) x).
 
 Definition dw_plus_dw2_guarded_spec :=
   DECLARE _dw_plus_dw2_guarded
@@ -407,6 +421,34 @@ Definition fast2_mult_acc_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
+Definition dword_finite_check_spec :=
+  DECLARE _dword_finite_check
+  WITH x : val, value : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword ]
+    PROP()
+    PARAMS (x)
+    SEP(data_at Tsh dword (f2val value) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> is_finite_p value)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val value) x).
+
+Definition dw_plus_fp_input_check_spec :=
+  DECLARE _dw_plus_fp_input_check
+  WITH x : val,
+       value : ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP()
+    PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val value) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWPlusFP_input_cond (fst value) (snd value) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val value) x).
+
 Definition dw_plus_fp_check_spec :=
   DECLARE _dw_plus_fp_check
   WITH x : val,
@@ -515,31 +557,34 @@ Definition exit_spec :=
 (*  Spec groupings for the ops VSU (and its body proof Gprog)                *)
 (* ======================================================================== *)
 
-(* Externals the ops TU calls but does not define: fma (libm), exit (libc),
-   and the six runtime checks (provided by the checks VSU at link time). *)
+(* Externals the ops TU calls but does not define: fma, exit, and the runtime
+   checks provided by the checks VSU at link time. *)
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
     two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
     fast2_mult_acc_check_spec;
+    dword_finite_check_spec; dw_plus_fp_input_check_spec;
     dw_plus_fp_check_spec; dw_plus_dw_check_spec; dw_mult_fp_check_spec;
     dw_mult_dw_check_spec; dw_div_fp_check_spec; dw_div_dw_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
-    dw_plus_fp_spec; dw_plus_dw2_spec; dw_mult_fp9_spec;
+    dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
+    dw_plus_dw2_spec; dw_mult_fp9_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
-    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
     dw_mult_dw12_spec; dw_mult_dw12_guarded_spec; dw_div_dw18_spec;
     dw_div_dw18_guarded_spec;
     dw_div_fp15_spec; dw_div_fp15_guarded_spec ].
 
-(* Public API exported by the ops VSU: the nine guarded wrappers plus the
-   Tier B Fast2Mult wrapper whose contract contains only the error bound. *)
+(* Public API exported by the ops VSU.  DW + FP exposes default and strong
+   interfaces with the same guarantee. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
-    dw_plus_fp_guarded_spec; dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
+    dw_plus_fp_spec; dw_plus_fp_strong_spec;
+    dw_plus_dw2_guarded_spec; dw_mult_fp9_guarded_spec;
     dw_mult_dw12_guarded_spec; dw_div_fp15_guarded_spec;
     dw_div_dw18_guarded_spec ].

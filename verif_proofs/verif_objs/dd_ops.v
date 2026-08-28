@@ -104,8 +104,11 @@ Definition _dw_plus_dw2_guarded : ident := $"dw_plus_dw2_guarded".
 Definition _dw_plus_dw_check : ident := $"dw_plus_dw_check".
 Definition _dw_plus_fp : ident := $"dw_plus_fp".
 Definition _dw_plus_fp_check : ident := $"dw_plus_fp_check".
-Definition _dw_plus_fp_guarded : ident := $"dw_plus_fp_guarded".
+Definition _dw_plus_fp_input_check : ident := $"dw_plus_fp_input_check".
+Definition _dw_plus_fp_kernel : ident := $"dw_plus_fp_kernel".
+Definition _dw_plus_fp_strong : ident := $"dw_plus_fp_strong".
 Definition _dword : ident := $"dword".
+Definition _dword_finite_check : ident := $"dword_finite_check".
 Definition _e : ident := $"e".
 Definition _exit : ident := $"exit".
 Definition _fast2_mult_acc_check : ident := $"fast2_mult_acc_check".
@@ -364,7 +367,7 @@ Definition f_fast_2mult_acc_guarded := {|
      (Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil)))
 |}.
 
-Definition f_dw_plus_fp := {|
+Definition f_dw_plus_fp_kernel := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
   fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
@@ -407,7 +410,48 @@ Definition f_dw_plus_fp := {|
          (Etempvar _t'1 tdouble) :: (Etempvar _v tdouble) :: nil)))))
 |}.
 
-Definition f_dw_plus_fp_guarded := {|
+Definition f_dw_plus_fp := {|
+  fn_return := tvoid;
+  fn_callconv := cc_default;
+  fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
+                (_x, (tptr (Tstruct _dword noattr))) :: (_y, tdouble) :: nil);
+  fn_vars := nil;
+  fn_temps := ((_t'2, tint) :: (_t'1, tint) :: nil);
+  fn_body :=
+(Ssequence
+  (Ssequence
+    (Scall (Some _t'1)
+      (Evar _dw_plus_fp_input_check (Tfunction
+                                      ((tptr (Tstruct _dword noattr)) ::
+                                       tdouble :: nil) tint cc_default))
+      ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y tdouble) :: nil))
+    (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
+      (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+        ((Econst_int (Int.repr 1) tint) :: nil))
+      Sskip))
+  (Ssequence
+    (Scall None
+      (Evar _dw_plus_fp_kernel (Tfunction
+                                 ((tptr (Tstruct _dword noattr)) ::
+                                  (tptr (Tstruct _dword noattr)) ::
+                                  tdouble :: nil) tvoid cc_default))
+      ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _x (tptr (Tstruct _dword noattr))) ::
+       (Etempvar _y tdouble) :: nil))
+    (Ssequence
+      (Scall (Some _t'2)
+        (Evar _dword_finite_check (Tfunction
+                                    ((tptr (Tstruct _dword noattr)) :: nil)
+                                    tint cc_default))
+        ((Etempvar _st (tptr (Tstruct _dword noattr))) :: nil))
+      (Sifthenelse (Eunop Onotbool (Etempvar _t'2 tint) tint)
+        (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
+          ((Econst_int (Int.repr 1) tint) :: nil))
+        Sskip))))
+|}.
+
+Definition f_dw_plus_fp_strong := {|
   fn_return := tvoid;
   fn_callconv := cc_default;
   fn_params := ((_st, (tptr (Tstruct _dword noattr))) ::
@@ -428,10 +472,10 @@ Definition f_dw_plus_fp_guarded := {|
         ((Econst_int (Int.repr 1) tint) :: nil))
       Sskip))
   (Scall None
-    (Evar _dw_plus_fp (Tfunction
-                        ((tptr (Tstruct _dword noattr)) ::
-                         (tptr (Tstruct _dword noattr)) :: tdouble :: nil)
-                        tvoid cc_default))
+    (Evar _dw_plus_fp_kernel (Tfunction
+                               ((tptr (Tstruct _dword noattr)) ::
+                                (tptr (Tstruct _dword noattr)) :: tdouble ::
+                                nil) tvoid cc_default))
     ((Etempvar _st (tptr (Tstruct _dword noattr))) ::
      (Etempvar _x (tptr (Tstruct _dword noattr))) :: (Etempvar _y tdouble) ::
      nil)))
@@ -840,10 +884,10 @@ Definition f_dw_div_dw18 := {|
              nil))
           (Ssequence
             (Scall None
-              (Evar _dw_plus_fp (Tfunction
-                                  ((tptr (Tstruct _dword noattr)) ::
-                                   (tptr (Tstruct _dword noattr)) ::
-                                   tdouble :: nil) tvoid cc_default))
+              (Evar _dw_plus_fp_kernel (Tfunction
+                                         ((tptr (Tstruct _dword noattr)) ::
+                                          (tptr (Tstruct _dword noattr)) ::
+                                          tdouble :: nil) tvoid cc_default))
               ((Eaddrof (Evar _m (Tstruct _dword noattr))
                  (tptr (Tstruct _dword noattr))) ::
                (Eaddrof (Evar _delta (Tstruct _dword noattr))
@@ -1250,6 +1294,10 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "exit"
                    (mksignature (AST.Xint :: nil) AST.Xvoid cc_default))
      (tint :: nil) tvoid cc_default)) ::
+ (_dword_finite_check,
+   Gfun(External (EF_external "dword_finite_check"
+                   (mksignature (AST.Xptr :: nil) AST.Xint cc_default))
+     ((tptr (Tstruct _dword noattr)) :: nil) tint cc_default)) ::
  (_fast2_sum_check,
    Gfun(External (EF_external "fast2_sum_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
@@ -1281,6 +1329,11 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
+ (_dw_plus_fp_input_check,
+   Gfun(External (EF_external "dw_plus_fp_input_check"
+                   (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
+                     cc_default))
+     ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
  (_dw_div_fp_check,
    Gfun(External (EF_external "dw_div_fp_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
@@ -1309,8 +1362,9 @@ Definition global_definitions : list (ident * globdef fundef type) :=
  (_fast_2mult, Gfun(Internal f_fast_2mult)) ::
  (_fast_2mult_guarded, Gfun(Internal f_fast_2mult_guarded)) ::
  (_fast_2mult_acc_guarded, Gfun(Internal f_fast_2mult_acc_guarded)) ::
+ (_dw_plus_fp_kernel, Gfun(Internal f_dw_plus_fp_kernel)) ::
  (_dw_plus_fp, Gfun(Internal f_dw_plus_fp)) ::
- (_dw_plus_fp_guarded, Gfun(Internal f_dw_plus_fp_guarded)) ::
+ (_dw_plus_fp_strong, Gfun(Internal f_dw_plus_fp_strong)) ::
  (_dw_plus_dw2, Gfun(Internal f_dw_plus_dw2)) ::
  (_dw_plus_dw2_guarded, Gfun(Internal f_dw_plus_dw2_guarded)) ::
  (_dw_mult_fp9, Gfun(Internal f_dw_mult_fp9)) ::
@@ -1326,31 +1380,31 @@ Definition public_idents : list ident :=
 (_dw_div_fp15_guarded :: _dw_div_fp15 :: _dw_div_dw18_guarded ::
  _dw_div_dw18 :: _dw_mult_dw12_guarded :: _dw_mult_dw12 ::
  _dw_mult_fp9_guarded :: _dw_mult_fp9 :: _dw_plus_dw2_guarded ::
- _dw_plus_dw2 :: _dw_plus_fp_guarded :: _dw_plus_fp ::
+ _dw_plus_dw2 :: _dw_plus_fp_strong :: _dw_plus_fp :: _dw_plus_fp_kernel ::
  _fast_2mult_acc_guarded :: _fast_2mult_guarded :: _fast_2mult ::
  _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded :: _dw_div_dw_check ::
  _dw_mult_dw_check :: _dw_mult_fp_check :: _dw_div_fp_check ::
- _dw_plus_fp_check :: _dw_plus_dw_check :: _fast2_mult_acc_check ::
- _fast2_mult_check :: _two_sum_check :: _fast2_sum_check :: _exit ::
- _two_sum :: _fma :: ___builtin_debug :: ___builtin_fmin ::
- ___builtin_fmax :: ___builtin_fnmsub :: ___builtin_fnmadd ::
- ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_clsll ::
- ___builtin_clsl :: ___builtin_cls :: ___builtin_expect ::
- ___builtin_unreachable :: ___builtin_va_end :: ___builtin_va_copy ::
- ___builtin_va_arg :: ___builtin_va_start :: ___builtin_membar ::
- ___builtin_annot_intval :: ___builtin_annot :: ___builtin_sel ::
- ___builtin_memcpy_aligned :: ___builtin_sqrt :: ___builtin_fsqrt ::
- ___builtin_fabsf :: ___builtin_fabs :: ___builtin_ctzll ::
- ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll :: ___builtin_clzl ::
- ___builtin_clz :: ___builtin_bswap16 :: ___builtin_bswap32 ::
- ___builtin_bswap :: ___builtin_bswap64 :: ___compcert_i64_umulh ::
- ___compcert_i64_smulh :: ___compcert_i64_sar :: ___compcert_i64_shr ::
- ___compcert_i64_shl :: ___compcert_i64_umod :: ___compcert_i64_smod ::
- ___compcert_i64_udiv :: ___compcert_i64_sdiv :: ___compcert_i64_utof ::
- ___compcert_i64_stof :: ___compcert_i64_utod :: ___compcert_i64_stod ::
- ___compcert_i64_dtou :: ___compcert_i64_dtos :: ___compcert_va_composite ::
- ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
- nil).
+ _dw_plus_fp_input_check :: _dw_plus_fp_check :: _dw_plus_dw_check ::
+ _fast2_mult_acc_check :: _fast2_mult_check :: _two_sum_check ::
+ _fast2_sum_check :: _dword_finite_check :: _exit :: _two_sum :: _fma ::
+ ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
+ ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
+ ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+ ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
+ ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
+ ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
+ ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
+ ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
+ ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
+ ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
+ ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
+ ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
+ ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
+ ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
+ ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
+ ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
+ ___compcert_va_composite :: ___compcert_va_float64 ::
+ ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.

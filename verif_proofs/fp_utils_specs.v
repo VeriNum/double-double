@@ -5,7 +5,7 @@ Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import fp_utils op_defs DDConds.
+Require Import fp_utils op_defs DDConds common.
 
 (* CompSpecs is needed because dw_plus_dw_check_spec uses data_at on the
    dword struct; the other specs in this file are pure scalar and don't need it. *)
@@ -102,6 +102,34 @@ Definition dword := Tstruct _dword noattr.
 
 Definition f2val (pq : ftype Tdouble * ftype Tdouble) : reptype dword :=
   (Vfloat (fst pq), Vfloat (snd pq)).
+
+Definition dword_finite_check_spec :=
+  DECLARE _dword_finite_check
+  WITH x : val, value : ftype Tdouble * ftype Tdouble
+  PRE [ tptr dword ]
+    PROP()
+    PARAMS (x)
+    SEP(data_at Tsh dword (f2val value) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> is_finite_p value)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val value) x).
+
+Definition dw_plus_fp_input_check_spec :=
+  DECLARE _dw_plus_fp_input_check
+  WITH x : val,
+       value : ftype Tdouble * ftype Tdouble,
+       y : ftype Tdouble
+  PRE [ tptr dword, tdouble ]
+    PROP()
+    PARAMS (x; Vfloat y)
+    SEP(data_at Tsh dword (f2val value) x)
+  POST [ tint ]
+    EX b : bool,
+    PROP(b = true -> DWPlusFP_input_cond (fst value) (snd value) y)
+    RETURN (Vint (if b then Int.one else Int.zero))
+    SEP(data_at Tsh dword (f2val value) x).
 
 Definition dw_plus_dw_check_spec :=
   DECLARE _dw_plus_dw_check

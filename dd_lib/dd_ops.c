@@ -20,8 +20,8 @@
 #include "fast_2mult_guarded.c"
 #include "fast_2mult_acc_guarded.c"
 
+#include "dw_plus_fp_kernel.c"
 #include "dw_plus_fp.c"
-#include "dw_plus_fp_guarded.c"
 
 #include "dw_plus_dw.c"
 #include "dw_plus_dw_guarded.c"

@@ -26,7 +26,8 @@ Open Scope logic.
    The inner two_sum / fast_2sum specs have empty preconditions, so the
    forward_call cascade discharges no side conditions -- identical in shape
    to body_dw_plus_dw2 and body_dw_mult_fp9. *)
-Lemma body_dw_plus_fp: semax_body Vprog Gprog f_dw_plus_fp dw_plus_fp_spec.
+Lemma body_dw_plus_fp_kernel:
+  semax_body Vprog Gprog f_dw_plus_fp_kernel dw_plus_fp_kernel_spec.
 Proof.
   start_function.
   (* two_sum(&sh, x->s, y) *)
@@ -70,8 +71,57 @@ Proof.
   entailer!.
 Qed.
 
-Lemma body_dw_plus_fp_guarded :
-  semax_body Vprog Gprog f_dw_plus_fp_guarded dw_plus_fp_guarded_spec.
+Lemma body_dw_plus_fp :
+  semax_body Vprog Gprog f_dw_plus_fp dw_plus_fp_spec.
+Proof.
+start_function.
+forward_call (x, xh, y).
+Intros vret_fin.
+set (Post_if :=
+  PROP (DWPlusFP_input_cond (fst xh) (snd xh) y)
+  LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
+  SEP (data_at_ Tsh dword s;
+       data_at Tsh dword (f2val xh) x)).
+forward_if Post_if.
+- forward_call (Int.repr 1).
+  unfold Post_if. entailer!.
+- forward.
+  unfold Post_if. entailer!.
+  apply H. destruct vret_fin; auto.
+- unfold Post_if.
+  assert_PROP (DWPlusFP_input_cond (fst xh) (snd xh) y) as Hin by entailer!.
+  forward_call (s, x, xh, y).
+  forward_call (s, DWPlusFP (fst xh) (snd xh) y).
+  Intros vret_out.
+  set (Post_out :=
+    PROP (DWPlusFP_cond (fst xh) (snd xh) y)
+    LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
+    SEP (data_at Tsh dword
+           (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+         data_at Tsh dword (f2val xh) x)).
+  forward_if Post_out.
+  + forward_call (Int.repr 1).
+    unfold Post_out. entailer!.
+  + forward.
+    unfold Post_out, DWPlusFP_cond, DWPlusFP_output_finite_cond.
+    entailer!.
+    match goal with
+    | Hfin : vret_out = true -> is_finite_p _ |- _ =>
+        apply Hfin; destruct vret_out; auto
+    end.
+  + unfold Post_out.
+    assert_PROP (DWPlusFP_cond (fst xh) (snd xh) y) as Hcond by entailer!.
+    assert (Hfp : (3 <= fprec Tdouble)%Z)
+      by (unfold fprec, Tdouble; simpl; lia).
+    pose proof
+      (@DWPlusFP_relative_guarantee_from_cond
+         _ Tdouble _ (fst xh) (snd xh) y Hfp Hcond)
+      as Hg.
+    entailer!!.
+Qed.
+
+Lemma body_dw_plus_fp_strong :
+  semax_body Vprog Gprog f_dw_plus_fp_strong dw_plus_fp_strong_spec.
 Proof.
 start_function.
 forward_call (x, xh, y).
