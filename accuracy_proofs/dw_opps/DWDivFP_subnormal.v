@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Mixed error and output validity when the leading quotient of [DWDivFP3] is
+(** Mixed error and output validity when the leading quotient of [DWDivFP] is
     subnormal.  The normal FLT to FLX bridge does not apply here.  Instead, the
     quotient, correction, and final sum lie on the [2^emin] lattice.  This
     gives [|th-xh/y| <= eta/2], keeps the low input contribution below
@@ -34,7 +34,7 @@ Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis FIN : is_finite_p (DWDivFP3 xh xl y).
+Hypothesis FIN : is_finite_p (DWDivFP xh xl y).
 Hypothesis Hyne : FT2R y <> 0.
 Hypothesis Hdwp : double_word_prop xh xl.
 Hypothesis Hxhlb : bpow radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
@@ -534,13 +534,13 @@ exact sub_sum_bnd.
 Qed.
 
 Local Lemma sub_f2s :
-  FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y)) = T + Tl.
+  FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)) = T + Tl.
 Proof.
-have Heqr : DWDivFP3 xh xl y
+have Heqr : DWDivFP xh xl y
   = DDModels.Fast2Sum (BDIV xh y)
       (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                            (Fast2Mult_err (BDIV xh y) y)) xl) y)
-  by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
+  by rewrite /DWDivFP /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
 destruct FIN as [Ffst Fsnd].
 rewrite Heqr in Ffst, Fsnd |- *.
 rewrite /DDModels.Fast2Sum /fst /snd in Ffst, Fsnd |- *.
@@ -578,11 +578,11 @@ Qed.
 
 (* ================= the subnormal quotient leg ================= *)
 Local Theorem sub_main :
-  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y)) - Q)
+  Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)) - Q)
     <= 3 * u ^ 2 * Rabs Q + eta.
 Proof.
 have Hf2s := sub_f2s. have H := sub_Tl_Q_T.
-have Heq : FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y)) - Q
+have Heq : FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)) - Q
          = Tl - (Q - T) by (rewrite Hf2s; ring).
 rewrite Heq.
 have Hpos : 0 <= 3 * u ^ 2 * Rabs Q.
@@ -594,13 +594,13 @@ Qed.
 
 (* ---------- Output validity follows from preservation of the sum ---------- *)
 Local Theorem sub_double_word :
-  double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y)).
+  double_word_prop (fst (DWDivFP xh xl y)) (snd (DWDivFP xh xl y)).
 Proof.
-have Heqr : DWDivFP3 xh xl y
+have Heqr : DWDivFP xh xl y
   = DDModels.Fast2Sum (BDIV xh y)
       (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                            (Fast2Mult_err (BDIV xh y) y)) xl) y)
-  by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
+  by rewrite /DWDivFP /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
 have Hsum := sub_f2s.
 rewrite Heqr in Hsum |- *.
 apply Fast2Sum_double_word_of_sum; [| exact Hsum ].
@@ -1130,13 +1130,13 @@ rewrite Rabs_Ropp. lra.
 Qed.
 
 (* ================= finiteness in the subnormal branch ================= *)
-Local Theorem fin_main : is_finite_p (DWDivFP3 xh xl y).
+Local Theorem fin_main : is_finite_p (DWDivFP xh xl y).
 Proof.
-have Heqr : DWDivFP3 xh xl y
+have Heqr : DWDivFP xh xl y
   = DDModels.Fast2Sum (BDIV xh y)
       (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                            (Fast2Mult_err (BDIV xh y) y)) xl) y)
-  by rewrite /DWDivFP3 /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
+  by rewrite /DWDivFP /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
 rewrite Heqr. split.
 - exact fin_fst_aux.
 - exact fin_snd_aux.
@@ -1146,23 +1146,23 @@ End SubFin.
 
 (** The subnormal proof leg exposed to the public mixed interface file.  Its
     internal error and validity proofs remain private to this file. *)
-Theorem DWDivFP3_subnormal_accuracy_and_double_word
+Theorem DWDivFP_subnormal_accuracy_and_double_word
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  is_finite_p (DWDivFP3 xh xl y) ->
+  is_finite_p (DWDivFP xh xl y) ->
   FT2R y <> 0 ->
   double_word_prop xh xl ->
   bpow radix2 (@common.emin t + 2 * fprec t) <= Rabs (FT2R xh) ->
   Rabs (FT2R xh / FT2R y) <
     bpow radix2 (@common.emin t + fprec t - 1) ->
-  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+  Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * bpow radix2 (-fprec t) ^ 2 *
          Rabs ((FT2R xh + FT2R xl) / FT2R y) +
        bpow radix2 (@common.emin t) /\
-  double_word_prop (fst (DWDivFP3 xh xl y))
-                   (snd (DWDivFP3 xh xl y)).
+  double_word_prop (fst (DWDivFP xh xl y))
+                   (snd (DWDivFP xh xl y)).
 Proof.
 intros Hp4 FIN Hyne Hdwp Hxhlb Hsub. split.
 - exact (sub_main xh xl y Hp4 FIN Hyne Hdwp Hxhlb Hsub).
@@ -1183,24 +1183,24 @@ Notation u    := (bpow radix2 (- fprec t)).
    All three deliverables at once: the mixed bound, output validity, and
    finiteness of the computed pair.  Section SubFin supplies the finiteness,
    Section Sub proves accuracy and output validity. *)
-Theorem DWDivFP3_subnormal_leg (xh xl y : ftype t) :
+Theorem DWDivFP_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_mixed_safe_input_cond xh xl y ->
   FT2R xh <> 0 ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
-  Rabs (FT2R (fst (DWDivFP3 xh xl y)) + FT2R (snd (DWDivFP3 xh xl y))
+  Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u ^ 2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) + bpow radix2 emin
-  /\ double_word_prop (fst (DWDivFP3 xh xl y)) (snd (DWDivFP3 xh xl y))
-  /\ is_finite_p (DWDivFP3 xh xl y).
+  /\ double_word_prop (fst (DWDivFP xh xl y)) (snd (DWDivFP xh xl y))
+  /\ is_finite_p (DWDivFP xh xl y).
 Proof.
 intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb)
   Hxhne Hsub.
 destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 have Hyne : FT2R y <> 0 by
   exact (DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth).
-have FIN : is_finite_p (DWDivFP3 xh xl y) by (apply fin_main; assumption).
-have [Hacc Hdw] := DWDivFP3_subnormal_accuracy_and_double_word
+have FIN : is_finite_p (DWDivFP xh xl y) by (apply fin_main; assumption).
+have [Hacc Hdw] := DWDivFP_subnormal_accuracy_and_double_word
   xh xl y Hp4 FIN Hyne Hdwp Hxhlb Hsub.
 exact (conj Hacc (conj Hdw FIN)).
 Qed.

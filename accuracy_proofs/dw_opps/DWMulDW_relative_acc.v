@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative accuracy and shared representation results for [DWTimesDW3] (Algorithm 12).
+(** Relative accuracy and shared representation results for [DWTimesDW] (Algorithm 12).
 
     Its public result is [DWTimesDW_relative_accuracy], the pure [4u^2]
     relative bound under [DWTimesDW_relative_error_input_cond].  Shared
@@ -36,16 +36,16 @@ Arguments DWTimesFP.TwoProd : simpl never.
 
 (* ============================================================
    Section 1: derive finiteness of each node from
-   FIN : is_finite_p (DWTimesDW3 xh xl yh yl).
+   FIN : is_finite_p (DWTimesDW xh xl yh yl).
    ============================================================ *)
 Section CorrectDWMulDW.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
   Variables (xh xl yh yl : ftype t).
 
-  Hypothesis FIN : is_finite_p (DWTimesDW3 xh xl yh yl).
+  Hypothesis FIN : is_finite_p (DWTimesDW xh xl yh yl).
 
-  (* fst (DWTimesDW3 xh xl yh yl) reduces to
+  (* fst (DWTimesDW xh xl yh yl) reduces to
        BPLUS (BMULT xh yh) (BPLUS (Fast2Mult_err xh yh)
                                   (BFMA xl yh (BFMA xh yl (BMULT xl yl)))).
      One pass of BPLUS/BFMA elimination of finiteness exposes every subterm's
@@ -65,23 +65,23 @@ Section CorrectDWMulDW.
           | exact Hmul | exact Htl0 | exact Htl1 | exact Hcl2 | exact Hrest
           | split; [ exact Hmul | exact Hcl1 ] ].
 
-  Fact DWTimesDW3_xh_finite : is_finite xh = true.
+  Fact DWTimesDW_xh_finite : is_finite xh = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_xl_finite : is_finite xl = true.
+  Fact DWTimesDW_xl_finite : is_finite xl = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_yh_finite : is_finite yh = true.
+  Fact DWTimesDW_yh_finite : is_finite yh = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_yl_finite : is_finite yl = true.
+  Fact DWTimesDW_yl_finite : is_finite yl = true.
   Proof. prove_finite. Qed.
 
   (* ch = fst (Fast2Mult xh yh) = BMULT xh yh *)
-  Fact DWTimesDW3_mul_finite : is_finite (BMULT xh yh) = true.
+  Fact DWTimesDW_mul_finite : is_finite (BMULT xh yh) = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_fast2mult_finite : is_finite_p (Fast2Mult xh yh).
+  Fact DWTimesDW_fast2mult_finite : is_finite_p (Fast2Mult xh yh).
   Proof. prove_finite. Qed.
 
   Let cl1 := snd (Fast2Mult xh yh).
@@ -90,26 +90,26 @@ Section CorrectDWMulDW.
   Let cl2 := BFMA xl yh tl1.
   Let cl3 := BPLUS cl1 cl2.
 
-  Fact DWTimesDW3_low_low_finite : is_finite tl0 = true.
+  Fact DWTimesDW_low_low_finite : is_finite tl0 = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_first_correction_finite : is_finite tl1 = true.
+  Fact DWTimesDW_first_correction_finite : is_finite tl1 = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_second_correction_finite : is_finite cl2 = true.
+  Fact DWTimesDW_second_correction_finite : is_finite cl2 = true.
   Proof. prove_finite. Qed.
 
-  Fact DWTimesDW3_correction_finite : is_finite cl3 = true.
+  Fact DWTimesDW_correction_finite : is_finite cl3 = true.
   Proof. prove_finite. Qed.
 
 End CorrectDWMulDW.
 
 
 (* ============================================================
-   Section 2: the essential FLX -> FLT bridge for DWTimesDW3.
+   Section 2: the essential FLX -> FLT bridge for DWTimesDW.
      DWTimesDW.DWTimesDW12 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
-       = F2Rp (DWTimesDW3 xh xl yh yl).
-   Analog of DWMulFP_relative_acc.v's DWTimesFP3_FLX_FLT_weak: each of the five rounded ops
+       = F2Rp (DWTimesDW xh xl yh yl).
+   Analog of DWMulFP_relative_acc.v's DWTimesFP_FLX_FLT_weak: each of the five rounded ops
    agrees with its FLX counterpart (round_FLT_FLX + representability), and the
    closing Fast2Sum is exact via the magnitude ordering |cl3| <= |ch|.
    ============================================================ *)
@@ -125,8 +125,8 @@ Let ulp := (Ulp.ulp radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 Variables (xh xl yh yl : ftype t).
 
-Hypothesis FIN : is_finite_p (DWTimesDW3 xh xl yh yl).
-(* Normal regime hypotheses: every rounding argument of DWTimesDW3 is normal
+Hypothesis FIN : is_finite_p (DWTimesDW xh xl yh yl).
+(* Normal regime hypotheses: every rounding argument of DWTimesDW is normal
    (>= bpow(emin+fprec-1)), so each FLT rounding equals its FLX counterpart
    (round_FLT_FLX).  Nprod is the two-product threshold for
    DWMulFP_relative_acc.Fast2Mult_correct_weak. *)
@@ -157,7 +157,7 @@ Qed.
 (** Assembly lemma for weakened bridges.  It separates the purely algebraic
     Algorithm 12 composition from the conditions under which each FLT and FLX node agrees
     (normality, zero, or exact subnormal representability). *)
-Local Lemma DWTimesDW3_FLX_FLT_from_node_equalities :
+Local Lemma DWTimesDW_FLX_FLT_from_node_equalities :
   round radix2 (FLX_exp (fprec t)) (Znearest choice)
       (FT2R xl*FT2R yl) = FT2R (BMULT xl yl) ->
   round radix2 (FLX_exp (fprec t)) (Znearest choice)
@@ -173,10 +173,10 @@ Local Lemma DWTimesDW3_FLX_FLT_from_node_equalities :
       (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) ->
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) =
-  F2Rp (DWTimesDW3 xh xl yh yl).
+  F2Rp (DWTimesDW xh xl yh yl).
 Proof.
 move => H0 H1 H2 H3.
-have Hfmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Hfmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have Nprod' : FT2R xh*FT2R yh<>0 ->
     bpow radix2 (emin+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh)
   by auto.
@@ -190,7 +190,7 @@ rewrite (FastTwoSumEq_FLT (Fast2Mult_mul xh yh)
 reflexivity.
 Qed.
 
-Local Lemma DWTimesDW3_FLX_FLT_exact_or_normal :
+Local Lemma DWTimesDW_FLX_FLT_exact_or_normal :
   (generic_format radix2 fexp
       (FT2R (BFMA xh yl (BMULT xl yl))+FT2R xl*FT2R yh) \/
    bpow radix2 (emin+fprec t-1) <=
@@ -203,13 +203,13 @@ Local Lemma DWTimesDW3_FLX_FLT_exact_or_normal :
        FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) ->
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) =
-  F2Rp (DWTimesDW3 xh xl yh yl).
+  F2Rp (DWTimesDW xh xl yh yl).
 Proof.
 move => E2 E3.
-have Hftl0 := DWTimesDW3_low_low_finite xh xl yh yl FIN.
-have Hftl1 := DWTimesDW3_first_correction_finite xh xl yh yl FIN.
-have Hfcl2 := DWTimesDW3_second_correction_finite xh xl yh yl FIN.
-have Hfcl3 := DWTimesDW3_correction_finite xh xl yh yl FIN.
+have Hftl0 := DWTimesDW_low_low_finite xh xl yh yl FIN.
+have Hftl1 := DWTimesDW_first_correction_finite xh xl yh yl FIN.
+have Hfcl2 := DWTimesDW_second_correction_finite xh xl yh yl FIN.
+have Hfcl3 := DWTimesDW_correction_finite xh xl yh yl FIN.
 have H0 : round radix2 (FLX_exp (fprec t)) (Znearest choice)
       (FT2R xl*FT2R yl) = FT2R (BMULT xl yl).
 { rewrite -(round_FLT_FLX radix2 emin (fprec t) (Znearest choice) _ N0).
@@ -236,19 +236,19 @@ have H2' : round radix2 (FLX_exp (fprec t)) (Znearest choice)
 { replace (FT2R (BFMA xh yl (BMULT xl yl))+FT2R xl*FT2R yh)%R with
     (FT2R xl*FT2R yh+FT2R (BFMA xh yl (BMULT xl yl)))%R by ring.
   exact H2. }
-exact (DWTimesDW3_FLX_FLT_from_node_equalities H0 H1 H2' H3).
+exact (DWTimesDW_FLX_FLT_from_node_equalities H0 H1 H2' H3).
 Qed.
 
-Theorem DWTimesDW3_FLX_FLT :
+Theorem DWTimesDW_FLX_FLT :
   DWTimesDW.DWTimesDW12 (fprec t) choice
     (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
-    = F2Rp (DWTimesDW3 xh xl yh yl).
+    = F2Rp (DWTimesDW xh xl yh yl).
 Proof.
-have Hfmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
-have Hftl0 := DWTimesDW3_low_low_finite xh xl yh yl FIN.
-have Hftl1 := DWTimesDW3_first_correction_finite xh xl yh yl FIN.
-have Hfcl2 := DWTimesDW3_second_correction_finite xh xl yh yl FIN.
-have Hfcl3 := DWTimesDW3_correction_finite xh xl yh yl FIN.
+have Hfmul := DWTimesDW_mul_finite xh xl yh yl FIN.
+have Hftl0 := DWTimesDW_low_low_finite xh xl yh yl FIN.
+have Hftl1 := DWTimesDW_first_correction_finite xh xl yh yl FIN.
+have Hfcl2 := DWTimesDW_second_correction_finite xh xl yh yl FIN.
+have Hfcl3 := DWTimesDW_correction_finite xh xl yh yl FIN.
 have Nprod' : FT2R xh * FT2R yh <> 0 ->
   bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh)
   by (move => _; exact Nprod).
@@ -292,9 +292,9 @@ End CorrectDWMulDW_bridge.
 
 
 (* ============================================================
-   Section 3: finiteness of DWTimesDW3 from
+   Section 3: finiteness of DWTimesDW from
    DWTimesDW_mixed_safe_input_cond.
-     fst (DWTimesDW3 xh xl yh yl) = BPLUS ch cl3, where
+     fst (DWTimesDW xh xl yh yl) = BPLUS ch cl3, where
        ch  = Fast2Mult_mul xh yh   (= BMULT xh yh),
        cl3 = BPLUS (Fast2Mult_err xh yh) (BFMA xl yh (BFMA xh yl (BMULT xl yl))).
    The cond's product bound |xh*yh| <= Omega/2 keeps |ch| small; the two
@@ -1391,9 +1391,9 @@ Qed.
     precision.  For [p>=3] a direct absolute budget suffices.  At [p=2], the
     first correction uses the ties-to-even midpoint above; the remaining
     near-overflow branch uses the exact two-product reconstruction. *)
-Lemma DWTimesDW3_finite_from_safe_input_cond (xh xl yh yl : ftype t) :
+Lemma DWTimesDW_finite_from_safe_input_cond (xh xl yh yl : ftype t) :
   DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl).
+  is_finite_p (DWTimesDW xh xl yh yl).
 Proof.
 intros (Hfxl & Hfyl & Hdwx & Hdwy & Hfmul & Hxhy).
 have [Hfxh Hfyh] := BMULT_finite_e t xh yh Hfmul.
@@ -1845,14 +1845,14 @@ destruct (Z.eq_dec (fprec t) 2) as [Hp2 | Hnp2].
 Qed.
 
 (* Closing Fast2Sum validity from its two primitive obligations. *)
-Lemma DWTimesDW3_double_word_from_pre (xh xl yh yl : ftype t) :
+Lemma DWTimesDW_double_word_from_pre (xh xl yh yl : ftype t) :
   is_finite (BPLUS (Fast2Mult_mul xh yh)
                    (BPLUS (Fast2Mult_err xh yh)
                           (BFMA xl yh (BFMA xh yl (BMULT xl yl))))) = true ->
   Rabs (FT2R (BPLUS (Fast2Mult_err xh yh)
                     (BFMA xl yh (BFMA xh yl (BMULT xl yl)))))
     <= Rabs (FT2R (Fast2Mult_mul xh yh)) ->
-  double_word (fst (DWTimesDW3 xh xl yh yl)) (snd (DWTimesDW3 xh xl yh yl)).
+  double_word (fst (DWTimesDW xh xl yh yl)) (snd (DWTimesDW xh xl yh yl)).
 Proof.
 move => Hfp Hord.
 exact (Fast2Sum_is_DW (Fast2Mult_mul xh yh)
@@ -1879,8 +1879,8 @@ Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 
 Variables (xh xl yh yl : ftype t).
 
-Let zh := FT2R (fst (DWTimesDW3 xh xl yh yl)).
-Let zl := FT2R (snd (DWTimesDW3 xh xl yh yl)).
+Let zh := FT2R (fst (DWTimesDW xh xl yh yl)).
+Let zl := FT2R (snd (DWTimesDW xh xl yh yl)).
 Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R yh + FT2R yl).
 
@@ -2274,7 +2274,7 @@ Lemma relerr_error_eq :
   (3 <= fprec t)%Z ->
   double_word_prop xh xl ->
   double_word_prop yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   is_finite (BMULT xh yh) = true ->
   bpow radix2 (eminA + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh) ->
   (zh + zl - xr * yr)%R
@@ -2307,8 +2307,8 @@ have Hch_eq : FT2R ch = FT2R xh * FT2R yh - FT2R (Fast2Mult_err xh yh).
 { have H := Fast2MultModel_correct xh yh Hfmul Huf'. rewrite -/ch in H. lra. }
 have Hsum : (zh + zl)%R = (FT2R ch + FT2R cl3)%R.
 { unfold zh, zl.
-  have Hfst_eq : fst (DWTimesDW3 xh xl yh yl) = Fast2Sum_sum ch cl3 by reflexivity.
-  have Hsnd_eq : snd (DWTimesDW3 xh xl yh yl) = Fast2Sum_err ch cl3 by reflexivity.
+  have Hfst_eq : fst (DWTimesDW xh xl yh yl) = Fast2Sum_sum ch cl3 by reflexivity.
+  have Hsnd_eq : snd (DWTimesDW xh xl yh yl) = Fast2Sum_err ch cl3 by reflexivity.
   rewrite Hfst_eq Hsnd_eq Hexact. ring. }
 rewrite Hsum Hch_eq. unfold xr, yr, cl3, cl2. ring.
 Qed.
@@ -2322,7 +2322,7 @@ Lemma relerr_error_relative_floor_decomposition :
   (3 <= fprec t)%Z ->
   double_word_prop xh xl ->
   double_word_prop yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   is_finite (BMULT xh yh) = true ->
   bpow radix2 (eminA+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh) ->
   exists er0 er1 er2 er3 ef0 ef1 ef2 ef3 : R,
@@ -2403,10 +2403,10 @@ Lemma relerr_error_relative_floor_decomposition :
          FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl)))+ef3).
 Proof.
 move => Hp3 DWx DWy FIN Fmul Nprod.
-have F0 := DWTimesDW3_low_low_finite xh xl yh yl FIN.
-have F1 := DWTimesDW3_first_correction_finite xh xl yh yl FIN.
-have F2 := DWTimesDW3_second_correction_finite xh xl yh yl FIN.
-have F3 := DWTimesDW3_correction_finite xh xl yh yl FIN.
+have F0 := DWTimesDW_low_low_finite xh xl yh yl FIN.
+have F1 := DWTimesDW_first_correction_finite xh xl yh yl FIN.
+have F2 := DWTimesDW_second_correction_finite xh xl yh yl FIN.
+have F3 := DWTimesDW_correction_finite xh xl yh yl FIN.
 have D0 := round_FLT_error_relative_plus_floor
   (t:=t) (FT2R xl*FT2R yl).
 have D1 := round_FLT_error_relative_plus_floor
@@ -2553,8 +2553,8 @@ Notation OmegaA := (bpow Zaux.radix2 (femax t)).
 Local Instance valid_fexp_inst_dh : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 Variables (xh xl yh yl : ftype t).
-Let zh := FT2R (fst (DWTimesDW3 xh xl yh yl)).
-Let zl := FT2R (snd (DWTimesDW3 xh xl yh yl)).
+Let zh := FT2R (fst (DWTimesDW xh xl yh yl)).
+Let zl := FT2R (snd (DWTimesDW xh xl yh yl)).
 Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R yh + FT2R yl).
 
@@ -2565,7 +2565,7 @@ Let yr := (FT2R yh + FT2R yl).
 Lemma DWTimesDW_relative_accuracy_core :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA + 2 * fprec t - 1) <=
     Rabs (FT2R xh * FT2R yh) ->
@@ -2575,9 +2575,9 @@ Lemma DWTimesDW_relative_accuracy_core :
 Proof.
 move => Hdw Hdwy Hfin Hp5 Nprod N0.
 have Hfmul : is_finite (BMULT xh yh)=true
-  by exact (DWTimesDW3_mul_finite xh xl yh yl Hfin).
+  by exact (DWTimesDW_mul_finite xh xl yh yl Hfin).
 have Hftl0 : is_finite (BMULT xl yl)=true
-  by exact (DWTimesDW3_low_low_finite xh xl yh yl Hfin).
+  by exact (DWTimesDW_low_low_finite xh xl yh yl Hfin).
 have N1 := normal_low0_implies_low1
   xh xl yh yl ltac:(lia) Hdw Hftl0 N0.
 have F2fix := normal_low0_implies_low2_FIX xh xl yh yl Hdwy N0.
@@ -2591,7 +2591,7 @@ specialize (F3fix NANS STD).
 have E3 := FIX_FLT_or_normal
   (FT2R (Fast2Mult_err xh yh)+
    FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) F3fix.
-have Hbridge := DWTimesDW3_FLX_FLT_exact_or_normal
+have Hbridge := DWTimesDW_FLX_FLT_exact_or_normal
   xh xl yh yl Hfin Nprod N0 N1 E2 E3.
 have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
   by (apply (dw_word_DWdouble xh xl xh); exact Hdw).
@@ -2620,7 +2620,7 @@ Theorem DWTimesDW_relative_accuracy :
   relative_error_DWTimesDW xh xl yh yl <= 4 * u ^ 2.
 Proof.
 move => Hp5 [Hsafe [Nprod N0]].
-have Hfin := DWTimesDW3_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWTimesDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
 move: Hsafe => [_ [_ [DWx [DWy _]]]].
 exact (DWTimesDW_relative_accuracy_core
   DWx DWy Hfin Hp5 Nprod N0).

@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole range mixed error and output validity results for [DWTimesDW3].
+(** Whole range mixed error and output validity results for [DWTimesDW].
 
     This file imports the common runtime model facts and normal range relative
     result from [DWMulDW_relative_acc], then handles the leading product
@@ -885,11 +885,11 @@ destruct (Rlt_dec 0 xh0) as [Hxp|Hxn].
     exact H.
 Qed.
 
-(* The far underflow bound for the low by low product, directly for the real DWTimesDW3, via the
+(* The far underflow bound for the low by low product, directly for the real DWTimesDW, via the
    FLT floor decomposition (no synthetic floored algorithm). *)
 Lemma DWTimesDW_abs_low0_far (xh xl yh yl : ftype t) :
   double_word xh xl -> double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   9/8*bpow radix2 (eminA+2*fprec t-1) < Rabs (FT2R xh*FT2R yh) ->
   Rabs (FT2R xl*FT2R yl) < bpow radix2 (eminA+fprec t-1) ->
@@ -900,14 +900,14 @@ Lemma DWTimesDW_abs_low0_far (xh xl yh yl : ftype t) :
   bpow radix2 (eminA+fprec t-1) <=
     Rabs (FT2R (Fast2Mult_err xh yh)+
       FT2R (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) ->
-  Rabs (FT2R (fst (DWTimesDW3 xh xl yh yl)) +
-        FT2R (snd (DWTimesDW3 xh xl yh yl)) -
+  Rabs (FT2R (fst (DWTimesDW xh xl yh yl)) +
+        FT2R (snd (DWTimesDW xh xl yh yl)) -
         (FT2R xh+FT2R xl)*(FT2R yh+FT2R yl)) <=
     4*u^2*Rabs ((FT2R xh+FT2R xl)*(FT2R yh+FT2R yl))+2*bpow radix2 eminA.
 Proof.
 move => DWx DWy FIN Hp5 Hfar U0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have T0 : bpow radix2 (eminA+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh).
 { have HT0 := bpow_gt_0 radix2 (eminA+2*fprec t-1). nra. }
 have Hdec := relerr_error_relative_floor_decomposition xh xl yh yl
@@ -962,7 +962,7 @@ have Ecl1 : FT2R xh*FT2R yh -
 { rewrite -Ecl1raw. symmetry. apply round_generic;
     [apply valid_rnd_N|exact Fcl1]. }
 have Hbridge : FLXlow0 (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) ef0 =
-    F2Rp (DWTimesDW3 xh xl yh yl).
+    F2Rp (DWTimesDW xh xl yh yl).
 { rewrite Etl1 Ecl2 Ecl1 Ech -Seq3.
   rewrite (FastTwoSumEq_FLT (Fast2Mult_mul xh yh)
     (BPLUS (Fast2Mult_err xh yh)
@@ -985,11 +985,11 @@ change (Rabs (fst (FLXlow0 (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) ef0)+
     (FT2R xh+FT2R xl)*(FT2R yh+FT2R yl)-ef0) <=
   4*u^2*Rabs ((FT2R xh+FT2R xl)*(FT2R yh+FT2R yl))+3*Rabs ef0) in Hmix.
 rewrite Hbridge /F2Rp in Hmix. cbn [fst snd] in Hmix.
-have Hz : (FT2R (fst (DWTimesDW3 xh xl yh yl))+
-   FT2R (snd (DWTimesDW3 xh xl yh yl))-
+have Hz : (FT2R (fst (DWTimesDW xh xl yh yl))+
+   FT2R (snd (DWTimesDW xh xl yh yl))-
    (FT2R xh+FT2R xl)*(FT2R yh+FT2R yl))%R =
-  ((FT2R (fst (DWTimesDW3 xh xl yh yl))+
-   FT2R (snd (DWTimesDW3 xh xl yh yl))-
+  ((FT2R (fst (DWTimesDW xh xl yh yl))+
+   FT2R (snd (DWTimesDW xh xl yh yl))-
    (FT2R xh+FT2R xl)*(FT2R yh+FT2R yl)-ef0)+ef0)%R by ring.
 rewrite Hz.
 eapply Rle_trans;[apply Rabs_triang|].
@@ -1012,8 +1012,8 @@ Notation OmegaA := (bpow Zaux.radix2 (femax t)).
 Local Instance valid_fexp_inst_dh : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 Variables (xh xl yh yl : ftype t).
-Let zh := FT2R (fst (DWTimesDW3 xh xl yh yl)).
-Let zl := FT2R (snd (DWTimesDW3 xh xl yh yl)).
+Let zh := FT2R (fst (DWTimesDW xh xl yh yl)).
+Let zl := FT2R (snd (DWTimesDW xh xl yh yl)).
 Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R yh + FT2R yl).
 
@@ -1021,7 +1021,7 @@ Let yr := (FT2R yh + FT2R yl).
 Corollary DWTimesDW_abs_low0_normal :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA + 2 * fprec t - 1) <=
     Rabs (FT2R xh * FT2R yh) ->
@@ -1066,7 +1066,7 @@ Qed.
 Theorem DWTimesDW_abs_low0_final_underflow :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -1079,7 +1079,7 @@ Theorem DWTimesDW_abs_low0_final_underflow :
 Proof.
 move => DWx DWy FIN Hp5 Nprod N0 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
   Hp3 DWx DWy FIN Fmul Nprod.
 destruct H as
@@ -1197,7 +1197,7 @@ Qed.
 Theorem DWTimesDW_abs_low0_low1_tail_normal :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -1215,7 +1215,7 @@ Theorem DWTimesDW_abs_low0_low1_tail_normal :
 Proof.
 move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
   Hp3 DWx DWy FIN Fmul Nprod.
 destruct H as
@@ -1433,7 +1433,7 @@ Qed.
 Theorem DWTimesDW_abs_low0_low2_other_normal :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -1451,7 +1451,7 @@ Theorem DWTimesDW_abs_low0_low2_other_normal :
 Proof.
 move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
   Hp3 DWx DWy FIN Fmul Nprod.
 destruct H as
@@ -1672,7 +1672,7 @@ Qed.
 Lemma DWTimesDW_core_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (3 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
-  is_finite_p (DWTimesDW3 xh0 xl0 yh0 yl0) ->
+  is_finite_p (DWTimesDW xh0 xl0 yh0 yl0) ->
   Rabs (FT2R xh0*FT2R yh0) <
     bpow radix2 (common.emin (t:=t)+2*fprec t-1) ->
   Rabs ((FT2R (Fast2Mult_mul xh0 yh0)+
@@ -1735,17 +1735,17 @@ set tl1 := BFMA xh0 yl0 tl0.
 set cl2 := BFMA xl0 yh0 tl1.
 set cl3 := BPLUS cl1 cl2.
 have Fch : is_finite ch=true by
-  (unfold ch,Fast2Mult_mul,Fast2Mult,fst;exact (DWTimesDW3_mul_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold ch,Fast2Mult_mul,Fast2Mult,fst;exact (DWTimesDW_mul_finite xh0 xl0 yh0 yl0 FIN)).
 have F0 : is_finite tl0=true by
-  (unfold tl0;exact (DWTimesDW3_low_low_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold tl0;exact (DWTimesDW_low_low_finite xh0 xl0 yh0 yl0 FIN)).
 have F1 : is_finite tl1=true by
-  (unfold tl1,tl0;exact (DWTimesDW3_first_correction_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold tl1,tl0;exact (DWTimesDW_first_correction_finite xh0 xl0 yh0 yl0 FIN)).
 have F2 : is_finite cl2=true by
-  (unfold cl2,tl1,tl0;exact (DWTimesDW3_second_correction_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold cl2,tl1,tl0;exact (DWTimesDW_second_correction_finite xh0 xl0 yh0 yl0 FIN)).
 have F3 : is_finite cl3=true by
   (unfold cl3,cl1,cl2,tl1,tl0;
-   exact (DWTimesDW3_correction_finite xh0 xl0 yh0 yl0 FIN)).
-have Ffast := DWTimesDW3_fast2mult_finite xh0 xl0 yh0 yl0 FIN.
+   exact (DWTimesDW_correction_finite xh0 xl0 yh0 yl0 FIN)).
+have Ffast := DWTimesDW_fast2mult_finite xh0 xl0 yh0 yl0 FIN.
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
 have Htl00 := leading_product_gap_low_low_zero
   xh0 xl0 yh0 yl0 DWx0 DWy0 F0 Hgap.
@@ -1880,19 +1880,19 @@ Qed.
 (* Bridge: the output pair of Algorithm 12 IS the closing Fast2Sum of
    (ch, cl3), so a preservation of the sum fact about that Fast2Sum transfers to
    the algorithm's output.  Pure definitional unfolding. *)
-Local Lemma DWTimesDW3_double_word_of_sum (xh0 xl0 yh0 yl0 : ftype t) :
-  is_finite_p (DWTimesDW3 xh0 xl0 yh0 yl0) ->
+Local Lemma DWTimesDW_double_word_of_sum (xh0 xl0 yh0 yl0 : ftype t) :
+  is_finite_p (DWTimesDW xh0 xl0 yh0 yl0) ->
   let ch := Fast2Mult_mul xh0 yh0 in
   let cl3 := BPLUS (Fast2Mult_err xh0 yh0)
                    (BFMA xl0 yh0 (BFMA xh0 yl0 (BMULT xl0 yl0))) in
-  FT2R (fst (DWTimesDW3 xh0 xl0 yh0 yl0))+
-  FT2R (snd (DWTimesDW3 xh0 xl0 yh0 yl0)) =
+  FT2R (fst (DWTimesDW xh0 xl0 yh0 yl0))+
+  FT2R (snd (DWTimesDW xh0 xl0 yh0 yl0)) =
     FT2R ch+FT2R cl3 ->
-  double_word_prop (fst (DWTimesDW3 xh0 xl0 yh0 yl0))
-                   (snd (DWTimesDW3 xh0 xl0 yh0 yl0)).
+  double_word_prop (fst (DWTimesDW xh0 xl0 yh0 yl0))
+                   (snd (DWTimesDW xh0 xl0 yh0 yl0)).
 Proof.
 move => FIN ch cl3 Hsum.
-set d := DWTimesDW3 xh0 xl0 yh0 yl0.
+set d := DWTimesDW xh0 xl0 yh0 yl0.
 fold d in Hsum, FIN.
 unfold double_word_prop, rounded. fold d. rewrite Hsum.
 have Hfst : fst d=BPLUS ch cl3 by reflexivity.
@@ -1903,7 +1903,7 @@ Qed.
 (* Two magnitude bounds on the closing Fast2Sum's arguments, in relative form
    (multiples of u*P and eta rather than of N).  They are coarser than the
    core chain's bounds in N form, but being expressed in u*P they make the
-   ordering test of DWTimesDW3_error_floor_gap a single crossing computation
+   ordering test of DWTimesDW_error_floor_gap a single crossing computation
    instead of the bootstrap with two steps that bounds in N form would force:
    |cl3| <= 6uP+4eta against |ch| >= (1-u)P-eta/2 cross only below P ~ 6*eta.
 
@@ -1970,7 +1970,7 @@ Qed.
 Lemma gap_cl3_upper_bound (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
-  is_finite_p (DWTimesDW3 xh0 xl0 yh0 yl0) ->
+  is_finite_p (DWTimesDW xh0 xl0 yh0 yl0) ->
   Rabs (FT2R xh0*FT2R yh0) <
     bpow radix2 (common.emin (t:=t)+2*fprec t-1) ->
   Rabs (FT2R (BPLUS (Fast2Mult_err xh0 yh0)
@@ -1997,14 +1997,14 @@ have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have HuP0 : 0 <= u'*P by nra.
 have F0 : is_finite tl0=true by
-  (unfold tl0;exact (DWTimesDW3_low_low_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold tl0;exact (DWTimesDW_low_low_finite xh0 xl0 yh0 yl0 FIN)).
 have F1 : is_finite tl1=true by
-  (unfold tl1,tl0;exact (DWTimesDW3_first_correction_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold tl1,tl0;exact (DWTimesDW_first_correction_finite xh0 xl0 yh0 yl0 FIN)).
 have F2 : is_finite cl2=true by
-  (unfold cl2,tl1,tl0;exact (DWTimesDW3_second_correction_finite xh0 xl0 yh0 yl0 FIN)).
+  (unfold cl2,tl1,tl0;exact (DWTimesDW_second_correction_finite xh0 xl0 yh0 yl0 FIN)).
 have F3 : is_finite cl3=true by
-  (unfold cl3,cl1,cl2,tl1,tl0;exact (DWTimesDW3_correction_finite xh0 xl0 yh0 yl0 FIN)).
-have Ffast := DWTimesDW3_fast2mult_finite xh0 xl0 yh0 yl0 FIN.
+  (unfold cl3,cl1,cl2,tl1,tl0;exact (DWTimesDW_correction_finite xh0 xl0 yh0 yl0 FIN)).
+have Ffast := DWTimesDW_fast2mult_finite xh0 xl0 yh0 yl0 FIN.
 (* the two cross products, each at most u*P *)
 have Hxl := @dw_low_le_u_high t STD xh0 xl0 DWx0.
 have Hml := @dw_low_le_u_high t STD yh0 yl0 DWy0.
@@ -2087,27 +2087,27 @@ Qed.
    leading product is small enough that [ch+cl3] lies on the shared FLT/FIX
    lattice, and [Fast2Sum_sum_exact_of_sum_small] preserves it.  The core
    contributes the full [5/2*eta] floor term. *)
-Lemma DWTimesDW3_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
+Lemma DWTimesDW_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
-  is_finite_p (DWTimesDW3 xh0 xl0 yh0 yl0) ->
+  is_finite_p (DWTimesDW xh0 xl0 yh0 yl0) ->
   Rabs (FT2R xh0*FT2R yh0) <
     bpow radix2 (common.emin (t:=t)+2*fprec t-1) ->
-  Rabs ((FT2R (fst (DWTimesDW3 xh0 xl0 yh0 yl0))+
-         FT2R (snd (DWTimesDW3 xh0 xl0 yh0 yl0)))-
+  Rabs ((FT2R (fst (DWTimesDW xh0 xl0 yh0 yl0))+
+         FT2R (snd (DWTimesDW xh0 xl0 yh0 yl0)))-
         (FT2R xh0+FT2R xl0)*(FT2R yh0+FT2R yl0))
     <= 5/2*bpow radix2 (common.emin (t:=t))+
        u^2*Rabs (FT2R xh0*FT2R yh0) /\
-  double_word_prop (fst (DWTimesDW3 xh0 xl0 yh0 yl0))
-                   (snd (DWTimesDW3 xh0 xl0 yh0 yl0)).
+  double_word_prop (fst (DWTimesDW xh0 xl0 yh0 yl0))
+                   (snd (DWTimesDW xh0 xl0 yh0 yl0)).
 Proof.
 move => Hp5 DWx0 DWy0 FIN Hgap.
 have Hp3 : (3 <= fprec t)%Z by lia.
 have Hcore := DWTimesDW_core_error_floor_gap xh0 xl0 yh0 yl0
   Hp3 DWx0 DWy0 FIN Hgap.
-have Hchlo0 := gap_ch_lower_bound xh0 yh0 (DWTimesDW3_mul_finite xh0 xl0 yh0 yl0 FIN).
+have Hchlo0 := gap_ch_lower_bound xh0 yh0 (DWTimesDW_mul_finite xh0 xl0 yh0 yl0 FIN).
 have Hcl30 := gap_cl3_upper_bound xh0 xl0 yh0 yl0 Hp5 DWx0 DWy0 FIN Hgap.
-set d := DWTimesDW3 xh0 xl0 yh0 yl0.
+set d := DWTimesDW xh0 xl0 yh0 yl0.
 set u' := bpow radix2 (-fprec t).
 set eta := bpow radix2 (common.emin (t:=t)).
 set P0 := (FT2R xh0*FT2R yh0)%R.
@@ -2130,7 +2130,7 @@ have Hu : u' <= /32.
 have Heta0 : 0 < eta by (unfold eta;apply bpow_gt_0).
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Fe : is_finite_p (Fast2Sum ch cl3).
-{ unfold d, DWTimesDW3 in FIN. fold ch cl1 tl0 tl1 cl2 cl3 in FIN.
+{ unfold d, DWTimesDW in FIN. fold ch cl1 tl0 tl1 cl2 cl3 in FIN.
   exact FIN. }
 destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
 - (* ordered: the closing Fast2Sum pair reconstructs the sum exactly in FLT,
@@ -2193,7 +2193,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   change (FT2R (fst d)+FT2R (snd d)=FT2R ch+FT2R cl3) in Hsum.
   split.
   + rewrite Hsum. exact Hcore.
-  + exact (DWTimesDW3_double_word_of_sum xh0 xl0 yh0 yl0 FIN Hsum).
+  + exact (DWTimesDW_double_word_of_sum xh0 xl0 yh0 yl0 FIN Hsum).
 Qed.
 
 (** Common proof near the threshold.  The numerical premise records exactly how
@@ -2202,7 +2202,7 @@ Local Lemma DWTimesDW_abs_normal_near_threshold_core
     (floor_coeff : R) :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -2214,11 +2214,11 @@ Local Lemma DWTimesDW_abs_normal_near_threshold_core
 Proof.
 move => DWx DWy FIN Hp5 Nprod Pnear Hcoef.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
-have F0 := DWTimesDW3_low_low_finite xh xl yh yl FIN.
-have F1 := DWTimesDW3_first_correction_finite xh xl yh yl FIN.
-have F2 := DWTimesDW3_second_correction_finite xh xl yh yl FIN.
-have F3 := DWTimesDW3_correction_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
+have F0 := DWTimesDW_low_low_finite xh xl yh yl FIN.
+have F1 := DWTimesDW_first_correction_finite xh xl yh yl FIN.
+have F2 := DWTimesDW_second_correction_finite xh xl yh yl FIN.
+have F3 := DWTimesDW_correction_finite xh xl yh yl FIN.
 have HerrEq := relerr_error_eq xh xl yh yl Hp3 DWx DWy FIN Fmul Nprod.
 have HerrRaw := aux_eta_bnd xh xl yh yl Hp5 DWx DWy
   Fmul F0 F1 F2 F3 Nprod.
@@ -2264,7 +2264,7 @@ Qed.
 Theorem DWTimesDW_abs_normal_near_threshold :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (8 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -2287,7 +2287,7 @@ Qed.
 Local Theorem DWTimesDW_abs_normal_near_threshold_floor52 :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -2313,7 +2313,7 @@ Qed.
 Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   (5 <= fprec t)%Z ->
   bpow radix2 (eminA+2*fprec t-1) <=
     Rabs (FT2R xh*FT2R yh) ->
@@ -2331,7 +2331,7 @@ Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
 Proof.
 move => DWx DWy FIN Hp5 Nprod N0 N1 N2 N3.
 have Hp3 : (3 <= fprec t)%Z by lia.
-have Fmul := DWTimesDW3_mul_finite xh xl yh yl FIN.
+have Fmul := DWTimesDW_mul_finite xh xl yh yl FIN.
 have H := relerr_error_relative_floor_decomposition xh xl yh yl
   Hp3 DWx DWy FIN Fmul Nprod.
 destruct H as
@@ -2494,11 +2494,11 @@ Qed.
 
 (* Normal arm at the 5/2*eta floor.  The near the threshold leg uses the _floor52
    variant, so the whole tree holds at p >= 5. *)
-Local Theorem DWTimesDW3_error_floor_normal :
+Local Theorem DWTimesDW_error_floor_normal :
   (5 <= fprec t)%Z ->
   double_word xh xl ->
   double_word yh yl ->
-  is_finite_p (DWTimesDW3 xh xl yh yl) ->
+  is_finite_p (DWTimesDW xh xl yh yl) ->
   bpow radix2 (eminA+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh) ->
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+5/2*bpow radix2 eminA.
@@ -2556,12 +2556,12 @@ Proof.
 move => Hp5 [[DWx DWy] FIN].
 destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
     (Rabs (FT2R xh*FT2R yh))) as [Nprod | Hgap].
-- exact (DWTimesDW3_error_floor_normal Hp5 DWx DWy FIN Nprod).
+- exact (DWTimesDW_error_floor_normal Hp5 DWx DWy FIN Nprod).
 - (* gap (P = 0 included): the u^2*P residual is absorbed into 4u^2|xr*yr|
      because |xr*yr| >= (1-u)^2*P and 4*(1-u)^2 >= 1 for u <= /2. *)
   have Hgap' : Rabs (FT2R xh*FT2R yh) <
       bpow radix2 (common.emin (t:=t)+2*fprec t-1) by exact Hgap.
-  have H := proj1 (DWTimesDW3_error_floor_gap xh xl yh yl
+  have H := proj1 (DWTimesDW_error_floor_gap xh xl yh yl
     Hp5 DWx DWy FIN Hgap').
   fold zh zl xr yr in H.
   have HXM := aux_dw_exact_product_lower xh xl yh yl DWx DWy.
@@ -2591,12 +2591,12 @@ Qed.
 (* Whole range output validity.  Both regimes preserve the closing Fast2Sum's sum, so
    both give the double-word property: above the threshold through the
    ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the small sum
-   lattice argument inside DWTimesDW3_error_floor_gap. *)
+   lattice argument inside DWTimesDW_error_floor_gap. *)
 Theorem DWTimesDW_double_word_from_cond :
   (5 <= fprec t)%Z ->
   DWTimesDW_mixed_cond xh xl yh yl ->
-  double_word_prop (fst (DWTimesDW3 xh xl yh yl))
-                   (snd (DWTimesDW3 xh xl yh yl)).
+  double_word_prop (fst (DWTimesDW xh xl yh yl))
+                   (snd (DWTimesDW xh xl yh yl)).
 Proof.
 move => Hp5 [[DWx DWy] FIN].
 have Hp3 : (3 <= fprec t)%Z by lia.
@@ -2608,14 +2608,14 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
     by exact (proj1 FIN).
   destruct (BPLUS_finite_e t _ _ Hfp) as [_ Hfcl3].
   have Hfmul : is_finite (BMULT xh yh)=true
-    by exact (DWTimesDW3_mul_finite xh xl yh yl FIN).
+    by exact (DWTimesDW_mul_finite xh xl yh yl FIN).
   have Nprod' : bpow radix2 (common.emin (t:=t)+2*fprec t-1) <=
       Rabs (FT2R xh*FT2R yh) by exact Nprod.
   have Hord := aux_cl3_le_ch xh xl yh yl Hp3 DWx DWy Hfmul Hfcl3 Nprod'.
-  exact (DWTimesDW3_double_word_from_pre xh xl yh yl Hfp Hord).
+  exact (DWTimesDW_double_word_from_pre xh xl yh yl Hfp Hord).
 - have Hgap' : Rabs (FT2R xh*FT2R yh) <
       bpow radix2 (common.emin (t:=t)+2*fprec t-1) by exact Hgap.
-  exact (proj2 (DWTimesDW3_error_floor_gap xh xl yh yl
+  exact (proj2 (DWTimesDW_error_floor_gap xh xl yh yl
     Hp5 DWx DWy FIN Hgap')).
 Qed.
 
@@ -2626,7 +2626,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Definition DWTimesDW_mixed_guarantee
     (xh xl yh yl : ftype t) : Prop :=
-  let '(zh, zl) := DWTimesDW3 xh xl yh yl in
+  let '(zh, zl) := DWTimesDW xh xl yh yl in
   Rabs
     (FT2R zh + FT2R zl -
        (FT2R xh + FT2R xl) * (FT2R yh + FT2R yl))
@@ -2648,7 +2648,7 @@ have Hdw :=
   DWTimesDW_double_word_from_cond xh xl yh yl Hp5 Hcond.
 unfold DWTimesDW_mixed_guarantee.
 revert Hacc Hdw.
-destruct (DWTimesDW3 xh xl yh yl) as [zh zl].
+destruct (DWTimesDW xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
@@ -2658,7 +2658,7 @@ Lemma DWTimesDW_mixed_cond_of_safe_input_cond
   DWTimesDW_mixed_cond xh xl yh yl.
 Proof.
 move => Hsafe.
-have Hfin := DWTimesDW3_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWTimesDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
 move: Hsafe => [_ [_ [Hdx [Hdy _]]]].
 unfold DWTimesDW_mixed_cond, DWTimesDW_mixed_input_cond,
        DWTimesDW_result_finite.
@@ -2687,10 +2687,10 @@ Lemma DWTimesDW_inputs_finite_of_result_finite
 Proof.
 unfold DWTimesDW_result_finite.
 move => Hfin.
-exact (conj (DWTimesDW3_xh_finite xh xl yh yl Hfin)
-       (conj (DWTimesDW3_xl_finite xh xl yh yl Hfin)
-       (conj (DWTimesDW3_yh_finite xh xl yh yl Hfin)
-             (DWTimesDW3_yl_finite xh xl yh yl Hfin)))).
+exact (conj (DWTimesDW_xh_finite xh xl yh yl Hfin)
+       (conj (DWTimesDW_xl_finite xh xl yh yl Hfin)
+       (conj (DWTimesDW_yh_finite xh xl yh yl Hfin)
+             (DWTimesDW_yl_finite xh xl yh yl Hfin)))).
 Qed.
 
 End MixedCondBridgeDWTimesDW.

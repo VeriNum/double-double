@@ -269,10 +269,10 @@ apply TwoSum_acc_helpers.is_finite_TwoSum; [exact Fsum | exact Fdiff |].
 eapply Rle_lt_trans; [exact Hb |]. apply FLT_lemmas.Omega4_lt_predOmega.
 Qed.
 
-Lemma AccurateDWPlusDW_finite_safe
+Lemma DWPlusDW_finite_safe
     (xh xl yh yl : ftype t) :
   DWPlusDW_safe_input_cond xh xl yh yl ->
-  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+  is_finite_p (DWPlusDW xh xl yh yl).
 Proof.
 intros (F_xh & F_xl & F_yh & F_yl & DWx & DWy & Hxh & Hyh).
 have HO : 0 < Omega by apply bpow_gt_0.
@@ -464,7 +464,7 @@ have Fzh : is_finite (BPLUS vh w) = true.
   red. eapply Rle_lt_trans; [apply round_abs_le_abs_plus_half_ulp |].
   have Hlt : Rabs (FT2R vh + FT2R w) < Omega by lra.
   have He := half_ulp_below_overflow_dwplus _ Hlt. lra. }
-unfold AccurateDWPlusDW.
+unfold DWPlusDW.
 destruct (TwoSumF xh yh) as [shi sli] eqn:Ehi.
 destruct (TwoSumF xl yl) as [thi tli] eqn:Elo.
 cbn [fst snd]. unfold Fast2Sum. cbn.

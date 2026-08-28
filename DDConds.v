@@ -85,7 +85,7 @@ Definition DWPlusDW_input_cond
 
 Definition DWPlusDW_output_finite_cond
     (xh xl yh yl : ftype t) : Prop :=
-  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+  is_finite_p (DWPlusDW xh xl yh yl).
 
 Definition DWPlusDW_cond
     (xh xl yh yl : ftype t) : Prop :=
@@ -136,7 +136,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Safe input condition for the relative bound on [DWTimesFP3].
+(* Safe input condition for the relative bound on [DWTimesFP].
    [Fast2Mult_exact_cond] makes the leading product finite and excludes its
    underflow gap.  The other conjuncts make [xl] finite, require a double-word
    input, and keep the product below [Omega/2] so that the cross term and final
@@ -147,7 +147,7 @@ Definition DWTimesFP_relative_error_input_cond (xh xl y : ftype t) : Prop :=
   Fast2Mult_exact_cond xh y /\
   Rabs (FT2R xh * FT2R y) <= /2 * Omega.
 
-(* Safe input condition for the mixed guarantee on [DWTimesFP3].  It requires
+(* Safe input condition for the mixed guarantee on [DWTimesFP].  It requires
    only finiteness of the rounded leading product, so it permits its underflow gap.
    Together with input finiteness, the double-word relation, and the product
    ceiling, it proves result finiteness and hence the mixed error bound and
@@ -165,7 +165,7 @@ Definition DWTimesFP_mixed_input_cond
 
 Definition DWTimesFP_result_finite
     (xh xl y : ftype t) : Prop :=
-  is_finite_p (DWTimesFP3 xh xl y).
+  is_finite_p (DWTimesFP xh xl y).
 
 Definition DWTimesFP_mixed_cond
     (xh xl y : ftype t) : Prop :=
@@ -191,7 +191,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Exact leading product condition used by the closing multiplication in
-   [DWDivDW3].  It excludes the [Fast2Mult] underflow gap, requires finite
+   [DWDivDW].  It excludes the [Fast2Mult] underflow gap, requires finite
    double-word inputs, and keeps [|xh*yh|] below [Omega/2] so that the final
    [Fast2Sum] remains finite. *)
 Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : Prop :=
@@ -202,7 +202,7 @@ Definition DWTimesDW_exact_leading_product_input_cond (xh xl yh yl : ftype t) : 
   Fast2Mult_exact_cond xh yh /\
   Rabs (FT2R xh * FT2R yh) <= /2 * Omega.
 
-(* Safe input condition for the mixed guarantee on [DWTimesDW3].  It requires
+(* Safe input condition for the mixed guarantee on [DWTimesDW].  It requires
    only finiteness of the rounded leading product, so it permits its underflow gap.
    The remaining conjuncts require finite double-word inputs and enough
    overflow headroom to prove result finiteness.  The mixed guarantee then
@@ -236,7 +236,7 @@ Definition DWTimesDW_mixed_input_cond
 
 Definition DWTimesDW_result_finite
     (xh xl yh yl : ftype t) : Prop :=
-  is_finite_p (DWTimesDW3 xh xl yh yl).
+  is_finite_p (DWTimesDW xh xl yh yl).
 
 Definition DWTimesDW_mixed_cond
     (xh xl yh yl : ftype t) : Prop :=
@@ -269,11 +269,11 @@ Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* ------------------------------------------------------------------
-   Whole range mixed tier for DWDivFP3 (Algorithm 15).
+   Whole range mixed tier for DWDivFP (Algorithm 15).
    Input condition decidable at runtime; no underflow floor on the quotient.
    ------------------------------------------------------------------ *)
 
-(* Safe input condition for the mixed guarantee on [DWDivFP3].  It requires
+(* Safe input condition for the mixed guarantee on [DWDivFP].  It requires
    finite inputs, a double-word dividend, and a finite leading quotient; the
    latter also implies a nonzero divisor.  Upper bounds on [|xh|] and
    [|xh/y|] prevent overflow.  For a nonzero dividend, the lower bound on
@@ -304,7 +304,7 @@ Definition DWDivFP_mixed_input_cond
 (* Output validity: the computed pair is finite. *)
 Definition DWDivFP_result_finite
     (xh xl y : ftype t) : Prop :=
-  is_finite_p (DWDivFP3 xh xl y).
+  is_finite_p (DWDivFP xh xl y).
 
 Definition DWDivFP_mixed_cond
     (xh xl y : ftype t) : Prop :=
@@ -312,10 +312,10 @@ Definition DWDivFP_mixed_cond
   DWDivFP_result_finite xh xl y.
 
 (* ------------------------------------------------------------------
-   Normal range pure relative tier for DWDivFP3.
+   Normal range pure relative tier for DWDivFP.
    ------------------------------------------------------------------ *)
 
-(* Normal range condition for the pure relative bound on [DWDivFP3].  It
+(* Normal range condition for the pure relative bound on [DWDivFP].  It
    requires a normal leading quotient and either a zero correction or a normal
    correction quotient.  The zero case preserves exact division.  These are
    properties of computed nodes, not conditions that an input guard can check. *)
@@ -353,10 +353,10 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin  := (SpecFloat.emin (fprec t) (femax t)).
 
 (* ------------------------------------------------------------------
-   Whole range mixed tier for DWDivDW3 (Algorithm 18).
+   Whole range mixed tier for DWDivDW (Algorithm 18).
    ------------------------------------------------------------------ *)
 
-(** Safe input condition for the mixed guarantee on [DWDivDW3].  It requires
+(** Safe input condition for the mixed guarantee on [DWDivDW].  It requires
     finite double-word operands, a divisor window, and a quotient ceiling.
     There is no lower bound on the quotient.  The upper divisor bound implies
     [eta*|yh| <= u^2/4], which pays for the reciprocal reconstruction floor
@@ -386,7 +386,7 @@ Definition DWDivDW_mixed_input_cond
 (* Output validity: the computed pair is finite. *)
 Definition DWDivDW_result_finite
     (xh xl yh yl : ftype t) : Prop :=
-  is_finite_p (DWDivDW3 xh xl yh yl).
+  is_finite_p (DWDivDW xh xl yh yl).
 
 Definition DWDivDW_mixed_cond
     (xh xl yh yl : ftype t) : Prop :=
@@ -396,7 +396,7 @@ Definition DWDivDW_mixed_cond
 End DWDivDWCond.
 
 
-(* Normal range condition for the pure relative bound on [DWDivDW3].
+(* Normal range condition for the pure relative bound on [DWDivDW].
    [DWDivDW_normal] records the nine node bounds needed to identify the FLT
    computation with the FLX model.  These bounds do not follow from input
    magnitudes, and the nodes may be zero.  The mixed tier therefore permits
@@ -413,8 +413,8 @@ Notation rh  := (BFMA (BOPP yh) th (Zconst t 1)).
 Notation rl  := (BOPP (BMULT yl th)).
 Notation eh  := (fst (Fast2Sum rh rl)).
 Notation el  := (snd (Fast2Sum rh rl)).
-Notation dh  := (fst (DWTimesFP3 eh el th)).
-Notation dl  := (snd (DWTimesFP3 eh el th)).
+Notation dh  := (fst (DWTimesFP eh el th)).
+Notation dl  := (snd (DWTimesFP eh el th)).
 Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 

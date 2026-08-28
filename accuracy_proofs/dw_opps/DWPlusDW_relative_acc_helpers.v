@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Helper lemmas for the relative accuracy proof of [AccurateDWPlusDW]. *)
+(** Helper lemmas for the relative accuracy proof of [DWPlusDW]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_lemmas DW_acc_lemmas.
@@ -1444,10 +1444,10 @@ destruct H as (d5 & Hd5 & B).
 Qed.
 
 
-Theorem AccurateDWPlusDW_finite :
-  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+Theorem DWPlusDW_finite :
+  is_finite_p (DWPlusDW xh xl yh yl).
 Proof.
-rewrite /is_finite_p /AccurateDWPlusDW.
+rewrite /is_finite_p /DWPlusDW.
 replace (TwoSumF xh yh) with (sh, sl) => //.
 replace (TwoSumF xl yl) with (th, tl) => //.
 rewrite /fst /snd.
@@ -1469,11 +1469,11 @@ Section DWPlusDWCondBridge.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl yh yl : ftype t).
 
-Theorem AccurateDWPlusDW_finite_from_safe_input_cond :
+Theorem DWPlusDW_finite_from_safe_input_cond :
   DWPlusDW_safe_input_cond xh xl yh yl ->
-  is_finite_p (AccurateDWPlusDW xh xl yh yl).
+  is_finite_p (DWPlusDW xh xl yh yl).
 Proof.
-apply DWPlus_finite.AccurateDWPlusDW_finite_safe.
+apply DWPlus_finite.DWPlusDW_finite_safe.
 Qed.
 
 End DWPlusDWCondBridge.

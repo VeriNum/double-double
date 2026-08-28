@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Precision-independent finiteness of [DWDivFP3] under the public safe-input
+(** Precision-independent finiteness of [DWDivFP] under the public safe-input
     bounds.  The normal and subnormal quotient ranges are proved separately. *)
 
 Require Import vcfloat.VCFloat.
@@ -151,7 +151,7 @@ Lemma DWDivFP_result_finite_subnormal (xh xl y : ftype t) :
   DWDivFP_mixed_safe_input_cond xh xl y ->
   FT2R xh <> 0 ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
-  is_finite_p (DWDivFP3 xh xl y).
+  is_finite_p (DWDivFP xh xl y).
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb)
   Hxhne Hsub.
@@ -387,7 +387,7 @@ have Ffst : is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS
               (Fast2Mult_err (BDIV xh y) y)) xl) y)) < /4 * Omega
     by (eapply Rle_lt_trans; [exact Hsum |]; nra).
   have Hulp := half_ulp_below_quarter _ Hsumlt. nra. }
-unfold DWDivFP3, Fast2Mult_err, Fast2Mult, Fast2Sum.
+unfold DWDivFP, Fast2Mult_err, Fast2Mult, Fast2Sum.
 cbn [fst snd]. split; [exact Ffst |].
 apply is_finite_FastSum_small.
 - eapply Rle_trans; [exact Htl |]. nra.
@@ -398,7 +398,7 @@ Lemma DWDivFP_result_finite_normal (xh xl y : ftype t) :
   DWDivFP_mixed_safe_input_cond xh xl y ->
   FT2R xh <> 0 ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
-  is_finite_p (DWDivFP3 xh xl y).
+  is_finite_p (DWDivFP xh xl y).
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & Hxhlb)
   Hxhne Hnorm.
@@ -734,7 +734,7 @@ have Ffst : is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS
       (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
               (Fast2Mult_err (BDIV xh y) y)) xl) y)) < Omega by nra.
   have Hulp := half_ulp_below_overflow _ Hsumlt. nra. }
-unfold DWDivFP3, Fast2Mult_err, Fast2Mult, Fast2Sum.
+unfold DWDivFP, Fast2Mult_err, Fast2Mult, Fast2Sum.
 cbn [fst snd]. split; [exact Ffst |].
 apply is_finite_FastSum_small; [exact Htl | exact Ffst].
 Qed.

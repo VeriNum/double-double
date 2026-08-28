@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative error and output validity results for [AccurateDWPlusDW].
+(** Relative error and output validity results for [DWPlusDW].
 
     The operation has no separate mixed error tier: under two input
     double-word properties and finiteness of the computed pair, its relative
@@ -54,12 +54,12 @@ Local Definition DWPlusDW_FLX :=
 Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 
-Let FIN : is_finite_p (AccurateDWPlusDW xh xl yh yl) :=
+Let FIN : is_finite_p (DWPlusDW xh xl yh yl) :=
   (proj2 Hcond).
 
 Ltac prove_finite :=
   move : FIN;
-  rewrite /is_finite_p/AccurateDWPlusDW;
+  rewrite /is_finite_p/DWPlusDW;
   rewrite /Fast2Sum/TwoSumF/snd/fst;
   move => [] ; repeat subexpr_finite => //
 .
@@ -89,7 +89,7 @@ Proof. prove_finite. Qed.
 (* the result of the FLT format algorithm and the FLX format algorithm are
   equal, regardless of underflow. *)
 Local Lemma DWPlusDWEq_FLT :
-  DWPlusDW_FLX = F2Rp (AccurateDWPlusDW xh xl yh yl).
+  DWPlusDW_FLX = F2Rp (DWPlusDW xh xl yh yl).
 Proof.
 pose proof FIN1 as fin1.
 pose proof FIN2 as fin2.
@@ -97,7 +97,7 @@ pose proof FIN3 as fin3.
 pose proof FIN4 as fin4.
 pose proof FIN5 as fin5.
 move: FIN.
-rewrite /AccurateDWPlusDW/is_finite_p/DWPlusDW_FLX.
+rewrite /DWPlusDW/is_finite_p/DWPlusDW_FLX.
 move => [].
 replace (TwoSumF xh yh) with (BPLUS xh yh, TwoSumF_err xh yh) => //.
 replace (TwoSumF xl yl) with (BPLUS xl yl, TwoSumF_err xl yl) => //.
@@ -177,8 +177,8 @@ have Hf0 : TwoSum_sum p choice xhr yhr = FT2R f0.
 Qed.
 
 
-Let zh := (FT2R (fst (AccurateDWPlusDW xh xl yh yl))).
-Let zl := (FT2R (snd (AccurateDWPlusDW xh xl yh yl))).
+Let zh := (FT2R (fst (DWPlusDW xh xl yh yl))).
+Let zl := (FT2R (snd (DWPlusDW xh xl yh yl))).
 
 Definition relative_error_DWPlusDW :=
   Rabs ((zh + zl - (xhr + xlr + yhr + ylr)) / (xhr + xlr + yhr + ylr)).
@@ -212,7 +212,7 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Definition DWPlusDW_relative_guarantee
     (xh xl yh yl : ftype t) : Prop :=
-  let '(zh, zl) := AccurateDWPlusDW xh xl yh yl in
+  let '(zh, zl) := DWPlusDW xh xl yh yl in
   Rabs
     ((FT2R zh + FT2R zl -
         (FT2R xh + FT2R xl + FT2R yh + FT2R yl)) /
@@ -225,8 +225,8 @@ Theorem DWPlusDW_double_word_from_cond
     (xh xl yh yl : ftype t) :
   (3 <= fprec t)%Z ->
   DWPlusDW_cond xh xl yh yl ->
-  double_word_prop (fst (AccurateDWPlusDW xh xl yh yl))
-                   (snd (AccurateDWPlusDW xh xl yh yl)).
+  double_word_prop (fst (DWPlusDW xh xl yh yl))
+                   (snd (DWPlusDW xh xl yh yl)).
 Proof.
 intros Hp3 [[DWx DWy] Hfin].
 unfold DWPlusDW_output_finite_cond in Hfin.
@@ -237,7 +237,7 @@ set vl := Fast2Sum_err sh c.
 set w := BPLUS (TwoSumF_err xl yl) vl.
 Ltac finite_from_result H :=
   move: H;
-  rewrite /is_finite_p /AccurateDWPlusDW /Fast2Sum /TwoSumF /snd /fst;
+  rewrite /is_finite_p /DWPlusDW /Fast2Sum /TwoSumF /snd /fst;
   move=>[]; repeat subexpr_finite=> //.
 have Fsh : is_finite sh = true by unfold sh; finite_from_result Hfin.
 have Fsl : is_finite (TwoSumF_err xh yh) = true by finite_from_result Hfin.
@@ -282,7 +282,7 @@ have Hdw := DWPlusDW_double_word_from_cond xh xl yh yl Hp3 Hcond.
 unfold relative_error_DWPlusDW in Hacc.
 unfold DWPlusDW_relative_guarantee.
 revert Hacc Hdw.
-destruct (AccurateDWPlusDW xh xl yh yl) as [zh zl].
+destruct (DWPlusDW xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
@@ -292,7 +292,7 @@ Lemma DWPlusDW_cond_of_safe_input_cond
   DWPlusDW_cond xh xl yh yl.
 Proof.
 intros Hsafe.
-have Hfin := AccurateDWPlusDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWPlusDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
 specialize (Hfin NANS STD).
 destruct Hsafe as (_ & _ & _ & _ & Hdx & Hdy & _ & _).
 unfold DWPlusDW_cond, DWPlusDW_input_cond, DWPlusDW_output_finite_cond.

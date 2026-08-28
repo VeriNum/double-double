@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole range mixed error and output validity results for [DWTimesFP3].
+(** Whole range mixed error and output validity results for [DWTimesFP].
 
     This file imports the common runtime model facts and normal range relative
     result from [DWMulFP_relative_acc], then handles the Fast2Mult underflow
@@ -32,13 +32,13 @@ Arguments DWTimesFP.TwoProd : simpl never.
     ordering: in the ordered arm the two Fast2Sum roundings of
     [DWDivDW_refinement_product_value_error_tight_floor] vanish, taking its
     floor from [2*eta] down to [eta]. *)
-Lemma DWTimesFP3_sum_exact_of_ord {NANS : Nans} {t : type}
+Lemma DWTimesFP_sum_exact_of_ord {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
-  is_finite_p (DWTimesFP3 ah al b) ->
+  is_finite_p (DWTimesFP ah al b) ->
   Rabs (FT2R (BFMA al b (Fast2Mult_err ah b))) <=
     Rabs (FT2R (Fast2Mult_mul ah b)) ->
-  FT2R (fst (DWTimesFP3 ah al b)) +
-  FT2R (snd (DWTimesFP3 ah al b)) =
+  FT2R (fst (DWTimesFP ah al b)) +
+  FT2R (snd (DWTimesFP ah al b)) =
     FT2R (Fast2Mult_mul ah b) +
     FT2R (BFMA al b (Fast2Mult_err ah b)).
 Proof.
@@ -47,33 +47,33 @@ set ch := Fast2Mult_mul ah b.
 set cl1 := Fast2Mult_err ah b.
 set cl3 := BFMA al b cl1.
 have Fe : is_finite_p (Fast2Sum ch cl3).
-{ unfold DWTimesFP3 in FIN.
+{ unfold DWTimesFP in FIN.
   unfold ch, cl1, cl3, Fast2Mult_mul, Fast2Mult_err, Fast2Mult in *.
   exact FIN. }
 fold ch cl1 cl3 in Hord.
 have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
-change (FT2R (snd (DWTimesFP3 ah al b)) =
-  FT2R ch + FT2R cl3 - FT2R (fst (DWTimesFP3 ah al b))) in Hsum.
+change (FT2R (snd (DWTimesFP ah al b)) =
+  FT2R ch + FT2R cl3 - FT2R (fst (DWTimesFP ah al b))) in Hsum.
 lra.
 Qed.
 
 (** If Algorithm 9's closing Fast2Sum preserves its two inputs, its returned
     pair is a double-word: the high component is exactly the rounding of that
     preserved sum. *)
-Local Lemma DWTimesFP3_double_word_of_sum {NANS : Nans} {t : type}
+Local Lemma DWTimesFP_double_word_of_sum {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
-  is_finite_p (DWTimesFP3 ah al b) ->
+  is_finite_p (DWTimesFP ah al b) ->
   let ch := Fast2Mult_mul ah b in
   let cl3 := BFMA al b (Fast2Mult_err ah b) in
-  FT2R (fst (DWTimesFP3 ah al b))+FT2R (snd (DWTimesFP3 ah al b))=
+  FT2R (fst (DWTimesFP ah al b))+FT2R (snd (DWTimesFP ah al b))=
     FT2R ch+FT2R cl3 ->
-  double_word_prop (fst (DWTimesFP3 ah al b))
-                   (snd (DWTimesFP3 ah al b)).
+  double_word_prop (fst (DWTimesFP ah al b))
+                   (snd (DWTimesFP ah al b)).
 Proof.
 move => FIN /= Hsum.
 set ch := Fast2Mult_mul ah b.
 set cl3 := BFMA al b (Fast2Mult_err ah b).
-set d := DWTimesFP3 ah al b.
+set d := DWTimesFP ah al b.
 fold d ch cl3 in Hsum.
 unfold double_word_prop, rounded. fold d.
 rewrite Hsum.
@@ -92,7 +92,7 @@ Qed.
 Local Lemma DWTimesFP_core_error_floor_gap {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
+  is_finite_p (DWTimesFP ah al b) ->
   ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
       Rabs (FT2R ah*FT2R b) ->
   let ch := Fast2Mult_mul ah b in
@@ -113,10 +113,10 @@ have Hu : u <= /8.
 { unfold u. have -> : (/8:R)=bpow radix2 (-3) by (simpl;lra).
   apply bpow_le; lia. }
 have Heta0 : 0 < eta by apply bpow_gt_0.
-have Ffast := DWTimesFP3_fast2mult_finite ah al b FIN.
+have Ffast := DWTimesFP_fast2mult_finite ah al b FIN.
 have Fch : is_finite ch=true by exact (proj1 Ffast).
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWTimesFP3_correction_finite ah al b FIN; fold cl1 cl3 in Fcl3.
+have Fcl3 := DWTimesFP_correction_finite ah al b FIN; fold cl1 cl3 in Fcl3.
 have Hdelta := Fast2Mult_sum_error_floor ah b Hp3 Ffast.
 fold x ch cl1 eta in Hdelta.
 have Hchr : FT2R ch=round radix2
@@ -186,18 +186,18 @@ Qed.
     holds it is exact.  If it fails, the leading and low terms are both within
     six floor ulps, where their common fixed-point lattice makes Fast2Sum exact
     as well.  Thus the compensated core's [2.51] ulps are the whole cost. *)
-Local Lemma DWTimesFP3_error_floor_gap {NANS : Nans} {t : type}
+Local Lemma DWTimesFP_error_floor_gap {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
+  is_finite_p (DWTimesFP ah al b) ->
   ~ bpow radix2 (@common.emin t+2*fprec t-1) <=
       Rabs (FT2R ah*FT2R b) ->
-  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
-         FT2R (snd (DWTimesFP3 ah al b)))-
+  Rabs ((FT2R (fst (DWTimesFP ah al b))+
+         FT2R (snd (DWTimesFP ah al b)))-
         (FT2R ah+FT2R al)*FT2R b)
     <= 251/100*bpow radix2 (@common.emin t) /\
-  double_word_prop (fst (DWTimesFP3 ah al b))
-                   (snd (DWTimesFP3 ah al b)).
+  double_word_prop (fst (DWTimesFP ah al b))
+                   (snd (DWTimesFP ah al b)).
 Proof.
 move => Hp3 DWa FIN Hgap.
 set x := (FT2R ah*FT2R b)%R.
@@ -205,7 +205,7 @@ set P := Rabs x.
 set ch := Fast2Mult_mul ah b.
 set cl1 := Fast2Mult_err ah b.
 set cl3 := BFMA al b cl1.
-set d := DWTimesFP3 ah al b.
+set d := DWTimesFP ah al b.
 set u := bpow radix2 (-fprec t).
 set eta := bpow radix2 (@common.emin t).
 have Hu0 : 0 < u by apply bpow_gt_0.
@@ -214,10 +214,10 @@ have Hu : u <= /8.
   apply bpow_le; lia. }
 have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
 have Heta0 : 0 < eta by apply bpow_gt_0.
-have Ffast := DWTimesFP3_fast2mult_finite ah al b FIN.
+have Ffast := DWTimesFP_fast2mult_finite ah al b FIN.
 have Fch : is_finite ch=true by exact (proj1 Ffast).
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWTimesFP3_correction_finite ah al b FIN; fold cl1 cl3 in Fcl3.
+have Fcl3 := DWTimesFP_correction_finite ah al b FIN; fold cl1 cl3 in Fcl3.
 have Hcore := DWTimesFP_core_error_floor_gap ah al b
   Hp3 DWa FIN Hgap.
 fold ch cl3 eta in Hcore. cbv zeta in Hcore.
@@ -271,7 +271,7 @@ have Hcl3up : Rabs (FT2R cl3)<=
   have Huw := Rmult_le_compat_l u _ _ (Rlt_le _ _ Hu0) Hw.
   nra. }
 have Fe : is_finite_p (Fast2Sum ch cl3).
-{ unfold d, DWTimesFP3 in FIN. fold ch cl1 cl3 in FIN. exact FIN. }
+{ unfold d, DWTimesFP in FIN. fold ch cl1 cl3 in FIN. exact FIN. }
 destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
     as [Hord|Hnord].
 - have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
@@ -342,7 +342,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
   + change (Rabs ((FT2R (fst d)+FT2R (snd d))-
       (FT2R ah+FT2R al)*FT2R b)<=251/100*eta).
     rewrite Hsum. exact Hcore.
-  + exact (DWTimesFP3_double_word_of_sum ah al b FIN Hsum).
+  + exact (DWTimesFP_double_word_of_sum ah al b FIN Hsum).
 Qed.
 
 (* ---------- public assembly: the whole range mixed API ---------- *)
@@ -351,14 +351,14 @@ Qed.
    is representable and the entire Algorithm 9 error is relative, with no
    physical floor contribution: this is the local relative accuracy core
    cleared of its division by the exact product. *)
-Local Lemma DWTimesFP3_error_normal_arm {NANS : Nans} {t : type}
+Local Lemma DWTimesFP_error_normal_arm {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
-  is_finite_p (DWTimesFP3 ah al b) ->
+  is_finite_p (DWTimesFP ah al b) ->
   bpow radix2 (@common.emin t+2*fprec t-1) <=
     Rabs (FT2R ah*FT2R b) ->
-  Rabs ((FT2R (fst (DWTimesFP3 ah al b))+
-         FT2R (snd (DWTimesFP3 ah al b)))-
+  Rabs ((FT2R (fst (DWTimesFP ah al b))+
+         FT2R (snd (DWTimesFP ah al b)))-
         (FT2R ah+FT2R al)*FT2R b)
     <= 2*bpow radix2 (-fprec t)^2*
          Rabs ((FT2R ah+FT2R al)*FT2R b).
@@ -367,8 +367,8 @@ move => Hp3 DWa FIN Hbig.
 move: (xryr_ne_0_of_big ah al b DWa Hbig) => [_ [Hyne [Hxrne Hne]]].
 have Hrel := DWTimesFP_relative_accuracy_core ah al b DWa FIN Hp3 (or_intror Hbig).
 unfold relative_error_DWTimesFP in Hrel.
-set E := (FT2R (fst (DWTimesFP3 ah al b))+
-          FT2R (snd (DWTimesFP3 ah al b))-
+set E := (FT2R (fst (DWTimesFP ah al b))+
+          FT2R (snd (DWTimesFP ah al b))-
           (FT2R ah+FT2R al)*FT2R b)%R.
 set Q := ((FT2R ah+FT2R al)*FT2R b)%R.
 fold E Q in Hrel. fold Q.
@@ -384,7 +384,7 @@ Qed.
    split used to establish that bundle. *)
 Definition DWTimesFP_mixed_guarantee {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) : Prop :=
-  let '(zh, zl) := DWTimesFP3 xh xl y in
+  let '(zh, zl) := DWTimesFP xh xl y in
   Rabs
     (FT2R zh + FT2R zl - (FT2R xh + FT2R xl) * FT2R y)
     <= 2 * bpow Zaux.radix2 (- fprec t) ^ 2 *
@@ -396,50 +396,50 @@ Local Lemma DWTimesFP_mixed_guarantee_core {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
   double_word_prop xh xl ->
-  is_finite_p (DWTimesFP3 xh xl y) ->
+  is_finite_p (DWTimesFP xh xl y) ->
   DWTimesFP_mixed_guarantee xh xl y.
 Proof.
 move => Hp3 DWa FIN.
 destruct (Rle_dec
   (bpow radix2 (@common.emin t + 2*fprec t - 1))
   (Rabs (FT2R xh * FT2R y))) as [Hbig | Hgap].
-- have Hnormal := DWTimesFP3_error_normal_arm xh xl y Hp3 DWa FIN Hbig.
+- have Hnormal := DWTimesFP_error_normal_arm xh xl y Hp3 DWa FIN Hbig.
   have Heta : 0 <= 251/100*bpow radix2 (@common.emin t).
   { have := bpow_ge_0 radix2 (@common.emin t). nra. }
   have Hacc :
-    Rabs ((FT2R (fst (DWTimesFP3 xh xl y)) +
-           FT2R (snd (DWTimesFP3 xh xl y))) -
+    Rabs ((FT2R (fst (DWTimesFP xh xl y)) +
+           FT2R (snd (DWTimesFP xh xl y))) -
           (FT2R xh + FT2R xl) * FT2R y)
     <= 2*bpow radix2 (-fprec t)^2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
        251/100*bpow radix2 (@common.emin t) by lra.
-  have Fmul := DWTimesFP3_mul_finite xh xl y FIN.
-  have Fcl3 := DWTimesFP3_correction_finite xh xl y FIN.
+  have Fmul := DWTimesFP_mul_finite xh xl y FIN.
+  have Fcl3 := DWTimesFP_correction_finite xh xl y FIN.
   have Hord := aux_cl3_le_ch xh xl y DWa Fmul Fcl3 Hbig.
-  have Hdw : double_word_prop (fst (DWTimesFP3 xh xl y))
-      (snd (DWTimesFP3 xh xl y))
-    by exact (DWTimesFP3_double_word_from_pre
+  have Hdw : double_word_prop (fst (DWTimesFP xh xl y))
+      (snd (DWTimesFP xh xl y))
+    by exact (DWTimesFP_double_word_from_pre
       xh xl y (proj1 FIN) Hord).
   unfold DWTimesFP_mixed_guarantee.
   revert Hacc Hdw.
-  destruct (DWTimesFP3 xh xl y) as [zh zl].
+  destruct (DWTimesFP xh xl y) as [zh zl].
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
-- have [Hfloor Hdw] := DWTimesFP3_error_floor_gap
+- have [Hfloor Hdw] := DWTimesFP_error_floor_gap
     xh xl y Hp3 DWa FIN Hgap.
   have Hu2 : 0 <= 2*bpow radix2 (-fprec t)^2 *
       Rabs ((FT2R xh + FT2R xl) * FT2R y).
   { have := bpow_ge_0 radix2 (-fprec t).
     have := Rabs_pos ((FT2R xh + FT2R xl) * FT2R y). nra. }
   have Hacc :
-    Rabs ((FT2R (fst (DWTimesFP3 xh xl y)) +
-           FT2R (snd (DWTimesFP3 xh xl y))) -
+    Rabs ((FT2R (fst (DWTimesFP xh xl y)) +
+           FT2R (snd (DWTimesFP xh xl y))) -
           (FT2R xh + FT2R xl) * FT2R y)
     <= 2*bpow radix2 (-fprec t)^2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
        251/100*bpow radix2 (@common.emin t) by lra.
   unfold DWTimesFP_mixed_guarantee.
   revert Hacc Hdw.
-  destruct (DWTimesFP3 xh xl y) as [zh zl].
+  destruct (DWTimesFP xh xl y) as [zh zl].
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
@@ -455,7 +455,7 @@ Lemma DWTimesFP_mixed_cond_of_safe_input_cond {NANS : Nans} {t : type}
   DWTimesFP_mixed_cond xh xl y.
 Proof.
 move => Hsafe.
-have Hfin := DWTimesFP3_finite_from_safe_input_cond xh xl y Hsafe.
+have Hfin := DWTimesFP_finite_from_safe_input_cond xh xl y Hsafe.
 move: Hsafe => [_ [Hdw _]].
 unfold DWTimesFP_mixed_cond, DWTimesFP_mixed_input_cond,
        DWTimesFP_result_finite.
@@ -468,8 +468,8 @@ Theorem DWTimesFP_mixed_accuracy_from_cond
   (3 <= fprec t)%Z ->
   DWTimesFP_mixed_cond xh xl y ->
   Rabs
-    (FT2R (fst (DWTimesFP3 xh xl y)) +
-       FT2R (snd (DWTimesFP3 xh xl y)) -
+    (FT2R (fst (DWTimesFP xh xl y)) +
+       FT2R (snd (DWTimesFP xh xl y)) -
        (FT2R xh + FT2R xl) * FT2R y)
     <= 2 * bpow Zaux.radix2 (- fprec t) ^ 2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
@@ -479,7 +479,7 @@ move => Hp3 [DWa FIN].
 have Hguarantee :=
   DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
 unfold DWTimesFP_mixed_guarantee in Hguarantee.
-destruct (DWTimesFP3 xh xl y) as [zh zl].
+destruct (DWTimesFP xh xl y) as [zh zl].
 exact (proj1 Hguarantee).
 Qed.
 
@@ -488,14 +488,14 @@ Theorem DWTimesFP_double_word_from_cond
     (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
   DWTimesFP_mixed_cond xh xl y ->
-  double_word_prop (fst (DWTimesFP3 xh xl y))
-                   (snd (DWTimesFP3 xh xl y)).
+  double_word_prop (fst (DWTimesFP xh xl y))
+                   (snd (DWTimesFP xh xl y)).
 Proof.
 move => Hp3 [DWa FIN].
 have Hguarantee :=
   DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
 unfold DWTimesFP_mixed_guarantee in Hguarantee.
-destruct (DWTimesFP3 xh xl y) as [zh zl].
+destruct (DWTimesFP xh xl y) as [zh zl].
 exact (proj2 Hguarantee).
 Qed.
 
@@ -513,7 +513,7 @@ have Hdw :=
   DWTimesFP_double_word_from_cond xh xl y Hp3 Hcond.
 unfold DWTimesFP_mixed_guarantee.
 revert Hacc Hdw.
-destruct (DWTimesFP3 xh xl y) as [zh zl].
+destruct (DWTimesFP xh xl y) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
@@ -539,6 +539,6 @@ Proof.
 unfold DWTimesFP_result_finite.
 move => Hfin.
 have [Hfxh Hfy] := BMULT_finite_e t xh y
-  (DWTimesFP3_mul_finite xh xl y Hfin).
-exact (conj Hfxh (conj (DWTimesFP3_xl_finite xh xl y Hfin) Hfy)).
+  (DWTimesFP_mul_finite xh xl y Hfin).
+exact (conj Hfxh (conj (DWTimesFP_xl_finite xh xl y Hfin) Hfy)).
 Qed.
