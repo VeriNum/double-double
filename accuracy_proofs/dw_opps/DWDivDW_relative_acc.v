@@ -2472,7 +2472,7 @@ destruct (Rle_or_lt
     DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
       xh xl (fst m) (snd m) Hfinal.
   exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_mixed_cond_of_safe_input_cond
-    xh xl (fst m) (snd m) ltac:(lia) Hsafe)).
+    xh xl (fst m) (snd m) Hsafe)).
 - exact (DWDivDW3_finite_from_cond_zprod_underflow xh xl yh yl
     Hp14 ANALYSIS Hsmall).
 Qed.
@@ -4230,16 +4230,15 @@ Notation ml  := (snd (DWPlusFP dh dl th)).
 (** The complete division is finite as soon as its closing multiplication
     satisfies [DWTimesDW_exact_leading_product_input_cond], proved earlier. *)
 Local Lemma DWDivDW3_finite_from_final_cond :
-  (4 <= fprec t)%Z ->
   DWTimesDW_exact_leading_product_input_cond xh xl mh ml ->
   is_finite_p (DWDivDW3 xh xl yh yl).
 Proof.
-move => Hp4 Hfinal.
+move => Hfinal.
 have Hsafe :=
   DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
     xh xl mh ml Hfinal.
 exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_mixed_cond_of_safe_input_cond
-  xh xl mh ml Hp4 Hsafe)).
+  xh xl mh ml Hsafe)).
 Qed.
 
 End FiniteDWDivDWFromFinalBlock.
@@ -4279,7 +4278,7 @@ have Hyhne := DWDivDW_cond_yh_nonzero xh xl yh yl ANALYSIS.
 have UF_th := DWDivDW_cond_UF_th xh xl yh yl ANALYSIS.
 have FINAL_cond := DWDivDW_final_cond_from_cond_normal xh xl yh yl
   Hp14 SAFE UF_zprod.
-have FIN := DWDivDW3_finite_from_final_cond xh xl yh yl ltac:(lia) FINAL_cond.
+have FIN := DWDivDW3_finite_from_final_cond xh xl yh yl FINAL_cond.
 exact (relative_errorDWDivDW3_correct xh xl yh yl
          DWx DWy FIN Hp14 Hyhne UF_th UF_rh UF_rl
          UF_dprod UF_dlow UF_zprod UF_z0 UF_z1 UF_z2 UF_z3).

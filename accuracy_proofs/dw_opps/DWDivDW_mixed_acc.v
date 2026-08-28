@@ -91,18 +91,14 @@ destruct (DWDivDW3 xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-Lemma DWDivDW_mixed_cond_of_safe_input_cond :
-  (14 <= fprec t)%Z ->
+Lemma DWDivDW_mixed_input_cond_of_safe_input_cond :
   DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
-  DWDivDW_mixed_cond xh xl yh yl.
+  DWDivDW_mixed_input_cond xh xl yh yl.
 Proof.
-move => Hp14 Hsafe.
-have Hfin := DWDivDW3_finite_from_cond xh xl yh yl Hp14 Hsafe.
-specialize (Hfin NANS STD).
+move => Hsafe.
 destruct Hsafe as (_ & _ & _ & _ & Hdx & Hdy & Hyhi & Hylo & _).
-unfold DWDivDW_mixed_cond, DWDivDW_mixed_input_cond,
-       DWDivDW_result_finite.
-exact (conj (conj Hdx (conj Hdy (conj Hyhi Hylo))) Hfin).
+unfold DWDivDW_mixed_input_cond.
+exact (conj Hdx (conj Hdy (conj Hyhi Hylo))).
 Qed.
 
 Theorem DWDivDW_mixed_guarantee_from_safe_input_cond :
@@ -112,7 +108,10 @@ Theorem DWDivDW_mixed_guarantee_from_safe_input_cond :
 Proof.
 move => Hp14 Hsafe.
 apply DWDivDW_mixed_guarantee_from_cond; [exact Hp14 |].
-exact (DWDivDW_mixed_cond_of_safe_input_cond Hp14 Hsafe).
+split.
+- exact (DWDivDW_mixed_input_cond_of_safe_input_cond Hsafe).
+- unfold DWDivDW_result_finite.
+  exact (DWDivDW3_finite_from_cond xh xl yh yl Hp14 Hsafe).
 Qed.
 
 End MixedGuaranteeDWDivDW.

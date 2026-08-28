@@ -2654,12 +2654,11 @@ Qed.
 
 Lemma DWTimesDW_mixed_cond_of_safe_input_cond
     (xh xl yh yl : ftype t) :
-  (4 <= fprec t)%Z ->
   DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
   DWTimesDW_mixed_cond xh xl yh yl.
 Proof.
-move => Hp4 Hsafe.
-have Hfin := DWTimesDW3_finite_from_safe_input_cond xh xl yh yl Hp4 Hsafe.
+move => Hsafe.
+have Hfin := DWTimesDW3_finite_from_safe_input_cond xh xl yh yl Hsafe.
 move: Hsafe => [_ [_ [Hdx [Hdy _]]]].
 unfold DWTimesDW_mixed_cond, DWTimesDW_mixed_input_cond,
        DWTimesDW_result_finite.
@@ -2675,7 +2674,7 @@ Proof.
 intros Hp5 Hsafe.
 apply DWTimesDW_mixed_guarantee_from_cond; [exact Hp5 |].
 exact (DWTimesDW_mixed_cond_of_safe_input_cond
-  xh xl yh yl ltac:(lia) Hsafe).
+  xh xl yh yl Hsafe).
 Qed.
 
 Lemma DWTimesDW_inputs_finite_of_result_finite
