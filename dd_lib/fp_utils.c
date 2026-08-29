@@ -290,12 +290,18 @@ int dw_div_fp_strong_precond_check(struct dword *x, double y) {
     int xh_hi = fabs(x->s) <= q_omega;
     int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
 
+    /* Reject before evaluating the quotient.  The explicit zero-divisor test
+       does not change the accepted set: qt_hi rejected both finite/0 and 0/0
+       already.  It prevents those rejected inputs from raising FE_DIVBYZERO
+       or FE_INVALID merely by being checked. */
+    int ready = dwx && fin_y && xh_hi && xh_lo && (y != 0.0);
+    if (!ready) return 0;
+
     /* Quotient CEILING only, on the rounded quotient q = RN(x->s / y).  There
        is deliberately no quotient floor: see the comment block above. */
     double q = x->s / y;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y| <= Omega/4; also forces q finite */
-
-    return dwx && fin_y && xh_hi && xh_lo && qt_hi;
+    return qt_hi;
 }
 
 int dw_div_fp_weak_precond_check(struct dword *x, double y) {
@@ -403,11 +409,16 @@ int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
 
+    /* yh_lo implies y->s != 0.  Reject the remaining clauses before division,
+       so an invalid divisor cannot raise a floating-point exception merely by
+       being checked. */
+    int ready = dwx && dwy && yh_hi && yh_lo;
+    if (!ready) return 0;
+
     /* quotient ceiling on the rounded quotient q = RN(x->s / y->s) */
     double q = x->s / y->s;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y->s| <= Omega/4; also forces q finite */
-
-    return dwx && dwy && yh_hi && yh_lo && qt_hi;
+    return qt_hi;
 }
 
 int dw_div_dw_weak_precond_check(struct dword *x, struct dword *y) {

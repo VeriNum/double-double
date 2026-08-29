@@ -116,21 +116,17 @@ Proof.
       * unfold Post_xh_lo; clear Post_xh_lo.
         Intros bxh_lo; rename H into Hbxh_lo.
         forward.                       (* xh_lo := t'9 *)
-      forward.                          (* t'15 := x->s *)
-      forward.                          (* q := t'18 / y *)
-      forward_call (Float.div (fst xh) y). forward. (* qt_hi := fabs(q) < q_omega *)
 
-      set (bqt_hi := Float.cmp Clt
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                          (Float.div (fst xh) y)) q_omega_val).
+      set (by_ne := Float.cmp Cne y (Float.of_bits (Int64.repr 0))).
 
-      (* Return cascade: t'12 = dwx && fin_y; ... ; t'15 = t'14 && qt_hi.
-         One level shorter than before: the qt_lo conjunct is gone. *)
+      (* Readiness cascade: t'11 = dwx && fin_y; then xh_hi, xh_lo,
+         and finally y != 0.  The quotient is evaluated only after this
+         cascade succeeds. *)
       set (Post_t11 :=
         EX b11 : bool,
         PROP (b11 = true -> b5 = true /\ vret_fy = true)
-        LOCAL (temp _t'12 (Vint (if b11 then Int.one else Int.zero));
-               temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+        LOCAL (temp _t'11 (Vint (if b11 then Int.one else Int.zero));
+               temp _q_omega (Vfloat q_omega_val);
                temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                temp _dwx (Vint (if b5 then Int.one else Int.zero));
@@ -142,7 +138,7 @@ Proof.
         forward. unfold Post_t11; Exists vret_fy; entailer!.
         repeat split;
         try (now (let H := fresh in intros H; repeat split; assumption));
-        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+        try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
         try change (femax Tdouble) with 1024%Z;
         repeat first
           [ reflexivity
@@ -153,7 +149,7 @@ Proof.
             end ].
       * forward. unfold Post_t11; Exists false; entailer!;
         repeat split;
-        try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+        try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
         try change (femax Tdouble) with 1024%Z;
         repeat first
           [ reflexivity
@@ -167,10 +163,10 @@ Proof.
         set (Post_t12 :=
           EX b12 : bool,
           PROP (b12 = true -> b5 = true /\ vret_fy = true /\ bxh_hi = true)
-          LOCAL (temp _t'13 (Vint (if b12 then Int.one else Int.zero));
-                 temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+          LOCAL (temp _t'12 (Vint (if b12 then Int.one else Int.zero));
+                 temp _q_omega (Vfloat q_omega_val);
                  temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
-                 temp _t'12 (Vint (if b11 then Int.one else Int.zero));
+                 temp _t'11 (Vint (if b11 then Int.one else Int.zero));
                  temp _xh_hi (Vint (if bxh_hi then Int.one else Int.zero));
                  temp _x x; temp _y (Vfloat y))
           SEP (data_at Tsh dword (f2val xh) x)).
@@ -180,7 +176,7 @@ Proof.
            split.
            { intros Hout. destruct (Hb11 eq_refl); auto. }
            { repeat split;
-             try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+             try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
              try change (femax Tdouble) with 1024%Z;
              repeat first
                [ reflexivity
@@ -191,7 +187,7 @@ Proof.
                  end ]. }
         ** forward. unfold Post_t12; Exists false; entailer!;
            repeat split;
-           try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+           try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
            try change (femax Tdouble) with 1024%Z;
            repeat first
              [ reflexivity
@@ -206,9 +202,9 @@ Proof.
              EX b13 : bool,
              PROP (b13 = true -> b5 = true /\ vret_fy = true /\
                                  bxh_hi = true /\ bxh_lo = true)
-             LOCAL (temp _t'14 (Vint (if b13 then Int.one else Int.zero));
-                    temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                    temp _t'13 (Vint (if b12 then Int.one else Int.zero));
+             LOCAL (temp _t'13 (Vint (if b13 then Int.one else Int.zero));
+                    temp _q_omega (Vfloat q_omega_val);
+                    temp _t'12 (Vint (if b12 then Int.one else Int.zero));
                     temp _xh_lo (Vint (if bxh_lo then Int.one else Int.zero));
                     temp _x x; temp _y (Vfloat y))
              SEP (data_at Tsh dword (f2val xh) x)).
@@ -218,7 +214,7 @@ Proof.
                split.
                { intros Hout. destruct (Hb12 eq_refl) as [? [? ?]]; auto. }
                { repeat split;
-                 try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+                 try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
                  try change (femax Tdouble) with 1024%Z;
                  repeat first
                    [ reflexivity
@@ -229,7 +225,7 @@ Proof.
                      end ]. }
            *** forward. unfold Post_t13; Exists false; entailer!;
                repeat split;
-               try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+               try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
                try change (femax Tdouble) with 1024%Z;
                repeat first
                  [ reflexivity
@@ -243,19 +239,19 @@ Proof.
                set (Post_t14 :=
                  EX b14 : bool,
                  PROP (b14 = true -> b5 = true /\ vret_fy = true /\
-                                     bxh_hi = true /\ bxh_lo = true /\ bqt_hi = true)
-                 LOCAL (temp _t'15 (Vint (if b14 then Int.one else Int.zero));
-                        temp _t'14 (Vint (if b13 then Int.one else Int.zero));
-                        temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+                                     bxh_hi = true /\ bxh_lo = true /\ by_ne = true)
+                 LOCAL (temp _t'14 (Vint (if b14 then Int.one else Int.zero));
+                        temp _q_omega (Vfloat q_omega_val);
+                        temp _t'13 (Vint (if b13 then Int.one else Int.zero));
                         temp _x x; temp _y (Vfloat y))
                  SEP (data_at Tsh dword (f2val xh) x)).
                forward_if Post_t14.
                **** assert (b13 = true) as Hb15_eq by (destruct b13; auto; simpl in H; rep_lia).
-                    forward. unfold Post_t14; Exists bqt_hi; entailer!.
+                    forward. unfold Post_t14; Exists by_ne; entailer!.
                     split.
                     { intros Hout. destruct (Hb13 eq_refl) as [? [? [? ?]]]; auto. }
                     { repeat split;
-                      try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+                      try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
                       try change (femax Tdouble) with 1024%Z;
                       repeat first
                         [ reflexivity
@@ -266,7 +262,7 @@ Proof.
                           end ]. }
                **** forward. unfold Post_t14; Exists false; entailer!;
                     repeat split;
-                    try unfold bxh_hi; try unfold bxh_lo; try unfold bqt_hi;
+                    try unfold bxh_hi; try unfold bxh_lo; try unfold by_ne;
                     try change (femax Tdouble) with 1024%Z;
                     repeat first
                       [ reflexivity
@@ -277,10 +273,24 @@ Proof.
                         end ].
                **** unfold Post_t14; clear Post_t14.
                     Intros b14; rename H into Hb14.
-                    forward.                 (* return t'16 *)
-                    Exists b14; entailer!.
+                    forward.                 (* ready := t'14 *)
+                    forward_if.
+                    { forward. Exists false. entailer!. }
+                    assert (b14 = true) as Hb14t
+                      by (destruct b14; auto; simpl in H; rep_lia).
+                    forward.                 (* read x->s *)
+                    forward.                 (* q := x->s / y *)
+                    forward_call (Float.div (fst xh) y).
+                    forward.                 (* qt_hi := fabs(q) < q_omega *)
+                    set (bqt_hi := Float.cmp Clt
+                      (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
+                        (Float.div (fst xh) y)) q_omega_val).
+                    forward.                 (* return qt_hi *)
+                    Exists bqt_hi; entailer!.
+                    split.
+                    { intros Hbqtht.
                     destruct (Hb14 eq_refl)
-                      as [Hb5t [Hfyt [Hbxhht [Hbxhlt Hbqtht]]]].
+                      as [Hb5t [Hfyt [Hbxhht [Hbxhlt Hynet]]]].
                     destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
                     assert (Hfin_y : is_finite y = true)
                       by (apply (proj1 Hspec_fy); exact Hfyt).
@@ -332,7 +342,8 @@ Proof.
                     repeat split; try assumption;
                     try (rewrite <- Hq4; exact Hxh_hi);
                     try exact Hquot_hi;
-                    try exact Hxh_lo.
+                    try exact Hxh_lo. }
+                    { destruct bqt_hi; reflexivity. }
 Qed.
 
 (* The default interface checks only the input part of the mixed condition.

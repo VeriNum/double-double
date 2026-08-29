@@ -148,9 +148,11 @@ static inline int dw_div_fp_strong_precond_check(struct dword *x, double y) {
     double q_plo   = ldexp(1.0, -968);           /* 2^(emin+2p), product node */
     int xh_hi = fabs(x->s) <= q_omega;
     int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
+    int ready = dwx && fin_y && xh_hi && xh_lo && (y != 0.0);
+    if (!ready) return 0;
     double q = x->s / y;
-    int qt_hi = fabs(q) < q_omega;   /* STRICT: also forces q finite, hence y != 0 */
-    return dwx && fin_y && xh_hi && xh_lo && qt_hi;
+    int qt_hi = fabs(q) < q_omega;   /* STRICT: also forces q finite */
+    return qt_hi;
 }
 
 static inline int dw_div_fp_weak_precond_check(struct dword *x, double y) {
@@ -182,9 +184,11 @@ static inline int dw_div_dw_strong_precond_check(struct dword *x, struct dword *
        dd_lib/fp_utils.c, this mirrors DWDivDW_strong_precond. */
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
+    int ready = dwx && dwy && yh_hi && yh_lo;
+    if (!ready) return 0;
     double q = x->s / y->s;
     int qt_hi = fabs(q) < q_omega;   /* STRICT: also forces q finite */
-    return dwx && dwy && yh_hi && yh_lo && qt_hi;
+    return qt_hi;
 }
 
 

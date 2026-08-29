@@ -184,31 +184,23 @@ Proof.
            fold q_omega_val q_hi966_val q_lo968_val.
            forward. forward_call (fst yh). forward.  (* yh_hi := fabs(y->s) <= q_yhi *)
            forward. forward_call (fst yh). forward.  (* yh_lo := q_ylo <= fabs(y->s) *)
-           forward.                                  (* t'19 := x->s *)
-           forward.                                  (* t'20 := y->s *)
-           forward.                                  (* q := t'19 / t'20 *)
-           forward_call (Float.div (fst xh) (fst yh)). forward. (* qt_hi *)
 
-           (* Name the three comparisons to keep their definitions out of the cascade. *)
+           (* Name the divisor-window comparisons to keep their definitions out
+              of the readiness cascade. *)
            remember (Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh))
                        q_hi966_val) as byh_hi eqn:Ebyh_hi.
            remember (Float.cmp Cle q_lo968_val
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh)))
                      as byh_lo eqn:Ebyh_lo.
-           remember (Float.cmp Clt
-                       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
-                          (Float.div (fst xh) (fst yh))) q_omega_val)
-                     as bqt_hi eqn:Ebqt_hi.
-
-           (* Return cascade.
-              t'15 = dwx && dwy;  t'16 = t'15 && yh_hi;
-              t'17 = t'16 && yh_lo; t'18 = t'17 && qt_hi *)
+           (* Readiness cascade.
+              t'14 = dwx && dwy; t'15 = t'14 && yh_hi;
+              t'16 = t'15 && yh_lo. *)
            set (Post_t15 :=
              EX b15 : bool,
              PROP (b15 = true -> b6 = true /\ b8 = true)
-             LOCAL (temp _t'15 (Vint (if b15 then Int.one else Int.zero));
-                    temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+             LOCAL (temp _t'14 (Vint (if b15 then Int.one else Int.zero));
+                    temp _q_omega (Vfloat q_omega_val);
                     temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
                     temp _yh_hi (Vint (if byh_hi then Int.one else Int.zero));
                     temp _dwx (Vint (if b6 then Int.one else Int.zero));
@@ -226,10 +218,10 @@ Proof.
               set (Post_t16 :=
                 EX b16 : bool,
                 PROP (b16 = true -> b6 = true /\ b8 = true /\ byh_hi = true)
-                LOCAL (temp _t'16 (Vint (if b16 then Int.one else Int.zero));
-                       temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
+                LOCAL (temp _t'15 (Vint (if b16 then Int.one else Int.zero));
+                       temp _q_omega (Vfloat q_omega_val);
                        temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
-                       temp _t'15 (Vint (if b15 then Int.one else Int.zero));
+                       temp _t'14 (Vint (if b15 then Int.one else Int.zero));
                        temp _yh_hi (Vint (if byh_hi then Int.one else Int.zero));
                        temp _x x; temp _y y)
                 SEP (data_at Tsh dword (f2val xh) x;
@@ -245,9 +237,9 @@ Proof.
                     EX b17 : bool,
                     PROP (b17 = true -> b6 = true /\ b8 = true /\
                                         byh_hi = true /\ byh_lo = true)
-                    LOCAL (temp _t'17 (Vint (if b17 then Int.one else Int.zero));
-                           temp _qt_hi (Vint (if bqt_hi then Int.one else Int.zero));
-                           temp _t'16 (Vint (if b16 then Int.one else Int.zero));
+                    LOCAL (temp _t'16 (Vint (if b17 then Int.one else Int.zero));
+                           temp _q_omega (Vfloat q_omega_val);
+                           temp _t'15 (Vint (if b16 then Int.one else Int.zero));
                            temp _yh_lo (Vint (if byh_lo then Int.one else Int.zero));
                            temp _x x; temp _y y)
                     SEP (data_at Tsh dword (f2val xh) x;
@@ -260,36 +252,30 @@ Proof.
                   ---- forward. unfold Post_t17; Exists false; entailer!; cascade_close.
                   ---- unfold Post_t17; clear Post_t17.
                        Intros b17; rename H into Hb17.
-                       set (Post_t18 :=
-                         EX b18 : bool,
-                         PROP (b18 = true -> b6 = true /\ b8 = true /\
-                                             byh_hi = true /\ byh_lo = true /\
-                                             bqt_hi = true)
-                         LOCAL (temp _t'18 (Vint (if b18 then Int.one else Int.zero));
-                                temp _x x; temp _y y)
-                         SEP (data_at Tsh dword (f2val xh) x;
-                              data_at Tsh dword (f2val yh) y)).
-                       forward_if Post_t18.
-                       ***** assert (b17 = true) as Hb17_eq
-                               by (destruct b17; auto; simpl in H; rep_lia).
-                             forward. unfold Post_t18; Exists bqt_hi; entailer!.
-                             cascade_close.
-                       ***** forward. unfold Post_t18; Exists false; entailer!;
-                             cascade_close.
-                       ***** unfold Post_t18; clear Post_t18.
-                             Intros b18; rename H into Hb18.
-                             forward.                    (* return t'18 *)
-                             Exists b18; entailer!.
+                       forward.                    (* ready := t'16 *)
+                       forward_if.
+                       { forward. Exists false. entailer!. }
+                       assert (b17 = true) as Hb17t
+                         by (destruct b17; auto; simpl in H; rep_lia).
+                       forward. forward. forward.  (* q := x->s / y->s *)
+                       forward_call (Float.div (fst xh) (fst yh)).
+                       forward.                    (* qt_hi := fabs(q) < q_omega *)
+                       set (bqt_hi := Float.cmp Clt
+                         (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
+                           (Float.div (fst xh) (fst yh))) q_omega_val).
+                       forward.                    (* return qt_hi *)
+                       Exists bqt_hi; entailer!.
+                       split.
+                       { intros Hqtht.
 
                              (* ===== discharge DWDivDW_strong_precond ===== *)
-                             destruct (Hb18 eq_refl)
-                               as [Hb6t [Hb8t [Hyhht [Hyhlt Hqtht]]]].
+                             destruct (Hb17 eq_refl)
+                               as [Hb6t [Hb8t [Hyhht Hyhlt]]].
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                              destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
-                             (* No `rewrite Eb..` is needed here: entailer! has
-                                already substituted the three remembered equations
-                                away, so Hyhht .. Hqtht arrive as the concrete
-                                Float.cmp facts the magnitude lemmas expect. *)
+                             (* entailer! has already substituted the remembered
+                                divisor-window equations, so Hyhht and Hyhlt are
+                                the concrete Float.cmp facts expected below. *)
 
                              (* |yh| <= 2^966 = 2^(femax-p-5), conjunct 7 *)
                              assert (Hyh_hi : Rabs (FT2R (fst yh)) <=
@@ -331,7 +317,8 @@ Proof.
                              repeat split; try assumption;
                              try exact Hyh_hi;
                              try exact Hyh_lo;
-                             try exact Hquot_hi.
+                             try exact Hquot_hi. }
+                       { destruct bqt_hi; reflexivity. }
 Qed.
 
 (* The default interface checks the two double-word relations and the divisor
