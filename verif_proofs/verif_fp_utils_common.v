@@ -36,7 +36,7 @@ Lemma Vint_b2z_if : forall b : bool,
 Proof. intros [|]; reflexivity. Qed.
 
 (* ldexp_val defines the IEEE-754 float for ldexp(1.0, 53) = 2^53.
-   Used by body_fast2_mult_check.
+   Used by body_fast2_mult_exact_check.
    Bit pattern 4607182418800017408 = 0x3FF0000000000000 is the encoding
    of 1.0 as a 64-bit double; Bldexp then scales it by 2^53. *)
 Definition ldexp_val :=
@@ -88,26 +88,26 @@ Definition tbool (b : bool) : int :=
 Definition Checks_Imports : funspecs := [ fabs_spec; ldexp_spec ].
 
 Definition Checks_Internal : funspecs :=
-  [ isfinite_double_spec; fast2_mult_check_spec; fast2_mult_acc_check_spec;
-    fast2_sum_check_spec;
-    two_sum_check_spec; dw_plus_dw_check_spec;
-    dw_plus_dw_input_check_spec;
-    dw_mult_fp_check_spec; dw_mult_fp_input_check_spec;
-    dw_mult_dw_check_spec; dw_mult_dw_input_check_spec; dw_plus_fp_check_spec;
-    dw_plus_fp_input_check_spec; dword_finite_check_spec;
-    dw_div_fp_check_spec; dw_div_fp_input_check_spec;
-    dw_div_dw_check_spec; dw_div_dw_input_check_spec ].
+  [ isfinite_double_spec; fast2_mult_exact_check_spec; fast2_mult_product_finite_check_spec;
+    fast2_sum_magnitude_order_check_spec;
+    two_sum_exact_check_spec; dw_plus_dw_strong_precond_check_spec;
+    dw_plus_dw_weak_precond_check_spec;
+    dw_mult_fp_strong_precond_check_spec; dw_mult_fp_weak_precond_check_spec;
+    dw_mult_dw_strong_precond_check_spec; dw_mult_dw_weak_precond_check_spec; dw_plus_fp_strong_precond_check_spec;
+    dw_plus_fp_weak_precond_check_spec; dword_finite_check_spec;
+    dw_div_fp_strong_precond_check_spec; dw_div_fp_weak_precond_check_spec;
+    dw_div_dw_strong_precond_check_spec; dw_div_dw_weak_precond_check_spec ].
 
 (* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
 Definition Checks_Exports : funspecs :=
-  [ two_sum_check_spec; fast2_sum_check_spec; fast2_mult_check_spec;
-    fast2_mult_acc_check_spec;
-    dword_finite_check_spec; dw_plus_fp_input_check_spec;
-    dw_plus_fp_check_spec; dw_plus_dw_input_check_spec; dw_plus_dw_check_spec;
-    dw_mult_fp_input_check_spec; dw_mult_fp_check_spec;
-    dw_mult_dw_input_check_spec; dw_mult_dw_check_spec;
-    dw_div_fp_input_check_spec; dw_div_fp_check_spec;
-    dw_div_dw_input_check_spec; dw_div_dw_check_spec ].
+  [ two_sum_exact_check_spec; fast2_sum_magnitude_order_check_spec; fast2_mult_exact_check_spec;
+    fast2_mult_product_finite_check_spec;
+    dword_finite_check_spec; dw_plus_fp_weak_precond_check_spec;
+    dw_plus_fp_strong_precond_check_spec; dw_plus_dw_weak_precond_check_spec; dw_plus_dw_strong_precond_check_spec;
+    dw_mult_fp_weak_precond_check_spec; dw_mult_fp_strong_precond_check_spec;
+    dw_mult_dw_weak_precond_check_spec; dw_mult_dw_strong_precond_check_spec;
+    dw_div_fp_weak_precond_check_spec; dw_div_fp_strong_precond_check_spec;
+    dw_div_dw_weak_precond_check_spec; dw_div_dw_strong_precond_check_spec ].
 
 (* Collect the function API specs together into Gprog: list funspec.
    Shared by all body proof files. *)

@@ -52,8 +52,8 @@ move => Hv. apply Generic_fmt.abs_round_le_generic.
 - exact Hv.
 Qed.
 
-Lemma DWPlusFP_finite_from_safe_input_cond (xh xl y : ftype t) :
-  DWPlusFP_safe_input_cond xh xl y ->
+Lemma DWPlusFP_finite_post_cond_from_strong_precond (xh xl y : ftype t) :
+  DWPlusFP_strong_precond xh xl y ->
   is_finite_p (DWPlusFP xh xl y).
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdw & Hxh & Hy).
@@ -271,7 +271,7 @@ Qed.
 
 Lemma DWPlusDW_finite_safe
     (xh xl yh yl : ftype t) :
-  DWPlusDW_safe_input_cond xh xl yh yl ->
+  DWPlusDW_strong_precond xh xl yh yl ->
   is_finite_p (DWPlusDW xh xl yh yl).
 Proof.
 intros (F_xh & F_xl & F_yh & F_yl & DWx & DWy & Hxh & Hyh).

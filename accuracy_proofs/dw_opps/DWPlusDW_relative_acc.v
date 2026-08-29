@@ -51,7 +51,7 @@ Local Definition DWPlusDW_FLX :=
 .
 
 
-Hypothesis Hcond: DWPlusDW_cond xh xl yh yl.
+Hypothesis Hcond: DWPlusDW_weak_pre_and_finite_post_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 
 Let FIN : is_finite_p (DWPlusDW xh xl yh yl) :=
@@ -193,7 +193,7 @@ fold DWPlusDW_FLX.
 rewrite DWPlusDWEq_FLT => //.
 Qed.
 
-Theorem DWPlusDW_relative_accuracy_from_cond :
+Theorem DWPlusDW_relative_accuracy_from_weak_pre_and_finite_post_cond :
   relative_error_DWPlusDW <= (3 * u^2) / (1 - 4 * u).
 Proof.
 have [DWx DWy] := proj1 Hcond.
@@ -221,15 +221,15 @@ Definition DWPlusDW_relative_guarantee
          (1 - 4 * bpow Zaux.radix2 (- fprec t)) /\
   double_word_prop zh zl.
 
-Theorem DWPlusDW_double_word_from_cond
+Theorem DWPlusDW_double_word_from_weak_pre_and_finite_post_cond
     (xh xl yh yl : ftype t) :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_weak_pre_and_finite_post_cond xh xl yh yl ->
   double_word_prop (fst (DWPlusDW xh xl yh yl))
                    (snd (DWPlusDW xh xl yh yl)).
 Proof.
 intros Hp3 [[DWx DWy] Hfin].
-unfold DWPlusDW_output_finite_cond in Hfin.
+unfold DWPlusDW_finite_post_cond in Hfin.
 set sh := TwoSumF_sum xh yh.
 set c := BPLUS (TwoSumF_err xh yh) (TwoSumF_sum xl yl).
 set vh := Fast2Sum_sum sh c.
@@ -269,16 +269,16 @@ symmetry.
 exact (BPLUS_round_correct t vh w Fzh).
 Qed.
 
-Theorem DWPlusDW_relative_guarantee_from_cond
+Theorem DWPlusDW_relative_guarantee_from_weak_pre_and_finite_post_cond
     (xh xl yh yl : ftype t) :
   (3 <= fprec t)%Z ->
-  DWPlusDW_cond xh xl yh yl ->
+  DWPlusDW_weak_pre_and_finite_post_cond xh xl yh yl ->
   DWPlusDW_relative_guarantee xh xl yh yl.
 Proof.
 intros Hp3 Hcond.
-have Hacc := @DWPlusDW_relative_accuracy_from_cond
+have Hacc := @DWPlusDW_relative_accuracy_from_weak_pre_and_finite_post_cond
                NANS t STD xh xl yh yl Hcond Hp3.
-have Hdw := DWPlusDW_double_word_from_cond xh xl yh yl Hp3 Hcond.
+have Hdw := DWPlusDW_double_word_from_weak_pre_and_finite_post_cond xh xl yh yl Hp3 Hcond.
 unfold relative_error_DWPlusDW in Hacc.
 unfold DWPlusDW_relative_guarantee.
 revert Hacc Hdw.
@@ -286,28 +286,28 @@ destruct (DWPlusDW xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-Lemma DWPlusDW_cond_of_safe_input_cond
+Lemma DWPlusDW_weak_pre_and_finite_post_cond_of_strong_precond
     (xh xl yh yl : ftype t) :
-  DWPlusDW_safe_input_cond xh xl yh yl ->
-  DWPlusDW_cond xh xl yh yl.
+  DWPlusDW_strong_precond xh xl yh yl ->
+  DWPlusDW_weak_pre_and_finite_post_cond xh xl yh yl.
 Proof.
 intros Hsafe.
-have Hfin := DWPlusDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWPlusDW_finite_post_cond_from_strong_precond xh xl yh yl Hsafe.
 specialize (Hfin NANS STD).
 destruct Hsafe as (_ & _ & _ & _ & Hdx & Hdy & _ & _).
-unfold DWPlusDW_cond, DWPlusDW_input_cond, DWPlusDW_output_finite_cond.
+unfold DWPlusDW_weak_pre_and_finite_post_cond, DWPlusDW_weak_precond, DWPlusDW_finite_post_cond.
 exact (conj (conj Hdx Hdy) Hfin).
 Qed.
 
-Theorem DWPlusDW_relative_guarantee_from_safe_input_cond
+Theorem DWPlusDW_relative_guarantee_from_strong_precond
     (xh xl yh yl : ftype t) :
   (3 <= fprec t)%Z ->
-  DWPlusDW_safe_input_cond xh xl yh yl ->
+  DWPlusDW_strong_precond xh xl yh yl ->
   DWPlusDW_relative_guarantee xh xl yh yl.
 Proof.
 intros Hp3 Hsafe.
-apply DWPlusDW_relative_guarantee_from_cond; [exact Hp3|].
-exact (DWPlusDW_cond_of_safe_input_cond xh xl yh yl Hsafe).
+apply DWPlusDW_relative_guarantee_from_weak_pre_and_finite_post_cond; [exact Hp3|].
+exact (DWPlusDW_weak_pre_and_finite_post_cond_of_strong_precond xh xl yh yl Hsafe).
 Qed.
 
 End RelativeGuaranteeDWPlusDW.

@@ -3,7 +3,7 @@
 #include "fp_utils.h"
 
 void two_sum_guarded(struct dword *st, double a, double b) {
-   if (!two_sum_check(a,b)) {
+   if (!two_sum_exact_check(a,b)) {
       exit(EXIT_FAILURE);
    }
    two_sum(st, a, b);

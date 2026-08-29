@@ -23,8 +23,11 @@ Clone the repo https://github.com/PrincetonUniversity/VST. In the directory **VS
 - `make install` 
 
 Now, in the main directory **double_double**:
-- `make run-clightgen` to populate **verif_proofs/verif_objs/** with **.v** files containing the Clight ASTs from the C functions in **dd_lib** used in the VST proofs. 
-- `make` to build the VST proofs in **verif_proofs/** and the accuracy proofs in **accuracy_proofs/**.
+- `make` generates the Clight ASTs in **verif_proofs/verif_objs/** when needed,
+  then builds the VST proofs in **verif_proofs/** and the accuracy proofs in
+  **accuracy_proofs/**.
+- `make run-clightgen` remains available when only the generated Clight files
+  are wanted.
 
 # On Building A Verified Library for Double-Word Arithmetic
 ## Introduction 
@@ -156,7 +159,6 @@ Finally, we conclude by sharing a quote of Knuth’s[^c7], which we believe conv
 [^c6]: “Program Logics for Certified Compilers,” Cambridge University Press,
 USA (2014).
 [^c7]: “The art of computer programming, volume 2 (3rd ed.): seminumerical algorithms,” Addison-Wesley Longman Publishing Co., Inc., USA (1997). 
-
 
 
 

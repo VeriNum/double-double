@@ -29,7 +29,7 @@ forward. forward.
 forward_call.
 forward. forward.
 forward_call.
-unfold f2val, DWTimesFP3, Fast2Mult, Fast2Sum, fst, snd.
+unfold f2val, DWTimesFP, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
 
@@ -55,7 +55,7 @@ forward.
 forward.
 forward.
 forward_call.
-unfold f2val, SloppyDWPlusDW, Fast2Mult, Fast2Sum, fst, snd.
+unfold f2val, DWTimesDW, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
 
@@ -66,7 +66,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesFP_mixed_input_cond (fst xh) (snd xh) y)
+  PROP (DWTimesFP_weak_precond (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -77,34 +77,34 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWTimesFP_mixed_input_cond (fst xh) (snd xh) y) as Hin
+  assert_PROP (DWTimesFP_weak_precond (fst xh) (snd xh) y) as Hin
     by entailer!.
   forward_call (s, x, xh, y).
-  forward_call (s, DWTimesFP3 (fst xh) (snd xh) y).
+  forward_call (s, DWTimesFP (fst xh) (snd xh) y).
   Intros vret_out.
   set (Post_out :=
-    PROP (DWTimesFP_mixed_cond (fst xh) (snd xh) y)
+    PROP (DWTimesFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y)
     LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
     SEP (data_at Tsh dword
-           (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+           (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
          data_at Tsh dword (f2val xh) x)).
   forward_if Post_out.
   + forward_call (Int.repr 1).
     unfold Post_out. entailer!.
   + forward.
-    unfold Post_out, DWTimesFP_mixed_cond, DWTimesFP_result_finite.
+    unfold Post_out, DWTimesFP_weak_pre_and_finite_post_cond, DWTimesFP_finite_post_cond.
     entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
         apply Hfin; destruct vret_out; auto
     end.
   + unfold Post_out.
-    assert_PROP (DWTimesFP_mixed_cond (fst xh) (snd xh) y) as Hcond
+    assert_PROP (DWTimesFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y) as Hcond
       by entailer!.
     assert (Hfp : (3 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
-      (@DWTimesFP_mixed_guarantee_from_cond
+      (@DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) y Hfp Hcond)
       as Hg.
     entailer!!.
@@ -117,7 +117,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesFP_mixed_safe_input_cond (fst xh) (snd xh) y)
+  PROP (DWTimesFP_strong_precond (fst xh) (snd xh) y)
   LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -128,12 +128,12 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWTimesFP_mixed_safe_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWTimesFP_strong_precond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (@DWTimesFP_mixed_guarantee_from_safe_input_cond
+    (@DWTimesFP_guarantee_from_strong_precond
        _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hg.
   entailer!!.
@@ -146,7 +146,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -159,24 +159,24 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWTimesDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
+    (DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
     by entailer!.
   forward_call (s, x, y, xh, yh).
   forward_call
-    (s, DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh)).
+    (s, DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)).
   Intros vret_out.
   set (Post_out :=
-    PROP (DWTimesDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP (DWTimesDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh))
     LOCAL (temp _st s; temp _x x; temp _y y)
     SEP (data_at Tsh dword
-           (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+           (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
          data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y)).
   forward_if Post_out.
   + forward_call (Int.repr 1).
     unfold Post_out. entailer!.
   + forward.
-    unfold Post_out, DWTimesDW_mixed_cond, DWTimesDW_result_finite.
+    unfold Post_out, DWTimesDW_weak_pre_and_finite_post_cond, DWTimesDW_finite_post_cond.
     entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
@@ -184,12 +184,12 @@ forward_if Post_if.
     end.
   + unfold Post_out.
     assert_PROP
-      (DWTimesDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
+      (DWTimesDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
       by entailer!.
     assert (Hp5 : (5 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
-      (@DWTimesDW_mixed_guarantee_from_cond
+      (@DWTimesDW_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp5 Hcond)
       as Hg.
     entailer!!.
@@ -202,7 +202,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWTimesDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _st s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -215,12 +215,12 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWTimesDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+    (DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp5 : (5 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (@DWTimesDW_mixed_guarantee_from_safe_input_cond
+    (@DWTimesDW_guarantee_from_strong_precond
        _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
     as Hg.
   entailer!!.

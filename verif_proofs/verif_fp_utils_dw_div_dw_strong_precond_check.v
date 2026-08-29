@@ -43,14 +43,14 @@ Local Ltac cascade_close :=
     | (intro; cascade_gather; repeat split; assumption)
     | (intro; cascade_gather; tauto) ].
 
-(* [dw_div_dw_check] establishes [DWDivDW_mixed_safe_input_cond]: finite
+(* [dw_div_dw_strong_precond_check] establishes [DWDivDW_strong_precond]: finite
    double-word operands, the divisor window, and the quotient ceiling.  The
    upper divisor test is exactly [2^(femax-p-5)] and also implies the weaker
    overflow bound.  The strict test on the rounded quotient proves finiteness;
    [BDIV_abs_le_bpow] then transfers the ceiling to the exact quotient.  The
    check imposes no lower bound on the quotient. *)
-Lemma body_dw_div_dw_check :
-  semax_body Vprog Gprog f_dw_div_dw_check dw_div_dw_check_spec.
+Lemma body_dw_div_dw_strong_precond_check :
+  semax_body Vprog Gprog f_dw_div_dw_strong_precond_check dw_div_dw_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh, fin_xl, fin_yh, fin_yl *)
@@ -281,7 +281,7 @@ Proof.
                              forward.                    (* return t'18 *)
                              Exists b18; entailer!.
 
-                             (* ===== discharge DWDivDW_mixed_safe_input_cond ===== *)
+                             (* ===== discharge DWDivDW_strong_precond ===== *)
                              destruct (Hb18 eq_refl)
                                as [Hb6t [Hb8t [Hyhht [Hyhlt Hqtht]]]].
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
@@ -327,7 +327,7 @@ Proof.
                                        bpow Zaux.radix2 1022)
                                by (apply (BDIV_abs_le_bpow (fst xh) (fst yh) 1022
                                             Hyhne Hfin_q Hfmt1022); exact Hq_hi).
-                             unfold DDConds.DWDivDW_mixed_safe_input_cond.
+                             unfold DDConds.DWDivDW_strong_precond.
                              repeat split; try assumption;
                              try exact Hyh_hi;
                              try exact Hyh_lo;
@@ -337,8 +337,8 @@ Qed.
 (* The default interface checks the two double-word relations and the divisor
    window.  The quotient ceiling is replaced by the finite-output check after
    the kernel call. *)
-Lemma body_dw_div_dw_input_check :
-  semax_body Vprog Gprog f_dw_div_dw_input_check dw_div_dw_input_check_spec.
+Lemma body_dw_div_dw_weak_precond_check :
+  semax_body Vprog Gprog f_dw_div_dw_weak_precond_check dw_div_dw_weak_precond_check_spec.
 Proof.
   start_function.
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
@@ -529,7 +529,7 @@ Proof.
                                       (bpow Zaux.radix2 (-968)) Hfin_yh
                                       q_lo968_val_finite q_lo968_val_FT2R);
                              exact Hyhlt).
-                       unfold DDConds.DWDivDW_mixed_input_cond.
+                       unfold DDConds.DWDivDW_weak_precond.
                        repeat split; try assumption;
                        try exact Hyh_hi; try exact Hyh_lo.
 Qed.

@@ -4,9 +4,9 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-Lemma body_dw_plus_fp_input_check :
-  semax_body Vprog Gprog f_dw_plus_fp_input_check
-    dw_plus_fp_input_check_spec.
+Lemma body_dw_plus_fp_weak_precond_check :
+  semax_body Vprog Gprog f_dw_plus_fp_weak_precond_check
+    dw_plus_fp_weak_precond_check_spec.
 Proof.
   start_function.
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
@@ -89,7 +89,7 @@ Proof.
         forward. Exists b6; entailer!.
         destruct (Hb6 eq_refl) as [Hb5t Hfyt].
         destruct (Hb5 Hb5t) as [_ [_ HDW]].
-        unfold DWPlusFP_input_cond. exact HDW.
+        unfold DWPlusFP_weak_precond. exact HDW.
 Qed.
 
 Lemma body_dword_finite_check :

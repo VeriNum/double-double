@@ -4,16 +4,16 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_plus_fp_check(x, y) returns 1 only if DWPlusFP_safe_input_cond holds:
+(* dw_plus_fp_strong_precond_check(x, y) returns 1 only if DWPlusFP_strong_precond holds:
    xh, xl, y are finite, (xh, xl) is a double-word, and |xh|, |y| <= Omega/4.
 
-   This is the single double-word specialization of body_dw_plus_dw_check:
+   This is the single double-word specialization of body_dw_plus_dw_strong_precond_check:
    it drops the (yh, yl) double-word half entirely and, in its place, checks
    the scalar bound |y| <= Omega/4 and folds finiteness of y directly into the
    return short-circuit.  The same short_circuit_*_concl helpers discharge the
    propositional conjuncts at each && join. *)
-Lemma body_dw_plus_fp_check :
-  semax_body Vprog Gprog f_dw_plus_fp_check dw_plus_fp_check_spec.
+Lemma body_dw_plus_fp_strong_precond_check :
+  semax_body Vprog Gprog f_dw_plus_fp_strong_precond_check dw_plus_fp_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh = isfinite_double(x->s) *)
@@ -217,7 +217,7 @@ Proof.
                destruct (Hb11 eq_refl) as [Hb5t [Hfyt [Hbxht Hbybt]]].
                destruct (Hb5 Hb5t) as [Hfin_xh [Hfin_xl HDWx]].
                assert (Hfin_y : is_finite y = true) by (apply (proj1 Hspec_fy); exact Hfyt).
-               unfold DDConds.DWPlusFP_safe_input_cond.
+               unfold DDConds.DWPlusFP_strong_precond.
                repeat (split; try assumption).
                { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                  unfold bxh, q_omega_val in Hbxht. exact Hbxht. }

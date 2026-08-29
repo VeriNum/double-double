@@ -77,7 +77,7 @@ Definition _a : ident := $"a".
 Definition _b : ident := $"b".
 Definition _dword : ident := $"dword".
 Definition _exit : ident := $"exit".
-Definition _fast2_mult_acc_check : ident := $"fast2_mult_acc_check".
+Definition _fast2_mult_product_finite_check : ident := $"fast2_mult_product_finite_check".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fast_2mult_acc_guarded : ident := $"fast_2mult_acc_guarded".
 Definition _main : ident := $"main".
@@ -97,8 +97,9 @@ Definition f_fast_2mult_acc_guarded := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _fast2_mult_acc_check (Tfunction (tdouble :: tdouble :: nil) tint
-                                    cc_default))
+      (Evar _fast2_mult_product_finite_check (Tfunction
+                                               (tdouble :: tdouble :: nil)
+                                               tint cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -371,33 +372,34 @@ Definition global_definitions : list (ident * globdef fundef type) :=
                      AST.Xvoid cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: tdouble :: nil) tvoid
      cc_default)) ::
- (_fast2_mult_acc_check,
-   Gfun(External (EF_external "fast2_mult_acc_check"
+ (_fast2_mult_product_finite_check,
+   Gfun(External (EF_external "fast2_mult_product_finite_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
  (_fast_2mult_acc_guarded, Gfun(Internal f_fast_2mult_acc_guarded)) :: nil).
 
 Definition public_idents : list ident :=
-(_fast_2mult_acc_guarded :: _fast2_mult_acc_check :: _fast_2mult :: _exit ::
- ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
- ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
- ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
- ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::
- ___builtin_sel :: ___builtin_memcpy_aligned :: ___builtin_sqrt ::
- ___builtin_fsqrt :: ___builtin_fabsf :: ___builtin_fabs ::
- ___builtin_ctzll :: ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll ::
- ___builtin_clzl :: ___builtin_clz :: ___builtin_bswap16 ::
- ___builtin_bswap32 :: ___builtin_bswap :: ___builtin_bswap64 ::
- ___compcert_i64_umulh :: ___compcert_i64_smulh :: ___compcert_i64_sar ::
- ___compcert_i64_shr :: ___compcert_i64_shl :: ___compcert_i64_umod ::
- ___compcert_i64_smod :: ___compcert_i64_udiv :: ___compcert_i64_sdiv ::
- ___compcert_i64_utof :: ___compcert_i64_stof :: ___compcert_i64_utod ::
- ___compcert_i64_stod :: ___compcert_i64_dtou :: ___compcert_i64_dtos ::
- ___compcert_va_composite :: ___compcert_va_float64 ::
- ___compcert_va_int64 :: ___compcert_va_int32 :: nil).
+(_fast_2mult_acc_guarded :: _fast2_mult_product_finite_check ::
+ _fast_2mult :: _exit :: ___builtin_debug :: ___builtin_fmin ::
+ ___builtin_fmax :: ___builtin_fnmsub :: ___builtin_fnmadd ::
+ ___builtin_fmsub :: ___builtin_fmadd :: ___builtin_clsll ::
+ ___builtin_clsl :: ___builtin_cls :: ___builtin_expect ::
+ ___builtin_unreachable :: ___builtin_va_end :: ___builtin_va_copy ::
+ ___builtin_va_arg :: ___builtin_va_start :: ___builtin_membar ::
+ ___builtin_annot_intval :: ___builtin_annot :: ___builtin_sel ::
+ ___builtin_memcpy_aligned :: ___builtin_sqrt :: ___builtin_fsqrt ::
+ ___builtin_fabsf :: ___builtin_fabs :: ___builtin_ctzll ::
+ ___builtin_ctzl :: ___builtin_ctz :: ___builtin_clzll :: ___builtin_clzl ::
+ ___builtin_clz :: ___builtin_bswap16 :: ___builtin_bswap32 ::
+ ___builtin_bswap :: ___builtin_bswap64 :: ___compcert_i64_umulh ::
+ ___compcert_i64_smulh :: ___compcert_i64_sar :: ___compcert_i64_shr ::
+ ___compcert_i64_shl :: ___compcert_i64_umod :: ___compcert_i64_smod ::
+ ___compcert_i64_udiv :: ___compcert_i64_sdiv :: ___compcert_i64_utof ::
+ ___compcert_i64_stof :: ___compcert_i64_utod :: ___compcert_i64_stod ::
+ ___compcert_i64_dtou :: ___compcert_i64_dtos :: ___compcert_va_composite ::
+ ___compcert_va_float64 :: ___compcert_va_int64 :: ___compcert_va_int32 ::
+ nil).
 
 Definition prog : Clight.program := 
   mkprogram composites global_definitions public_idents _main Logic.I.

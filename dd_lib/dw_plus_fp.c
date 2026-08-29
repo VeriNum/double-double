@@ -5,7 +5,7 @@
 /* Default interface: check the mathematical input condition, run the kernel,
    then reject a nonfinite result. */
 void dw_plus_fp(struct dword *st, struct dword *x, double y) {
-   if (!dw_plus_fp_input_check(x, y)) {
+   if (!dw_plus_fp_weak_precond_check(x, y)) {
       exit(EXIT_FAILURE);
    }
    dw_plus_fp_kernel(st, x, y);
@@ -16,7 +16,7 @@ void dw_plus_fp(struct dword *st, struct dword *x, double y) {
 
 /* Strong interface: the input check proves output finiteness in advance. */
 void dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
-   if (!dw_plus_fp_check(x, y)) {
+   if (!dw_plus_fp_strong_precond_check(x, y)) {
       exit(EXIT_FAILURE);
    }
    dw_plus_fp_kernel(st, x, y);

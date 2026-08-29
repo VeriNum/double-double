@@ -3,11 +3,11 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* [fast2_mult_check] establishes [Fast2Mult_exact_cond]: a finite product that
+(* [fast2_mult_exact_check] establishes [Fast2Mult_exact_cond]: a finite product that
    is either zero or above the underflow threshold.  The intermediate
    invariants record the two zero tests and the final threshold test.  At the
    return join, their forward implications prove the required condition. *)
-Lemma body_fast2_mult_check: semax_body Vprog Gprog f_fast2_mult_check fast2_mult_check_spec.
+Lemma body_fast2_mult_exact_check: semax_body Vprog Gprog f_fast2_mult_exact_check fast2_mult_exact_check_spec.
 Proof.
   start_function.
   (* z = x * y;  thresh = DBL_MIN * ldexp(1.0,53);  fin = isfinite_double(z) *)

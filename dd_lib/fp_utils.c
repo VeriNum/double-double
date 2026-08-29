@@ -20,7 +20,7 @@ int isfinite_double(double x) {
     return (x - x) == 0.0;
 }
 
-int fast2_mult_check(double x, double y) {
+int fast2_mult_exact_check(double x, double y) {
     double z = x * y;
     // 2 ^ (emin + 2 * p - 1)
     double thresh = DBL_MIN * ldexp(1.0, 53); 
@@ -36,23 +36,23 @@ int fast2_mult_check(double x, double y) {
     return fin && ((zx || zy) || thresh < fabs(z)); 
 }
 
-int fast2_mult_acc_check(double x, double y) {
+int fast2_mult_product_finite_check(double x, double y) {
     /* This Fast2Mult guard checks that the rounded product is finite.  That is
        exactly what the bound |err| <= 1/2 ulp(x*y) needs in every regime, so the
-       check omits fast2_mult_check's underflow zero/threshold test.  It does
+       check omits fast2_mult_exact_check's underflow zero/threshold test.  It does
        NOT certify that mul + err == x*y or that the result is a valid double
-       word; use fast2_mult_check for those guarantees. */
+       word; use fast2_mult_exact_check for those guarantees. */
     return isfinite_double(x * y);
 }
 
-int fast2_sum_check(double a, double b) {
+int fast2_sum_magnitude_order_check(double a, double b) {
     double s = a + b;
     int fin = isfinite_double(s);
     /* short-circuit: fabs called only when fin=true, i.e. a and b are finite */
     return fin && (fabs(b) <= fabs(a));
 }
 
-int two_sum_check(double a, double b) {
+int two_sum_exact_check(double a, double b) {
     int fin_sum  = isfinite_double(a + b);
     int fin_diff = isfinite_double(a - b);
     /* short-circuit: fabs called only when both fin checks pass */
@@ -60,8 +60,8 @@ int two_sum_check(double a, double b) {
     return fin_sum && fin_diff && (fabs(b) < DBL_MAX);
 }
 
-int dw_plus_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWPlusDW_safe_input_cond: each component is finite, both pairs satisfy the
+int dw_plus_dw_strong_precond_check(struct dword *x, struct dword *y) {
+    /* Verifies DWPlusDW_strong_precond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),
        and the high parts are bounded by Omega/4 = 2^1022.
        The DW relation (x->s + x->t == x->s) is well-defined as a comparison
@@ -78,7 +78,7 @@ int dw_plus_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && xh_bnd && yh_bnd;
 }
 
-int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
+int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -88,8 +88,8 @@ int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
     return dwx && dwy;
 }
 
-int dw_mult_fp_check(struct dword *x, double y) {
-    /* Verifies DWTimesFP_mixed_error_input_cond: x->t, y finite; (x->s, x->t) is a double-word;
+int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
+    /* Verifies DWTimesFP_strong_precond: x->t, y finite; (x->s, x->t) is a double-word;
        round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
        Omega/2 = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down
        finiteness of x->t in R (FT2R sends NaN/Inf to 0), so fin_xl is asserted,
@@ -99,7 +99,7 @@ int dw_mult_fp_check(struct dword *x, double y) {
        NOT CHECKED, deliberately: Fast2Mult's underflow disjunction
          FT2R x->s * FT2R y = 0  \/  2^(emin+2*p-1) <= |FT2R x->s * FT2R y|
        (the `mult_safe` test this function used to carry, and which
-       fast2_mult_check still does).  That disjunct buys the
+       fast2_mult_exact_check still does).  That disjunct buys the
        PURE relative bound 2u^2 by excluding the Fast2Mult underflow gap, at the
        cost of aborting on any input whose leading product lands in it -- ordinary
        tiny-operand inputs.  The contract exported by dw_mult_fp_strong is
@@ -107,12 +107,12 @@ int dw_mult_fp_check(struct dword *x, double y) {
 
          |(zh+zl) - (x->s + x->t)*y| <= 2u^2 |(x->s + x->t)*y| + 2.51*eta
 
-       (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond),
+       (DWMulFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond),
        which holds in EVERY regime given
        only the double-word relation and finiteness of the computed pair.  The
        three conjuncts below are exactly what is needed to establish that
        finiteness
-       (DWMulFP_relative_acc.DWTimesFP3_finite_from_safe_input_cond), so the gap is accepted
+       (DWMulFP_relative_acc.DWTimesFP_finite_post_cond_from_strong_precond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
        as part of the same mixed guarantee. */
     int fin_xh = isfinite_double(x->s);
@@ -152,19 +152,19 @@ int dw_mult_fp_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
-int dw_mult_fp_input_check(struct dword *x, double y) {
-    return dw_plus_fp_input_check(x, y);
+int dw_mult_fp_weak_precond_check(struct dword *x, double y) {
+    return dw_plus_fp_weak_precond_check(x, y);
 }
 
-int dw_mult_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWTimesDW_mixed_error_input_cond: x->t, y->t finite; (x->s, x->t) and
+int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
+    /* Verifies DWTimesDW_strong_precond: x->t, y->t finite; (x->s, x->t) and
        (y->s, y->t) are each a double-word; round(x->s * y->s) finite; and the
        real product |FT2R x->s * FT2R y->s| <= Omega/2 = 2^(femax-1) = 2^1023.
 
-       This is dw_mult_fp_check with the scalar y promoted to a second
+       This is dw_mult_fp_strong_precond_check with the scalar y promoted to a second
        double-word (y->s, y->t): the product bound now ranges over y->s (the high
        part), and finiteness of both y-components plus the y double-word relation
-       are asserted, exactly as dw_plus_dw_check does for its second operand.
+       are asserted, exactly as dw_plus_dw_strong_precond_check does for its second operand.
        The DW prop alone does not pin down finiteness of x->t / y->t in R (FT2R
        sends NaN/Inf to 0), so fin_xl / fin_yl are asserted, even though
        s + t == s implies each under IEEE comparison semantics.
@@ -172,7 +172,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
        NOT CHECKED, deliberately: Fast2Mult's underflow disjunction
          FT2R x->s * FT2R y->s = 0  \/  2^(emin+2*p-1) <= |FT2R x->s * FT2R y->s|
        (the `mult_safe` test this function used to carry, and which
-       fast2_mult_check still does).  That disjunct buys the PURE relative bound
+       fast2_mult_exact_check still does).  That disjunct buys the PURE relative bound
        4u^2 by excluding the Fast2Mult underflow gap, at the cost of aborting on
        any input whose leading product lands in it -- ordinary tiny-operand
        inputs.  The contract exported by dw_mult_dw_strong is instead the
@@ -181,12 +181,12 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
          |(zh+zl) - (x->s+x->t)*(y->s+y->t)|
              <= 4u^2 |(x->s+x->t)*(y->s+y->t)| + 2.5*eta
 
-       (DWMulDW_mixed_acc.DWTimesDW_mixed_guarantee_from_safe_input_cond),
+       (DWMulDW_mixed_acc.DWTimesDW_guarantee_from_strong_precond),
        which holds in EVERY regime given
        only the two double-word relations and finiteness of the computed pair.
        The four conjuncts below are exactly what is needed to establish that
        finiteness
-       (DWMulDW_relative_acc.DWTimesDW3_finite_from_safe_input_cond), so the gap is accepted
+       (DWMulDW_relative_acc.DWTimesDW_finite_post_cond_from_strong_precond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
        as part of the same mixed guarantee: closure needs only that the
        closing Fast2Sum preserves its sum, which holds both above the threshold
@@ -196,7 +196,7 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
 
        All soundness subtleties of the strict rounded-product bound
        (one-directional implication; overflow precluded because prod_bnd forces z
-       finite) are identical to dw_mult_fp_check above -- see that comment. */
+       finite) are identical to dw_mult_fp_strong_precond_check above -- see that comment. */
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -212,12 +212,12 @@ int dw_mult_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && prod_bnd;
 }
 
-int dw_mult_dw_input_check(struct dword *x, struct dword *y) {
-    return dw_plus_dw_input_check(x, y);
+int dw_mult_dw_weak_precond_check(struct dword *x, struct dword *y) {
+    return dw_plus_dw_weak_precond_check(x, y);
 }
 
-int dw_div_fp_check(struct dword *x, double y) {
-    /* Verifies DWDivFP_mixed_safe_input_cond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
+int dw_div_fp_strong_precond_check(struct dword *x, double y) {
+    /* Verifies DWDivFP_strong_precond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
        double-word; RN(x->s / y) finite; |x->s| <= Omega/4; |x->s / y| <=
        Omega/4; and either x->s is zero or |x->s| >= 2^(emin+2p).  There is NO
        quotient lower bound.
@@ -228,11 +228,11 @@ int dw_div_fp_check(struct dword *x, double y) {
          2^(emin+2p-1) = 2^-969   the floor of an earlier, quotient-window
                                   formulation of the relative tier;
          2^(emin+p-1)  = 2^-1022  the floor of the internal
-                                  DWDivFP_normal_quotient_input_cond in
+                                  DWDivFP_relative_normal_quotient_precond in
                                   DWDivFP_relative_acc.v, which is what Layer 1's
                                   FLX->FLT bridge for the leading quotient
                                   node needs;
-         (none)                   DWDivFP_mixed_safe_input_cond, this guard.
+         (none)                   DWDivFP_strong_precond, this guard.
 
        The last step is not a bridge relaxation but a separate proof: below
        2^(emin+p-1) the leading node RN(x->s/y) is subnormal and Layer 1 does
@@ -244,7 +244,7 @@ int dw_div_fp_check(struct dword *x, double y) {
 
          |(zh+zl) - (x->s + x->t)/y| <= 3u^2 |(x->s + x->t)/y| + 2^emin
 
-       (DWDivFP_mixed_acc.DWDivFP_mixed_guarantee_from_safe_input_cond), which
+       (DWDivFP_mixed_acc.DWDivFP_guarantee_from_strong_precond), which
        bundles the accuracy bound and output double-word closure; finiteness of
        the computed pair is established while deriving the mixed condition.
 
@@ -298,7 +298,7 @@ int dw_div_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_hi && xh_lo && qt_hi;
 }
 
-int dw_div_fp_input_check(struct dword *x, double y) {
+int dw_div_fp_weak_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y = isfinite_double(y);
@@ -308,8 +308,8 @@ int dw_div_fp_input_check(struct dword *x, double y) {
     return dwx && fin_y && xh_lo;
 }
 
-int dw_plus_fp_check(struct dword *x, double y) {
-    /* Verifies DWPlusFP_safe_input_cond: xh, xl, y are finite, (x->s, x->t) is a
+int dw_plus_fp_strong_precond_check(struct dword *x, double y) {
+    /* Verifies DWPlusFP_strong_precond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
        does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
        so fin_xl is asserted, even though x->s + x->t == x->s implies it
@@ -324,7 +324,7 @@ int dw_plus_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_bnd && y_bnd;
 }
 
-int dw_plus_fp_input_check(struct dword *x, double y) {
+int dw_plus_fp_weak_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -340,14 +340,14 @@ int dword_finite_check(struct dword *x) {
     return 1;
 }
 
-int dw_div_dw_check(struct dword *x, struct dword *y) {
-    /* Verifies DWDivDW_mixed_safe_input_cond (DDConds.v), the guard for the
+int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {
+    /* Verifies DWDivDW_strong_precond (DDConds.v), the guard for the
        reciprocal-bootstrap double-word division kernel.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
        (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
        2^(emin+2p) <= |y->s|; and |x->s/y->s| <= Omega/4.
 
-       The quotient CEILING is the same construction as dw_div_fp_check's: it is
+       The quotient CEILING is the same construction as dw_div_fp_strong_precond_check's: it is
        tested on the ROUNDED quotient q = RN(x->s / y->s), and the rounded->exact
        transfer is one-directional in Coq (BDIV_abs_le_bpow).  The STRICT `<` on
        qt_hi does double duty, giving the cond's real-quotient upper bound AND
@@ -372,8 +372,8 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
          x->s only ever enters the algorithm multiplied by m ~ 1/y->s, so the
          quotient ceiling already covers every node it reaches.
 
-       - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_relative_error_input_cond's conjunct 8,
-         which DWDivDW_mixed_safe_input_cond drops; it bought the sharper 2*eta closing floor
+       - No quotient FLOOR `q_qlo < fabs(q)`.  That was DWDivDW_relative_precond's conjunct 8,
+         which DWDivDW_strong_precond drops; it bought the sharper 2*eta closing floor
          (and with it the pure 13.9u^2 relative bound), at the cost of rejecting
          every quotient below 2^-969.  The exported guarantee here is the
          whole-range mixed bound 9.8u^2|Q| + 2.5*eta plus double-word closure,
@@ -403,7 +403,7 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
        reconstruction's own underflow floor when the closing multiply by X
        scales it up.  Loosening 966 by k binades multiplies that charge by 2^k
        and takes the exported constant from 9.8 back toward 12.33 -- see the
-       DWDivDW_relative_error_input_cond doc comment in DDModels.v. */
+       DWDivDW_relative_precond doc comment in DDModels.v. */
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
 
@@ -414,7 +414,7 @@ int dw_div_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && yh_hi && yh_lo && qt_hi;
 }
 
-int dw_div_dw_input_check(struct dword *x, struct dword *y) {
+int dw_div_dw_weak_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);

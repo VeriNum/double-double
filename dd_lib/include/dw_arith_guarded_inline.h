@@ -9,7 +9,7 @@
  * default input-check/kernel/output-check interface and a strong-input
  * interface.  The Tier B Fast2Mult wrapper
  * (fast_2mult_acc_guarded) whose contract contains only a bound on the returned
- * error component.  It uses the cheaper fast2_mult_acc_check and does NOT prove
+ * error component.  It uses the cheaper fast2_mult_product_finite_check and does NOT prove
  * exact reconstruction or that the output is a valid double word.  Use
  * fast_2mult_guarded for those stronger guarantees.
  *
@@ -35,19 +35,19 @@ static inline int dword_finite_check(struct dword *x) {
     return 1;
 }
 
-static inline int two_sum_check(double a, double b) {
+static inline int two_sum_exact_check(double a, double b) {
     int fin_sum  = isfinite_double(a + b);
     int fin_diff = isfinite_double(a - b);
     return fin_sum && fin_diff && (fabs(b) < DBL_MAX);
 }
 
-static inline int fast2_sum_check(double a, double b) {
+static inline int fast2_sum_magnitude_order_check(double a, double b) {
     double s = a + b;
     int fin = isfinite_double(s);
     return fin && (fabs(b) <= fabs(a));
 }
 
-static inline int fast2_mult_check(double x, double y) {
+static inline int fast2_mult_exact_check(double x, double y) {
     double z = x * y;
     double thresh = DBL_MIN * ldexp(1.0, 53);   /* 2^(emin + 2p - 1) */
     int fin = isfinite_double(z);
@@ -56,11 +56,11 @@ static inline int fast2_mult_check(double x, double y) {
     return fin && ((zx || zy) || thresh < fabs(z));
 }
 
-static inline int fast2_mult_acc_check(double x, double y) {
+static inline int fast2_mult_product_finite_check(double x, double y) {
     return isfinite_double(x * y);   /* Tier B proves only the error bound. */
 }
 
-static inline int dw_plus_fp_check(struct dword *x, double y) {
+static inline int dw_plus_fp_strong_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -71,7 +71,7 @@ static inline int dw_plus_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_bnd && y_bnd;
 }
 
-static inline int dw_plus_fp_input_check(struct dword *x, double y) {
+static inline int dw_plus_fp_weak_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -79,7 +79,7 @@ static inline int dw_plus_fp_input_check(struct dword *x, double y) {
     return dwx && fin_y;
 }
 
-static inline int dw_plus_dw_check(struct dword *x, struct dword *y) {
+static inline int dw_plus_dw_strong_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -92,7 +92,7 @@ static inline int dw_plus_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && xh_bnd && yh_bnd;
 }
 
-static inline int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
+static inline int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -102,10 +102,10 @@ static inline int dw_plus_dw_input_check(struct dword *x, struct dword *y) {
     return dwx && dwy;
 }
 
-/* DWTimesFP_mixed_error_input_cond: no underflow disjunction -- the exported contract is the
+/* DWTimesFP_strong_precond: no underflow disjunction -- the exported contract is the
    whole-range mixed bound 2u^2|P| + 2.51*eta, not the pure 2u^2 relative bound,
    so the Fast2Mult underflow gap is accepted.  See dd_lib/fp_utils.c. */
-static inline int dw_mult_fp_check(struct dword *x, double y) {
+static inline int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -116,14 +116,14 @@ static inline int dw_mult_fp_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
-static inline int dw_mult_fp_input_check(struct dword *x, double y) {
-    return dw_plus_fp_input_check(x, y);
+static inline int dw_mult_fp_weak_precond_check(struct dword *x, double y) {
+    return dw_plus_fp_weak_precond_check(x, y);
 }
 
-/* DWTimesDW_mixed_error_input_cond: no underflow disjunction -- the exported contract is the
+/* DWTimesDW_strong_precond: no underflow disjunction -- the exported contract is the
    whole-range mixed bound 4u^2|P| + 2.5*eta, not the pure 8u^2 relative bound,
    so the Fast2Mult underflow gap is accepted.  See dd_lib/fp_utils.c. */
-static inline int dw_mult_dw_check(struct dword *x, struct dword *y) {
+static inline int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -136,14 +136,14 @@ static inline int dw_mult_dw_check(struct dword *x, struct dword *y) {
     return dwx && dwy && prod_bnd;
 }
 
-static inline int dw_mult_dw_input_check(struct dword *x, struct dword *y) {
-    return dw_plus_dw_input_check(x, y);
+static inline int dw_mult_dw_weak_precond_check(struct dword *x, struct dword *y) {
+    return dw_plus_dw_weak_precond_check(x, y);
 }
 
-/* Discharges DWDivFP_mixed_safe_input_cond.  NO quotient floor: qt_hi alone gives both the
+/* Discharges DWDivFP_strong_precond.  NO quotient floor: qt_hi alone gives both the
    quotient ceiling and finiteness of RN(x->s/y) (hence y != 0), which is the
    cond's fifth conjunct.  The xh floor admits exact zero separately. */
-static inline int dw_div_fp_check(struct dword *x, double y) {
+static inline int dw_div_fp_strong_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -157,7 +157,7 @@ static inline int dw_div_fp_check(struct dword *x, double y) {
     return dwx && fin_y && xh_hi && xh_lo && qt_hi;
 }
 
-static inline int dw_div_fp_input_check(struct dword *x, double y) {
+static inline int dw_div_fp_weak_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y = isfinite_double(y);
@@ -167,7 +167,7 @@ static inline int dw_div_fp_input_check(struct dword *x, double y) {
     return dwx && fin_y && xh_lo;
 }
 
-static inline int dw_div_dw_check(struct dword *x, struct dword *y) {
+static inline int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -183,7 +183,7 @@ static inline int dw_div_dw_check(struct dword *x, struct dword *y) {
        forces y->s != 0.  The upper exponent IS the exported u^2 coefficient
        9.8 -- loosening it by k binades costs a factor 2^k on the reciprocal
        floor's charge.  No |x->s| bound and no quotient FLOOR: see
-       dd_lib/fp_utils.c, this mirrors DWDivDW_mixed_safe_input_cond. */
+       dd_lib/fp_utils.c, this mirrors DWDivDW_strong_precond. */
     int yh_hi = fabs(y->s) <= q_yhi;
     int yh_lo = q_ylo <= fabs(y->s);
     double q = x->s / y->s;
@@ -192,7 +192,7 @@ static inline int dw_div_dw_check(struct dword *x, struct dword *y) {
 }
 
 
-static inline int dw_div_dw_input_check(struct dword *x, struct dword *y) {
+static inline int dw_div_dw_weak_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -209,73 +209,73 @@ static inline int dw_div_dw_input_check(struct dword *x, struct dword *y) {
 /* ---- guarded wrappers (from dd_lib *_guarded.c) -------------------------- */
 
 static inline void two_sum_guarded(struct dword *st, double a, double b) {
-    if (!two_sum_check(a, b)) exit(EXIT_FAILURE);
+    if (!two_sum_exact_check(a, b)) exit(EXIT_FAILURE);
     two_sum(st, a, b);
 }
 static inline void fast_2sum_guarded(struct dword *st, double a, double b) {
-    if (!fast2_sum_check(a, b)) exit(EXIT_FAILURE);
+    if (!fast2_sum_magnitude_order_check(a, b)) exit(EXIT_FAILURE);
     fast_2sum(st, a, b);
 }
 static inline void fast_2mult_guarded(struct dword *st, double a, double b) {
-    if (!fast2_mult_check(a, b)) exit(EXIT_FAILURE);
+    if (!fast2_mult_exact_check(a, b)) exit(EXIT_FAILURE);
     fast_2mult(st, a, b);
 }
 static inline void fast_2mult_acc_guarded(struct dword *st, double a, double b) {
-    if (!fast2_mult_acc_check(a, b)) exit(EXIT_FAILURE);
+    if (!fast2_mult_product_finite_check(a, b)) exit(EXIT_FAILURE);
     fast_2mult(st, a, b);
 }
 static inline void dw_plus_fp(struct dword *st, struct dword *x, double y) {
-    if (!dw_plus_fp_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_plus_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_fp_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
 static inline void dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
-    if (!dw_plus_fp_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_plus_fp_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_fp_kernel(st, x, y);
 }
 static inline void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_plus_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_plus_dw_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_dw_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
 static inline void dw_plus_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_plus_dw_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_plus_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_dw_kernel(st, x, y);
 }
 static inline void dw_mult_fp(struct dword *st, struct dword *x, double y) {
-    if (!dw_mult_fp_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_mult_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_mult_fp_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
 static inline void dw_mult_fp_strong(struct dword *st, struct dword *x, double y) {
-    if (!dw_mult_fp_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_mult_fp_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_mult_fp_kernel(st, x, y);
 }
 static inline void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_mult_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_mult_dw_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_mult_dw_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
 static inline void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_mult_dw_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_mult_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_mult_dw_kernel(st, x, y);
 }
 static inline void dw_div_fp(struct dword *z, struct dword *x, double y) {
-    if (!dw_div_fp_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_div_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_div_fp_kernel(z, x, y);
     if (!dword_finite_check(z)) exit(EXIT_FAILURE);
 }
 static inline void dw_div_fp_strong(struct dword *z, struct dword *x, double y) {
-    if (!dw_div_fp_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_div_fp_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_div_fp_kernel(z, x, y);
 }
 static inline void dw_div_dw(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_div_dw_input_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_div_dw_weak_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_div_dw_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
 static inline void dw_div_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_div_dw_check(x, y)) exit(EXIT_FAILURE);
+    if (!dw_div_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_div_dw_kernel(st, x, y);
 }
 

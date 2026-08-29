@@ -1185,7 +1185,7 @@ Notation u    := (bpow radix2 (- fprec t)).
    Section Sub proves accuracy and output validity. *)
 Theorem DWDivFP_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
+  DWDivFP_strong_precond xh xl y ->
   FT2R xh <> 0 ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
   Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))

@@ -614,7 +614,7 @@ Qed.
 End FiniteAccuracyDWDivFP.
 
 (* ============================================================
-   Layer-2: finiteness + treatment of underflow facts derived from DWDivFP_relative_error_input_cond.
+   Layer-2: finiteness + treatment of underflow facts derived from DWDivFP_relative_precond.
 
    The cond bounds only the components (|xh| <= bpow(femax/2-1), |y| >=
    bpow(1-femax/2)) plus the quotient underflow bound; from these the quotient
@@ -630,15 +630,15 @@ Notation ulp   := (Ulp.ulp Zaux.radix2 fexp).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
 (* Internal normal leading quotient proof condition for DWDivFP.  This is not
-   a runtime guard or a public accuracy tier: DWDivFP_mixed_safe_input_cond is
+   a runtime guard or a public accuracy tier: DWDivFP_strong_precond is
    the canonical whole range mixed error condition, while
-   DWDivFP_relative_error_input_cond is the normal range pure relative one.
+   DWDivFP_relative_precond is the normal range pure relative one.
    The helper records the normal quotient branch used to reuse the FLX proof
    when |xh/y| is at least 2^(emin+p-1).  It differs from the safe input cond
    only in the clause-5 slot, where finiteness of the leading quotient node is
    traded for that node being normal; the final lower bound is on the distinct
    product node th*y and remains necessary in this branch. *)
-Definition DWDivFP_normal_quotient_input_cond
+Definition DWDivFP_relative_normal_quotient_precond
     (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -658,8 +658,8 @@ Definition DWDivFP_normal_quotient_input_cond
     floor used by the accuracy proof, but omits the two overflow ceilings.
     Those ceilings belong only to the condition checked before the operation to prove
     result finiteness; the postchecked interface supplies result finiteness
-    directly through [DWDivFP_mixed_cond]. *)
-Definition DWDivFP_internal_input_cond (xh xl y : ftype t) : Prop :=
+    directly through [DWDivFP_weak_pre_and_finite_post_cond]. *)
+Definition DWDivFP_internal_precond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y = true /\
@@ -684,23 +684,23 @@ destruct (float_of_ftype b) eqn:E; simpl in Hb; try discriminate.
 - revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-Lemma DWDivFP_internal_input_cond_of_safe_input_cond (xh xl y : ftype t) :
-  DWDivFP_mixed_safe_input_cond xh xl y ->
+Lemma DWDivFP_internal_precond_of_strong_precond (xh xl y : ftype t) :
+  DWDivFP_strong_precond xh xl y ->
   FT2R xh <> 0 ->
-  DWDivFP_internal_input_cond xh xl y.
+  DWDivFP_internal_precond xh xl y.
 Proof.
 intros (Hfxh & Hfxl & Hfy & Hdwp & Hfth & _ & _ & Hxhlb) Hxhne.
 destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 repeat split; assumption.
 Qed.
 
-Lemma DWDivFP_inputs_finite_of_result_finite (xh xl y : ftype t) :
-  DWDivFP_result_finite xh xl y ->
+Lemma DWDivFP_inputs_finite_of_finite_post_cond (xh xl y : ftype t) :
+  DWDivFP_finite_post_cond xh xl y ->
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y = true.
 Proof.
-unfold DWDivFP_result_finite.
+unfold DWDivFP_finite_post_cond.
 move => Hfin.
 have Hfxh := FINxh xh xl y Hfin.
 have Hpih := FINpih xh xl y Hfin.
@@ -710,17 +710,17 @@ have [_ Hfxl] := BPLUS_finite_e t _ xl Hd.
 exact (conj Hfxh (conj Hfxl Hfy)).
 Qed.
 
-Lemma DWDivFP_internal_input_cond_of_mixed_cond (xh xl y : ftype t) :
-  DWDivFP_mixed_cond xh xl y ->
+Lemma DWDivFP_internal_precond_of_weak_pre_and_finite_post_cond (xh xl y : ftype t) :
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
   FT2R xh <> 0 ->
-  DWDivFP_internal_input_cond xh xl y.
+  DWDivFP_internal_precond xh xl y.
 Proof.
 move => [[Hdwp Hxhlb] Hfin] Hxhne.
 destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
 have [Hfxh [Hfxl Hfy]] :=
-  DWDivFP_inputs_finite_of_result_finite xh xl y Hfin.
+  DWDivFP_inputs_finite_of_finite_post_cond xh xl y Hfin.
 have Hfth : is_finite (BDIV xh y) = true.
-{ unfold DWDivFP_result_finite in Hfin.
+{ unfold DWDivFP_finite_post_cond in Hfin.
   exact (FINth xh xl y Hfin). }
 repeat split; assumption.
 Qed.
@@ -816,12 +816,12 @@ Qed.
    BPLUS are finite, with |th| and |tl| bounded by Omega/2 and |th+tl| < Omega.
    Consumed by both DWDivFP_fst_finite_acc and DWDivFP_snd_finite_acc.
 
-   Stated on DWDivFP_normal_quotient_input_cond: the quotient bound enters only
+   Stated on DWDivFP_relative_normal_quotient_precond: the quotient bound enters only
    through Hnorm below, at emin+p-1 (thy_residual / ulp_FLT_le), and the
    product node is carried by clause 8, which the relaxed cond keeps. *)
 Lemma DWDivFP_cascade_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_normal_quotient_input_cond xh xl y ->
+  DWDivFP_relative_normal_quotient_precond xh xl y ->
   is_finite (BDIV xh y) = true /\
   is_finite (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y) = true /\
   is_finite (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) = true /\
@@ -1228,7 +1228,7 @@ Qed.
 
 Lemma DWDivFP_fst_finite_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_normal_quotient_input_cond xh xl y ->
+  DWDivFP_relative_normal_quotient_precond xh xl y ->
   is_finite (fst (DWDivFP xh xl y)) = true.
 Proof.
 intros Hp4 COND.
@@ -1246,7 +1246,7 @@ Qed.
    result (|tl| <= ulp(th)), then is_finite_FastSum_ulp. *)
 Lemma DWDivFP_snd_finite_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_normal_quotient_input_cond xh xl y ->
+  DWDivFP_relative_normal_quotient_precond xh xl y ->
   is_finite (snd (DWDivFP xh xl y)) = true.
 Proof.
 intros Hp4 COND.
@@ -1305,7 +1305,7 @@ apply (abst_snd _ (/ 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMIN
 Qed.
 
 Lemma cond_UF_prod_internal (xh xl y : ftype t) :
-  DWDivFP_internal_input_cond xh xl y ->
+  DWDivFP_internal_precond xh xl y ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   bpow radix2 (emin + 2 * fprec t - 1) <=
     Rabs (FT2R (BDIV xh y) * FT2R y).
@@ -1356,7 +1356,7 @@ Qed.
     ceiling on [xh] or [xh/y]. *)
 Lemma DWDivFP_residual_le_high_internal (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_internal_input_cond xh xl y ->
+  DWDivFP_internal_precond xh xl y ->
   is_finite_p (DWDivFP xh xl y) ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   Rabs (FT2R (BPLUS
@@ -1435,7 +1435,7 @@ Qed.
 
 Lemma DWDivFP_ordering_internal (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_internal_input_cond xh xl y ->
+  DWDivFP_internal_precond xh xl y ->
   is_finite_p (DWDivFP xh xl y) ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
@@ -1460,7 +1460,7 @@ Qed.
 Corollary DWDivFP_double_word_from_internal_normal_quotient
     (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_internal_input_cond xh xl y ->
+  DWDivFP_internal_precond xh xl y ->
   is_finite_p (DWDivFP xh xl y) ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   double_word_prop (fst (DWDivFP xh xl y))
@@ -1485,7 +1485,7 @@ Qed.
 End DWDivFP_Finite.
 
 (* Pure [3u^2] relative bound when the leading quotient and nonzero correction
-   quotient are normal.  [DWDivFP_normal] packages the correction condition
+   quotient are normal.  [DWDivFP_relative_regime_cond] packages the correction condition
    with the zero case needed for exact division. *)
 Section CondAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -1496,7 +1496,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_internal_input_cond xh xl y.
+Hypothesis COND : DWDivFP_internal_precond xh xl y.
 Hypothesis FIN : is_finite_p (DWDivFP xh xl y).
 Hypothesis Hquot : bpow radix2 (emin + fprec t - 1)
   <= Rabs (FT2R xh / FT2R y).
@@ -1528,7 +1528,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_internal_input_cond xh xl y.
+Hypothesis COND : DWDivFP_internal_precond xh xl y.
 Hypothesis FIN : is_finite_p (DWDivFP xh xl y).
 Hypothesis Hquot : bpow radix2 (emin + fprec t - 1)
   <= Rabs (FT2R xh / FT2R y).
@@ -1678,7 +1678,7 @@ Local Lemma DWDivFP_tl_perturbation_le_eta
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_internal_input_cond xh xl y)
+  (COND : DWDivFP_internal_precond xh xl y)
   (FIN : is_finite_p (DWDivFP xh xl y)) :
   Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                   (Fast2Mult_err (BDIV xh y) y)) xl) y)
@@ -1701,13 +1701,13 @@ Qed.
 
 (* The exact division case: the correction d is zero, so both roundings at the
    tl node are applied to 0 and the perturbation vanishes identically.  This is
-   the disjunct DDConds.DWDivFP_normal keeps alongside "d/y is normal", and it
+   the disjunct DDConds.DWDivFP_relative_regime_cond keeps alongside "d/y is normal", and it
    is why the relative tier does not have to exclude exact divisions. *)
 Local Lemma DWDivFP_error_exact_division
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
   (Hp4 : (4 <= fprec t)%Z)
-  (COND : DWDivFP_internal_input_cond xh xl y)
+  (COND : DWDivFP_internal_precond xh xl y)
   (FIN : is_finite_p (DWDivFP xh xl y))
   (Hquot : bpow radix2 (@common.emin t + fprec t - 1)
             <= Rabs (FT2R xh / FT2R y))
@@ -1759,7 +1759,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_internal_input_cond xh xl y.
+Hypothesis COND : DWDivFP_internal_precond xh xl y.
 Hypothesis FIN : is_finite_p (DWDivFP xh xl y).
 Hypothesis Hquot : bpow radix2 (emin + fprec t - 1)
   <= Rabs (FT2R xh / FT2R y).
@@ -1806,9 +1806,9 @@ Qed.
 
 End CondAccuracyDWDivFP_mixed.
 
-(* Public pure relative theorem.  [DWDivFP_normal] requires a normal leading
+(* Public pure relative theorem.  [DWDivFP_relative_regime_cond] requires a normal leading
    quotient and either a zero correction or a normal correction quotient.
-   [DWDivFP_relative_error_input_cond] adds the safe input requirements.  In
+   [DWDivFP_relative_precond] adds the safe input requirements.  In
    this regime the FLT and FLX models agree, giving the paper's [3u^2] bound
    without an absolute floor term. *)
 Section RelativeAccuracyDWDivFP.
@@ -1820,7 +1820,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_relative_error_input_cond xh xl y.
+Hypothesis COND : DWDivFP_relative_precond xh xl y.
 
 Theorem DWDivFP_relative_accuracy :
   relative_error_DWDivFP xh xl y <= 3 * u ^ 2.
@@ -1831,8 +1831,8 @@ have Hxhne : FT2R xh <> 0.
   intros Hbad. exact (Rlt_not_le _ _
     (bpow_gt_0 radix2 (emin + fprec t - 1)) Hbad). }
 have INTERNAL :=
-  DWDivFP_internal_input_cond_of_safe_input_cond xh xl y SAFE Hxhne.
-have CONDn : DWDivFP_normal_quotient_input_cond xh xl y.
+  DWDivFP_internal_precond_of_strong_precond xh xl y SAFE Hxhne.
+have CONDn : DWDivFP_relative_normal_quotient_precond xh xl y.
 { move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [_ [Hxhb [Hqub Hxhlb]]]]]]].
   destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
   repeat split; assumption. }

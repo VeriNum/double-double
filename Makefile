@@ -10,7 +10,8 @@ KNOWNFILES   := Makefile _CoqProject
 
 ifneq ($(MAKECMDGOALS),run-clightgen)
 ifneq ($(MAKECMDGOALS),clean)
-CoqMakefile: Makefile _CoqProject
+.SECONDEXPANSION:
+CoqMakefile: Makefile _CoqProject $$(OBJS)
 	$(COQBIN)coq_makefile -f _CoqProject -o CoqMakefile
 
 invoke-coqmakefile: CoqMakefile
@@ -35,9 +36,20 @@ OBJ += dd_ops.v
 OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
 SRCDIR = dd_lib
 INCLUDES = -I $(SRCDIR)/include
+CLIGHT_HEADERS = $(SRCDIR)/include/dw_arith.h $(SRCDIR)/include/fp_utils.h
+CLIGHT_SOURCES = $(addprefix $(SRCDIR)/,$(OBJ:.v=.c))
+DD_OPS_INCLUDES = $(filter-out $(SRCDIR)/fp_utils.c $(SRCDIR)/dd_ops.c,$(CLIGHT_SOURCES))
 
+.PHONY: run-clightgen
 run-clightgen: $(OBJS)
 	
+$(OBJDIR):
+	mkdir -p $@
+
+$(OBJS): $(CLIGHT_HEADERS) | $(OBJDIR)
+
+$(OBJDIR)/dd_ops.v: $(DD_OPS_INCLUDES)
+
 $(OBJS): $(OBJDIR)/%.v: $(SRCDIR)/%.c
 	clightgen -normalize $(INCLUDES) $< -o $@
 

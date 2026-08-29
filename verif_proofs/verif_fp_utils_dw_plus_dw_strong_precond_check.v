@@ -4,16 +4,16 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_plus_dw_check(x, y) returns 1 only if DWPlusDW_safe_input_cond holds:
+(* dw_plus_dw_strong_precond_check(x, y) returns 1 only if DWPlusDW_strong_precond holds:
    each component is finite, both (xh, xl) and (yh, yl) are double-words,
    and |xh|, |yh| <= Omega/4 = 2^1022.
 
-   Proof structure mirrors body_two_sum_check; each &&-short-circuit becomes
+   Proof structure mirrors body_two_sum_exact_check; each &&-short-circuit becomes
    a forward_if cascade with an EX b_i, PROP(b_i = true -> P_i) invariant.
    Discharge of the propositional conjuncts at each join is delegated to the
    short_circuit_*_concl lemmas in verif_fp_utils_short_circuit.v. *)
-Lemma body_dw_plus_dw_check :
-  semax_body Vprog Gprog f_dw_plus_dw_check dw_plus_dw_check_spec.
+Lemma body_dw_plus_dw_strong_precond_check :
+  semax_body Vprog Gprog f_dw_plus_dw_strong_precond_check dw_plus_dw_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh = isfinite_double(x->s) *)
@@ -288,7 +288,7 @@ Proof.
                        destruct (Hb14 eq_refl) as [Hb6t [Hb8t [Hbxht Hbyht]]].
                        destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                        destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
-                       unfold DDConds.DWPlusDW_safe_input_cond.
+                       unfold DDConds.DWPlusDW_strong_precond.
                        repeat (split; try assumption).
                        { apply Float_cmp_Cle_bpow1022; [exact Hfin_xh|].
                          unfold bxh, q_omega_val in Hbxht.
@@ -298,9 +298,9 @@ Proof.
                          exact Hbyht. }
 Qed.
 
-Lemma body_dw_plus_dw_input_check :
-  semax_body Vprog Gprog f_dw_plus_dw_input_check
-    dw_plus_dw_input_check_spec.
+Lemma body_dw_plus_dw_weak_precond_check :
+  semax_body Vprog Gprog f_dw_plus_dw_weak_precond_check
+    dw_plus_dw_weak_precond_check_spec.
 Proof.
   start_function.
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
@@ -443,5 +443,5 @@ Proof.
               destruct (Hb9 eq_refl) as [Hb6t Hb8t].
               destruct (Hb6 Hb6t) as [_ [_ HDWx]].
               destruct (Hb8 Hb8t) as [_ [_ HDWy]].
-              unfold DWPlusDW_input_cond. exact (conj HDWx HDWy).
+              unfold DWPlusDW_weak_precond. exact (conj HDWx HDWy).
 Qed.

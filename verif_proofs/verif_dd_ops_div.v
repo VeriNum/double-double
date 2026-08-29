@@ -24,7 +24,7 @@ Open Scope logic.
    factored into dd_float_reconcile (imported above); body_dw_div_dw_kernel uses
    them to make the stored value and the postcondition syntactically equal. *)
 
-(* Verification of the call sequence implementing [DWDivDW3].  Each callee
+(* Verification of the call sequence implementing [DWDivDW].  Each callee
    returns its model result without an arithmetic precondition.  The struct
    arguments produced by earlier calls are passed as explicit witnesses
    because Coq cannot infer them through projections of [f2val]. *)
@@ -52,16 +52,16 @@ match goal with |- context [temp _th (Vfloat ?T)] =>
 (* dw_mult_dw_kernel(z, x, &m): witness (s, x, v_m, xh, m pair). *)
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
-(* Rewrite the postcondition's DWDivDW3 term into the exact composition the
+(* Rewrite the postcondition's DWDivDW term into the exact composition the
    cascade produced, so both `data_at` values become syntactically identical
    and the closing entailer needs no whole term conversion between B and
    CompCert floating-point operations. *)
 match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
-  replace (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh)) with PROD end.
-2:{ unfold DWDivDW3.
+  replace (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh)) with PROD end.
+2:{ unfold DWDivDW.
     rewrite ?BDIV_Td, ?BFMA_Td, ?BOPP_Td, ?BMULT_Td, ?Zconst1_Td.
     destruct (Fast2Sum _ _)     as [eh el]; cbn [fst snd].
-    destruct (DWTimesFP3 _ _ _) as [dh dl]; cbn [fst snd].
+    destruct (DWTimesFP _ _ _) as [dh dl]; cbn [fst snd].
     destruct (DWPlusFP _ _ _)   as [mh ml]; cbn [fst snd].
     reflexivity. }
 entailer!!.
@@ -72,7 +72,7 @@ Qed.
    subtractions/additions of Algorithm 15, so -- unlike the DW/DW kernel, whose
    arithmetic is hidden inside the multiplication and addition kernels -- the
    stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
-   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP3 into that exact CompCert float
+   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP into that exact CompCert float
    composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
    data_at values become syntactically identical for the closing entailer. *)
 Lemma body_dw_div_fp_kernel:
@@ -96,10 +96,10 @@ forward.            (* tl  = d / y *)
 match goal with |- context [temp _th (Vfloat ?TH)] =>
  match goal with |- context [temp _tl (Vfloat ?TL)] =>
    forward_call (s, TH, TL) end end.
-(* Rewrite the postcondition's DWDivFP3 into the produced composition. *)
+(* Rewrite the postcondition's DWDivFP into the produced composition. *)
 match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
-  replace (DWDivFP3 (fst xh) (snd xh) y) with PROD end.
-2:{ unfold DWDivFP3.
+  replace (DWDivFP (fst xh) (snd xh) y) with PROD end.
+2:{ unfold DWDivFP.
     rewrite ?BDIV_Td, ?BMINUS_Td, ?BPLUS_Td.
     destruct (Fast2Mult _ _) as [pih pil]; cbn [fst snd].
     destruct (Fast2Sum _ _) as [zh zl]; cbn [fst snd].
@@ -114,7 +114,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivFP_mixed_input_cond (fst xh) (snd xh) y)
+  PROP (DWDivFP_weak_precond (fst xh) (snd xh) y)
   LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -125,34 +125,34 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivFP_mixed_input_cond (fst xh) (snd xh) y) as Hin
+  assert_PROP (DWDivFP_weak_precond (fst xh) (snd xh) y) as Hin
     by entailer!.
   forward_call (s, x, xh, y).
-  forward_call (s, DWDivFP3 (fst xh) (snd xh) y).
+  forward_call (s, DWDivFP (fst xh) (snd xh) y).
   Intros vret_out.
   set (Post_out :=
-    PROP (DWDivFP_mixed_cond (fst xh) (snd xh) y)
+    PROP (DWDivFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y)
     LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
     SEP (data_at Tsh dword
-           (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+           (f2val (DWDivFP (fst xh) (snd xh) y)) s;
          data_at Tsh dword (f2val xh) x)).
   forward_if Post_out.
   + forward_call (Int.repr 1).
     unfold Post_out. entailer!.
   + forward.
-    unfold Post_out, DWDivFP_mixed_cond, DWDivFP_result_finite.
+    unfold Post_out, DWDivFP_weak_pre_and_finite_post_cond, DWDivFP_finite_post_cond.
     entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
         apply Hfin; destruct vret_out; auto
     end.
   + unfold Post_out.
-    assert_PROP (DWDivFP_mixed_cond (fst xh) (snd xh) y) as Hcond
+    assert_PROP (DWDivFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y) as Hcond
       by entailer!.
     assert (Hp4 : (4 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
-      (@DWDivFP_mixed_guarantee_from_cond
+      (@DWDivFP_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) y Hp4 Hcond)
       as Hg.
     entailer!!.
@@ -165,7 +165,7 @@ start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivFP_mixed_safe_input_cond (fst xh) (snd xh) y)
+  PROP (DWDivFP_strong_precond (fst xh) (snd xh) y)
   LOCAL (temp _z s; temp _x x; temp _y (Vfloat y))
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x)).
@@ -176,12 +176,12 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivFP_mixed_safe_input_cond (fst xh) (snd xh) y) as HFC by entailer!.
+  assert_PROP (DWDivFP_strong_precond (fst xh) (snd xh) y) as HFC by entailer!.
   forward_call (s, x, xh, y).
   assert (Hp4 : (4 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (DWDivFP_mixed_guarantee_from_safe_input_cond
+    (DWDivFP_guarantee_from_strong_precond
        (fst xh) (snd xh) y Hp4 HFC)
     as Hg.
   entailer!!.
@@ -194,7 +194,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWDivDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _z s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -207,23 +207,23 @@ forward_if Post_if.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP
-    (DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
+    (DWDivDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
     by entailer!.
   forward_call (s, x, y, xh, yh).
-  forward_call (s, DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh)).
+  forward_call (s, DWDivDW (fst xh) (snd xh) (fst yh) (snd yh)).
   Intros vret_out.
   set (Post_out :=
-    PROP (DWDivDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP (DWDivDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh))
     LOCAL (temp _z s; temp _x x; temp _y y)
     SEP (data_at Tsh dword
-           (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+           (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
          data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y)).
   forward_if Post_out.
   + forward_call (Int.repr 1).
     unfold Post_out. entailer!.
   + forward.
-    unfold Post_out, DWDivDW_mixed_cond, DWDivDW_result_finite.
+    unfold Post_out, DWDivDW_weak_pre_and_finite_post_cond, DWDivDW_finite_post_cond.
     entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
@@ -231,12 +231,12 @@ forward_if Post_if.
     end.
   + unfold Post_out.
     assert_PROP
-      (DWDivDW_mixed_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
+      (DWDivDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
       by entailer!.
     assert (Hp14 : (14 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
-      (@DWDivDW_mixed_guarantee_from_cond
+      (@DWDivDW_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp14 Hcond)
       as Hg.
     entailer!!.
@@ -249,7 +249,7 @@ start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
 set (Post_if :=
-  PROP (DWDivDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+  PROP (DWDivDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
   LOCAL (temp _z s; temp _x x; temp _y y)
   SEP (data_at_ Tsh dword s;
        data_at Tsh dword (f2val xh) x;
@@ -261,13 +261,13 @@ forward_if Post_if.
   unfold Post_if. entailer!.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
-  assert_PROP (DWDivDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
+  assert_PROP (DWDivDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC
     by entailer!.
   forward_call (s, x, y, xh, yh).
   assert (Hp14 : (14 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
-    (DWDivDW_mixed_guarantee_from_safe_input_cond
+    (DWDivDW_guarantee_from_strong_precond
        (fst xh) (snd xh) (fst yh) (snd yh) Hp14 HFC)
     as Hg.
   entailer!!.

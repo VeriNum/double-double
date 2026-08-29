@@ -317,7 +317,7 @@ Proof.
 Qed.
 
 (* q_sqrt_val: IEEE-754 double for 2^(femax/2 - 1) = 2^511 in Tdouble, the
-   *factor* (square root scale) bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_exact_leading_product_input_cond.
+   *factor* (square root scale) bound used by DWTimesFP_relative_precond / DWTimesDW_exact_leading_product_precond.
    Same construction as q_omega_val but scaling 1.0 by 2^511 instead of 2^1022.
    Used by Float_cmp_Cle_bpow511 to lift the C runtime check
    `fabs(a) <= ldexp(1.0, 511)` into the abstract bound
@@ -348,7 +348,7 @@ Qed.
 
 (* Float.cmp Cle (fabs b) q_sqrt_val = true → Rabs (FT2R b) <= 2^(femax/2 - 1).
    The factor bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
-   is bpow (femax/2 - 1) itself, matching DWTimesFP_relative_error_input_cond directly). *)
+   is bpow (femax/2 - 1) itself, matching DWTimesFP_relative_precond directly). *)
 Lemma Float_cmp_Cle_bpow511 :
   forall (b : ftype Tdouble),
   is_finite b = true ->
@@ -379,7 +379,7 @@ Proof.
 Qed.
 
 (* q_prod_val: IEEE-754 double for 2^1023 = Omega/2 = 2^(femax-1) in Tdouble, the
-   *product* magnitude bound used by DWTimesFP_relative_error_input_cond / DWTimesDW_exact_leading_product_input_cond.  Same
+   *product* magnitude bound used by DWTimesFP_relative_precond / DWTimesDW_exact_leading_product_precond.  Same
    construction as q_omega_val / q_sqrt_val but scaling 1.0 by 2^1023.  Used by
    Float_cmp_Clt_bpow1023 to lift the C runtime check `fabs(z) < ldexp(1.0, 1023)`
    into the abstract bound Rabs (FT2R z) < bpow radix2 1023 together with
@@ -575,7 +575,7 @@ Proof.
 Qed.
 
 (* ==================================================================== *)
-(*  Division guard helpers (dw_div_fp_check / DWDivFP_mixed_safe_input_cond)  *)
+(*  Division guard helpers (dw_div_fp_strong_precond_check / DWDivFP_strong_precond)  *)
 (* ==================================================================== *)
 
 (* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
@@ -584,7 +584,7 @@ Qed.
      - a strict rounded bound above bpow k forces the exact value > bpow k.
    These are the division check analogs of no_overflow/underflow_real_from_round_mul,
    stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
-   BDIV_round_correct in body_dw_div_fp_check). *)
+   BDIV_round_correct in body_dw_div_fp_strong_precond_check). *)
 Lemma round_abs_le_bpow (r : R) (k : Z) :
   generic_format radix2 fexp (bpow Zaux.radix2 k) ->
   Rabs (round radix2 fexp ZnearestE r) < bpow Zaux.radix2 k ->
@@ -811,11 +811,11 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 (* ==================================================================== *)
-(*  Double-word division check helpers (dw_div_dw_check / DWDivDW_mixed_safe_input_cond) *)
+(*  Double-word division check helpers (dw_div_dw_strong_precond_check / DWDivDW_strong_precond) *)
 (* ==================================================================== *)
 
 (* [q_hi966_val] represents [2^966 = 2^(femax-p-5)], the upper divisor bound
-   in [DWDivDW_mixed_safe_input_cond].  This bound is equivalent to
+   in [DWDivDW_strong_precond].  This bound is equivalent to
    [eta*|yh| <= u^2/4], which pays for the reciprocal reconstruction floor.
    The guard compares [|y->s|] directly with this value. *)
 Definition q_hi966_val :=
@@ -846,7 +846,7 @@ Qed.
    the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
    Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
    the /4*Omega form), so the same lemma serves both the 2^966 bound on |yh| and
-   the 2^(femax-2) bounds that DWDivDW_mixed_safe_input_cond states as bpow (femax t - 2). *)
+   the 2^(femax-2) bounds that DWDivDW_strong_precond states as bpow (femax t - 2). *)
 Lemma Float_cmp_Cle_hi :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),
   is_finite b = true ->

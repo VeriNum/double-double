@@ -147,8 +147,8 @@ apply round_abs_le_bpow.
 - exact Hv.
 Qed.
 
-Lemma DWDivFP_result_finite_subnormal (xh xl y : ftype t) :
-  DWDivFP_mixed_safe_input_cond xh xl y ->
+Lemma DWDivFP_finite_post_cond_subnormal (xh xl y : ftype t) :
+  DWDivFP_strong_precond xh xl y ->
   FT2R xh <> 0 ->
   Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1) ->
   is_finite_p (DWDivFP xh xl y).
@@ -394,8 +394,8 @@ apply is_finite_FastSum_small.
 - exact Ffst.
 Qed.
 
-Lemma DWDivFP_result_finite_normal (xh xl y : ftype t) :
-  DWDivFP_mixed_safe_input_cond xh xl y ->
+Lemma DWDivFP_finite_post_cond_normal (xh xl y : ftype t) :
+  DWDivFP_strong_precond xh xl y ->
   FT2R xh <> 0 ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
   is_finite_p (DWDivFP xh xl y).
@@ -468,7 +468,7 @@ have Fdh : is_finite (BMINUS xh (BMULT (BDIV xh y) y)) = true.
   have Hulp := half_ulp_below_quarter _ Hlt. nra. }
 
 (* The normal quotient and product nodes agree with their FLX roundings. *)
-have INTERNAL : DWDivFP_internal_input_cond xh xl y.
+have INTERNAL : DWDivFP_internal_precond xh xl y.
 { repeat split; assumption. }
 have UFprod := cond_UF_prod_internal xh xl y INTERNAL Hnorm.
 have Hth_bridge : round radix2 (FLX_exp (fprec t)) (Znearest choice)

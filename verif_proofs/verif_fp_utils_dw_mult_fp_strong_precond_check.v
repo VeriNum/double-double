@@ -22,13 +22,13 @@ Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* [dw_mult_fp_check] establishes [DWTimesFP_mixed_safe_input_cond]: finite
+(* [dw_mult_fp_strong_precond_check] establishes [DWTimesFP_strong_precond]: finite
    inputs, a double-word operand, and a strict bound on the rounded leading
    product.  [prod_bnd_facts] converts that test into product finiteness and the
    [Omega/2] real bound.  The check does not exclude the [Fast2Mult] underflow
    gap because the exported mixed guarantee covers it. *)
-Lemma body_dw_mult_fp_check :
-  semax_body Vprog Gprog f_dw_mult_fp_check dw_mult_fp_check_spec.
+Lemma body_dw_mult_fp_strong_precond_check :
+  semax_body Vprog Gprog f_dw_mult_fp_strong_precond_check dw_mult_fp_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh = isfinite_double(x->s) *)
@@ -113,7 +113,7 @@ Proof.
                     q_prod_val).
 
       (* Return cascade: dwx && fin_y && prod_bnd.
-         A pure conjunction, as in body_dw_plus_fp_check: two nested
+         A pure conjunction, as in body_dw_plus_fp_strong_precond_check: two nested
          short-circuit levels, each carrying one more raw fact forward. *)
       set (Post_t8 :=
         EX b8 : bool,
@@ -163,7 +163,7 @@ Proof.
            Intros b9; rename H into Hb9.
            forward.  (* return t'9 *)
            Exists b9; entailer!.
-           (* Final discharge: the three conjuncts of DWTimesFP_mixed_safe_input_cond.
+           (* Final discharge: the three conjuncts of DWTimesFP_strong_precond.
               No underflow disjunct to prove -- that is the whole point of the
               weakening -- so prod_bnd_facts closes both remaining goals
               (Fast2Mult finiteness and the product magnitude bound) in one
@@ -175,13 +175,13 @@ Proof.
            destruct (prod_bnd_facts (fst xh) y)
              as [Hbmul_fin Hprodb].
            { unfold bpb in Hbpbt; exact Hbpbt. }
-           unfold DDConds.DWTimesFP_mixed_safe_input_cond.
+           unfold DDConds.DWTimesFP_strong_precond.
            repeat (split; try assumption).
 Qed.
 
-Lemma body_dw_mult_fp_input_check :
-  semax_body Vprog Gprog f_dw_mult_fp_input_check
-    dw_mult_fp_input_check_spec.
+Lemma body_dw_mult_fp_weak_precond_check :
+  semax_body Vprog Gprog f_dw_mult_fp_weak_precond_check
+    dw_mult_fp_weak_precond_check_spec.
 Proof.
   start_function.
   forward_call (x, xh, y).

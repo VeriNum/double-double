@@ -128,7 +128,7 @@ Definition dw_plus_dw_kernel_spec :=
     PROP()
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -144,7 +144,7 @@ Definition dw_mult_fp_kernel_spec :=
   POST [ tvoid ]
     PROP()
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_mult_dw_kernel_spec :=
@@ -162,7 +162,7 @@ Definition dw_mult_dw_kernel_spec :=
     PROP()
     RETURN()
     SEP(data_at Tsh dword 
-          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s; 
+          (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y). 
 
@@ -181,7 +181,7 @@ Definition dw_div_dw_kernel_spec :=
     PROP()
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -197,7 +197,7 @@ Definition dw_div_fp_kernel_spec :=
   POST [ tvoid ]
     PROP()
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 
@@ -268,7 +268,7 @@ Definition dw_plus_dw_spec :=
            (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -288,7 +288,7 @@ Definition dw_plus_dw_strong_spec :=
            (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (AccurateDWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -303,9 +303,9 @@ Definition dw_mult_fp_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP(DWTimesFP_mixed_guarantee (fst xh) (snd xh) y)
+    PROP(DWTimesFP_guarantee (fst xh) (snd xh) y)
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_mult_fp_strong_spec :=
@@ -319,9 +319,9 @@ Definition dw_mult_fp_strong_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP(DWTimesFP_mixed_guarantee (fst xh) (snd xh) y)
+    PROP(DWTimesFP_guarantee (fst xh) (snd xh) y)
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWTimesFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_mult_dw_spec :=
@@ -336,11 +336,11 @@ Definition dw_mult_dw_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP(DWTimesDW_mixed_guarantee
+    PROP(DWTimesDW_guarantee
            (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -356,11 +356,11 @@ Definition dw_mult_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP(DWTimesDW_mixed_guarantee
+    PROP(DWTimesDW_guarantee
            (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (DWTimesDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -375,9 +375,9 @@ Definition dw_div_fp_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP(DWDivFP_mixed_guarantee (fst xh) (snd xh) y)
+    PROP(DWDivFP_guarantee (fst xh) (snd xh) y)
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_div_fp_strong_spec :=
@@ -391,9 +391,9 @@ Definition dw_div_fp_strong_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
   POST [ tvoid ]
-    PROP(DWDivFP_mixed_guarantee (fst xh) (snd xh) y)
+    PROP(DWDivFP_guarantee (fst xh) (snd xh) y)
     RETURN()
-    SEP(data_at Tsh dword (f2val (DWDivFP3 (fst xh) (snd xh) y)) s;
+    SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_div_dw_spec :=
@@ -408,10 +408,10 @@ Definition dw_div_dw_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP(DWDivDW_mixed_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -427,10 +427,10 @@ Definition dw_div_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
-    PROP(DWDivDW_mixed_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    PROP(DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN()
     SEP(data_at Tsh dword
-          (f2val (DWDivDW3 (fst xh) (snd xh) (fst yh) (snd yh))) s;
+          (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -454,23 +454,23 @@ Definition exit_spec :=
    checks provided by the checks VSU at link time. *)
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
-    fp_utils_specs.two_sum_check_spec;
-    fp_utils_specs.fast2_sum_check_spec;
-    fp_utils_specs.fast2_mult_check_spec;
-    fp_utils_specs.fast2_mult_acc_check_spec;
+    fp_utils_specs.two_sum_exact_check_spec;
+    fp_utils_specs.fast2_sum_magnitude_order_check_spec;
+    fp_utils_specs.fast2_mult_exact_check_spec;
+    fp_utils_specs.fast2_mult_product_finite_check_spec;
     fp_utils_specs.dword_finite_check_spec;
-    fp_utils_specs.dw_plus_fp_input_check_spec;
-    fp_utils_specs.dw_plus_fp_check_spec;
-    fp_utils_specs.dw_plus_dw_input_check_spec;
-    fp_utils_specs.dw_plus_dw_check_spec;
-    fp_utils_specs.dw_mult_fp_input_check_spec;
-    fp_utils_specs.dw_mult_fp_check_spec;
-    fp_utils_specs.dw_mult_dw_input_check_spec;
-    fp_utils_specs.dw_mult_dw_check_spec;
-    fp_utils_specs.dw_div_fp_input_check_spec;
-    fp_utils_specs.dw_div_fp_check_spec;
-    fp_utils_specs.dw_div_dw_input_check_spec;
-    fp_utils_specs.dw_div_dw_check_spec ].
+    fp_utils_specs.dw_plus_fp_weak_precond_check_spec;
+    fp_utils_specs.dw_plus_fp_strong_precond_check_spec;
+    fp_utils_specs.dw_plus_dw_weak_precond_check_spec;
+    fp_utils_specs.dw_plus_dw_strong_precond_check_spec;
+    fp_utils_specs.dw_mult_fp_weak_precond_check_spec;
+    fp_utils_specs.dw_mult_fp_strong_precond_check_spec;
+    fp_utils_specs.dw_mult_dw_weak_precond_check_spec;
+    fp_utils_specs.dw_mult_dw_strong_precond_check_spec;
+    fp_utils_specs.dw_div_fp_weak_precond_check_spec;
+    fp_utils_specs.dw_div_fp_strong_precond_check_spec;
+    fp_utils_specs.dw_div_dw_weak_precond_check_spec;
+    fp_utils_specs.dw_div_dw_strong_precond_check_spec ].
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=

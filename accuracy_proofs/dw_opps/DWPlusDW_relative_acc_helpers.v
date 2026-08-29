@@ -25,7 +25,7 @@ Hypothesis HFINxl : is_finite xl = true.
 Hypothesis HFINyh : is_finite yh = true.
 Hypothesis HFINyl : is_finite yl = true.
 
-(* Tight magnitude bounds on the high words, matching DWPlusDW_safe_input_cond.
+(* Tight magnitude bounds on the high words, matching DWPlusDW_strong_precond.
    These are weaker than the `|xh + xl| < Omega/4` form used in the paper, but
    suffice for every downstream use here. *)
 Hypothesis Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t).
@@ -1469,8 +1469,8 @@ Section DWPlusDWCondBridge.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Variables (xh xl yh yl : ftype t).
 
-Theorem DWPlusDW_finite_from_safe_input_cond :
-  DWPlusDW_safe_input_cond xh xl yh yl ->
+Theorem DWPlusDW_finite_post_cond_from_strong_precond :
+  DWPlusDW_strong_precond xh xl yh yl ->
   is_finite_p (DWPlusDW xh xl yh yl).
 Proof.
 apply DWPlus_finite.DWPlusDW_finite_safe.

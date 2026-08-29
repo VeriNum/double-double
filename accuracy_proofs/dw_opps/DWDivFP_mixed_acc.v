@@ -23,7 +23,7 @@ Context {NANS : Nans} {t : type} {STD : is_standard t}.
 Notation emin := (@common.emin t).
 Notation u := (bpow radix2 (-fprec t)).
 
-Definition DWDivFP_mixed_guarantee (xh xl y : ftype t) : Prop :=
+Definition DWDivFP_guarantee (xh xl y : ftype t) : Prop :=
   let '(zh, zl) := DWDivFP xh xl y in
   Rabs (FT2R zh + FT2R zl - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u^2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) +
@@ -103,7 +103,7 @@ Local Lemma DWDivFP_zero_finite_and_guarantee (xh xl y : ftype t) :
   is_finite xh = true -> is_finite xl = true -> is_finite y = true ->
   double_word_prop xh xl -> is_finite (BDIV xh y) = true ->
   FT2R xh = 0 ->
-  is_finite_p (DWDivFP xh xl y) /\ DWDivFP_mixed_guarantee xh xl y.
+  is_finite_p (DWDivFP xh xl y) /\ DWDivFP_guarantee xh xl y.
 Proof.
 intros Hfxh Hfxl Hfy Hdw Hfq Hxh0.
 have Hxl0 := double_word_0 xh xl Hdw Hxh0.
@@ -147,7 +147,7 @@ have [Hfzl Hzl0] := zero_minus
 split.
 - unfold DWDivFP, Fast2Mult_err, Fast2Mult, Fast2Sum. cbn [fst snd].
   exact (conj Hfzh Hfzl).
-- unfold DWDivFP_mixed_guarantee, DWDivFP, Fast2Mult_err, Fast2Mult, Fast2Sum.
+- unfold DWDivFP_guarantee, DWDivFP, Fast2Mult_err, Fast2Mult, Fast2Sum.
   cbn [fst snd]. split.
   + rewrite Hzh0 Hzl0 Hxh0 Hxl0 Rplus_0_l /Rdiv Rmult_0_l
             Rminus_diag Rabs_R0.
@@ -157,9 +157,9 @@ split.
   + unfold double_word_prop. rewrite Hzh0 Hzl0 Rplus_0_l /rounded round_0 //.
 Qed.
 
-Local Lemma DWDivFP_result_finite_from_safe_input_cond
+Local Lemma DWDivFP_finite_post_cond_from_strong_precond
     (xh xl y : ftype t) :
-  DWDivFP_mixed_safe_input_cond xh xl y ->
+  DWDivFP_strong_precond xh xl y ->
   is_finite_p (DWDivFP xh xl y).
 Proof.
 intros Hsafe.
@@ -167,7 +167,7 @@ destruct Hsafe as
   (Hfxh & Hfxl & Hfy & Hdwp & Hfth & Hxhb & Hqub & [Hxh0 | Hxhlb]).
 - exact (proj1 (DWDivFP_zero_finite_and_guarantee
     xh xl y Hfxh Hfxl Hfy Hdwp Hfth Hxh0)).
-- have Hsafe : DWDivFP_mixed_safe_input_cond xh xl y.
+- have Hsafe : DWDivFP_strong_precond xh xl y.
   { repeat split; try assumption. right; exact Hxhlb. }
   have Hxhne : FT2R xh <> 0.
   { intro Hxh0. move: Hxhlb. rewrite Hxh0 Rabs_R0.
@@ -175,31 +175,31 @@ destruct Hsafe as
       (bpow_gt_0 radix2 (emin + 2 * fprec t)) Hbad). }
   destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
                       (Rabs (FT2R xh / FT2R y))) as [Hn | Hs].
-  + exact (DWDivFP_result_finite_normal xh xl y Hsafe Hxhne Hn).
-  + exact (DWDivFP_result_finite_subnormal xh xl y Hsafe Hxhne Hs).
+  + exact (DWDivFP_finite_post_cond_normal xh xl y Hsafe Hxhne Hn).
+  + exact (DWDivFP_finite_post_cond_subnormal xh xl y Hsafe Hxhne Hs).
 Qed.
 
-Lemma DWDivFP_mixed_cond_of_safe_input_cond (xh xl y : ftype t) :
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  DWDivFP_mixed_cond xh xl y.
+Lemma DWDivFP_weak_pre_and_finite_post_cond_of_strong_precond (xh xl y : ftype t) :
+  DWDivFP_strong_precond xh xl y ->
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y.
 Proof.
 intros Hsafe.
-have Hfin := DWDivFP_result_finite_from_safe_input_cond xh xl y Hsafe.
+have Hfin := DWDivFP_finite_post_cond_from_strong_precond xh xl y Hsafe.
 destruct Hsafe as (_ & _ & _ & Hdw & _ & _ & _ & Hxh).
-unfold DWDivFP_mixed_cond, DWDivFP_mixed_input_cond,
-       DWDivFP_result_finite.
+unfold DWDivFP_weak_pre_and_finite_post_cond, DWDivFP_weak_precond,
+       DWDivFP_finite_post_cond.
 exact (conj (conj Hdw Hxh) Hfin).
 Qed.
 
-Local Lemma DWDivFP_zero_from_mixed_cond (xh xl y : ftype t) :
-  DWDivFP_mixed_cond xh xl y ->
+Local Lemma DWDivFP_zero_from_weak_pre_and_finite_post_cond (xh xl y : ftype t) :
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
   FT2R xh = 0 ->
-  is_finite_p (DWDivFP xh xl y) /\ DWDivFP_mixed_guarantee xh xl y.
+  is_finite_p (DWDivFP xh xl y) /\ DWDivFP_guarantee xh xl y.
 Proof.
 intros Hcond Hxh0.
-have Hresult : DWDivFP_result_finite xh xl y := proj2 Hcond.
+have Hresult : DWDivFP_finite_post_cond xh xl y := proj2 Hcond.
 have [Hfxh [Hfxl Hfy]] :=
-  DWDivFP_inputs_finite_of_result_finite xh xl y Hresult.
+  DWDivFP_inputs_finite_of_finite_post_cond xh xl y Hresult.
 have FIN : is_finite_p (DWDivFP xh xl y) := Hresult.
 specialize (FIN STD).
 have Hfth : is_finite (BDIV xh y) = true := FINth xh xl y FIN.
@@ -210,9 +210,9 @@ Qed.
 
 (** Whole range mixed accuracy from the mathematical input assumptions and an
     a posteriori finiteness check on the result. *)
-Theorem DWDivFP_mixed_accuracy_from_cond (xh xl y : ftype t) :
+Theorem DWDivFP_accuracy_from_weak_pre_and_finite_post_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_mixed_cond xh xl y ->
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
   Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))
         - (FT2R xh + FT2R xl) / FT2R y)
     <= 3 * u^2 * Rabs ((FT2R xh + FT2R xl) / FT2R y) +
@@ -221,8 +221,8 @@ Proof.
 move => Hp4 Hcond.
 have Hrange := proj2 (proj1 Hcond).
 destruct Hrange as [Hxh0 | Hxhlb].
-- have HG := proj2 (DWDivFP_zero_from_mixed_cond xh xl y Hcond Hxh0).
-  unfold DWDivFP_mixed_guarantee in HG.
+- have HG := proj2 (DWDivFP_zero_from_weak_pre_and_finite_post_cond xh xl y Hcond Hxh0).
+  unfold DWDivFP_guarantee in HG.
   revert HG. destruct (DWDivFP xh xl y) as [zh zl].
   cbn [fst snd]. tauto.
 - have Hxhne : FT2R xh <> 0.
@@ -230,7 +230,7 @@ destruct Hrange as [Hxh0 | Hxhlb].
     intros Hbad. exact (Rlt_not_le _ _
       (bpow_gt_0 radix2 (emin + 2 * fprec t)) Hbad). }
   have INTERNAL :=
-    DWDivFP_internal_input_cond_of_mixed_cond xh xl y Hcond Hxhne.
+    DWDivFP_internal_precond_of_weak_pre_and_finite_post_cond xh xl y Hcond Hxhne.
 have FIN : is_finite_p (DWDivFP xh xl y) := proj2 Hcond.
 specialize (FIN STD).
 move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hfloor]]]]].
@@ -242,17 +242,17 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
     xh xl y Hp4 FIN Hyne Hdwp Hfloor Hs)).
 Qed.
 
-Theorem DWDivFP_double_word_from_cond (xh xl y : ftype t) :
+Theorem DWDivFP_double_word_from_weak_pre_and_finite_post_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_mixed_cond xh xl y ->
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
   double_word_prop (fst (DWDivFP xh xl y))
                    (snd (DWDivFP xh xl y)).
 Proof.
 move => Hp4 Hcond.
 have Hrange := proj2 (proj1 Hcond).
 destruct Hrange as [Hxh0 | Hxhlb].
-- have HG := proj2 (DWDivFP_zero_from_mixed_cond xh xl y Hcond Hxh0).
-  unfold DWDivFP_mixed_guarantee in HG.
+- have HG := proj2 (DWDivFP_zero_from_weak_pre_and_finite_post_cond xh xl y Hcond Hxh0).
+  unfold DWDivFP_guarantee in HG.
   revert HG. destruct (DWDivFP xh xl y) as [zh zl].
   cbn [fst snd]. tauto.
 - have Hxhne : FT2R xh <> 0.
@@ -260,7 +260,7 @@ destruct Hrange as [Hxh0 | Hxhlb].
     intros Hbad. exact (Rlt_not_le _ _
       (bpow_gt_0 radix2 (emin + 2 * fprec t)) Hbad). }
   have INTERNAL :=
-    DWDivFP_internal_input_cond_of_mixed_cond xh xl y Hcond Hxhne.
+    DWDivFP_internal_precond_of_weak_pre_and_finite_post_cond xh xl y Hcond Hxhne.
 have FIN : is_finite_p (DWDivFP xh xl y) := proj2 Hcond.
 specialize (FIN STD).
 move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hfloor]]]]].
@@ -273,29 +273,29 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
     xh xl y Hp4 FIN Hyne Hdwp Hfloor Hs)).
 Qed.
 
-Theorem DWDivFP_mixed_guarantee_from_cond (xh xl y : ftype t) :
+Theorem DWDivFP_guarantee_from_weak_pre_and_finite_post_cond (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_mixed_cond xh xl y ->
-  DWDivFP_mixed_guarantee xh xl y.
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
+  DWDivFP_guarantee xh xl y.
 Proof.
 move => Hp4 Hcond.
-have Hacc := DWDivFP_mixed_accuracy_from_cond xh xl y Hp4 Hcond.
-have Hdw := DWDivFP_double_word_from_cond xh xl y Hp4 Hcond.
-unfold DWDivFP_mixed_guarantee.
+have Hacc := DWDivFP_accuracy_from_weak_pre_and_finite_post_cond xh xl y Hp4 Hcond.
+have Hdw := DWDivFP_double_word_from_weak_pre_and_finite_post_cond xh xl y Hp4 Hcond.
+unfold DWDivFP_guarantee.
 revert Hacc Hdw.
 destruct (DWDivFP xh xl y) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-Theorem DWDivFP_mixed_guarantee_from_safe_input_cond
+Theorem DWDivFP_guarantee_from_strong_precond
     (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivFP_mixed_safe_input_cond xh xl y ->
-  DWDivFP_mixed_guarantee xh xl y.
+  DWDivFP_strong_precond xh xl y ->
+  DWDivFP_guarantee xh xl y.
 Proof.
 move => Hp4 Hsafe.
-apply DWDivFP_mixed_guarantee_from_cond; [exact Hp4 |].
-exact (DWDivFP_mixed_cond_of_safe_input_cond xh xl y Hsafe).
+apply DWDivFP_guarantee_from_weak_pre_and_finite_post_cond; [exact Hp4 |].
+exact (DWDivFP_weak_pre_and_finite_post_cond_of_strong_precond xh xl y Hsafe).
 Qed.
 
 End MixedAccuracyDWDivFP.

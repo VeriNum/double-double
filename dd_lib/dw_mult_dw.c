@@ -3,7 +3,7 @@
 #include "fp_utils.h"
 
 void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
-   if (!dw_mult_dw_input_check(x, y)) {
+   if (!dw_mult_dw_weak_precond_check(x, y)) {
       exit(EXIT_FAILURE);
    }
    dw_mult_dw_kernel(st, x, y);
@@ -13,7 +13,7 @@ void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
 }
 
 void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
-   if (!dw_mult_dw_check(x, y)) {
+   if (!dw_mult_dw_strong_precond_check(x, y)) {
       exit(EXIT_FAILURE);
    }
    dw_mult_dw_kernel(st, x, y);

@@ -4,7 +4,7 @@
 (** Relative accuracy and shared representation results for [DWTimesFP] (Algorithm 9).
 
     Its public result is [DWTimesFP_relative_accuracy], the pure [2u^2]
-    relative bound under [DWTimesFP_relative_error_input_cond].  The shared
+    relative bound under [DWTimesFP_relative_precond].  The shared
     runtime model, finiteness, and normal case lemmas are consumed by
     [DWMulFP_mixed_acc], which contains the whole range mixed API. *)
 
@@ -182,7 +182,7 @@ End DWTimesFP_FLX_Bridge.
 
 
 (* ============================================================
-   Finiteness of fst (DWTimesFP xh xl y) from DWTimesFP_relative_error_input_cond.
+   Finiteness of fst (DWTimesFP xh xl y) from DWTimesFP_relative_precond.
    fst (DWTimesFP xh xl y) = BPLUS ch cl3, where
      ch  = Fast2Mult_mul xh y   (= BMULT xh y),
      cl3 = BFMA xl y (Fast2Mult_err xh y).
@@ -277,8 +277,8 @@ Qed.
 
 (* Product headroom and the input double-word relation keep every intermediate
    finite; no underflow premise is required. *)
-Lemma DWTimesFP_finite_from_safe_input_cond (xh xl y : ftype t) :
-  DWTimesFP_mixed_safe_input_cond xh xl y ->
+Lemma DWTimesFP_finite_post_cond_from_strong_precond (xh xl y : ftype t) :
+  DWTimesFP_strong_precond xh xl y ->
   is_finite_p (DWTimesFP xh xl y).
 Proof.
 intros (Hfxl & Hdwp & Hfmul & Hreal).
@@ -718,12 +718,12 @@ destruct Huf as [Hxy0 | Hbig].
 Qed.
 
 (* The cond forbids the nonzero underflow gap.  This is literally the
-   third field of DWTimesFP_relative_error_input_cond (DDConds.v), projecting the underflow
+   third field of DWTimesFP_relative_precond (DDConds.v), projecting the underflow
    disjunct of Fast2Mult_exact_cond: under the cond the leading product is
    either exactly zero or at least the TwoProd exactness threshold, which is
    precisely why the theorem below has no physical floor term. *)
 Local Lemma DWTimesFP_cond_no_gap :
-  DWTimesFP_relative_error_input_cond xh xl y ->
+  DWTimesFP_relative_precond xh xl y ->
   FT2R xh * FT2R y = 0 \/
   bpow Zaux.radix2 (eminA + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R y).
 Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
@@ -732,14 +732,14 @@ Proof. move => [_ [_ [Hf2m _]]]; exact (proj2 Hf2m). Qed.
     underflow gap, while its safe input consequence establishes finiteness. *)
 Theorem DWTimesFP_relative_accuracy :
   (3 <= fprec t)%Z ->
-  DWTimesFP_relative_error_input_cond xh xl y ->
+  DWTimesFP_relative_precond xh xl y ->
   relative_error_DWTimesFP <= 2 * u ^ 2.
 Proof.
 intros Hp3 Hcond.
 have Hsafe :=
-  DWTimesFP_mixed_safe_input_cond_of_relative_error_input_cond
+  DWTimesFP_strong_precond_of_relative_precond
     xh xl y Hcond.
-have Hfp := DWTimesFP_finite_from_safe_input_cond xh xl y Hsafe.
+have Hfp := DWTimesFP_finite_post_cond_from_strong_precond xh xl y Hsafe.
 have Hnogap := DWTimesFP_cond_no_gap Hcond.
 move: Hcond => [Hfxl [Hdwp [Hf2m Hreal]]].
 exact (DWTimesFP_relative_accuracy_core Hdwp Hfp Hp3 Hnogap).

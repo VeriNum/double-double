@@ -76,7 +76,7 @@ forward_if Post_if.
   unfold Post_if. entailer!.
 - forward.
   unfold Post_if. entailer!.
-  unfold fp_utils_specs.SumResultIsSafeForFast2Sum in H.
+  unfold fp_utils_specs.Fast2Sum_magnitude_order_cond in H.
   apply H. destruct vret_fin; auto.
 - unfold Post_if.
   assert_PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)

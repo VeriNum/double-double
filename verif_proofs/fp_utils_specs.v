@@ -7,7 +7,7 @@ Require Import vcfloat.FPCompCert.
 
 Require Import fp_utils op_defs DDConds common.
 
-(* CompSpecs is needed because dw_plus_dw_check_spec uses data_at on the
+(* CompSpecs is needed because dw_plus_dw_strong_precond_check_spec uses data_at on the
    dword struct; the other specs in this file are pure scalar and don't need it. *)
 #[export] Instance CompSpecs : compspecs. make_compspecs prog. Defined.
 
@@ -31,8 +31,8 @@ Notation emin := (SpecFloat.emin (fprec Tdouble) (femax Tdouble)).
 
 (* The function returns `1` iff `is_finite x` is true, and `0` otherwise.
    It does not modify memory. *)
-Definition fast2_mult_check_spec :=
-  DECLARE _fast2_mult_check
+Definition fast2_mult_exact_check_spec :=
+  DECLARE _fast2_mult_exact_check
   WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ] (* c lang types *)
     PROP()
@@ -48,9 +48,9 @@ Definition fast2_mult_check_spec :=
 (* This Tier B check confirms that the rounded product is finite.  That fact
    suffices for the bound on the returned error component, but not for exact
    reconstruction or for proving that the output is a valid double-word.  It
-   mirrors [fast2_mult_check_spec]. *)
-Definition fast2_mult_acc_check_spec :=
-  DECLARE _fast2_mult_acc_check
+   mirrors [fast2_mult_exact_check_spec]. *)
+Definition fast2_mult_product_finite_check_spec :=
+  DECLARE _fast2_mult_product_finite_check
   WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ]
     PROP()
@@ -58,13 +58,13 @@ Definition fast2_mult_acc_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> is_finite (BMULT x y) = true)
+    PROP(b = true -> Fast2Mult_product_finite_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
 
-Definition two_sum_check_spec :=
-  DECLARE _two_sum_check
+Definition two_sum_exact_check_spec :=
+  DECLARE _two_sum_exact_check
   WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ]
     PROP()
@@ -76,15 +76,15 @@ Definition two_sum_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
-(* The C check fast2_sum_check verifies fin && |b| <= |a|.  We expose the
+(* The C check fast2_sum_magnitude_order_check verifies fin && |b| <= |a|.  We expose the
    magnitude form directly (rather than weakening to the ulp/zero disjunction
    of Fast2Sum_exact_cond) so callers can derive both Fast2Sum_exact_cond (via ulp_le_abs)
    and FastTwoSum_accuracy_from_magnitude_order. *)
-Definition SumResultIsSafeForFast2Sum (a b : ftype Tdouble) : Prop :=
+Definition Fast2Sum_magnitude_order_cond (a b : ftype Tdouble) : Prop :=
   is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R.
 
-Definition fast2_sum_check_spec :=
-  DECLARE _fast2_sum_check
+Definition fast2_sum_magnitude_order_check_spec :=
+  DECLARE _fast2_sum_magnitude_order_check
   WITH x : ftype Tdouble, y : ftype Tdouble
   PRE [ tdouble, tdouble ]
     PROP()
@@ -92,7 +92,7 @@ Definition fast2_sum_check_spec :=
     SEP()
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> SumResultIsSafeForFast2Sum x y)
+    PROP(b = true -> Fast2Sum_magnitude_order_cond x y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP().
 
@@ -116,8 +116,8 @@ Definition dword_finite_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val value) x).
 
-Definition dw_plus_fp_input_check_spec :=
-  DECLARE _dw_plus_fp_input_check
+Definition dw_plus_fp_weak_precond_check_spec :=
+  DECLARE _dw_plus_fp_weak_precond_check
   WITH x : val,
        value : ftype Tdouble * ftype Tdouble,
        y : ftype Tdouble
@@ -127,12 +127,12 @@ Definition dw_plus_fp_input_check_spec :=
     SEP(data_at Tsh dword (f2val value) x)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWPlusFP_input_cond (fst value) (snd value) y)
+    PROP(b = true -> DWPlusFP_weak_precond (fst value) (snd value) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val value) x).
 
-Definition dw_plus_dw_check_spec :=
-  DECLARE _dw_plus_dw_check
+Definition dw_plus_dw_strong_precond_check_spec :=
+  DECLARE _dw_plus_dw_strong_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -144,13 +144,13 @@ Definition dw_plus_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusDW_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWPlusDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-Definition dw_plus_dw_input_check_spec :=
-  DECLARE _dw_plus_dw_input_check
+Definition dw_plus_dw_weak_precond_check_spec :=
+  DECLARE _dw_plus_dw_weak_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -162,13 +162,13 @@ Definition dw_plus_dw_input_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusDW_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWPlusDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_plus_fp_check_spec :=
-  DECLARE _dw_plus_fp_check
+Definition dw_plus_fp_strong_precond_check_spec :=
+  DECLARE _dw_plus_fp_strong_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -179,20 +179,20 @@ Definition dw_plus_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWPlusFP_safe_input_cond (fst xh) (snd xh) y)
+         DWPlusFP_strong_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
 (* Safe input cond: NO quotient floor at all -- the guard accepts every
    quotient magnitude the format can represent.  What that buys the caller is
-   DWDivFP_mixed_acc.DWDivFP_mixed_guarantee_from_safe_input_cond rather than
+   DWDivFP_mixed_acc.DWDivFP_guarantee_from_strong_precond rather than
    the normal range pure 3u^2 relative bound
    (DWDivFP_relative_acc.DWDivFP_relative_accuracy), whose condition constrains the
    computed nodes and so is not an input test; see
    dw_div_fp_strong_spec in DDOpsASI.v.
    The product node floor on |xh| is retained. *)
-Definition dw_div_fp_check_spec :=
-  DECLARE _dw_div_fp_check
+Definition dw_div_fp_strong_precond_check_spec :=
+  DECLARE _dw_div_fp_strong_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -203,12 +203,12 @@ Definition dw_div_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivFP_mixed_safe_input_cond (fst xh) (snd xh) y)
+         DWDivFP_strong_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-Definition dw_div_fp_input_check_spec :=
-  DECLARE _dw_div_fp_input_check
+Definition dw_div_fp_weak_precond_check_spec :=
+  DECLARE _dw_div_fp_weak_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -217,17 +217,17 @@ Definition dw_div_fp_input_check_spec :=
     SEP(data_at Tsh dword (f2val xh) x)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWDivFP_mixed_input_cond (fst xh) (snd xh) y)
+    PROP(b = true -> DWDivFP_weak_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x).
 
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
-   (DWMulFP_mixed_acc.DWTimesFP_mixed_guarantee_from_safe_input_cond) and proves that the
+   (DWMulFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond) and proves that the
    output is a valid double-word.  It does not give the pure 2u^2 relative
    bound; see dw_mult_fp_strong_spec in DDOpsASI.v. *)
-Definition dw_mult_fp_check_spec :=
-  DECLARE _dw_mult_fp_check
+Definition dw_mult_fp_strong_precond_check_spec :=
+  DECLARE _dw_mult_fp_strong_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -238,12 +238,12 @@ Definition dw_mult_fp_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesFP_mixed_safe_input_cond (fst xh) (snd xh) y)
+         DWTimesFP_strong_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-Definition dw_mult_fp_input_check_spec :=
-  DECLARE _dw_mult_fp_input_check
+Definition dw_mult_fp_weak_precond_check_spec :=
+  DECLARE _dw_mult_fp_weak_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -252,12 +252,12 @@ Definition dw_mult_fp_input_check_spec :=
     SEP(data_at Tsh dword (f2val xh) x)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWTimesFP_mixed_input_cond (fst xh) (snd xh) y)
+    PROP(b = true -> DWTimesFP_weak_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_dw_check_spec :=
-  DECLARE _dw_mult_dw_check
+Definition dw_mult_dw_strong_precond_check_spec :=
+  DECLARE _dw_mult_dw_strong_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -269,13 +269,13 @@ Definition dw_mult_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-Definition dw_mult_dw_input_check_spec :=
-  DECLARE _dw_mult_dw_input_check
+Definition dw_mult_dw_weak_precond_check_spec :=
+  DECLARE _dw_mult_dw_weak_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -286,13 +286,13 @@ Definition dw_mult_dw_input_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWTimesDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_div_dw_check_spec :=
-  DECLARE _dw_div_dw_check
+Definition dw_div_dw_strong_precond_check_spec :=
+  DECLARE _dw_div_dw_strong_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -304,13 +304,13 @@ Definition dw_div_dw_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivDW_mixed_safe_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWDivDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-Definition dw_div_dw_input_check_spec :=
-  DECLARE _dw_div_dw_input_check
+Definition dw_div_dw_weak_precond_check_spec :=
+  DECLARE _dw_div_dw_weak_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -321,7 +321,7 @@ Definition dw_div_dw_input_check_spec :=
   POST [ tint ]
     EX b : bool,
     PROP(b = true ->
-         DWDivDW_mixed_input_cond (fst xh) (snd xh) (fst yh) (snd yh))
+         DWDivDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).

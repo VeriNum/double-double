@@ -88,42 +88,42 @@ Definition _delta : ident := $"delta".
 Definition _dh : ident := $"dh".
 Definition _dt : ident := $"dt".
 Definition _dw_div_dw : ident := $"dw_div_dw".
-Definition _dw_div_dw_check : ident := $"dw_div_dw_check".
-Definition _dw_div_dw_input_check : ident := $"dw_div_dw_input_check".
 Definition _dw_div_dw_kernel : ident := $"dw_div_dw_kernel".
 Definition _dw_div_dw_strong : ident := $"dw_div_dw_strong".
+Definition _dw_div_dw_strong_precond_check : ident := $"dw_div_dw_strong_precond_check".
+Definition _dw_div_dw_weak_precond_check : ident := $"dw_div_dw_weak_precond_check".
 Definition _dw_div_fp : ident := $"dw_div_fp".
-Definition _dw_div_fp_check : ident := $"dw_div_fp_check".
-Definition _dw_div_fp_input_check : ident := $"dw_div_fp_input_check".
 Definition _dw_div_fp_kernel : ident := $"dw_div_fp_kernel".
 Definition _dw_div_fp_strong : ident := $"dw_div_fp_strong".
+Definition _dw_div_fp_strong_precond_check : ident := $"dw_div_fp_strong_precond_check".
+Definition _dw_div_fp_weak_precond_check : ident := $"dw_div_fp_weak_precond_check".
 Definition _dw_mult_dw : ident := $"dw_mult_dw".
-Definition _dw_mult_dw_check : ident := $"dw_mult_dw_check".
-Definition _dw_mult_dw_input_check : ident := $"dw_mult_dw_input_check".
 Definition _dw_mult_dw_kernel : ident := $"dw_mult_dw_kernel".
 Definition _dw_mult_dw_strong : ident := $"dw_mult_dw_strong".
+Definition _dw_mult_dw_strong_precond_check : ident := $"dw_mult_dw_strong_precond_check".
+Definition _dw_mult_dw_weak_precond_check : ident := $"dw_mult_dw_weak_precond_check".
 Definition _dw_mult_fp : ident := $"dw_mult_fp".
-Definition _dw_mult_fp_check : ident := $"dw_mult_fp_check".
-Definition _dw_mult_fp_input_check : ident := $"dw_mult_fp_input_check".
 Definition _dw_mult_fp_kernel : ident := $"dw_mult_fp_kernel".
 Definition _dw_mult_fp_strong : ident := $"dw_mult_fp_strong".
+Definition _dw_mult_fp_strong_precond_check : ident := $"dw_mult_fp_strong_precond_check".
+Definition _dw_mult_fp_weak_precond_check : ident := $"dw_mult_fp_weak_precond_check".
 Definition _dw_plus_dw : ident := $"dw_plus_dw".
-Definition _dw_plus_dw_check : ident := $"dw_plus_dw_check".
-Definition _dw_plus_dw_input_check : ident := $"dw_plus_dw_input_check".
 Definition _dw_plus_dw_kernel : ident := $"dw_plus_dw_kernel".
 Definition _dw_plus_dw_strong : ident := $"dw_plus_dw_strong".
+Definition _dw_plus_dw_strong_precond_check : ident := $"dw_plus_dw_strong_precond_check".
+Definition _dw_plus_dw_weak_precond_check : ident := $"dw_plus_dw_weak_precond_check".
 Definition _dw_plus_fp : ident := $"dw_plus_fp".
-Definition _dw_plus_fp_check : ident := $"dw_plus_fp_check".
-Definition _dw_plus_fp_input_check : ident := $"dw_plus_fp_input_check".
 Definition _dw_plus_fp_kernel : ident := $"dw_plus_fp_kernel".
 Definition _dw_plus_fp_strong : ident := $"dw_plus_fp_strong".
+Definition _dw_plus_fp_strong_precond_check : ident := $"dw_plus_fp_strong_precond_check".
+Definition _dw_plus_fp_weak_precond_check : ident := $"dw_plus_fp_weak_precond_check".
 Definition _dword : ident := $"dword".
 Definition _dword_finite_check : ident := $"dword_finite_check".
 Definition _e : ident := $"e".
 Definition _exit : ident := $"exit".
-Definition _fast2_mult_acc_check : ident := $"fast2_mult_acc_check".
-Definition _fast2_mult_check : ident := $"fast2_mult_check".
-Definition _fast2_sum_check : ident := $"fast2_sum_check".
+Definition _fast2_mult_exact_check : ident := $"fast2_mult_exact_check".
+Definition _fast2_mult_product_finite_check : ident := $"fast2_mult_product_finite_check".
+Definition _fast2_sum_magnitude_order_check : ident := $"fast2_sum_magnitude_order_check".
 Definition _fast_2mult : ident := $"fast_2mult".
 Definition _fast_2mult_acc_guarded : ident := $"fast_2mult_acc_guarded".
 Definition _fast_2mult_guarded : ident := $"fast_2mult_guarded".
@@ -144,7 +144,7 @@ Definition _t1 : ident := $"t1".
 Definition _th : ident := $"th".
 Definition _tl : ident := $"tl".
 Definition _two_sum : ident := $"two_sum".
-Definition _two_sum_check : ident := $"two_sum_check".
+Definition _two_sum_exact_check : ident := $"two_sum_exact_check".
 Definition _two_sum_guarded : ident := $"two_sum_guarded".
 Definition _v : ident := $"v".
 Definition _vh : ident := $"vh".
@@ -224,8 +224,8 @@ Definition f_two_sum_guarded := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _two_sum_check (Tfunction (tdouble :: tdouble :: nil) tint
-                             cc_default))
+      (Evar _two_sum_exact_check (Tfunction (tdouble :: tdouble :: nil) tint
+                                   cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -279,8 +279,9 @@ Definition f_fast_2sum_guarded := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _fast2_sum_check (Tfunction (tdouble :: tdouble :: nil) tint
-                               cc_default))
+      (Evar _fast2_sum_magnitude_order_check (Tfunction
+                                               (tdouble :: tdouble :: nil)
+                                               tint cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -336,8 +337,8 @@ Definition f_fast_2mult_guarded := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _fast2_mult_check (Tfunction (tdouble :: tdouble :: nil) tint
-                                cc_default))
+      (Evar _fast2_mult_exact_check (Tfunction (tdouble :: tdouble :: nil)
+                                      tint cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -362,8 +363,9 @@ Definition f_fast_2mult_acc_guarded := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _fast2_mult_acc_check (Tfunction (tdouble :: tdouble :: nil) tint
-                                    cc_default))
+      (Evar _fast2_mult_product_finite_check (Tfunction
+                                               (tdouble :: tdouble :: nil)
+                                               tint cc_default))
       ((Etempvar _a tdouble) :: (Etempvar _b tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
       (Scall None (Evar _exit (Tfunction (tint :: nil) tvoid cc_default))
@@ -431,9 +433,10 @@ Definition f_dw_plus_fp := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_plus_fp_input_check (Tfunction
-                                      ((tptr (Tstruct _dword noattr)) ::
-                                       tdouble :: nil) tint cc_default))
+      (Evar _dw_plus_fp_weak_precond_check (Tfunction
+                                             ((tptr (Tstruct _dword noattr)) ::
+                                              tdouble :: nil) tint
+                                             cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -472,9 +475,10 @@ Definition f_dw_plus_fp_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_plus_fp_check (Tfunction
-                                ((tptr (Tstruct _dword noattr)) :: tdouble ::
-                                 nil) tint cc_default))
+      (Evar _dw_plus_fp_strong_precond_check (Tfunction
+                                               ((tptr (Tstruct _dword noattr)) ::
+                                                tdouble :: nil) tint
+                                               cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -593,10 +597,10 @@ Definition f_dw_plus_dw := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_plus_dw_input_check (Tfunction
-                                      ((tptr (Tstruct _dword noattr)) ::
-                                       (tptr (Tstruct _dword noattr)) :: nil)
-                                      tint cc_default))
+      (Evar _dw_plus_dw_weak_precond_check (Tfunction
+                                             ((tptr (Tstruct _dword noattr)) ::
+                                              (tptr (Tstruct _dword noattr)) ::
+                                              nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -637,10 +641,10 @@ Definition f_dw_plus_dw_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_plus_dw_check (Tfunction
-                                ((tptr (Tstruct _dword noattr)) ::
-                                 (tptr (Tstruct _dword noattr)) :: nil) tint
-                                cc_default))
+      (Evar _dw_plus_dw_strong_precond_check (Tfunction
+                                               ((tptr (Tstruct _dword noattr)) ::
+                                                (tptr (Tstruct _dword noattr)) ::
+                                                nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -716,9 +720,10 @@ Definition f_dw_mult_fp := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_mult_fp_input_check (Tfunction
-                                      ((tptr (Tstruct _dword noattr)) ::
-                                       tdouble :: nil) tint cc_default))
+      (Evar _dw_mult_fp_weak_precond_check (Tfunction
+                                             ((tptr (Tstruct _dword noattr)) ::
+                                              tdouble :: nil) tint
+                                             cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -757,9 +762,10 @@ Definition f_dw_mult_fp_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_mult_fp_check (Tfunction
-                                ((tptr (Tstruct _dword noattr)) :: tdouble ::
-                                 nil) tint cc_default))
+      (Evar _dw_mult_fp_strong_precond_check (Tfunction
+                                               ((tptr (Tstruct _dword noattr)) ::
+                                                tdouble :: nil) tint
+                                               cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -889,10 +895,10 @@ Definition f_dw_mult_dw := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_mult_dw_input_check (Tfunction
-                                      ((tptr (Tstruct _dword noattr)) ::
-                                       (tptr (Tstruct _dword noattr)) :: nil)
-                                      tint cc_default))
+      (Evar _dw_mult_dw_weak_precond_check (Tfunction
+                                             ((tptr (Tstruct _dword noattr)) ::
+                                              (tptr (Tstruct _dword noattr)) ::
+                                              nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -933,10 +939,10 @@ Definition f_dw_mult_dw_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_mult_dw_check (Tfunction
-                                ((tptr (Tstruct _dword noattr)) ::
-                                 (tptr (Tstruct _dword noattr)) :: nil) tint
-                                cc_default))
+      (Evar _dw_mult_dw_strong_precond_check (Tfunction
+                                               ((tptr (Tstruct _dword noattr)) ::
+                                                (tptr (Tstruct _dword noattr)) ::
+                                                nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -1056,10 +1062,10 @@ Definition f_dw_div_dw := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_div_dw_input_check (Tfunction
-                                     ((tptr (Tstruct _dword noattr)) ::
-                                      (tptr (Tstruct _dword noattr)) :: nil)
-                                     tint cc_default))
+      (Evar _dw_div_dw_weak_precond_check (Tfunction
+                                            ((tptr (Tstruct _dword noattr)) ::
+                                             (tptr (Tstruct _dword noattr)) ::
+                                             nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -1100,10 +1106,10 @@ Definition f_dw_div_dw_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_div_dw_check (Tfunction
-                               ((tptr (Tstruct _dword noattr)) ::
-                                (tptr (Tstruct _dword noattr)) :: nil) tint
-                               cc_default))
+      (Evar _dw_div_dw_strong_precond_check (Tfunction
+                                              ((tptr (Tstruct _dword noattr)) ::
+                                               (tptr (Tstruct _dword noattr)) ::
+                                               nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y (tptr (Tstruct _dword noattr))) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -1198,9 +1204,9 @@ Definition f_dw_div_fp := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_div_fp_input_check (Tfunction
-                                     ((tptr (Tstruct _dword noattr)) ::
-                                      tdouble :: nil) tint cc_default))
+      (Evar _dw_div_fp_weak_precond_check (Tfunction
+                                            ((tptr (Tstruct _dword noattr)) ::
+                                             tdouble :: nil) tint cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -1239,9 +1245,10 @@ Definition f_dw_div_fp_strong := {|
 (Ssequence
   (Ssequence
     (Scall (Some _t'1)
-      (Evar _dw_div_fp_check (Tfunction
-                               ((tptr (Tstruct _dword noattr)) :: tdouble ::
-                                nil) tint cc_default))
+      (Evar _dw_div_fp_strong_precond_check (Tfunction
+                                              ((tptr (Tstruct _dword noattr)) ::
+                                               tdouble :: nil) tint
+                                              cc_default))
       ((Etempvar _x (tptr (Tstruct _dword noattr))) ::
        (Etempvar _y tdouble) :: nil))
     (Sifthenelse (Eunop Onotbool (Etempvar _t'1 tint) tint)
@@ -1522,88 +1529,88 @@ Definition global_definitions : list (ident * globdef fundef type) :=
    Gfun(External (EF_external "dword_finite_check"
                    (mksignature (AST.Xptr :: nil) AST.Xint cc_default))
      ((tptr (Tstruct _dword noattr)) :: nil) tint cc_default)) ::
- (_fast2_sum_check,
-   Gfun(External (EF_external "fast2_sum_check"
+ (_fast2_sum_magnitude_order_check,
+   Gfun(External (EF_external "fast2_sum_magnitude_order_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
- (_two_sum_check,
-   Gfun(External (EF_external "two_sum_check"
+ (_two_sum_exact_check,
+   Gfun(External (EF_external "two_sum_exact_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
- (_fast2_mult_check,
-   Gfun(External (EF_external "fast2_mult_check"
+ (_fast2_mult_exact_check,
+   Gfun(External (EF_external "fast2_mult_exact_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
- (_fast2_mult_acc_check,
-   Gfun(External (EF_external "fast2_mult_acc_check"
+ (_fast2_mult_product_finite_check,
+   Gfun(External (EF_external "fast2_mult_product_finite_check"
                    (mksignature (AST.Xfloat :: AST.Xfloat :: nil) AST.Xint
                      cc_default)) (tdouble :: tdouble :: nil) tint
      cc_default)) ::
- (_dw_plus_dw_check,
-   Gfun(External (EF_external "dw_plus_dw_check"
+ (_dw_plus_dw_strong_precond_check,
+   Gfun(External (EF_external "dw_plus_dw_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
- (_dw_plus_dw_input_check,
-   Gfun(External (EF_external "dw_plus_dw_input_check"
+ (_dw_plus_dw_weak_precond_check,
+   Gfun(External (EF_external "dw_plus_dw_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
- (_dw_plus_fp_check,
-   Gfun(External (EF_external "dw_plus_fp_check"
+ (_dw_plus_fp_strong_precond_check,
+   Gfun(External (EF_external "dw_plus_fp_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_plus_fp_input_check,
-   Gfun(External (EF_external "dw_plus_fp_input_check"
+ (_dw_plus_fp_weak_precond_check,
+   Gfun(External (EF_external "dw_plus_fp_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_div_fp_check,
-   Gfun(External (EF_external "dw_div_fp_check"
+ (_dw_div_fp_strong_precond_check,
+   Gfun(External (EF_external "dw_div_fp_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_div_fp_input_check,
-   Gfun(External (EF_external "dw_div_fp_input_check"
+ (_dw_div_fp_weak_precond_check,
+   Gfun(External (EF_external "dw_div_fp_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_mult_fp_check,
-   Gfun(External (EF_external "dw_mult_fp_check"
+ (_dw_mult_fp_strong_precond_check,
+   Gfun(External (EF_external "dw_mult_fp_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_mult_fp_input_check,
-   Gfun(External (EF_external "dw_mult_fp_input_check"
+ (_dw_mult_fp_weak_precond_check,
+   Gfun(External (EF_external "dw_mult_fp_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xfloat :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: tdouble :: nil) tint cc_default)) ::
- (_dw_mult_dw_check,
-   Gfun(External (EF_external "dw_mult_dw_check"
+ (_dw_mult_dw_strong_precond_check,
+   Gfun(External (EF_external "dw_mult_dw_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
- (_dw_mult_dw_input_check,
-   Gfun(External (EF_external "dw_mult_dw_input_check"
+ (_dw_mult_dw_weak_precond_check,
+   Gfun(External (EF_external "dw_mult_dw_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
- (_dw_div_dw_check,
-   Gfun(External (EF_external "dw_div_dw_check"
+ (_dw_div_dw_strong_precond_check,
+   Gfun(External (EF_external "dw_div_dw_strong_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
       nil) tint cc_default)) ::
- (_dw_div_dw_input_check,
-   Gfun(External (EF_external "dw_div_dw_input_check"
+ (_dw_div_dw_weak_precond_check,
+   Gfun(External (EF_external "dw_div_dw_weak_precond_check"
                    (mksignature (AST.Xptr :: AST.Xptr :: nil) AST.Xint
                      cc_default))
      ((tptr (Tstruct _dword noattr)) :: (tptr (Tstruct _dword noattr)) ::
@@ -1641,15 +1648,18 @@ Definition public_idents : list ident :=
  _dw_plus_dw_kernel :: _dw_plus_fp_strong :: _dw_plus_fp ::
  _dw_plus_fp_kernel :: _fast_2mult_acc_guarded :: _fast_2mult_guarded ::
  _fast_2mult :: _fast_2sum_guarded :: _fast_2sum :: _two_sum_guarded ::
- _dw_div_dw_input_check :: _dw_div_dw_check :: _dw_mult_dw_input_check ::
- _dw_mult_dw_check :: _dw_mult_fp_input_check :: _dw_mult_fp_check ::
- _dw_div_fp_input_check :: _dw_div_fp_check :: _dw_plus_fp_input_check ::
- _dw_plus_fp_check :: _dw_plus_dw_input_check :: _dw_plus_dw_check ::
- _fast2_mult_acc_check :: _fast2_mult_check :: _two_sum_check ::
- _fast2_sum_check :: _dword_finite_check :: _exit :: _two_sum :: _fma ::
- ___builtin_debug :: ___builtin_fmin :: ___builtin_fmax ::
- ___builtin_fnmsub :: ___builtin_fnmadd :: ___builtin_fmsub ::
- ___builtin_fmadd :: ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
+ _dw_div_dw_weak_precond_check :: _dw_div_dw_strong_precond_check ::
+ _dw_mult_dw_weak_precond_check :: _dw_mult_dw_strong_precond_check ::
+ _dw_mult_fp_weak_precond_check :: _dw_mult_fp_strong_precond_check ::
+ _dw_div_fp_weak_precond_check :: _dw_div_fp_strong_precond_check ::
+ _dw_plus_fp_weak_precond_check :: _dw_plus_fp_strong_precond_check ::
+ _dw_plus_dw_weak_precond_check :: _dw_plus_dw_strong_precond_check ::
+ _fast2_mult_product_finite_check :: _fast2_mult_exact_check ::
+ _two_sum_exact_check :: _fast2_sum_magnitude_order_check ::
+ _dword_finite_check :: _exit :: _two_sum :: _fma :: ___builtin_debug ::
+ ___builtin_fmin :: ___builtin_fmax :: ___builtin_fnmsub ::
+ ___builtin_fnmadd :: ___builtin_fmsub :: ___builtin_fmadd ::
+ ___builtin_clsll :: ___builtin_clsl :: ___builtin_cls ::
  ___builtin_expect :: ___builtin_unreachable :: ___builtin_va_end ::
  ___builtin_va_copy :: ___builtin_va_arg :: ___builtin_va_start ::
  ___builtin_membar :: ___builtin_annot_intval :: ___builtin_annot ::

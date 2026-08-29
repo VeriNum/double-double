@@ -14,13 +14,13 @@ Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* [dw_mult_dw_check] establishes [DWTimesDW_mixed_safe_input_cond]: finite
+(* [dw_mult_dw_strong_precond_check] establishes [DWTimesDW_strong_precond]: finite
    double-word inputs and a strict bound on the rounded leading product.
    [prod_bnd_facts] converts that test into product finiteness and the
    [Omega/2] real bound.  The check does not exclude the [Fast2Mult] underflow
    gap because the exported mixed guarantee covers it. *)
-Lemma body_dw_mult_dw_check :
-  semax_body Vprog Gprog f_dw_mult_dw_check dw_mult_dw_check_spec.
+Lemma body_dw_mult_dw_strong_precond_check :
+  semax_body Vprog Gprog f_dw_mult_dw_strong_precond_check dw_mult_dw_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh, fin_xl, fin_yh, fin_yl *)
@@ -220,7 +220,7 @@ Proof.
                     Intros b12; rename H into Hb12.
                     forward. (* return t'12 *)
                     Exists b12; entailer!.
-                    (* Final discharge: the six conjuncts of DWTimesDW_mixed_safe_input_cond.
+                    (* Final discharge: the six conjuncts of DWTimesDW_strong_precond.
                        No underflow disjunct to prove -- that is the whole point
                        of the weakening -- so prod_bnd_facts closes both
                        remaining goals (Fast2Mult finiteness and the
@@ -231,13 +231,13 @@ Proof.
                     destruct (prod_bnd_facts (fst xh) (fst yh))
                       as [Hbmul_fin Hprodb].
                     { unfold bpb in Hbpbt; exact Hbpbt. }
-                    unfold DDConds.DWTimesDW_mixed_safe_input_cond.
+                    unfold DDConds.DWTimesDW_strong_precond.
                     repeat (split; try assumption).
 Qed.
 
-Lemma body_dw_mult_dw_input_check :
-  semax_body Vprog Gprog f_dw_mult_dw_input_check
-    dw_mult_dw_input_check_spec.
+Lemma body_dw_mult_dw_weak_precond_check :
+  semax_body Vprog Gprog f_dw_mult_dw_weak_precond_check
+    dw_mult_dw_weak_precond_check_spec.
 Proof.
   start_function.
   forward_call (x, y, xh, yh).

@@ -3,12 +3,12 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* fast2_sum_check(x,y) returns 1 only if SumResultIsSafeForFast2Sum x y:
+(* fast2_sum_magnitude_order_check(x,y) returns 1 only if Fast2Sum_magnitude_order_cond x y:
    (a+b) is finite (derived by isfinite_double(s)), and |b| ≤ |a| (by fabs comparison).
    Because the C uses short-circuit &&, fabs is called only when fin=true,
    so is_finite x and is_finite y can be derived from is_finite (BPLUS x y)
    via is_finite_Float_add_l / is_finite_Float_add_r. *)
-Lemma body_fast2_sum_check: semax_body Vprog Gprog f_fast2_sum_check fast2_sum_check_spec.
+Lemma body_fast2_sum_magnitude_order_check: semax_body Vprog Gprog f_fast2_sum_magnitude_order_check fast2_sum_magnitude_order_check_spec.
 Proof.
   start_function.
   forward. (* s = x + y *)
@@ -17,7 +17,7 @@ Proof.
   rename H into Hfin_spec.
   set (Post_ret :=
     EX b_r : bool,
-    PROP(b_r = true -> SumResultIsSafeForFast2Sum x y)
+    PROP(b_r = true -> Fast2Sum_magnitude_order_cond x y)
     LOCAL(temp _t'2 (Vint (if b_r then Int.one else Int.zero));
           temp _a (Vfloat (float_of_ftype x));
           temp _b (Vfloat (float_of_ftype y)))
@@ -47,7 +47,7 @@ Proof.
     entailer!.
     split.
     + intro Hcmp_true.
-      unfold SumResultIsSafeForFast2Sum.
+      unfold Fast2Sum_magnitude_order_cond.
       split.
       { rewrite is_finite_Binary; exact Hfin_sum. }
       { apply Float_cmp_Cle_abs; [exact Hx_fin | exact Hy_fin | exact Hcmp_true]. }

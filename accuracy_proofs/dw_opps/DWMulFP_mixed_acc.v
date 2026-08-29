@@ -382,7 +382,7 @@ Qed.
 (* The public whole range result bundles the conventional mixed bound with
    output validity.  The single local core below performs the only normal/gap
    split used to establish that bundle. *)
-Definition DWTimesFP_mixed_guarantee {NANS : Nans} {t : type}
+Definition DWTimesFP_guarantee {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) : Prop :=
   let '(zh, zl) := DWTimesFP xh xl y in
   Rabs
@@ -392,12 +392,12 @@ Definition DWTimesFP_mixed_guarantee {NANS : Nans} {t : type}
        251 / 100 * bpow Zaux.radix2 (@common.emin t) /\
   double_word_prop zh zl.
 
-Local Lemma DWTimesFP_mixed_guarantee_core {NANS : Nans} {t : type}
+Local Lemma DWTimesFP_guarantee_core {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
   double_word_prop xh xl ->
   is_finite_p (DWTimesFP xh xl y) ->
-  DWTimesFP_mixed_guarantee xh xl y.
+  DWTimesFP_guarantee xh xl y.
 Proof.
 move => Hp3 DWa FIN.
 destruct (Rle_dec
@@ -420,7 +420,7 @@ destruct (Rle_dec
       (snd (DWTimesFP xh xl y))
     by exact (DWTimesFP_double_word_from_pre
       xh xl y (proj1 FIN) Hord).
-  unfold DWTimesFP_mixed_guarantee.
+  unfold DWTimesFP_guarantee.
   revert Hacc Hdw.
   destruct (DWTimesFP xh xl y) as [zh zl].
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
@@ -437,36 +437,36 @@ destruct (Rle_dec
     <= 2*bpow radix2 (-fprec t)^2 *
          Rabs ((FT2R xh + FT2R xl) * FT2R y) +
        251/100*bpow radix2 (@common.emin t) by lra.
-  unfold DWTimesFP_mixed_guarantee.
+  unfold DWTimesFP_guarantee.
   revert Hacc Hdw.
   destruct (DWTimesFP xh xl y) as [zh zl].
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-(* Public mixed interface.  [DWTimesFP_mixed_cond] combines the input
+(* Public mixed interface.  [DWTimesFP_weak_pre_and_finite_post_cond] combines the input
    double-word property with result finiteness.  The following theorems expose
    accuracy, output validity, and their conjunction.  A caller may instead
-   establish [DWTimesFP_mixed_safe_input_cond] before the operation.  Neither
+   establish [DWTimesFP_strong_precond] before the operation.  Neither
    route excludes the [Fast2Mult] underflow gap. *)
 
-Lemma DWTimesFP_mixed_cond_of_safe_input_cond {NANS : Nans} {t : type}
+Lemma DWTimesFP_weak_pre_and_finite_post_cond_of_strong_precond {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
-  DWTimesFP_mixed_safe_input_cond xh xl y ->
-  DWTimesFP_mixed_cond xh xl y.
+  DWTimesFP_strong_precond xh xl y ->
+  DWTimesFP_weak_pre_and_finite_post_cond xh xl y.
 Proof.
 move => Hsafe.
-have Hfin := DWTimesFP_finite_from_safe_input_cond xh xl y Hsafe.
+have Hfin := DWTimesFP_finite_post_cond_from_strong_precond xh xl y Hsafe.
 move: Hsafe => [_ [Hdw _]].
-unfold DWTimesFP_mixed_cond, DWTimesFP_mixed_input_cond,
-       DWTimesFP_result_finite.
+unfold DWTimesFP_weak_pre_and_finite_post_cond, DWTimesFP_weak_precond,
+       DWTimesFP_finite_post_cond.
 exact (conj Hdw Hfin).
 Qed.
 
-Theorem DWTimesFP_mixed_accuracy_from_cond
+Theorem DWTimesFP_accuracy_from_weak_pre_and_finite_post_cond
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_cond xh xl y ->
+  DWTimesFP_weak_pre_and_finite_post_cond xh xl y ->
   Rabs
     (FT2R (fst (DWTimesFP xh xl y)) +
        FT2R (snd (DWTimesFP xh xl y)) -
@@ -477,66 +477,66 @@ Theorem DWTimesFP_mixed_accuracy_from_cond
 Proof.
 move => Hp3 [DWa FIN].
 have Hguarantee :=
-  DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
-unfold DWTimesFP_mixed_guarantee in Hguarantee.
+  DWTimesFP_guarantee_core xh xl y Hp3 DWa FIN.
+unfold DWTimesFP_guarantee in Hguarantee.
 destruct (DWTimesFP xh xl y) as [zh zl].
 exact (proj1 Hguarantee).
 Qed.
 
-Theorem DWTimesFP_double_word_from_cond
+Theorem DWTimesFP_double_word_from_weak_pre_and_finite_post_cond
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_cond xh xl y ->
+  DWTimesFP_weak_pre_and_finite_post_cond xh xl y ->
   double_word_prop (fst (DWTimesFP xh xl y))
                    (snd (DWTimesFP xh xl y)).
 Proof.
 move => Hp3 [DWa FIN].
 have Hguarantee :=
-  DWTimesFP_mixed_guarantee_core xh xl y Hp3 DWa FIN.
-unfold DWTimesFP_mixed_guarantee in Hguarantee.
+  DWTimesFP_guarantee_core xh xl y Hp3 DWa FIN.
+unfold DWTimesFP_guarantee in Hguarantee.
 destruct (DWTimesFP xh xl y) as [zh zl].
 exact (proj2 Hguarantee).
 Qed.
 
-Theorem DWTimesFP_mixed_guarantee_from_cond
+Theorem DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_cond xh xl y ->
-  DWTimesFP_mixed_guarantee xh xl y.
+  DWTimesFP_weak_pre_and_finite_post_cond xh xl y ->
+  DWTimesFP_guarantee xh xl y.
 Proof.
 intros Hp3 Hcond.
 have Hacc :=
-  DWTimesFP_mixed_accuracy_from_cond xh xl y Hp3 Hcond.
+  DWTimesFP_accuracy_from_weak_pre_and_finite_post_cond xh xl y Hp3 Hcond.
 have Hdw :=
-  DWTimesFP_double_word_from_cond xh xl y Hp3 Hcond.
-unfold DWTimesFP_mixed_guarantee.
+  DWTimesFP_double_word_from_weak_pre_and_finite_post_cond xh xl y Hp3 Hcond.
+unfold DWTimesFP_guarantee.
 revert Hacc Hdw.
 destruct (DWTimesFP xh xl y) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-Theorem DWTimesFP_mixed_guarantee_from_safe_input_cond
+Theorem DWTimesFP_guarantee_from_strong_precond
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
   (3 <= fprec t)%Z ->
-  DWTimesFP_mixed_safe_input_cond xh xl y ->
-  DWTimesFP_mixed_guarantee xh xl y.
+  DWTimesFP_strong_precond xh xl y ->
+  DWTimesFP_guarantee xh xl y.
 Proof.
 intros Hp3 Hsafe.
-apply DWTimesFP_mixed_guarantee_from_cond; [exact Hp3 |].
-exact (DWTimesFP_mixed_cond_of_safe_input_cond xh xl y Hsafe).
+apply DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond; [exact Hp3 |].
+exact (DWTimesFP_weak_pre_and_finite_post_cond_of_strong_precond xh xl y Hsafe).
 Qed.
 
-Lemma DWTimesFP_inputs_finite_of_result_finite {NANS : Nans} {t : type}
+Lemma DWTimesFP_inputs_finite_of_finite_post_cond {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :
-  DWTimesFP_result_finite xh xl y ->
+  DWTimesFP_finite_post_cond xh xl y ->
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite y = true.
 Proof.
-unfold DWTimesFP_result_finite.
+unfold DWTimesFP_finite_post_cond.
 move => Hfin.
 have [Hfxh Hfy] := BMULT_finite_e t xh y
   (DWTimesFP_mul_finite xh xl y Hfin).

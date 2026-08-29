@@ -3,7 +3,7 @@
 #include "fp_utils.h"
 
 void fast_2sum_guarded(struct dword *st, double a, double b) {
-   if (!fast2_sum_check(a,b)) {
+   if (!fast2_sum_magnitude_order_check(a,b)) {
       exit(EXIT_FAILURE);
    }
    fast_2sum(st, a, b);

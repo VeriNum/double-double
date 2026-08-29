@@ -4,7 +4,7 @@
 (** Relative accuracy and shared representation results for [DWTimesDW] (Algorithm 12).
 
     Its public result is [DWTimesDW_relative_accuracy], the pure [4u^2]
-    relative bound under [DWTimesDW_relative_error_input_cond].  Shared
+    relative bound under [DWTimesDW_relative_precond].  Shared
     runtime model and finiteness lemmas are consumed by [DWMulDW_mixed_acc],
     while [DWDivDW_relative_acc] consumes the FLX bridge for its closing
     multiplication. *)
@@ -293,7 +293,7 @@ End CorrectDWMulDW_bridge.
 
 (* ============================================================
    Section 3: finiteness of DWTimesDW from
-   DWTimesDW_mixed_safe_input_cond.
+   DWTimesDW_strong_precond.
      fst (DWTimesDW xh xl yh yl) = BPLUS ch cl3, where
        ch  = Fast2Mult_mul xh yh   (= BMULT xh yh),
        cl3 = BPLUS (Fast2Mult_err xh yh) (BFMA xl yh (BFMA xh yl (BMULT xl yl))).
@@ -1263,7 +1263,7 @@ eapply Rle_trans.
 - have := HuP0. have := Hu2P0. have := HEP. have := Hule. nra.
 Qed.
 
-(* DWTimesDW_mixed_safe_input_cond bounds the real product by /2*Omega; since
+(* DWTimesDW_strong_precond bounds the real product by /2*Omega; since
    /2*Omega is representable (generic_format_half_Omega), the rounded product stays
    <= /2*Omega. *)
 Local Lemma aux_round_half_bnd (a b : ftype t) :
@@ -1391,8 +1391,8 @@ Qed.
     precision.  For [p>=3] a direct absolute budget suffices.  At [p=2], the
     first correction uses the ties-to-even midpoint above; the remaining
     near-overflow branch uses the exact two-product reconstruction. *)
-Lemma DWTimesDW_finite_from_safe_input_cond (xh xl yh yl : ftype t) :
-  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
+Lemma DWTimesDW_finite_post_cond_from_strong_precond (xh xl yh yl : ftype t) :
+  DWTimesDW_strong_precond xh xl yh yl ->
   is_finite_p (DWTimesDW xh xl yh yl).
 Proof.
 intros (Hfxl & Hfyl & Hdwx & Hdwy & Hfmul & Hxhy).
@@ -2616,11 +2616,11 @@ Qed.
 (** Public pure relative result for the normal range. *)
 Theorem DWTimesDW_relative_accuracy :
   (5 <= fprec t)%Z ->
-  DWTimesDW_relative_error_input_cond xh xl yh yl ->
+  DWTimesDW_relative_precond xh xl yh yl ->
   relative_error_DWTimesDW xh xl yh yl <= 4 * u ^ 2.
 Proof.
 move => Hp5 [Hsafe [Nprod N0]].
-have Hfin := DWTimesDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWTimesDW_finite_post_cond_from_strong_precond xh xl yh yl Hsafe.
 move: Hsafe => [_ [_ [DWx [DWy _]]]].
 exact (DWTimesDW_relative_accuracy_core
   DWx DWy Hfin Hp5 Nprod N0).

@@ -3,11 +3,11 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* two_sum_check(x,y) returns 1 only if TwoSum_exact_cond x y holds:
+(* two_sum_exact_check(x,y) returns 1 only if TwoSum_exact_cond x y holds:
    (x+y) finite, (x-y) finite, and |y| < pred(2^1024) = DBL_MAX.
    Short-circuit && ensures fabs(b) is called only after both fin checks pass,
    at which point is_finite y follows from is_finite (BPLUS x y). *)
-Lemma body_two_sum_check: semax_body Vprog Gprog f_two_sum_check two_sum_check_spec.
+Lemma body_two_sum_exact_check: semax_body Vprog Gprog f_two_sum_exact_check two_sum_exact_check_spec.
 Proof.
   start_function.
   forward_call. (* fin_sum = isfinite_double(x+y) *)

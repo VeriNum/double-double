@@ -17,7 +17,7 @@ Section DWHighBnd.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 (* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 then 
-|xh| <= Omega/4 (the high part bound used in DWPlusFP_safe_input_cond / DWPlusDW_safe_input_cond).
+|xh| <= Omega/4 (the high part bound used in DWPlusFP_strong_precond / DWPlusDW_strong_precond).
 The implication holds because Omega/4 = 2^(femax - 2) is a power of two, hence
 in generic_format, and round-to-nearest cannot push a value with |x| < B above 
 B when B is representable. *)

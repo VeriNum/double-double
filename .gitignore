@@ -34,3 +34,4 @@ nlia.cache
 nra.cache
 CoqMakefile
 CoqMakefile.conf
+/verif_proofs/verif_objs/*.v

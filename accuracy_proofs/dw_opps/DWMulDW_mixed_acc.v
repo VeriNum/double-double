@@ -2547,9 +2547,9 @@ Qed.
    leading product.  The gap lemma covers [P = 0] and [0 < P < T], while the
    regime tree covers [T <= P].  The resulting floor term is [5/2*eta], and
    the proof requires [p >= 5]. *)
-Theorem DWTimesDW_mixed_accuracy_from_cond :
+Theorem DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_cond xh xl yh yl ->
+  DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl ->
   Rabs (zh+zl-xr*yr) <=
     4*u^2*Rabs (xr*yr)+5/2*bpow radix2 eminA.
 Proof.
@@ -2592,9 +2592,9 @@ Qed.
    both give the double-word property: above the threshold through the
    ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the small sum
    lattice argument inside DWTimesDW_error_floor_gap. *)
-Theorem DWTimesDW_double_word_from_cond :
+Theorem DWTimesDW_double_word_from_weak_pre_and_finite_post_cond :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_cond xh xl yh yl ->
+  DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl ->
   double_word_prop (fst (DWTimesDW xh xl yh yl))
                    (snd (DWTimesDW xh xl yh yl)).
 Proof.
@@ -2624,7 +2624,7 @@ End DWMulDW_Division_Helpers.
 Section MixedCondBridgeDWTimesDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Definition DWTimesDW_mixed_guarantee
+Definition DWTimesDW_guarantee
     (xh xl yh yl : ftype t) : Prop :=
   let '(zh, zl) := DWTimesDW xh xl yh yl in
   Rabs
@@ -2635,57 +2635,57 @@ Definition DWTimesDW_mixed_guarantee
        5 / 2 * bpow Zaux.radix2 (@common.emin t) /\
   double_word_prop zh zl.
 
-Theorem DWTimesDW_mixed_guarantee_from_cond
+Theorem DWTimesDW_guarantee_from_weak_pre_and_finite_post_cond
     (xh xl yh yl : ftype t) :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_cond xh xl yh yl ->
-  DWTimesDW_mixed_guarantee xh xl yh yl.
+  DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl ->
+  DWTimesDW_guarantee xh xl yh yl.
 Proof.
 intros Hp5 Hcond.
 have Hacc :=
-  DWTimesDW_mixed_accuracy_from_cond xh xl yh yl Hp5 Hcond.
+  DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond xh xl yh yl Hp5 Hcond.
 have Hdw :=
-  DWTimesDW_double_word_from_cond xh xl yh yl Hp5 Hcond.
-unfold DWTimesDW_mixed_guarantee.
+  DWTimesDW_double_word_from_weak_pre_and_finite_post_cond xh xl yh yl Hp5 Hcond.
+unfold DWTimesDW_guarantee.
 revert Hacc Hdw.
 destruct (DWTimesDW xh xl yh yl) as [zh zl].
 cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
 
-Lemma DWTimesDW_mixed_cond_of_safe_input_cond
+Lemma DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
     (xh xl yh yl : ftype t) :
-  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
-  DWTimesDW_mixed_cond xh xl yh yl.
+  DWTimesDW_strong_precond xh xl yh yl ->
+  DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl.
 Proof.
 move => Hsafe.
-have Hfin := DWTimesDW_finite_from_safe_input_cond xh xl yh yl Hsafe.
+have Hfin := DWTimesDW_finite_post_cond_from_strong_precond xh xl yh yl Hsafe.
 move: Hsafe => [_ [_ [Hdx [Hdy _]]]].
-unfold DWTimesDW_mixed_cond, DWTimesDW_mixed_input_cond,
-       DWTimesDW_result_finite.
+unfold DWTimesDW_weak_pre_and_finite_post_cond, DWTimesDW_weak_precond,
+       DWTimesDW_finite_post_cond.
 exact (conj (conj Hdx Hdy) Hfin).
 Qed.
 
-Theorem DWTimesDW_mixed_guarantee_from_safe_input_cond
+Theorem DWTimesDW_guarantee_from_strong_precond
     (xh xl yh yl : ftype t) :
   (5 <= fprec t)%Z ->
-  DWTimesDW_mixed_safe_input_cond xh xl yh yl ->
-  DWTimesDW_mixed_guarantee xh xl yh yl.
+  DWTimesDW_strong_precond xh xl yh yl ->
+  DWTimesDW_guarantee xh xl yh yl.
 Proof.
 intros Hp5 Hsafe.
-apply DWTimesDW_mixed_guarantee_from_cond; [exact Hp5 |].
-exact (DWTimesDW_mixed_cond_of_safe_input_cond
+apply DWTimesDW_guarantee_from_weak_pre_and_finite_post_cond; [exact Hp5 |].
+exact (DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
   xh xl yh yl Hsafe).
 Qed.
 
-Lemma DWTimesDW_inputs_finite_of_result_finite
+Lemma DWTimesDW_inputs_finite_of_finite_post_cond
     (xh xl yh yl : ftype t) :
-  DWTimesDW_result_finite xh xl yh yl ->
+  DWTimesDW_finite_post_cond xh xl yh yl ->
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite yh = true /\
   is_finite yl = true.
 Proof.
-unfold DWTimesDW_result_finite.
+unfold DWTimesDW_finite_post_cond.
 move => Hfin.
 exact (conj (DWTimesDW_xh_finite xh xl yh yl Hfin)
        (conj (DWTimesDW_xl_finite xh xl yh yl Hfin)

@@ -178,7 +178,7 @@ End CorrectDWDivDW.
 
 (* Generic rounding lemmas used below come from [FLT_helpers].  The imported
    multiplication results [DWTimesFP_sum_exact_of_ord] and
-   [DWTimesFP_mixed_guarantee_from_cond] are proved in [DWMulFP_mixed_acc].
+   [DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond] are proved in [DWMulFP_mixed_acc].
    [Fast2Sum_double_word_of_sum] comes from [Fast2Sum_acc_helpers]. *)
 
 (* ============================================================
@@ -193,8 +193,8 @@ Notation emin := (SpecFloat.emin (fprec t) (femax t)).
     public safe input condition, it contains no quotient ceiling: that
     ceiling is needed only to prove output finiteness before executing the
     kernel.  In the postchecked interface, output finiteness is supplied by
-    [DWDivDW_mixed_cond] instead. *)
-Definition DWDivDW_internal_input_cond (xh xl yh yl : ftype t) : Prop :=
+    [DWDivDW_weak_pre_and_finite_post_cond] instead. *)
+Definition DWDivDW_internal_precond (xh xl yh yl : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite yh = true /\
@@ -204,23 +204,23 @@ Definition DWDivDW_internal_input_cond (xh xl yh yl : ftype t) : Prop :=
   Rabs (FT2R yh) <= bpow radix2 (femax t - fprec t - 5) /\
   bpow radix2 (emin + 2 * fprec t) <= Rabs (FT2R yh).
 
-Local Lemma DWDivDW_internal_input_cond_of_safe_input_cond (xh xl yh yl : ftype t) :
-  DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
-  DWDivDW_internal_input_cond xh xl yh yl.
+Local Lemma DWDivDW_internal_precond_of_strong_precond (xh xl yh yl : ftype t) :
+  DDConds.DWDivDW_strong_precond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl.
 Proof.
 move => [Fxh [Fxl [Fyh [Fyl [DWx [DWy [Hyhi [Hylo _]]]]]]]].
 repeat split; assumption.
 Qed.
 
-Local Lemma DWDivDW_inputs_finite_of_result_finite
+Local Lemma DWDivDW_inputs_finite_of_finite_post_cond
     (xh xl yh yl : ftype t) :
-  DWDivDW_result_finite xh xl yh yl ->
+  DWDivDW_finite_post_cond xh xl yh yl ->
   is_finite xh = true /\
   is_finite xl = true /\
   is_finite yh = true /\
   is_finite yl = true.
 Proof.
-unfold DWDivDW_result_finite.
+unfold DWDivDW_finite_post_cond.
 move => Hfin.
 have Hmul := FIN_mul xh xl yh yl Hfin.
 exact (conj (DWMulDW_relative_acc.DWTimesDW_xh_finite xh xl _ _ Hmul)
@@ -229,19 +229,19 @@ exact (conj (DWMulDW_relative_acc.DWTimesDW_xh_finite xh xl _ _ Hmul)
              (FIN_yl xh xl yh yl Hfin)))).
 Qed.
 
-Lemma DWDivDW_internal_input_cond_of_mixed_cond (xh xl yh yl : ftype t) :
-  DWDivDW_mixed_cond xh xl yh yl ->
-  DWDivDW_internal_input_cond xh xl yh yl.
+Lemma DWDivDW_internal_precond_of_weak_pre_and_finite_post_cond (xh xl yh yl : ftype t) :
+  DWDivDW_weak_pre_and_finite_post_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl.
 Proof.
 move => [Hinput Hfin].
 move: Hinput => [DWx [DWy [Hyhi Hylo]]].
 have [Fxh [Fxl [Fyh Fyl]]] :=
-  DWDivDW_inputs_finite_of_result_finite xh xl yh yl Hfin.
+  DWDivDW_inputs_finite_of_finite_post_cond xh xl yh yl Hfin.
 repeat split; assumption.
 Qed.
 
 Local Lemma DWDivDW_cond_yh_nonzero (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl -> FT2R yh <> 0.
+  DWDivDW_internal_precond xh xl yh yl -> FT2R yh <> 0.
 Proof.
 move => [_ [_ [_ [_ [_ [_ [_ Hyhlo]]]]]]].
 intro Hyh0.
@@ -258,7 +258,7 @@ Qed.
     [|yh|] side, which needs no [1.0/y->s] node and no transfer from rounded to exact
     transfer. *)
 Local Lemma DWDivDW_cond_recip_lower (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   bpow radix2 (emin + 2 * fprec t + 2) <= Rabs (1 / FT2R yh).
 Proof.
 move => COND.
@@ -279,7 +279,7 @@ Qed.
     the bound [4*u^2], valid for any format.  (Only [p < femax] is available without the
     window, and [eta <= 4u^2] does not fit the arm budgets.) *)
 Local Lemma DWDivDW_cond_emin_le (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   (emin + 2 * fprec t <= 0)%Z.
 Proof.
 move => COND.
@@ -298,7 +298,7 @@ Qed.
     and [eta/2] collapses to the relative one.  The general bound
     [eta <= 4*u^2] of [DWDivDW_eta_scales_from_cond_tight] would not do. *)
 Local Lemma DWDivDW_cond_eta_le_u2 (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   bpow radix2 emin <= bpow radix2 (- fprec t) ^ 2.
 Proof.
 move => COND.
@@ -309,7 +309,7 @@ rewrite -bpow_plus. apply bpow_le. lia.
 Qed.
 
 Local Lemma DWDivDW_cond_UF_th (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (1 / FT2R yh).
 Proof.
 move => COND.
@@ -320,7 +320,7 @@ Qed.
 (** The public lower bound on [|yh|] also keeps the initial reciprocal far
     below overflow. *)
 Local Lemma DWDivDW_cond_reciprocal_upper (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   Rabs (1 / FT2R yh) <= bpow radix2 (femax t - 2).
 Proof.
 move => [_ [_ [_ [_ [_ [_ [_ Hyhlo]]]]]]].
@@ -341,7 +341,7 @@ eapply Rle_trans.
 Qed.
 
 Local Lemma DWDivDW_cond_reciprocal_upper_tight (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   Rabs (1 / FT2R yh) <= bpow radix2 (femax t - fprec t - 3).
 Proof.
 move => [_ [_ [_ [_ [_ [_ [_ Hyhlo]]]]]]].
@@ -359,7 +359,7 @@ Qed.
 (** Finiteness of the reciprocal bootstrap node, obtained by reusing the
     quotient node proof from DW/FP division at numerator [1]. *)
 Local Lemma DWDivDW_th_finite_from_cond (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   is_finite (BDIV (Zconst t 1) yh) = true.
 Proof.
 move => COND.
@@ -385,7 +385,7 @@ apply DWDivFP_relative_acc.th_finite.
 Qed.
 
 Local Lemma DWDivDW_th_abs_upper_tight (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R (BDIV (Zconst t 1) yh))
     <= bpow radix2 (femax t - fprec t - 3).
 Proof.
@@ -412,7 +412,7 @@ apply abs_round_le_generic.
 Qed.
 
 Local Lemma DWDivDW_th_yh_residual_from_cond (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R (BDIV (Zconst t 1) yh) * FT2R yh - 1)
     <= bpow radix2 (- fprec t).
 Proof.
@@ -434,7 +434,7 @@ rewrite Rabs_R1 Rmult_1_l in Hres. exact Hres.
 Qed.
 
 Local Lemma DWDivDW_th_relative_bounds_from_cond (xh xl yh yl : ftype t) :
-  (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (4 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
   let eta := bpow radix2 (@common.emin t) in
@@ -511,7 +511,7 @@ repeat split.
 Qed.
 
 Local Lemma DWDivDW_yl_th_abs_from_cond (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R yl * FT2R (BDIV (Zconst t 1) yh))
     <= bpow radix2 (- fprec t) * (1 + bpow radix2 (- fprec t)).
 Proof.
@@ -542,7 +542,7 @@ Qed.
     rounded value cannot overflow. *)
 Local Lemma DWDivDW_rh_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   is_finite (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1)) = true.
 Proof.
 move => Hp4 COND.
@@ -604,7 +604,7 @@ Qed.
     [|yl| <= u|yh|], while reciprocal rounding gives [|th*yh| <= 1+u]. *)
 Local Lemma DWDivDW_yl_th_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   is_finite (BMULT yl (BDIV (Zconst t 1) yh)) = true.
 Proof.
 move => Hp4 COND.
@@ -665,7 +665,7 @@ Qed.
 
 Local Lemma DWDivDW_rl_finite_from_cond (xh xl yh yl : ftype t) :
   (4 <= fprec t)%Z ->
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   is_finite (BOPP (BMULT yl (BDIV (Zconst t 1) yh))) = true.
 Proof.
 move => Hp4 COND.
@@ -674,7 +674,7 @@ exact (DWDivDW_yl_th_finite_from_cond xh xl yh yl Hp4 COND).
 Qed.
 
 Local Lemma DWDivDW_rh_abs_le_one (xh xl yh yl : ftype t) :
-  (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (4 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))) <= 1.
 Proof.
 move => Hp4 COND.
@@ -714,7 +714,7 @@ apply abs_round_le_generic.
 Qed.
 
 Local Lemma DWDivDW_rl_abs_le_one (xh xl yh yl : ftype t) :
-  (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (4 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R (BOPP (BMULT yl (BDIV (Zconst t 1) yh)))) <= 1.
 Proof.
 move => Hp4 COND.
@@ -750,7 +750,7 @@ Qed.
     subnormal regime.  This sharper exponent fact, rather than a magnitude
     ordering between [rh] and [rl], is what the paper's Fast2Sum proof uses. *)
 Local Lemma DWDivDW_rl_abs_lt_two_u (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   Rabs (FT2R (BOPP (BMULT yl (BDIV (Zconst t 1) yh)))) <
     2*bpow radix2 (-fprec t).
 Proof.
@@ -806,7 +806,7 @@ rewrite Hop Rabs_Ropp. eapply Rle_lt_trans; [exact Hqabs|]. nra.
 Qed.
 
 Local Lemma DWDivDW_rl_cexp_le (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rl := BOPP (BMULT yl th) in
   FT2R rl <> 0 ->
@@ -838,7 +838,7 @@ Qed.
     power-of-two envelopes.  This proof does not require the Fast2Sum
     magnitude ordering. *)
 Local Lemma DWDivDW_fast2sum_cascade_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let e := Fast2Sum
        (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))
        (BOPP (BMULT yl (BDIV (Zconst t 1) yh))) in
@@ -896,7 +896,7 @@ exact (conj (conj Fs Fe) (conj Hs He)).
 Qed.
 
 Local Corollary DWDivDW_fast2sum_finite_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   is_finite_p
     (Fast2Sum
        (BFMA (BOPP yh) (BDIV (Zconst t 1) yh) (Zconst t 1))
@@ -910,7 +910,7 @@ Qed.
     deliberately coarse [|eh| <= 2], [|el| <= 8] bounds are sufficient because
     [th] is at scale [2^(femax-p-3)]. *)
 Local Lemma DWDivDW_timesfp_cascade_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let e := Fast2Sum
        (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)) in
@@ -1048,7 +1048,7 @@ Qed.
 
 (** Forward overflow cascade for the reciprocal renormalization [DWPlusFP]. *)
 Local Lemma DWDivDW_plusfp_cascade_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let e := Fast2Sum
        (BFMA (BOPP yh) th (Zconst t 1)) (BOPP (BMULT yl th)) in
@@ -1213,7 +1213,7 @@ Qed.
 (** Relational reconstruction bounds.  Unlike the coarse exponent envelopes
     used only for overflow, these bounds retain the scale of [th]. *)
 Lemma DWDivDW_reciprocal_relative_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -1598,7 +1598,7 @@ repeat split; [exact Hmhlo | exact Hmh | exact Hml | exact HDW | exact Hord].
 Qed.
 
 Local Lemma DWDivDW_eta_scales_from_cond_tight (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
   let eta := bpow radix2 (@common.emin t) in
@@ -1680,7 +1680,7 @@ Qed.
 
 (** Compatibility form with factor [3]. *)
 Local Lemma DWDivDW_eta_scales_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let u := bpow radix2 (- fprec t) in
   let eta := bpow radix2 (@common.emin t) in
@@ -1696,7 +1696,7 @@ eapply Rle_trans; [exact Ht|]. nra.
 Qed.
 
 Local Lemma DWDivDW_residual_value_error_floor (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -1885,7 +1885,7 @@ Qed.
     terms.  New denormal proofs should use
     [DWDivDW_residual_value_error_floor] instead. *)
 Local Lemma DWDivDW_residual_value_error (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -1929,7 +1929,7 @@ Qed.
     is itself second order. *)
 Local Lemma DWDivDW_refinement_product_value_error_tight_floor
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -2193,7 +2193,7 @@ Qed.
 
 Local Lemma DWDivDW_final_cond_from_cond_normal (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z ->
-  DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
+  DDConds.DWDivDW_strong_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -2202,10 +2202,10 @@ Local Lemma DWDivDW_final_cond_from_cond_normal (xh xl yh yl : ftype t) :
   let m := DWPlusFP (fst d) (snd d) th in
   bpow radix2 (@common.emin t + 2 * fprec t - 1)
     <= Rabs (FT2R xh * FT2R (fst m)) ->
-  DWTimesDW_exact_leading_product_input_cond xh xl (fst m) (snd m).
+  DWTimesDW_exact_leading_product_precond xh xl (fst m) (snd m).
 Proof.
 move => Hp14 COND /= UFprod.
-have ANALYSIS := DWDivDW_internal_input_cond_of_safe_input_cond xh xl yh yl COND.
+have ANALYSIS := DWDivDW_internal_precond_of_strong_precond xh xl yh yl COND.
 set th := BDIV (Zconst t 1) yh.
 set rh := BFMA (BOPP yh) th (Zconst t 1).
 set rl := BOPP (BMULT yl th).
@@ -2279,9 +2279,9 @@ Qed.
 
 (** In the complementary closing product regime, all nodes of the final
     [DWTimesDW] are absolutely small.  This supplies finiteness without the
-    normal product disjunct required by [DWTimesDW_exact_leading_product_input_cond]. *)
+    normal product disjunct required by [DWTimesDW_exact_leading_product_precond]. *)
 Local Lemma DWDivDW_finite_from_cond_zprod_underflow (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -2452,11 +2452,11 @@ Qed.
 
 Lemma DWDivDW_finite_from_cond (xh xl yh yl : ftype t) :
   (14 <= fprec t)%Z ->
-  DDConds.DWDivDW_mixed_safe_input_cond xh xl yh yl ->
+  DDConds.DWDivDW_strong_precond xh xl yh yl ->
   is_finite_p (DWDivDW xh xl yh yl).
 Proof.
 move => Hp14 COND.
-have ANALYSIS := DWDivDW_internal_input_cond_of_safe_input_cond xh xl yh yl COND.
+have ANALYSIS := DWDivDW_internal_precond_of_strong_precond xh xl yh yl COND.
 set th := BDIV (Zconst t 1) yh.
 set rh := BFMA (BOPP yh) th (Zconst t 1).
 set rl := BOPP (BMULT yl th).
@@ -2469,9 +2469,9 @@ destruct (Rle_or_lt
 - have Hfinal := DWDivDW_final_cond_from_cond_normal xh xl yh yl
     Hp14 COND Hnormal.
   have Hsafe :=
-    DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
+    DWTimesDW_strong_precond_of_exact_leading_product_precond
       xh xl (fst m) (snd m) Hfinal.
-  exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_mixed_cond_of_safe_input_cond
+  exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
     xh xl (fst m) (snd m) Hsafe)).
 - exact (DWDivDW_finite_from_cond_zprod_underflow xh xl yh yl
     Hp14 ANALYSIS Hsmall).
@@ -2842,7 +2842,7 @@ Qed.
     magnitude ordering between [rh] and [rl] is assumed. *)
 Local Lemma DWDivDW_residual_fast2sum_exact_from_fix
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -2888,7 +2888,7 @@ Qed.
 (** The public condition makes the leading reciprocal normal, so this node is
     shared literally by the runtime FLT computation and the paper FLX model. *)
 Local Lemma DWDivDW_th_FLT_FLX_from_cond (xh xl yh yl : ftype t) :
-  DWDivDW_internal_input_cond xh xl yh yl ->
+  DWDivDW_internal_precond xh xl yh yl ->
   rnd_p (/ FT2R yh) = FT2R (BDIV (Zconst t 1) yh).
 Proof.
 move => COND.
@@ -2913,7 +2913,7 @@ Qed.
     coarser, the rounded result lies on that coarser lattice, which is itself
     included in the [2*u^2] lattice. *)
 Local Lemma DWDivDW_rh_fix_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   generic_format radix2 (FIX_exp (1-2*fprec t)) (FT2R rh).
@@ -2987,7 +2987,7 @@ destruct (Z.leb_spec0 emin ef) as [Hemin|Hemin].
 Qed.
 
 (** The preceding lemma splits on whether the paper lattice [1-2p] is coarser
-    than [emin].  Under [DWDivDW_internal_input_cond] it never is: [DWDivDW_cond_emin_le]
+    than [emin].  Under [DWDivDW_internal_precond] it never is: [DWDivDW_cond_emin_le]
     gives [emin <= -2p < 1-2p], so the exact residual is always an FLT value
     and the FMA does not round at all.
 
@@ -2996,7 +2996,7 @@ Qed.
     term of order [u] nor an underflow floor -- so the [~UF_rh] arm of the regime cascade
     carries no error of its own. *)
 Local Lemma DWDivDW_rh_exact_from_cond (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   FT2R (BFMA (BOPP yh) th (Zconst t 1)) = 1 - FT2R yh * FT2R th.
 Proof.
@@ -3065,7 +3065,7 @@ Qed.
     automatic, so the residual Fast2Sum contributes no rounding error. *)
 Local Lemma DWDivDW_residual_fast2sum_exact_from_cond
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3082,7 +3082,7 @@ Qed.
     ordinary term and only the floor term from the Fast2Mult gap. *)
 Local Lemma DWDivDW_refinement_product_error_mixed_paper
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3114,10 +3114,10 @@ have Hex := DWDivDW_residual_fast2sum_exact_from_cond
 fold th rh rl e in Hex. cbv zeta in Hex.
 have DWe := Fast2Sum_double_word_of_sum rh rl Fe Hex.
 fold e in DWe.
-have H := DWTimesFP_mixed_guarantee_from_cond
+have H := DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond
   (fst e) (snd e) th ltac:(lia) (conj DWe Fd).
 fold d in H.
-unfold DWTimesFP_mixed_guarantee in H.
+unfold DWTimesFP_guarantee in H.
 destruct d as [dh dl].
 cbn [fst snd] in H |- *.
 exact H.
@@ -3125,7 +3125,7 @@ Qed.
 
 Local Lemma DWDivDW_reciprocal_plus_error_paper_tight
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3159,7 +3159,7 @@ Qed.
 (** The low divisor product is the only other node in the reciprocal setup
     that may initially differ; it costs at most one floor ulp. *)
 Local Lemma DWDivDW_rl_FLT_FLX_diff_from_cond (xh xl yh yl : ftype t) :
-  (4 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (4 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   Rabs (FT2R (BOPP (BMULT yl th)) -
         (- rnd_p (FT2R yl * FT2R th)))
@@ -3192,7 +3192,7 @@ Qed.
     must be propagated; the normal [u^2] analysis is deliberately absent. *)
 Local Lemma DWDivDW_residual_sum_FLT_FLX_diff_from_cond
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3231,7 +3231,7 @@ Qed.
     the low double round. *)
 Local Lemma DWDivDW_fast2sum_sum_FLT_FLX_diff_from_cond
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3262,7 +3262,7 @@ Qed.
     [round_FLT_error_max_emin] without an added floor term. *)
 Local Lemma DWDivDW_residual_value_error_tight_floor
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3322,7 +3322,7 @@ Qed.
 
 Local Lemma DWDivDW_newton_step_error_tight_from_cond
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let Y := FT2R yh+FT2R yl in
   Rabs (FT2R th+(1-Y*FT2R th)*FT2R th-/Y) <=
@@ -3345,7 +3345,7 @@ Qed.
     quotient is essentially one: [|(xh+xl)*th| <= 1.001*|Q|]. *)
 Local Lemma DWDivDW_X_th_quotient_scale_from_cond
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let Q := (FT2R xh + FT2R xl)/(FT2R yh + FT2R yl) in
   Rabs ((FT2R xh + FT2R xl) * FT2R th) <= 1001/1000 * Rabs Q.
@@ -3422,7 +3422,7 @@ Qed.
     this step; only the floor coefficient [fl] is carried through. *)
 Local Lemma DWDivDW_refinement_product_error_scaled_param
     (xh xl yh yl : ftype t) (c3 fl : R) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   0 <= c3 -> c3 <= 140 -> 0 <= fl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -3508,7 +3508,7 @@ Qed.
     up here, which is what lets each arm keep its own sharp constants. *)
 Local Lemma DWDivDW_reciprocal_error_scaled_floor_param
     (xh xl yh yl : ftype t) (fr nw : R) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   0 <= fr -> 0 <= nw ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -3661,12 +3661,12 @@ Definition DWDivDW_FLX_model (xh xl yh yl : ftype t) : R * R :=
     (FT2R xh) (FT2R xl) (fst mhl) (snd mhl).
 
 (** Mixed contract for the closing multiplication.  Applying
-    [DWTimesDW_mixed_accuracy_from_cond] to the two double-words needs no lower
+    [DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond] to the two double-words needs no lower
     bound on [xh*mh].  Its gap case contributes [5/2*eta], which is carried
     through [DWDivDW_error_mixed_arms_param]. *)
 Local Lemma DWDivDW_closing_mixed_error_from_cond_acc
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   is_finite_p (DWDivDW xh xl yh yl) ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
@@ -3697,7 +3697,7 @@ specialize (Hrel NANS STD). fold th rh rl e d m in Hrel.
 destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m mh ml in DWm.
 fold th rh rl e d m mh ml in FIN.
 change (is_finite_p (DWTimesDW xh xl mh ml)) in FIN.
-have Hmul := DWMulDW_mixed_acc.DWTimesDW_mixed_accuracy_from_cond
+have Hmul := DWMulDW_mixed_acc.DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond
   xh xl mh ml ltac:(lia) (conj (conj DWx DWm) FIN).
 exact Hmul.
 Qed.
@@ -3776,7 +3776,7 @@ Qed.
     enters through [Hclose] with a symbolic floor coefficient. *)
 Local Theorem DWDivDW_error_mixed_arms_param
     (xh xl yh yl : ftype t) (fc : R) :
-  (14 <= fprec t)%Z -> DWDivDW_internal_input_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_internal_precond xh xl yh yl ->
   let th := BDIV (Zconst t 1) yh in
   let rh := BFMA (BOPP yh) th (Zconst t 1) in
   let rl := BOPP (BMULT yl th) in
@@ -3929,10 +3929,10 @@ destruct Harms as [Htight|[Hcoarse Hsmall]].
 Qed.
 
 (** The whole range [5/2*eta] instance: no quotient underflow floor anywhere,
-    hence [DWDivDW_internal_input_cond]. *)
+    hence [DWDivDW_internal_precond]. *)
 Theorem DWDivDW_error_mixed_arms_acc
     (xh xl yh yl : ftype t) :
-  (14 <= fprec t)%Z -> DWDivDW_mixed_cond xh xl yh yl ->
+  (14 <= fprec t)%Z -> DWDivDW_weak_pre_and_finite_post_cond xh xl yh yl ->
   let X := FT2R xh+FT2R xl in
   let Q := X/(FT2R yh+FT2R yl) in
   let zr := FT2R (fst (DWDivDW xh xl yh yl))+
@@ -3941,7 +3941,7 @@ Theorem DWDivDW_error_mixed_arms_acc
                  5/2*bpow radix2 (@common.emin t).
 Proof.
 move => Hp14 MIXED /=.
-have COND := DWDivDW_internal_input_cond_of_mixed_cond xh xl yh yl MIXED.
+have COND := DWDivDW_internal_precond_of_weak_pre_and_finite_post_cond xh xl yh yl MIXED.
 have FIN : is_finite_p (DWDivDW xh xl yh yl) := proj2 MIXED.
 specialize (FIN STD).
 have H := DWDivDW_error_mixed_arms_param xh xl yh yl (5/2) Hp14 COND.
@@ -4228,25 +4228,25 @@ Notation mh  := (fst (DWPlusFP dh dl th)).
 Notation ml  := (snd (DWPlusFP dh dl th)).
 
 (** The complete division is finite as soon as its closing multiplication
-    satisfies [DWTimesDW_exact_leading_product_input_cond], proved earlier. *)
+    satisfies [DWTimesDW_exact_leading_product_precond], proved earlier. *)
 Local Lemma DWDivDW_finite_from_final_cond :
-  DWTimesDW_exact_leading_product_input_cond xh xl mh ml ->
+  DWTimesDW_exact_leading_product_precond xh xl mh ml ->
   is_finite_p (DWDivDW xh xl yh yl).
 Proof.
 move => Hfinal.
 have Hsafe :=
-  DWTimesDW_mixed_safe_input_cond_of_exact_leading_product_input_cond
+  DWTimesDW_strong_precond_of_exact_leading_product_precond
     xh xl mh ml Hfinal.
-exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_mixed_cond_of_safe_input_cond
+exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
   xh xl mh ml Hsafe)).
 Qed.
 
 End FiniteDWDivDWFromFinalBlock.
 
-(* Pure relative bound in the normal regime.  [DWDivDW_normal] supplies the
+(* Pure relative bound in the normal regime.  [DWDivDW_relative_regime_cond] supplies the
    nine node bounds needed by the FLT to FLX bridge; [UF_th] follows separately
-   from [DWDivDW_internal_input_cond].  Together with the safe input condition,
-   these form [DWDivDW_relative_error_input_cond].  The result is the paper's
+   from [DWDivDW_internal_precond].  Together with the safe input condition,
+   these form [DWDivDW_relative_precond].  The result is the paper's
    [9.8u^2] bound with no absolute floor term. *)
 Section RelativeAccuracyDWDivDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -4257,7 +4257,7 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl yh yl : ftype t).
 
 Hypothesis Hp14 : (14 <= fprec t)%Z.
-Hypothesis COND : DWDivDW_relative_error_input_cond xh xl yh yl.
+Hypothesis COND : DWDivDW_relative_precond xh xl yh yl.
 
 Theorem DWDivDW_relative_accuracy :
   Rabs
@@ -4268,7 +4268,7 @@ Theorem DWDivDW_relative_accuracy :
   <= 98 / 10 * u ^ 2.
 Proof.
 move: (COND) => [SAFE Hnormal].
-have ANALYSIS := DWDivDW_internal_input_cond_of_safe_input_cond xh xl yh yl SAFE.
+have ANALYSIS := DWDivDW_internal_precond_of_strong_precond xh xl yh yl SAFE.
 move: (SAFE) =>
   [Hfxh [Hfxl [Hfyh [Hfyl [DWx [DWy _]]]]]].
 move: Hnormal =>

@@ -4,13 +4,13 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* [dw_div_fp_check] establishes [DWDivFP_mixed_safe_input_cond]: finite inputs,
+(* [dw_div_fp_strong_precond_check] establishes [DWDivFP_strong_precond]: finite inputs,
    a double-word dividend, a finite leading quotient, the required dividend
    window, and the quotient ceiling.  There is no lower quotient bound.  A
    strict ceiling on the rounded quotient proves its finiteness and a nonzero
    divisor.  [BDIV_abs_le_bpow] transfers that ceiling to the exact quotient. *)
-Lemma body_dw_div_fp_check :
-  semax_body Vprog Gprog f_dw_div_fp_check dw_div_fp_check_spec.
+Lemma body_dw_div_fp_strong_precond_check :
+  semax_body Vprog Gprog f_dw_div_fp_strong_precond_check dw_div_fp_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh = isfinite_double(x->s) *)
@@ -325,7 +325,7 @@ Proof.
                                   = bpow Zaux.radix2 (femax Tdouble - 2))%R).
                     { replace (femax Tdouble) with (2 + (femax Tdouble - 2))%Z at 1 by lia.
                       rewrite bpow_plus. simpl. lra. }
-                    unfold DDConds.DWDivFP_mixed_safe_input_cond.
+                    unfold DDConds.DWDivFP_strong_precond.
                     (* conjuncts 1-4 (finiteness/double-word) and conjunct 5
                        (finiteness of the quotient node) close by assumption; the
                        remaining three are the two magnitude windows. *)
@@ -338,8 +338,8 @@ Qed.
 (* The default interface checks only the input part of the mixed condition.
    Finiteness is still tested here so the floating-point comparisons have their
    intended real-number meaning, but it is not exposed in the postcondition. *)
-Lemma body_dw_div_fp_input_check :
-  semax_body Vprog Gprog f_dw_div_fp_input_check dw_div_fp_input_check_spec.
+Lemma body_dw_div_fp_weak_precond_check :
+  semax_body Vprog Gprog f_dw_div_fp_weak_precond_check dw_div_fp_weak_precond_check_spec.
 Proof.
   start_function.
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
@@ -487,6 +487,6 @@ Proof.
                             (bpow Zaux.radix2 (-968)) Hfin_xh
                             q_lo968_val_finite q_lo968_val_FT2R).
                    unfold bxh_floor in Hfloor; exact Hfloor. }
-               unfold DDConds.DWDivFP_mixed_input_cond.
+               unfold DDConds.DWDivFP_weak_precond.
                split; assumption.
 Qed.
