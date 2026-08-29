@@ -7,7 +7,7 @@ void dw_times_fp(struct dword *st, struct dword *x, double y) {
       exit(EXIT_FAILURE);
    }
    dw_times_fp_kernel(st, x, y);
-   if (!dword_finite_check(st)) {
+   if (!isfinite_dword(st)) {
       exit(EXIT_FAILURE);
    }
 }

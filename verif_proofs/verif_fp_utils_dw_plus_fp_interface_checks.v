@@ -92,8 +92,8 @@ Proof.
         unfold DWPlusFP_weak_precond. exact HDW.
 Qed.
 
-Lemma body_dword_finite_check :
-  semax_body Vprog Gprog f_dword_finite_check dword_finite_check_spec.
+Lemma body_isfinite_dword :
+  semax_body Vprog Gprog f_isfinite_dword isfinite_dword_spec.
 Proof.
   start_function.
   forward. forward_call. Intros vret_s. rename H into Hspec_s.

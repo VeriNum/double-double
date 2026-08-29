@@ -9,7 +9,7 @@ void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y) {
       exit(EXIT_FAILURE);
    }
    dw_plus_dw_kernel(st, x, y);
-   if (!dword_finite_check(st)) {
+   if (!isfinite_dword(st)) {
       exit(EXIT_FAILURE);
    }
 }

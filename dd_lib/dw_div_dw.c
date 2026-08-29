@@ -7,7 +7,7 @@ void dw_div_dw(struct dword *z, struct dword *x, struct dword *y) {
       exit(EXIT_FAILURE);
    }
    dw_div_dw_kernel(z, x, y);
-   if (!dword_finite_check(z)) {
+   if (!isfinite_dword(z)) {
       exit(EXIT_FAILURE);
    }
 }

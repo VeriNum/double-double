@@ -458,7 +458,7 @@ Definition Ops_Imports : funspecs :=
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
     fp_utils_specs.fast2_mult_exact_check_spec;
     fp_utils_specs.fast2_mult_product_finite_check_spec;
-    fp_utils_specs.dword_finite_check_spec;
+    fp_utils_specs.isfinite_dword_spec;
     fp_utils_specs.dw_plus_fp_weak_precond_check_spec;
     fp_utils_specs.dw_plus_fp_strong_precond_check_spec;
     fp_utils_specs.dw_plus_dw_weak_precond_check_spec;

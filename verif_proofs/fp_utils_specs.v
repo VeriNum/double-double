@@ -103,8 +103,8 @@ Definition dword := Tstruct _dword noattr.
 Definition f2val (pq : ftype Tdouble * ftype Tdouble) : reptype dword :=
   (Vfloat (fst pq), Vfloat (snd pq)).
 
-Definition dword_finite_check_spec :=
-  DECLARE _dword_finite_check
+Definition isfinite_dword_spec :=
+  DECLARE _isfinite_dword
   WITH x : val, value : ftype Tdouble * ftype Tdouble
   PRE [ tptr dword ]
     PROP()

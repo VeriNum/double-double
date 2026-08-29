@@ -45,7 +45,7 @@ Proof.
   1:{ solve_SF_dd body_dw_times_dw_weak_precond_check. }
   1:{ solve_SF_dd body_dw_plus_fp_strong_precond_check. }
   1:{ solve_SF_dd body_dw_plus_fp_weak_precond_check. }
-  1:{ solve_SF_dd body_dword_finite_check. }
+  1:{ solve_SF_dd body_isfinite_dword. }
   1:{ solve_SF_dd body_dw_div_fp_strong_precond_check. }
   1:{ solve_SF_dd body_dw_div_fp_weak_precond_check. }
   1:{ solve_SF_dd body_dw_div_dw_strong_precond_check. }

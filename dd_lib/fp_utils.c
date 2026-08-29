@@ -46,21 +46,19 @@ int fast2_mult_product_finite_check(double x, double y) {
 }
 
 int fast2_sum_magnitude_order_check(double a, double b) {
-    double s = a + b;
-    int fin = isfinite_double(s);
     /* short-circuit: fabs called only when fin=true, i.e. a and b are finite */
-    return fin && (fabs(b) <= fabs(a));
+    return isfinite_double(a + b) && (fabs(b) <= fabs(a));
 }
 
 int two_sum_exact_check(double a, double b) {
-    int fin_sum  = isfinite_double(a + b);
-    int fin_diff = isfinite_double(a - b);
     /* short-circuit: fabs called only when both fin checks pass */
     /* pred(2^1024) = DBL_MAX; strict inequality excludes ±DBL_MAX */
-    return fin_sum && fin_diff && (fabs(b) < DBL_MAX);
+    return isfinite_double(a + b)
+        && isfinite_double(a - b)
+        && (fabs(b) < DBL_MAX);
 }
 
-int dw_plus_dw_strong_precond_check(struct dword *x, struct dword *y) {
+int dw_plus_dw_strong_precond_check(const struct dword *x, const struct dword *y) {
     /* Verifies DWPlusDW_strong_precond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),
        and the high parts are bounded by Omega/4 = 2^1022.
@@ -78,7 +76,7 @@ int dw_plus_dw_strong_precond_check(struct dword *x, struct dword *y) {
     return dwx && dwy && xh_bnd && yh_bnd;
 }
 
-int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y) {
+int dw_plus_dw_weak_precond_check(const struct dword *x, const struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -88,7 +86,7 @@ int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y) {
     return dwx && dwy;
 }
 
-int dw_times_fp_strong_precond_check(struct dword *x, double y) {
+int dw_times_fp_strong_precond_check(const struct dword *x, double y) {
     /* Verifies DWTimesFP_strong_precond: x->t, y finite; (x->s, x->t) is a double-word;
        round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
        Omega/2 = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down
@@ -152,11 +150,11 @@ int dw_times_fp_strong_precond_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
-int dw_times_fp_weak_precond_check(struct dword *x, double y) {
+int dw_times_fp_weak_precond_check(const struct dword *x, double y) {
     return dw_plus_fp_weak_precond_check(x, y);
 }
 
-int dw_times_dw_strong_precond_check(struct dword *x, struct dword *y) {
+int dw_times_dw_strong_precond_check(const struct dword *x, const struct dword *y) {
     /* Verifies DWTimesDW_strong_precond: x->t, y->t finite; (x->s, x->t) and
        (y->s, y->t) are each a double-word; round(x->s * y->s) finite; and the
        real product |FT2R x->s * FT2R y->s| <= Omega/2 = 2^(femax-1) = 2^1023.
@@ -212,11 +210,11 @@ int dw_times_dw_strong_precond_check(struct dword *x, struct dword *y) {
     return dwx && dwy && prod_bnd;
 }
 
-int dw_times_dw_weak_precond_check(struct dword *x, struct dword *y) {
+int dw_times_dw_weak_precond_check(const struct dword *x, const struct dword *y) {
     return dw_plus_dw_weak_precond_check(x, y);
 }
 
-int dw_div_fp_strong_precond_check(struct dword *x, double y) {
+int dw_div_fp_strong_precond_check(const struct dword *x, double y) {
     /* Verifies DWDivFP_strong_precond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
        double-word; RN(x->s / y) finite; |x->s| <= Omega/4; |x->s / y| <=
        Omega/4; and either x->s is zero or |x->s| >= 2^(emin+2p).  There is NO
@@ -304,7 +302,7 @@ int dw_div_fp_strong_precond_check(struct dword *x, double y) {
     return qt_hi;
 }
 
-int dw_div_fp_weak_precond_check(struct dword *x, double y) {
+int dw_div_fp_weak_precond_check(const struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y = isfinite_double(y);
@@ -314,7 +312,7 @@ int dw_div_fp_weak_precond_check(struct dword *x, double y) {
     return dwx && fin_y && xh_lo;
 }
 
-int dw_plus_fp_strong_precond_check(struct dword *x, double y) {
+int dw_plus_fp_strong_precond_check(const struct dword *x, double y) {
     /* Verifies DWPlusFP_strong_precond: xh, xl, y are finite, (x->s, x->t) is a
        double-word, and |x->s|, |y| <= Omega/4 = 2^1022.  The DW prop alone
        does not pin down finiteness of x->t in R (FT2R sends NaN/Inf to 0),
@@ -330,7 +328,7 @@ int dw_plus_fp_strong_precond_check(struct dword *x, double y) {
     return dwx && fin_y && xh_bnd && y_bnd;
 }
 
-int dw_plus_fp_weak_precond_check(struct dword *x, double y) {
+int dw_plus_fp_weak_precond_check(const struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -338,11 +336,11 @@ int dw_plus_fp_weak_precond_check(struct dword *x, double y) {
     return dwx && fin_y;
 }
 
-int dword_finite_check(const struct dword *x) {
+int isfinite_dword(const struct dword *x) {
     return isfinite_double(x->s) && isfinite_double(x->t);
 }
 
-int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {
+int dw_div_dw_strong_precond_check(const struct dword *x, const struct dword *y) {
     /* Verifies DWDivDW_strong_precond (DDConds.v), the guard for the
        reciprocal-bootstrap double-word division kernel.  Nine conjuncts,
        five clauses: x->s, x->t, y->s, y->t finite; (x->s, x->t) and
@@ -421,7 +419,7 @@ int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {
     return qt_hi;
 }
 
-int dw_div_dw_weak_precond_check(struct dword *x, struct dword *y) {
+int dw_div_dw_weak_precond_check(const struct dword *x, const struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);

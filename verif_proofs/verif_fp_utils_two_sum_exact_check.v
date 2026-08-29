@@ -13,17 +13,13 @@ Proof.
   forward_call. (* fin_sum = isfinite_double(x+y) *)
   Intros vret_sum.
   rename H into Hfin_sum_spec.
-  forward_call. (* fin_diff = isfinite_double(x-y) *)
-  Intros vret_diff.
-  rename H into Hfin_diff_spec.
-  (* first short-circuit: if fin_sum then t'3 = (bool)fin_diff else t'3 = 0 *)
+  (* first short-circuit: evaluate x-y only when x+y is finite *)
   set (Post_if :=
     EX b_fd : bool,
     PROP(b_fd = true -> is_finite (BPLUS x y) = true /\
                         is_finite (BMINUS x y) = true)
-    LOCAL(temp _fin_sum (Vint (if vret_sum then Int.one else Int.zero));
-          temp _fin_diff (Vint (if vret_diff then Int.one else Int.zero));
-          temp _t'3 (Vint (if b_fd then Int.one else Int.zero));
+    LOCAL(temp _t'1 (Vint (if vret_sum then Int.one else Int.zero));
+          temp _t'2 (Vint (if b_fd then Int.one else Int.zero));
           temp _a (Vfloat (float_of_ftype x));
           temp _b (Vfloat (float_of_ftype y)))
     SEP()).
@@ -31,6 +27,12 @@ Proof.
   - (* fin_sum ≠ 0: vret_sum = true *)
     assert (vret_sum = true) as Hvs.
     { destruct vret_sum; auto; simpl in H; rep_lia. }
+    forward_call. (* isfinite_double(x-y) *)
+    Intros vret_diff.
+    match goal with
+    | Ht : vret_diff = true <-> _ |- _ =>
+        rename Ht into Hfin_diff_spec
+    end.
     forward.
     unfold Post_if; Exists vret_diff; entailer!.
     split.
@@ -39,7 +41,7 @@ Proof.
       { apply (proj1 Hfin_sum_spec); auto. }
       { apply (proj1 Hfin_diff_spec); auto. }
     + destruct vret_diff; simpl; auto.
-  - (* fin_sum = 0: t'3 = 0 *)
+  - (* fin_sum = 0: t'2 = 0, and x-y is not evaluated *)
     forward.
     unfold Post_if; Exists false; entailer!.
   - (* after first short-circuit: check |b| < DBL_MAX *)
@@ -54,7 +56,7 @@ Proof.
             temp _b (Vfloat (float_of_ftype y)))
       SEP()).
     forward_if Post_final.
-    + (* t'3 ≠ 0: b_fd = true, so both fin checks pass *)
+    + (* t'2 ≠ 0: b_fd = true, so both fin checks pass *)
       assert (b_fd = true) as Hbfd_eq.
       { destruct b_fd; auto; simpl in H; rep_lia. }
       destruct (H_b_fd Hbfd_eq) as [Hfin_plus Hfin_minus].
@@ -82,7 +84,7 @@ Proof.
             (abs_nan (fprec Tdouble) 1024 (fprec_gt_one Tdouble)) y)
           (Float.of_bits (Int64.repr 9218868437227405311))).
         intro b_cmp; destruct b_cmp; reflexivity. }
-    + (* t'3 = 0: t'4 = 0 *)
+    + (* t'2 = 0: t'4 = 0 *)
       forward. (* t'4 = 0 *)
       unfold Post_final; clear Post_final; Exists false; entailer!.
     + (* join: return t'4 *)

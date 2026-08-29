@@ -11,14 +11,14 @@ Require Import DD.verif_proofs.verif_fp_utils_common.
 Lemma body_fast2_sum_magnitude_order_check: semax_body Vprog Gprog f_fast2_sum_magnitude_order_check fast2_sum_magnitude_order_check_spec.
 Proof.
   start_function.
-  forward. (* s = x + y *)
-  forward_call. (* fin = isfinite_double(s): Scall + Sset _fin handled together *)
+  forward_call. (* isfinite_double(x + y) *)
   Intros vret_fin.
   rename H into Hfin_spec.
   set (Post_ret :=
     EX b_r : bool,
     PROP(b_r = true -> Fast2Sum_magnitude_order_cond x y)
-    LOCAL(temp _t'2 (Vint (if b_r then Int.one else Int.zero));
+    LOCAL(temp _t'1 (Vint (if vret_fin then Int.one else Int.zero));
+          temp _t'2 (Vint (if b_r then Int.one else Int.zero));
           temp _a (Vfloat (float_of_ftype x));
           temp _b (Vfloat (float_of_ftype y)))
     SEP()).
