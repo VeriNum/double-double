@@ -4,13 +4,13 @@
 (** Whole range mixed error and output validity results for [DWTimesFP].
 
     This file imports the common runtime model facts and normal range relative
-    result from [DWMulFP_relative_acc], then handles the Fast2Mult underflow
+    result from [DWTimesFP_relative_acc], then handles the Fast2Mult underflow
     gap and exposes the mixed guarantee ladder. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
-Require Import DW_acc_lemmas DWMulFP_relative_acc.
+Require Import DW_acc_lemmas DWTimesFP_relative_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Stdlib Require Import Reals.Reals Logic.FunctionalExtensionality.
 Require Import mathcomp.ssreflect.ssreflect.

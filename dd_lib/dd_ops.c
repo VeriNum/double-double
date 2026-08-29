@@ -26,11 +26,11 @@
 #include "dw_plus_dw_kernel.c"
 #include "dw_plus_dw.c"
 
-#include "dw_mult_fp_kernel.c"
-#include "dw_mult_fp.c"
+#include "dw_times_fp_kernel.c"
+#include "dw_times_fp.c"
 
-#include "dw_mult_dw_kernel.c"
-#include "dw_mult_dw.c"
+#include "dw_times_dw_kernel.c"
+#include "dw_times_dw.c"
 
 #include "dw_div_dw_kernel.c"
 #include "dw_div_dw.c"

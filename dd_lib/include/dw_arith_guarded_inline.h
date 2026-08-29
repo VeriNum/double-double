@@ -105,7 +105,7 @@ static inline int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y
 /* DWTimesFP_strong_precond: no underflow disjunction -- the exported contract is the
    whole-range mixed bound 2u^2|P| + 2.51*eta, not the pure 2u^2 relative bound,
    so the Fast2Mult underflow gap is accepted.  See dd_lib/fp_utils.c. */
-static inline int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
+static inline int dw_times_fp_strong_precond_check(struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y  = isfinite_double(y);
@@ -116,14 +116,14 @@ static inline int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
-static inline int dw_mult_fp_weak_precond_check(struct dword *x, double y) {
+static inline int dw_times_fp_weak_precond_check(struct dword *x, double y) {
     return dw_plus_fp_weak_precond_check(x, y);
 }
 
 /* DWTimesDW_strong_precond: no underflow disjunction -- the exported contract is the
    whole-range mixed bound 4u^2|P| + 2.5*eta, not the pure 8u^2 relative bound,
    so the Fast2Mult underflow gap is accepted.  See dd_lib/fp_utils.c. */
-static inline int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
+static inline int dw_times_dw_strong_precond_check(struct dword *x, struct dword *y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -136,7 +136,7 @@ static inline int dw_mult_dw_strong_precond_check(struct dword *x, struct dword 
     return dwx && dwy && prod_bnd;
 }
 
-static inline int dw_mult_dw_weak_precond_check(struct dword *x, struct dword *y) {
+static inline int dw_times_dw_weak_precond_check(struct dword *x, struct dword *y) {
     return dw_plus_dw_weak_precond_check(x, y);
 }
 
@@ -242,23 +242,23 @@ static inline void dw_plus_dw_strong(struct dword *st, struct dword *x, struct d
     if (!dw_plus_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
     dw_plus_dw_kernel(st, x, y);
 }
-static inline void dw_mult_fp(struct dword *st, struct dword *x, double y) {
-    if (!dw_mult_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_fp_kernel(st, x, y);
+static inline void dw_times_fp(struct dword *st, struct dword *x, double y) {
+    if (!dw_times_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);
+    dw_times_fp_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
-static inline void dw_mult_fp_strong(struct dword *st, struct dword *x, double y) {
-    if (!dw_mult_fp_strong_precond_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_fp_kernel(st, x, y);
+static inline void dw_times_fp_strong(struct dword *st, struct dword *x, double y) {
+    if (!dw_times_fp_strong_precond_check(x, y)) exit(EXIT_FAILURE);
+    dw_times_fp_kernel(st, x, y);
 }
-static inline void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_mult_dw_weak_precond_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_dw_kernel(st, x, y);
+static inline void dw_times_dw(struct dword *st, struct dword *x, struct dword *y) {
+    if (!dw_times_dw_weak_precond_check(x, y)) exit(EXIT_FAILURE);
+    dw_times_dw_kernel(st, x, y);
     if (!dword_finite_check(st)) exit(EXIT_FAILURE);
 }
-static inline void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
-    if (!dw_mult_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
-    dw_mult_dw_kernel(st, x, y);
+static inline void dw_times_dw_strong(struct dword *st, struct dword *x, struct dword *y) {
+    if (!dw_times_dw_strong_precond_check(x, y)) exit(EXIT_FAILURE);
+    dw_times_dw_kernel(st, x, y);
 }
 static inline void dw_div_fp(struct dword *z, struct dword *x, double y) {
     if (!dw_div_fp_weak_precond_check(x, y)) exit(EXIT_FAILURE);

@@ -6,7 +6,7 @@
     Its public result is [DWTimesFP_relative_accuracy], the pure [2u^2]
     relative bound under [DWTimesFP_relative_precond].  The shared
     runtime model, finiteness, and normal case lemmas are consumed by
-    [DWMulFP_mixed_acc], which contains the whole range mixed API. *)
+    [DWTimesFP_mixed_acc], which contains the whole range mixed API. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.

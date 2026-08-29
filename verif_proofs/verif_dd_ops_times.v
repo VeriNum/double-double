@@ -9,8 +9,8 @@ Require Import vcfloat.FPCompCert.
 Require Import VSTlib.spec_math.
 
 Require Import DDConds common real_extras op_defs.
-Require Import DD.accuracy_proofs.dw_opps.DWMulFP_mixed_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulDW_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWTimesFP_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWTimesDW_mixed_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
 Require Import DD.verif_proofs.DDOpsASI.
 Require Import DD.verif_proofs.verif_dd_ops_common.
@@ -19,8 +19,8 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-Lemma body_dw_mult_fp_kernel:
-  semax_body Vprog Gprog f_dw_mult_fp_kernel dw_mult_fp_kernel_spec.
+Lemma body_dw_times_fp_kernel:
+  semax_body Vprog Gprog f_dw_times_fp_kernel dw_times_fp_kernel_spec.
 Proof.
 start_function.
 forward.
@@ -33,8 +33,8 @@ unfold f2val, DWTimesFP, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
 
-Lemma body_dw_mult_dw_kernel:
-  semax_body Vprog Gprog f_dw_mult_dw_kernel dw_mult_dw_kernel_spec.
+Lemma body_dw_times_dw_kernel:
+  semax_body Vprog Gprog f_dw_times_dw_kernel dw_times_dw_kernel_spec.
 Proof.
 start_function.
 forward.
@@ -59,8 +59,8 @@ unfold f2val, DWTimesDW, Fast2Mult, Fast2Sum, fst, snd.
 entailer!.
 Qed.
 
-Lemma body_dw_mult_fp :
-  semax_body Vprog Gprog f_dw_mult_fp dw_mult_fp_spec.
+Lemma body_dw_times_fp :
+  semax_body Vprog Gprog f_dw_times_fp dw_times_fp_spec.
 Proof.
 start_function.
 forward_call (x, xh, y).
@@ -110,8 +110,8 @@ forward_if Post_if.
     entailer!!.
 Qed.
 
-Lemma body_dw_mult_fp_strong :
-  semax_body Vprog Gprog f_dw_mult_fp_strong dw_mult_fp_strong_spec.
+Lemma body_dw_times_fp_strong :
+  semax_body Vprog Gprog f_dw_times_fp_strong dw_times_fp_strong_spec.
 Proof.
 start_function.
 forward_call (x, xh, y).
@@ -139,8 +139,8 @@ forward_if Post_if.
   entailer!!.
 Qed.
 
-Lemma body_dw_mult_dw :
-  semax_body Vprog Gprog f_dw_mult_dw dw_mult_dw_spec.
+Lemma body_dw_times_dw :
+  semax_body Vprog Gprog f_dw_times_dw dw_times_dw_spec.
 Proof.
 start_function.
 forward_call (x, y, xh, yh).
@@ -195,8 +195,8 @@ forward_if Post_if.
     entailer!!.
 Qed.
 
-Lemma body_dw_mult_dw_strong :
-  semax_body Vprog Gprog f_dw_mult_dw_strong dw_mult_dw_strong_spec.
+Lemma body_dw_times_dw_strong :
+  semax_body Vprog Gprog f_dw_times_dw_strong dw_times_dw_strong_spec.
 Proof.
 start_function.
 forward_call (x, y, xh, yh).

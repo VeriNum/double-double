@@ -4,14 +4,14 @@
 (** Whole range mixed error and output validity results for [DWTimesDW].
 
     This file imports the common runtime model facts and normal range relative
-    result from [DWMulDW_relative_acc], then handles the leading product
+    result from [DWTimesDW_relative_acc], then handles the leading product
     underflow gap and exposes the mixed guarantee ladder. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesDW DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_relative_acc_helpers DW_acc_lemmas.
-Require Import DWMulFP_relative_acc DWMulDW_relative_acc.
+Require Import DWTimesFP_relative_acc DWTimesDW_relative_acc.
 From Flocq Require Import Pff2Flocq Core Mult_error.
 From Stdlib Require Import Reals.Reals.
 Require Import mathcomp.ssreflect.ssreflect.
@@ -946,7 +946,7 @@ have HDWy : DWPlus.double_word (fprec t) choice (FT2R yh) (FT2R yl)
   by (apply (dw_word_DWdouble yh yl yh);exact DWy).
 have Fxh := proj1 (proj1 HDWx).
 have Fyh := proj1 (proj1 HDWy).
-have Htp := DWMulFP_relative_acc.Fast2Mult_correct_weak xh yh Fmul ltac:(auto).
+have Htp := DWTimesFP_relative_acc.Fast2Mult_correct_weak xh yh Fmul ltac:(auto).
 rewrite /DWTimesFP.Fast2Mult /F2Rp /= in Htp.
 have Ech := f_equal fst Htp. have Ecl1raw := f_equal snd Htp.
 simpl in Ech, Ecl1raw.
@@ -1002,7 +1002,7 @@ Qed.
 
 End FarLow0Apparatus.
 
-Section DWMulDW_Division_Helpers.
+Section DWTimesDW_Division_Helpers.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation u := (bpow Zaux.radix2 (- fprec t)).
 Notation fexp := (SpecFloat.fexp (fprec t) (femax t)).
@@ -2619,7 +2619,7 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
     Hp5 DWx DWy FIN Hgap')).
 Qed.
 
-End DWMulDW_Division_Helpers.
+End DWTimesDW_Division_Helpers.
 
 Section MixedCondBridgeDWTimesDW.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.

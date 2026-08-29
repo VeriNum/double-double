@@ -17,8 +17,8 @@ Require Import DDConds common real_extras.
 Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_relative_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusDW_relative_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulFP_mixed_acc.
-Require Import DD.accuracy_proofs.dw_opps.DWMulDW_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWTimesFP_mixed_acc.
+Require Import DD.accuracy_proofs.dw_opps.DWTimesDW_mixed_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_mixed_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWDivDW_mixed_acc.
 Require Import DD.verif_proofs.verif_objs.dd_ops.
@@ -132,8 +132,8 @@ Definition dw_plus_dw_kernel_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_mult_fp_kernel_spec :=
-  DECLARE _dw_mult_fp_kernel
+Definition dw_times_fp_kernel_spec :=
+  DECLARE _dw_times_fp_kernel
   WITH s: val, x : val,
       xh : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble ]
@@ -147,8 +147,8 @@ Definition dw_mult_fp_kernel_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_dw_kernel_spec :=
-  DECLARE _dw_mult_dw_kernel
+Definition dw_times_dw_kernel_spec :=
+  DECLARE _dw_times_dw_kernel
   WITH s: val, x : val, y: val,
       xh : ftype Tdouble * ftype Tdouble, 
       yh : ftype Tdouble * ftype Tdouble
@@ -292,8 +292,8 @@ Definition dw_plus_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_mult_fp_spec :=
-  DECLARE _dw_mult_fp
+Definition dw_times_fp_spec :=
+  DECLARE _dw_times_fp
   WITH s: val, x: val,
        xh: ftype Tdouble * ftype Tdouble,
        y : ftype Tdouble
@@ -308,8 +308,8 @@ Definition dw_mult_fp_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_fp_strong_spec :=
-  DECLARE _dw_mult_fp_strong
+Definition dw_times_fp_strong_spec :=
+  DECLARE _dw_times_fp_strong
   WITH s: val, x: val,
        xh: ftype Tdouble * ftype Tdouble,
        y : ftype Tdouble
@@ -324,8 +324,8 @@ Definition dw_mult_fp_strong_spec :=
     SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_dw_spec :=
-  DECLARE _dw_mult_dw
+Definition dw_times_dw_spec :=
+  DECLARE _dw_times_dw
   WITH s: val, x: val, y: val,
        xh: ftype Tdouble * ftype Tdouble,
        yh: ftype Tdouble * ftype Tdouble
@@ -344,8 +344,8 @@ Definition dw_mult_dw_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-Definition dw_mult_dw_strong_spec :=
-  DECLARE _dw_mult_dw_strong
+Definition dw_times_dw_strong_spec :=
+  DECLARE _dw_times_dw_strong
   WITH s: val, x: val, y: val,
        xh: ftype Tdouble * ftype Tdouble,
        yh: ftype Tdouble * ftype Tdouble
@@ -463,10 +463,10 @@ Definition Ops_Imports : funspecs :=
     fp_utils_specs.dw_plus_fp_strong_precond_check_spec;
     fp_utils_specs.dw_plus_dw_weak_precond_check_spec;
     fp_utils_specs.dw_plus_dw_strong_precond_check_spec;
-    fp_utils_specs.dw_mult_fp_weak_precond_check_spec;
-    fp_utils_specs.dw_mult_fp_strong_precond_check_spec;
-    fp_utils_specs.dw_mult_dw_weak_precond_check_spec;
-    fp_utils_specs.dw_mult_dw_strong_precond_check_spec;
+    fp_utils_specs.dw_times_fp_weak_precond_check_spec;
+    fp_utils_specs.dw_times_fp_strong_precond_check_spec;
+    fp_utils_specs.dw_times_dw_weak_precond_check_spec;
+    fp_utils_specs.dw_times_dw_strong_precond_check_spec;
     fp_utils_specs.dw_div_fp_weak_precond_check_spec;
     fp_utils_specs.dw_div_fp_strong_precond_check_spec;
     fp_utils_specs.dw_div_dw_weak_precond_check_spec;
@@ -477,11 +477,11 @@ Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
-    dw_mult_fp_kernel_spec;
+    dw_times_fp_kernel_spec;
     two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
-    dw_mult_fp_spec; dw_mult_fp_strong_spec;
-    dw_mult_dw_kernel_spec; dw_mult_dw_spec; dw_mult_dw_strong_spec;
+    dw_times_fp_spec; dw_times_fp_strong_spec;
+    dw_times_dw_kernel_spec; dw_times_dw_spec; dw_times_dw_strong_spec;
     dw_div_dw_kernel_spec; dw_div_dw_spec; dw_div_dw_strong_spec;
     dw_div_fp_kernel_spec; dw_div_fp_spec; dw_div_fp_strong_spec ].
 
@@ -492,7 +492,7 @@ Definition Ops_Exports : funspecs :=
     fast_2mult_acc_guarded_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
-    dw_mult_fp_spec; dw_mult_fp_strong_spec;
-    dw_mult_dw_spec; dw_mult_dw_strong_spec;
+    dw_times_fp_spec; dw_times_fp_strong_spec;
+    dw_times_dw_spec; dw_times_dw_strong_spec;
     dw_div_fp_spec; dw_div_fp_strong_spec;
     dw_div_dw_spec; dw_div_dw_strong_spec ].

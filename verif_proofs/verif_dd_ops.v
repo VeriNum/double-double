@@ -8,5 +8,5 @@
 Require Export DD.verif_proofs.verif_dd_ops_common.
 Require Export DD.verif_proofs.verif_dd_ops_basic.
 Require Export DD.verif_proofs.verif_dd_ops_plus.
-Require Export DD.verif_proofs.verif_dd_ops_mult.
+Require Export DD.verif_proofs.verif_dd_ops_times.
 Require Export DD.verif_proofs.verif_dd_ops_div.

@@ -223,11 +223,11 @@ Definition dw_div_fp_weak_precond_check_spec :=
 
 (* This condition has no underflow disjunct, so the guard accepts the Fast2Mult
    underflow gap.  It gives the caller the mixed bound
-   (DWMulFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond) and proves that the
+   (DWTimesFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond) and proves that the
    output is a valid double-word.  It does not give the pure 2u^2 relative
-   bound; see dw_mult_fp_strong_spec in DDOpsASI.v. *)
-Definition dw_mult_fp_strong_precond_check_spec :=
-  DECLARE _dw_mult_fp_strong_precond_check
+   bound; see dw_times_fp_strong_spec in DDOpsASI.v. *)
+Definition dw_times_fp_strong_precond_check_spec :=
+  DECLARE _dw_times_fp_strong_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -242,8 +242,8 @@ Definition dw_mult_fp_strong_precond_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-Definition dw_mult_fp_weak_precond_check_spec :=
-  DECLARE _dw_mult_fp_weak_precond_check
+Definition dw_times_fp_weak_precond_check_spec :=
+  DECLARE _dw_times_fp_weak_precond_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -256,8 +256,8 @@ Definition dw_mult_fp_weak_precond_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x).
 
-Definition dw_mult_dw_strong_precond_check_spec :=
-  DECLARE _dw_mult_dw_strong_precond_check
+Definition dw_times_dw_strong_precond_check_spec :=
+  DECLARE _dw_times_dw_strong_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble
@@ -274,8 +274,8 @@ Definition dw_mult_dw_strong_precond_check_spec :=
     SEP( data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y ).
 
-Definition dw_mult_dw_weak_precond_check_spec :=
-  DECLARE _dw_mult_dw_weak_precond_check
+Definition dw_times_dw_weak_precond_check_spec :=
+  DECLARE _dw_times_dw_weak_precond_check
   WITH x : val, y : val,
        xh : ftype Tdouble * ftype Tdouble,
        yh : ftype Tdouble * ftype Tdouble

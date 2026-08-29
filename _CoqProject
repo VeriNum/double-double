@@ -35,10 +35,10 @@ accuracy_proofs/dw_opps/DWPlusFP_relative_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusFP_relative_acc.v
 accuracy_proofs/dw_opps/DWPlusDW_relative_acc_helpers.v
 accuracy_proofs/dw_opps/DWPlusDW_relative_acc.v
-accuracy_proofs/dw_opps/DWMulFP_relative_acc.v
-accuracy_proofs/dw_opps/DWMulFP_mixed_acc.v
-accuracy_proofs/dw_opps/DWMulDW_relative_acc.v
-accuracy_proofs/dw_opps/DWMulDW_mixed_acc.v
+accuracy_proofs/dw_opps/DWTimesFP_relative_acc.v
+accuracy_proofs/dw_opps/DWTimesFP_mixed_acc.v
+accuracy_proofs/dw_opps/DWTimesDW_relative_acc.v
+accuracy_proofs/dw_opps/DWTimesDW_mixed_acc.v
 accuracy_proofs/dw_opps/DWDivFP_relative_acc.v
 accuracy_proofs/dw_opps/DWDivFP_subnormal.v
 accuracy_proofs/dw_opps/DWDivFP_finite.v
@@ -57,8 +57,8 @@ verif_proofs/verif_fp_utils_fast2_mult_product_finite_check.v
 verif_proofs/verif_fp_utils_fast2_sum_magnitude_order_check.v
 verif_proofs/verif_fp_utils_two_sum_exact_check.v
 verif_proofs/verif_fp_utils_dw_plus_dw_strong_precond_check.v
-verif_proofs/verif_fp_utils_dw_mult_dw_strong_precond_check.v
-verif_proofs/verif_fp_utils_dw_mult_fp_strong_precond_check.v
+verif_proofs/verif_fp_utils_dw_times_dw_strong_precond_check.v
+verif_proofs/verif_fp_utils_dw_times_fp_strong_precond_check.v
 verif_proofs/verif_fp_utils_dw_plus_fp_strong_precond_check.v
 verif_proofs/verif_fp_utils_dw_plus_fp_interface_checks.v
 verif_proofs/verif_fp_utils_dw_div_fp_strong_precond_check.v
@@ -68,7 +68,7 @@ verif_proofs/DDOpsASI.v
 verif_proofs/verif_dd_ops_common.v
 verif_proofs/verif_dd_ops_basic.v
 verif_proofs/verif_dd_ops_plus.v
-verif_proofs/verif_dd_ops_mult.v
+verif_proofs/verif_dd_ops_times.v
 verif_proofs/verif_dd_ops_div.v
 verif_proofs/verif_dd_ops.v
 verif_proofs/vsu/VSU_tactics.v

@@ -92,8 +92,8 @@ Definition Checks_Internal : funspecs :=
     fast2_sum_magnitude_order_check_spec;
     two_sum_exact_check_spec; dw_plus_dw_strong_precond_check_spec;
     dw_plus_dw_weak_precond_check_spec;
-    dw_mult_fp_strong_precond_check_spec; dw_mult_fp_weak_precond_check_spec;
-    dw_mult_dw_strong_precond_check_spec; dw_mult_dw_weak_precond_check_spec; dw_plus_fp_strong_precond_check_spec;
+    dw_times_fp_strong_precond_check_spec; dw_times_fp_weak_precond_check_spec;
+    dw_times_dw_strong_precond_check_spec; dw_times_dw_weak_precond_check_spec; dw_plus_fp_strong_precond_check_spec;
     dw_plus_fp_weak_precond_check_spec; dword_finite_check_spec;
     dw_div_fp_strong_precond_check_spec; dw_div_fp_weak_precond_check_spec;
     dw_div_dw_strong_precond_check_spec; dw_div_dw_weak_precond_check_spec ].
@@ -104,8 +104,8 @@ Definition Checks_Exports : funspecs :=
     fast2_mult_product_finite_check_spec;
     dword_finite_check_spec; dw_plus_fp_weak_precond_check_spec;
     dw_plus_fp_strong_precond_check_spec; dw_plus_dw_weak_precond_check_spec; dw_plus_dw_strong_precond_check_spec;
-    dw_mult_fp_weak_precond_check_spec; dw_mult_fp_strong_precond_check_spec;
-    dw_mult_dw_weak_precond_check_spec; dw_mult_dw_strong_precond_check_spec;
+    dw_times_fp_weak_precond_check_spec; dw_times_fp_strong_precond_check_spec;
+    dw_times_dw_weak_precond_check_spec; dw_times_dw_strong_precond_check_spec;
     dw_div_fp_weak_precond_check_spec; dw_div_fp_strong_precond_check_spec;
     dw_div_dw_weak_precond_check_spec; dw_div_dw_strong_precond_check_spec ].
 

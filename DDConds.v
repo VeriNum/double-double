@@ -166,7 +166,7 @@ Definition DWTimesFP_relative_precond (xh xl y : ftype t) : Prop :=
    only finiteness of the rounded leading product, so it permits its underflow gap.
    Together with input finiteness, the double-word relation, and the product
    ceiling, it proves result finiteness and hence the mixed error bound and
-   output validity.  [dw_mult_fp_strong_precond_check] establishes this condition.  The pure
+   output validity.  [dw_times_fp_strong_precond_check] establishes this condition.  The pure
    relative bound instead requires [DWTimesFP_relative_precond]. *)
 Definition DWTimesFP_strong_precond (xh xl y : ftype t) : Prop :=
   is_finite xl = true /\
@@ -222,7 +222,7 @@ Definition DWTimesDW_exact_leading_product_precond (xh xl yh yl : ftype t) : Pro
    The remaining conjuncts require finite double-word inputs and enough
    overflow headroom to prove result finiteness.  The mixed guarantee then
    supplies the [4u^2|P| + 5/2*eta] bound and output validity.
-   [dw_mult_dw_strong_precond_check] establishes this condition. *)
+   [dw_times_dw_strong_precond_check] establishes this condition. *)
 Definition DWTimesDW_strong_precond (xh xl yh yl : ftype t) : Prop :=
   is_finite xl = true /\
   is_finite yl = true /\

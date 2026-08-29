@@ -22,13 +22,13 @@ Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* [dw_mult_fp_strong_precond_check] establishes [DWTimesFP_strong_precond]: finite
+(* [dw_times_fp_strong_precond_check] establishes [DWTimesFP_strong_precond]: finite
    inputs, a double-word operand, and a strict bound on the rounded leading
    product.  [prod_bnd_facts] converts that test into product finiteness and the
    [Omega/2] real bound.  The check does not exclude the [Fast2Mult] underflow
    gap because the exported mixed guarantee covers it. *)
-Lemma body_dw_mult_fp_strong_precond_check :
-  semax_body Vprog Gprog f_dw_mult_fp_strong_precond_check dw_mult_fp_strong_precond_check_spec.
+Lemma body_dw_times_fp_strong_precond_check :
+  semax_body Vprog Gprog f_dw_times_fp_strong_precond_check dw_times_fp_strong_precond_check_spec.
 Proof.
   start_function.
   (* fin_xh = isfinite_double(x->s) *)
@@ -179,9 +179,9 @@ Proof.
            repeat (split; try assumption).
 Qed.
 
-Lemma body_dw_mult_fp_weak_precond_check :
-  semax_body Vprog Gprog f_dw_mult_fp_weak_precond_check
-    dw_mult_fp_weak_precond_check_spec.
+Lemma body_dw_times_fp_weak_precond_check :
+  semax_body Vprog Gprog f_dw_times_fp_weak_precond_check
+    dw_times_fp_weak_precond_check_spec.
 Proof.
   start_function.
   forward_call (x, xh, y).

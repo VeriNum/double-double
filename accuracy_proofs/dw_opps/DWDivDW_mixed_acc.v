@@ -8,7 +8,7 @@
 
 Require Import vcfloat.VCFloat.
 Require Import common op_defs DDConds DWord_defs.
-Require Import DWMulDW_mixed_acc DWDivDW_relative_acc.
+Require Import DWTimesDW_mixed_acc DWDivDW_relative_acc.
 From Flocq Require Import Core.
 Require Import mathcomp.ssreflect.ssreflect.
 
@@ -72,7 +72,7 @@ fold th rh rl e d m in Hrec.
 destruct Hrec as [_ [_ [_ [DWm _]]]].
 fold m mh ml in DWm.
 move: (COND) => [_ [_ [_ [_ [DWx _]]]]].
-exact (DWMulDW_mixed_acc.DWTimesDW_double_word_from_weak_pre_and_finite_post_cond xh xl mh ml
+exact (DWTimesDW_mixed_acc.DWTimesDW_double_word_from_weak_pre_and_finite_post_cond xh xl mh ml
   ltac:(lia) (conj (conj DWx DWm) FINmul)).
 Qed.
 

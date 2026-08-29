@@ -40,17 +40,17 @@ void dw_plus_dw(struct dword *st, struct dword *x, struct dword *y);
 
 void dw_plus_dw_strong(struct dword *st, struct dword *x, struct dword *y);
 
-void dw_mult_fp_kernel(struct dword *st, struct dword *x, double y);
+void dw_times_fp_kernel(struct dword *st, struct dword *x, double y);
 
-void dw_mult_fp(struct dword *st, struct dword *x, double y);
+void dw_times_fp(struct dword *st, struct dword *x, double y);
 
-void dw_mult_fp_strong(struct dword *st, struct dword *x, double y);
+void dw_times_fp_strong(struct dword *st, struct dword *x, double y);
 
-void dw_mult_dw_kernel(struct dword *st, struct dword *x, struct dword *y);
+void dw_times_dw_kernel(struct dword *st, struct dword *x, struct dword *y);
 
-void dw_mult_dw(struct dword *st, struct dword *x, struct dword *y);
+void dw_times_dw(struct dword *st, struct dword *x, struct dword *y);
 
-void dw_mult_dw_strong(struct dword *st, struct dword *x, struct dword *y);
+void dw_times_dw_strong(struct dword *st, struct dword *x, struct dword *y);
 
 void dw_div_fp_kernel(struct dword *st, struct dword *x, double y);
 

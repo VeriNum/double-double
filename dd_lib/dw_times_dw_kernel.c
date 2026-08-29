@@ -1,7 +1,7 @@
 #include <math.h>
 #include "dw_arith.h"
 
-void dw_mult_dw_kernel(struct dword *zh, struct dword *x, struct dword *y) {
+void dw_times_dw_kernel(struct dword *zh, struct dword *x, struct dword *y) {
    double t0; double t1; double c2; double c3;
    struct dword ch;
    fast_2mult(&ch,x->s,y->s);

@@ -13,7 +13,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc
         Fast2Mult_acc_helpers Fast2Sum_acc.
-Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DW_acc_lemmas.
+Require Import DWPlusFP_relative_acc_helpers DWTimesFP_relative_acc DW_acc_lemmas.
 Require Import DD.accuracy_proofs.dw_opps.DWDivFP_relative_acc.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.

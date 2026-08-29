@@ -475,7 +475,7 @@ have Hth_bridge : round radix2 (FLX_exp (fprec t)) (Znearest choice)
       (FT2R xh / FT2R y) = FT2R (BDIV xh y).
 { rewrite -(BDIV_round_correct t xh y Hyne Hfth).
   by rewrite round_FLT_FLX. }
-have Hpair := DWMulFP_relative_acc.Fast2Mult_correct_weak
+have Hpair := DWTimesFP_relative_acc.Fast2Mult_correct_weak
   (BDIV xh y) y Fpih (fun _ => UFprod).
 have Hpih_bridge : round radix2 (FLX_exp (fprec t)) (Znearest choice)
       (FT2R (BDIV xh y) * FT2R y) = FT2R (BMULT (BDIV xh y) y).

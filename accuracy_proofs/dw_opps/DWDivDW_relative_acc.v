@@ -18,8 +18,8 @@ Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
    sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
    into this file's proofs by asserting again transparency after the Require. *)
 Require Import DWDivDW.
-Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DWMulFP_mixed_acc
-               DWPlusFP_relative_acc DWMulDW_relative_acc DWMulDW_mixed_acc
+Require Import DWPlusFP_relative_acc_helpers DWTimesFP_relative_acc DWTimesFP_mixed_acc
+               DWPlusFP_relative_acc DWTimesDW_relative_acc DWTimesDW_mixed_acc
                DWDivFP_relative_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error.
@@ -51,10 +51,10 @@ Section CorrectDWDivDW.
   Notation ml  := (snd (DWPlusFP dh dl th)).
 
   (* The closing DWTimesDW xh xl mh ml is finite as a pair; finiteness of each node
-     finiteness follows from DWMulDW_relative_acc's CorrectDWMulDW facts applied at
+     finiteness follows from DWTimesDW_relative_acc's CorrectDWTimesDW facts applied at
      (xh, xl, mh, ml).  The prologue nodes (th, rh, rl, eh, el, dh, dl, mh, ml)
      follows by eliminating BPLUS/BFMA/BMULT from FIN, exactly
-     as in DWMulDW_relative_acc.v's [prove_finite]. *)
+     as in DWTimesDW_relative_acc.v's [prove_finite]. *)
 
   (** If the complete division returns finite components, then its final
       double-word multiplication also returns finite components.  This fact
@@ -66,12 +66,12 @@ Section CorrectDWDivDW.
   (** The high component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
   Local Fact FIN_mh : is_finite mh = true.
-  Proof. exact (DWMulDW_relative_acc.DWTimesDW_yh_finite xh xl mh ml FIN_mul). Qed.
+  Proof. exact (DWTimesDW_relative_acc.DWTimesDW_yh_finite xh xl mh ml FIN_mul). Qed.
 
   (** The low component of the reconstructed reciprocal is finite whenever
       the complete division result is finite. *)
   Local Fact FIN_ml : is_finite ml = true.
-  Proof. exact (DWMulDW_relative_acc.DWTimesDW_yl_finite xh xl mh ml FIN_mul). Qed.
+  Proof. exact (DWTimesDW_relative_acc.DWTimesDW_yl_finite xh xl mh ml FIN_mul). Qed.
 
   (** The reciprocal renormalization returns a finite pair. *)
   Local Fact FIN_plus : is_finite_p (DWPlusFP dh dl th).
@@ -92,10 +92,10 @@ Section CorrectDWDivDW.
   (** The Fast2Sum components of the reciprocal residual are finite, obtained
       by projecting backward through [DWTimesFP]. *)
   Local Fact FIN_eh : is_finite eh = true.
-  Proof. exact (DWMulFP_relative_acc.DWTimesFP_xh_finite eh el th FIN_timesfp). Qed.
+  Proof. exact (DWTimesFP_relative_acc.DWTimesFP_xh_finite eh el th FIN_timesfp). Qed.
 
   Local Fact FIN_el : is_finite el = true.
-  Proof. exact (DWMulFP_relative_acc.DWTimesFP_xl_finite eh el th FIN_timesfp). Qed.
+  Proof. exact (DWTimesFP_relative_acc.DWTimesFP_xl_finite eh el th FIN_timesfp). Qed.
 
   Local Fact FIN_fast2sum : is_finite_p (Fast2Sum rh rl).
   Proof. split; [exact FIN_eh | exact FIN_el]. Qed.
@@ -161,7 +161,7 @@ Section CorrectDWDivDW.
            <= Rabs (FT2R (Fast2Mult_mul eh th))) :
     double_word dh dl.
   Proof.
-    exact (DWMulFP_relative_acc.DWTimesFP_double_word_from_pre eh el th
+    exact (DWTimesFP_relative_acc.DWTimesFP_double_word_from_pre eh el th
              (proj1 FIN_timesfp) Hord).
   Qed.
 
@@ -178,7 +178,7 @@ End CorrectDWDivDW.
 
 (* Generic rounding lemmas used below come from [FLT_helpers].  The imported
    multiplication results [DWTimesFP_sum_exact_of_ord] and
-   [DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond] are proved in [DWMulFP_mixed_acc].
+   [DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond] are proved in [DWTimesFP_mixed_acc].
    [Fast2Sum_double_word_of_sum] comes from [Fast2Sum_acc_helpers]. *)
 
 (* ============================================================
@@ -223,8 +223,8 @@ Proof.
 unfold DWDivDW_finite_post_cond.
 move => Hfin.
 have Hmul := FIN_mul xh xl yh yl Hfin.
-exact (conj (DWMulDW_relative_acc.DWTimesDW_xh_finite xh xl _ _ Hmul)
-       (conj (DWMulDW_relative_acc.DWTimesDW_xl_finite xh xl _ _ Hmul)
+exact (conj (DWTimesDW_relative_acc.DWTimesDW_xh_finite xh xl _ _ Hmul)
+       (conj (DWTimesDW_relative_acc.DWTimesDW_xl_finite xh xl _ _ Hmul)
        (conj (FIN_yh xh xl yh yl Hfin)
              (FIN_yl xh xl yh yl Hfin)))).
 Qed.
@@ -1384,10 +1384,10 @@ have Hel : Rabs (FT2R el) <= 12*u.
 set ch := BMULT eh th.
 set cl1 := Fast2Mult_err eh th.
 set cl3 := BFMA el th cl1.
-have Fch := DWMulFP_relative_acc.DWTimesFP_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
-have Ffast := DWMulFP_relative_acc.DWTimesFP_fast2mult_finite eh el th (conj Fdh Fdl).
+have Fch := DWTimesFP_relative_acc.DWTimesFP_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
+have Ffast := DWTimesFP_relative_acc.DWTimesFP_fast2mult_finite eh el th (conj Fdh Fdl).
 have Fcl1 : is_finite cl1 = true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_relative_acc.DWTimesFP_correction_finite eh el th (conj Fdh Fdl); fold cl1 cl3 in Fcl3.
+have Fcl3 := DWTimesFP_relative_acc.DWTimesFP_correction_finite eh el th (conj Fdh Fdl); fold cl1 cl3 in Fcl3.
 have Hch : Rabs (FT2R ch) <= 6*u*T.
 { unfold ch. rewrite -(BMULT_round_correct t eh th Fch).
   eapply Rle_trans; [apply Hround_uT with (C := 5) | nra].
@@ -1974,10 +1974,10 @@ fold th e d in Fd. destruct Fd as [[Fdh Fdl] _].
 fold eh el dh dl in Fdh, Fdl.
 set ch := BMULT eh th; set cl1 := Fast2Mult_err eh th.
 set cl3 := BFMA el th cl1; set z := BMINUS dh ch.
-have Fch := DWMulFP_relative_acc.DWTimesFP_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
-have Ffast := DWMulFP_relative_acc.DWTimesFP_fast2mult_finite eh el th (conj Fdh Fdl).
+have Fch := DWTimesFP_relative_acc.DWTimesFP_mul_finite eh el th (conj Fdh Fdl); fold ch in Fch.
+have Ffast := DWTimesFP_relative_acc.DWTimesFP_fast2mult_finite eh el th (conj Fdh Fdl).
 have Fcl1 : is_finite cl1=true by exact (proj2 Ffast).
-have Fcl3 := DWMulFP_relative_acc.DWTimesFP_correction_finite eh el th (conj Fdh Fdl);
+have Fcl3 := DWTimesFP_relative_acc.DWTimesFP_correction_finite eh el th (conj Fdh Fdl);
   fold cl1 cl3 in Fcl3.
 have Fz : is_finite z=true.
 { move: Fdl. unfold dl,d,DWTimesFP,Fast2Sum,snd,
@@ -2471,7 +2471,7 @@ destruct (Rle_or_lt
   have Hsafe :=
     DWTimesDW_strong_precond_of_exact_leading_product_precond
       xh xl (fst m) (snd m) Hfinal.
-  exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
+  exact (proj2 (DWTimesDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
     xh xl (fst m) (snd m) Hsafe)).
 - exact (DWDivDW_finite_from_cond_zprod_underflow xh xl yh yl
     Hp14 ANALYSIS Hsmall).
@@ -3697,7 +3697,7 @@ specialize (Hrel NANS STD). fold th rh rl e d m in Hrel.
 destruct Hrel as [_ [_ [_ [DWm _]]]]. fold m mh ml in DWm.
 fold th rh rl e d m mh ml in FIN.
 change (is_finite_p (DWTimesDW xh xl mh ml)) in FIN.
-have Hmul := DWMulDW_mixed_acc.DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond
+have Hmul := DWTimesDW_mixed_acc.DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond
   xh xl mh ml ltac:(lia) (conj (conj DWx DWm) FIN).
 exact Hmul.
 Qed.
@@ -4080,7 +4080,7 @@ have Heq : F2Sum.Fast2Sum (fprec t) choice (FT2R rh) (FT2R rl)
 have Hd : DWTimesFP.DWTimesFP9 (fprec t) choice
               (FT2R eh) (FT2R el) (FT2R th)
             = F2Rp (DWTimesFP eh el th).
-{ exact (DWMulFP_relative_acc.DWTimesFP_FLX_FLT_weak eh el th Fd
+{ exact (DWTimesFP_relative_acc.DWTimesFP_FLX_FLT_weak eh el th Fd
            UF_dprod UF_dlow). }
 have Hm : DWPlus.DWPlusFP (fprec t) choice
               (FT2R dh) (FT2R dl) (FT2R th)
@@ -4089,7 +4089,7 @@ have Hm : DWPlus.DWPlusFP (fprec t) choice
 have Hz : DWTimesDW.DWTimesDW12 (fprec t) choice
               (FT2R xh) (FT2R xl) (FT2R mh) (FT2R ml)
             = F2Rp (DWTimesDW xh xl mh ml).
-{ exact (DWMulDW_relative_acc.DWTimesDW_FLX_FLT xh xl mh ml Fz
+{ exact (DWTimesDW_relative_acc.DWTimesDW_FLX_FLT xh xl mh ml Fz
            UF_zprod UF_z0 UF_z1 UF_z2 UF_z3). }
 have Heh := f_equal fst Heq.
 have Hel := f_equal snd Heq.
@@ -4237,7 +4237,7 @@ move => Hfinal.
 have Hsafe :=
   DWTimesDW_strong_precond_of_exact_leading_product_precond
     xh xl mh ml Hfinal.
-exact (proj2 (DWMulDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
+exact (proj2 (DWTimesDW_mixed_acc.DWTimesDW_weak_pre_and_finite_post_cond_of_strong_precond
   xh xl mh ml Hsafe)).
 Qed.
 

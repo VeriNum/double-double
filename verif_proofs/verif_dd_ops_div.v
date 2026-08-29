@@ -40,7 +40,7 @@ forward.            (* rh  = t'1 *)
 forward.            (* t'2 = y->t *)
 forward.            (* rl  = -(t'2 * th) *)
 forward_call.       (* fast_2sum(&e, rh, rl) *)
-(* dw_mult_fp_kernel(&delta, &e, th): witness (s, x, xh, y) =
+(* dw_times_fp_kernel(&delta, &e, th): witness (s, x, xh, y) =
    (v_delta, v_e, e pair, th). *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?E) v_e] =>
@@ -49,7 +49,7 @@ match goal with |- context [temp _th (Vfloat ?T)] =>
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?D) v_delta] =>
    forward_call (v_m, v_delta, D, T) end end.
-(* dw_mult_dw_kernel(z, x, &m): witness (s, x, v_m, xh, m pair). *)
+(* dw_times_dw_kernel(z, x, &m): witness (s, x, v_m, xh, m pair). *)
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
 (* Rewrite the postcondition's DWDivDW term into the exact composition the

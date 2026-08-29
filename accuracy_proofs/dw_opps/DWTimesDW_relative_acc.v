@@ -5,7 +5,7 @@
 
     Its public result is [DWTimesDW_relative_accuracy], the pure [4u^2]
     relative bound under [DWTimesDW_relative_precond].  Shared
-    runtime model and finiteness lemmas are consumed by [DWMulDW_mixed_acc],
+    runtime model and finiteness lemmas are consumed by [DWTimesDW_mixed_acc],
     while [DWDivDW_relative_acc] consumes the FLX bridge for its closing
     multiplication. *)
 
@@ -14,9 +14,9 @@ Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DDConds DWord_defs Fast2Mult_acc TwoSum_acc Fast2Sum_acc.
 Require Import DWPlusFP_relative_acc_helpers DW_acc_lemmas.
 (* The primitive Fast2Sum and Fast2Mult files supply the generic exact sum and
-   underflow floor lemmas reused by the Algorithm 12 gap block.  DWMulFP_relative_acc
+   underflow floor lemmas reused by the Algorithm 12 gap block.  DWTimesFP_relative_acc
    supplies only the bridge specific to this operation and shared with division. *)
-Require Import DWMulFP_relative_acc.
+Require Import DWTimesFP_relative_acc.
 From Flocq Require Import Pff2Flocq Core.
 
 From Stdlib Require Import Reals.Reals.
@@ -38,7 +38,7 @@ Arguments DWTimesFP.TwoProd : simpl never.
    Section 1: derive finiteness of each node from
    FIN : is_finite_p (DWTimesDW xh xl yh yl).
    ============================================================ *)
-Section CorrectDWMulDW.
+Section CorrectDWTimesDW.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
   Variables (xh xl yh yl : ftype t).
@@ -102,18 +102,18 @@ Section CorrectDWMulDW.
   Fact DWTimesDW_correction_finite : is_finite cl3 = true.
   Proof. prove_finite. Qed.
 
-End CorrectDWMulDW.
+End CorrectDWTimesDW.
 
 
 (* ============================================================
    Section 2: the essential FLX -> FLT bridge for DWTimesDW.
      DWTimesDW.DWTimesDW12 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl)
        = F2Rp (DWTimesDW xh xl yh yl).
-   Analog of DWMulFP_relative_acc.v's DWTimesFP_FLX_FLT_weak: each of the five rounded ops
+   Analog of DWTimesFP_relative_acc.v's DWTimesFP_FLX_FLT_weak: each of the five rounded ops
    agrees with its FLX counterpart (round_FLT_FLX + representability), and the
    closing Fast2Sum is exact via the magnitude ordering |cl3| <= |ch|.
    ============================================================ *)
-Section CorrectDWMulDW_bridge.
+Section CorrectDWTimesDW_bridge.
 
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -129,7 +129,7 @@ Hypothesis FIN : is_finite_p (DWTimesDW xh xl yh yl).
 (* Normal regime hypotheses: every rounding argument of DWTimesDW is normal
    (>= bpow(emin+fprec-1)), so each FLT rounding equals its FLX counterpart
    (round_FLT_FLX).  Nprod is the two-product threshold for
-   DWMulFP_relative_acc.Fast2Mult_correct_weak. *)
+   DWTimesFP_relative_acc.Fast2Mult_correct_weak. *)
 Hypothesis Nprod : bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R xh * FT2R yh).
 Hypothesis N0 : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xl * FT2R yl).
 Hypothesis N1 : bpow radix2 (emin + fprec t - 1)
@@ -181,7 +181,7 @@ have Nprod' : FT2R xh*FT2R yh<>0 ->
     bpow radix2 (emin+2*fprec t-1) <= Rabs (FT2R xh*FT2R yh)
   by auto.
 rewrite /DWTimesDW.DWTimesDW12 DWTimesFP.TwoProdE.
-rewrite (DWMulFP_relative_acc.Fast2Mult_correct_weak xh yh Hfmul Nprod').
+rewrite (DWTimesFP_relative_acc.Fast2Mult_correct_weak xh yh Hfmul Nprod').
 rewrite /F2Rp /Fast2Mult_err /Fast2Mult_mul /Fast2Mult /fst /snd.
 cbv zeta. rewrite H0 H1 H2 H3.
 rewrite (FastTwoSumEq_FLT (Fast2Mult_mul xh yh)
@@ -278,7 +278,7 @@ have H3 : round radix2 (FLX_exp (fprec t)) (Znearest choice)
            (BFMA xl yh (BFMA xh yl (BMULT xl yl))) Hfcl3). }
 (* assemble: bridge the product and closing Fast2Sum, then peel the four rounds *)
 rewrite /DWTimesDW.DWTimesDW12 DWTimesFP.TwoProdE.
-rewrite (DWMulFP_relative_acc.Fast2Mult_correct_weak xh yh Hfmul Nprod').
+rewrite (DWTimesFP_relative_acc.Fast2Mult_correct_weak xh yh Hfmul Nprod').
 rewrite /F2Rp /Fast2Mult_err /Fast2Mult_mul /Fast2Mult /fst /snd.
 cbv zeta.
 rewrite H0 H1 H2 H3.
@@ -288,7 +288,7 @@ rewrite (FastTwoSumEq_FLT (Fast2Mult_mul xh yh)
 reflexivity.
 Qed.
 
-End CorrectDWMulDW_bridge.
+End CorrectDWTimesDW_bridge.
 
 
 (* ============================================================

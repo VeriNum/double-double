@@ -12,7 +12,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWDivFP DDConds DWord_defs Fast2Mult_acc Fast2Sum_acc
                Fast2Sum_acc_helpers.
-Require Import DWPlusFP_relative_acc_helpers DWMulFP_relative_acc DW_acc_lemmas.
+Require Import DWPlusFP_relative_acc_helpers DWTimesFP_relative_acc DW_acc_lemmas.
 From Flocq Require Import Pff2Flocq Core.
 From Flocq Require Import Mult_error FLT Div_sqrt_error Plus_error.
 From Flocq Require Relative Sterbenz.
@@ -304,7 +304,7 @@ Lemma bridge_prod :
   DWTimesFP.Fast2Mult (fprec t) choice (FT2R (BDIV xh y)) (FT2R y)
     = F2Rp (Fast2Mult (BDIV xh y) y).
 Proof.
-exact (DWMulFP_relative_acc.Fast2Mult_correct_weak (BDIV xh y) y (FINpih xh xl y FIN)
+exact (DWTimesFP_relative_acc.Fast2Mult_correct_weak (BDIV xh y) y (FINpih xh xl y FIN)
          (fun _ => UF_prod)).
 Qed.
 

@@ -28,13 +28,13 @@ int dw_div_fp_strong_precond_check(struct dword *x, double y);
 
 int dw_div_fp_weak_precond_check(struct dword *x, double y);
 
-int dw_mult_fp_strong_precond_check(struct dword *x, double y);
+int dw_times_fp_strong_precond_check(struct dword *x, double y);
 
-int dw_mult_fp_weak_precond_check(struct dword *x, double y);
+int dw_times_fp_weak_precond_check(struct dword *x, double y);
 
-int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y);
+int dw_times_dw_strong_precond_check(struct dword *x, struct dword *y);
 
-int dw_mult_dw_weak_precond_check(struct dword *x, struct dword *y);
+int dw_times_dw_weak_precond_check(struct dword *x, struct dword *y);
 
 int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y);
 

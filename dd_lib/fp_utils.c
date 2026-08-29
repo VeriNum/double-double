@@ -88,7 +88,7 @@ int dw_plus_dw_weak_precond_check(struct dword *x, struct dword *y) {
     return dwx && dwy;
 }
 
-int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
+int dw_times_fp_strong_precond_check(struct dword *x, double y) {
     /* Verifies DWTimesFP_strong_precond: x->t, y finite; (x->s, x->t) is a double-word;
        round(x->s * y) finite; and the real product |FT2R x->s * FT2R y| <=
        Omega/2 = 2^(femax-1) = 2^1023.  The DW prop alone does not pin down
@@ -102,17 +102,17 @@ int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
        fast2_mult_exact_check still does).  That disjunct buys the
        PURE relative bound 2u^2 by excluding the Fast2Mult underflow gap, at the
        cost of aborting on any input whose leading product lands in it -- ordinary
-       tiny-operand inputs.  The contract exported by dw_mult_fp_strong is
+       tiny-operand inputs.  The contract exported by dw_times_fp_strong is
        instead the whole-range MIXED bound
 
          |(zh+zl) - (x->s + x->t)*y| <= 2u^2 |(x->s + x->t)*y| + 2.51*eta
 
-       (DWMulFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond),
+       (DWTimesFP_mixed_acc.DWTimesFP_guarantee_from_strong_precond),
        which holds in EVERY regime given
        only the double-word relation and finiteness of the computed pair.  The
        three conjuncts below are exactly what is needed to establish that
        finiteness
-       (DWMulFP_relative_acc.DWTimesFP_finite_post_cond_from_strong_precond), so the gap is accepted
+       (DWTimesFP_relative_acc.DWTimesFP_finite_post_cond_from_strong_precond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
        as part of the same mixed guarantee. */
     int fin_xh = isfinite_double(x->s);
@@ -152,16 +152,16 @@ int dw_mult_fp_strong_precond_check(struct dword *x, double y) {
     return dwx && fin_y && prod_bnd;
 }
 
-int dw_mult_fp_weak_precond_check(struct dword *x, double y) {
+int dw_times_fp_weak_precond_check(struct dword *x, double y) {
     return dw_plus_fp_weak_precond_check(x, y);
 }
 
-int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
+int dw_times_dw_strong_precond_check(struct dword *x, struct dword *y) {
     /* Verifies DWTimesDW_strong_precond: x->t, y->t finite; (x->s, x->t) and
        (y->s, y->t) are each a double-word; round(x->s * y->s) finite; and the
        real product |FT2R x->s * FT2R y->s| <= Omega/2 = 2^(femax-1) = 2^1023.
 
-       This is dw_mult_fp_strong_precond_check with the scalar y promoted to a second
+       This is dw_times_fp_strong_precond_check with the scalar y promoted to a second
        double-word (y->s, y->t): the product bound now ranges over y->s (the high
        part), and finiteness of both y-components plus the y double-word relation
        are asserted, exactly as dw_plus_dw_strong_precond_check does for its second operand.
@@ -175,18 +175,18 @@ int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
        fast2_mult_exact_check still does).  That disjunct buys the PURE relative bound
        4u^2 by excluding the Fast2Mult underflow gap, at the cost of aborting on
        any input whose leading product lands in it -- ordinary tiny-operand
-       inputs.  The contract exported by dw_mult_dw_strong is instead the
+       inputs.  The contract exported by dw_times_dw_strong is instead the
        whole-range MIXED bound
 
          |(zh+zl) - (x->s+x->t)*(y->s+y->t)|
              <= 4u^2 |(x->s+x->t)*(y->s+y->t)| + 2.5*eta
 
-       (DWMulDW_mixed_acc.DWTimesDW_guarantee_from_strong_precond),
+       (DWTimesDW_mixed_acc.DWTimesDW_guarantee_from_strong_precond),
        which holds in EVERY regime given
        only the two double-word relations and finiteness of the computed pair.
        The four conjuncts below are exactly what is needed to establish that
        finiteness
-       (DWMulDW_relative_acc.DWTimesDW_finite_post_cond_from_strong_precond), so the gap is accepted
+       (DWTimesDW_relative_acc.DWTimesDW_finite_post_cond_from_strong_precond), so the gap is accepted
        rather than fatal.  Output double-word closure likewise survives
        as part of the same mixed guarantee: closure needs only that the
        closing Fast2Sum preserves its sum, which holds both above the threshold
@@ -196,7 +196,7 @@ int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
 
        All soundness subtleties of the strict rounded-product bound
        (one-directional implication; overflow precluded because prod_bnd forces z
-       finite) are identical to dw_mult_fp_strong_precond_check above -- see that comment. */
+       finite) are identical to dw_times_fp_strong_precond_check above -- see that comment. */
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_yh = isfinite_double(y->s);
@@ -212,7 +212,7 @@ int dw_mult_dw_strong_precond_check(struct dword *x, struct dword *y) {
     return dwx && dwy && prod_bnd;
 }
 
-int dw_mult_dw_weak_precond_check(struct dword *x, struct dword *y) {
+int dw_times_dw_weak_precond_check(struct dword *x, struct dword *y) {
     return dw_plus_dw_weak_precond_check(x, y);
 }
 
