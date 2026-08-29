@@ -27,12 +27,8 @@
 
 static inline int isfinite_double(double x) { return (x - x) == 0.0; }
 
-static inline int dword_finite_check(struct dword *x) {
-    int fin_s = isfinite_double(x->s);
-    int fin_t = isfinite_double(x->t);
-    if (!fin_s) return 0;
-    if (!fin_t) return 0;
-    return 1;
+static inline int dword_finite_check(const struct dword *x) {
+    return isfinite_double(x->s) && isfinite_double(x->t);
 }
 
 static inline int two_sum_exact_check(double a, double b) {

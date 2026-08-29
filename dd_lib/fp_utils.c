@@ -332,12 +332,8 @@ int dw_plus_fp_weak_precond_check(struct dword *x, double y) {
     return dwx && fin_y;
 }
 
-int dword_finite_check(struct dword *x) {
-    int fin_s = isfinite_double(x->s);
-    int fin_t = isfinite_double(x->t);
-    if (!fin_s) return 0;
-    if (!fin_t) return 0;
-    return 1;
+int dword_finite_check(const struct dword *x) {
+    return isfinite_double(x->s) && isfinite_double(x->t);
 }
 
 int dw_div_dw_strong_precond_check(struct dword *x, struct dword *y) {

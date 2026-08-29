@@ -6,7 +6,7 @@
 
 int isfinite_double(double x);
 
-int dword_finite_check(struct dword *x);
+int dword_finite_check(const struct dword *x);
 
 int fast2_sum_magnitude_order_check(double a, double b);
 

@@ -96,35 +96,29 @@ Lemma body_dword_finite_check :
   semax_body Vprog Gprog f_dword_finite_check dword_finite_check_spec.
 Proof.
   start_function.
-  forward. forward_call. Intros vret_s. rename H into Hspec_s. forward.
-  forward. forward_call. Intros vret_t. forward.
-  set (Post_s :=
-    PROP (is_finite (fst value) = true)
-    LOCAL (temp _fin_s (Vint (if vret_s then Int.one else Int.zero));
-           temp _fin_t (Vint (if vret_t then Int.one else Int.zero));
-           temp _x x)
+  forward. forward_call. Intros vret_s. rename H into Hspec_s.
+  set (Post_if :=
+    EX b : bool,
+    PROP (b = true -> is_finite_p value)
+    LOCAL (temp _t'1 (Vint (if vret_s then Int.one else Int.zero));
+           temp _t'2 (Vint (if b then Int.one else Int.zero)); temp _x x)
     SEP (data_at Tsh dword (f2val value) x)).
-  forward_if Post_s.
-  - forward. Exists false. entailer!.
-  - forward. unfold Post_s. entailer!.
-    apply (proj1 Hspec_s). destruct vret_s; auto.
-  - unfold Post_s; clear Post_s.
-    assert_PROP (is_finite (fst value) = true) as Hfin_s by entailer!.
-    set (Post_t :=
-      PROP (is_finite_p value)
-      LOCAL (temp _fin_s (Vint (if vret_s then Int.one else Int.zero));
-             temp _fin_t (Vint (if vret_t then Int.one else Int.zero));
-             temp _x x)
-      SEP (data_at Tsh dword (f2val value) x)).
-    forward_if Post_t.
-    + forward. Exists false. entailer!.
-    + forward. unfold Post_t. entailer!.
-      split; [exact Hfin_s |].
-      match goal with
-      | Hspec_t : vret_t = true <-> is_finite (snd value) = true |- _ =>
-          apply (proj1 Hspec_t); destruct vret_t; auto
-      end.
-    + unfold Post_t; clear Post_t.
-      assert_PROP (is_finite_p value) as Hfin by entailer!.
-      forward. Exists true. entailer!.
+  forward_if Post_if.
+  - assert (vret_s = true) as Hfin_s.
+    { destruct vret_s; auto; simpl in H; rep_lia. }
+    forward. forward_call. Intros vret_t.
+    match goal with
+    | Ht : vret_t = true <-> is_finite (snd value) = true |- _ =>
+        rename Ht into Hspec_t
+    end.
+    forward.
+    unfold Post_if. Exists vret_t. entailer!.
+    split.
+    + intros Hfin_t. split.
+      * apply (proj1 Hspec_s). reflexivity.
+      * apply (proj1 Hspec_t). exact Hfin_t.
+    + destruct vret_t; reflexivity.
+  - forward. unfold Post_if. Exists false. entailer!.
+  - unfold Post_if; clear Post_if. Intros b.
+    forward. Exists b. entailer!.
 Qed.
