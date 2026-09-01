@@ -1,5 +1,10 @@
+# Evaluation targets are handled by bench/Makefile rather than CoqMakefile.
+BENCHTARGETS := prepare-evaluation smoke results run-evaluation report-evaluation \
+                check-report \
+                multiplication_underflow_example
+
 # KNOWNTARGETS will not be passed along to CoqMakefile
-KNOWNTARGETS := CoqMakefile extra-stuff extra-stuff2
+KNOWNTARGETS := CoqMakefile extra-stuff extra-stuff2 $(BENCHTARGETS)
 # KNOWNFILES will not get implicit targets from the final rule, and so
 # depending on them won't invoke the submake
 # Warning: These files get declared as PHONY, so any targets depending
@@ -23,6 +28,10 @@ endif
 ####################################################################
 ##                      Your targets here                         ##
 ####################################################################
+
+.PHONY: $(BENCHTARGETS)
+$(BENCHTARGETS):
+	+$(MAKE) --no-print-directory -C bench $@
 
 OBJDIR = verif_proofs/verif_objs
 OBJ = two_sum.v two_sum_guarded.v fast_2mult.v fast_2mult_guarded.v fast_2mult_acc_guarded.v fast_2sum.v fast_2sum_guarded.v

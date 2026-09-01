@@ -1,100 +1,187 @@
-# dd_lib and QD comparison
+# Evaluation harness
 
-`bench_all.cpp` runs the nine dd_lib arithmetic operations and the corresponding
-QD operations on the same inputs. It reports output differences and median time
-per call.
+The evaluation has one driver for each research question:
 
-The dd_lib C files are compiled with CompCert. A C++ compiler builds the shared
-test driver because QD is a C++ library. MPFR is used only to compare the values
-represented by the returned component pairs.
+- `rq1_accuracy.cpp` measures the bounds for the six double-word operations.
+- `rq2_guard_acceptance.cpp` evaluates QD on inputs rejected by the checked
+  double-word and error-free-transformation interfaces.
+- `rq3_performance.cpp` times the guarded interfaces, unchecked kernels, and
+  QD. It is built once with CompCert library objects and once with Clang
+  library objects.
+
+Input generation, MPFR measurements, boundary cases, and timing support are
+kept in separate source files.
 
 ## Requirements
 
-- CompCert (`ccomp`)
-- A C++14 compiler
-- QD built with FMA support
-- MPFR and GMP
-- `pkg-config`, unless MPFR and GMP flags are supplied explicitly
+The harness requires CompCert, Clang, a GCC- or Clang-compatible C++14
+compiler, MPFR, GMP, QD headers, and Python 3. It supports macOS
+and Linux. CompCert and Clang build separate copies of the unchanged library
+C files; the C++ compiler builds the drivers.
 
-`QD_PREFIX` is `/usr/local` by default. Set it when QD is installed elsewhere.
+The build obtains MPFR and GMP flags from `pkg-config`. Set `MPFR_CFLAGS` and
+`MPFR_LIBS` explicitly if they are not available there.
 
-## Build and run
+The repository layout keeps `dd_lib` next to this directory. An artifact may
+instead place `dd_lib` inside this directory; the build detects both layouts.
+Set `DD_LIB_DIR` only for a different source layout.
 
-```sh
-make QD_PREFIX=$HOME/.local/qd-fma
-./bench_all [input_count] [trial_count]
-```
+## Build and test
 
-The defaults are `2^22` inputs and 11 timing trials.
-
-`bench_all` calls the checked public interface. To measure the unchecked
-arithmetic kernels instead, run:
+From this directory, run:
 
 ```sh
-./bench_all_kernel [input_count] [trial_count]
+make prepare-evaluation
 ```
 
-Remove generated executables and object files with:
+The build looks first for QD headers at `third_party/qd`, then uses
+`qd-config` from `PATH`, and finally checks conventional system prefixes.
+There are no user-specific paths. To make the submitted artifact
+self-contained, its setup step should install the pinned QD headers under
+`third_party/qd`; discovery itself does not download dependencies.
+
+To select a particular installation, use either:
 
 ```sh
-make clean
+make QD_PREFIX=/absolute/path/to/qd prepare-evaluation
+make QD_CONFIG=/absolute/path/to/qd-config prepare-evaluation
 ```
 
-If a shared QD installation is outside the system search path, set
-`LD_LIBRARY_PATH` on Linux or `DYLD_LIBRARY_PATH` on macOS when running the
-benchmark.
+An explicit setting is checked as given and is never replaced by another
+installation. Without a bundled or installed QD, `make` reports the missing
+dependency and stops.
 
-## Inputs
+This builds the RQ1 and RQ2 drivers and both RQ3 binaries, then runs the C++
+tests, the asserted RQ2 boundary suite, and the Python pipeline tests. The
+build records the compiler,
+flags, and QD files in `.build/config.json`; the runner refuses to use binaries
+built with different settings. A routine `make clean` is unnecessary and does
+not remove evaluation runs.
 
-Both libraries receive identical binary64 components.
+## Generate results
 
-- Every double-word input has a finite, nonzero high component.
-- Four-fifths have a finite, nonzero low component smaller than one-quarter ulp
-  of the high component.
-- One-fifth have a zero low component, retaining ordinary-double cases.
-- Every pair is checked with `hi + lo == hi` before use.
-- High components and scalar divisors are resampled when zero. Division uses the
-  same input distribution as the other operations.
-- Fast2Sum inputs alone are reordered to satisfy `|a| >= |b|`.
+A smoke run checks the complete pipeline with 4,096 RQ3 timing cases and
+without enforcing the frozen artifact build settings:
 
-The random inputs are drawn from `[-1,1]`. This program does not test exponent
-extremes or boundary cases.
+```sh
+make smoke
+```
 
-## Compared operations
+To run the full artifact evaluation and generate its report:
 
-| dd_lib | QD |
-|---|---|
-| `two_sum_guarded` | `qd::two_sum` |
-| `fast_2sum_guarded` | `qd::quick_two_sum` |
-| `fast_2mult_guarded` | `qd::two_prod` |
-| `dw_plus_fp` | `dd_real + double` |
-| `dw_times_fp` | `dd_real * double` |
-| `dw_div_fp` | `dd_real / double` |
-| `dw_plus_dw` | `dd_real::ieee_add` |
-| `dw_times_dw` | `dd_real * dd_real` |
-| `dw_div_dw` | `dd_real::accurate_div` |
+```sh
+make results
+```
 
-The kernel build replaces the dd_lib functions above with their unchecked
-counterparts. QD's accurate addition and division routines are selected
-explicitly where QD offers more than one implementation.
+Both commands build the drivers and run all tests before executing the
+evaluation. `make results` uses the frozen artifact workload and compiler
+flags, but it does not require Git. The artifact timing workload uses 65,536
+test cases and 24 trials per table cell. It prints the path to the generated
+`RESULTS.md`. Make assigns a timestamped run identifier unless `RUN_ID` is
+provided. Run directories are immutable, including failed runs.
 
-## Output
+Each run is stored under `runs/RUN_ID`:
 
-For each operation, the differential pass reports:
+```text
+manifest.json
+checksums.sha256
+raw/
+generated/
+```
 
-- different high-component encodings;
-- different low-component encodings;
-- different represented values; and
-- the largest relative gap, using the QD value as the denominator.
+The manifest records the profile, available Git metadata, toolchain, binaries,
+commands, input parameters, TSV metadata, and artifact hashes. Raw driver
+output is kept separate from derived reports.
 
-MPFR reconstructs each returned value as the exact sum `hi + lo`. Thus the
-represented-value count does not lose differences through binary64 cancellation
-or underflow.
+## Evaluation scope
 
-QD is a comparison implementation, not an exact arithmetic oracle. A nonzero
-gap shows that the libraries returned different values; it does not determine
-which value is more accurate.
+| Question | Library interfaces | Reference or comparison |
+|---|---|---|
+| RQ1 bound tightness | default, six double-word operations | MPFR oracle; QD as a secondary comparison |
+| RQ2 wrapper usefulness | checked interfaces for all nine operations; strong interface for double-word operations | QD on rejected test cases |
+| RQ3 performance | default and kernel for all nine operations; strong interface for double-word operations | QD and Clang compiler ablation |
 
-Timing results include one untimed warm-up pass and report the median nanoseconds
-per call. The values in `RESULTS.md` are smoke-test results, not controlled
-publication measurements.
+The default double-word interface uses the two-stage guard. The `dw_*_strong`
+interface checks the stronger input-only conditions. Both call the same
+unchecked kernel. Exact transformations have one guarded public interface.
+
+RQ1 and RQ2 invoke the public C functions. Each RQ3 binary invokes the default
+public function and kernel directly. For double-word operations it also invokes
+the strong public function. Before timing, both guarded results must match the
+kernel bit for bit.
+
+## Inputs and measurements
+
+The RQ1 and RQ2 numerical test inputs are deterministic and are created before
+any guard runs. Binary64 values cover magnitude exponents -1074 through 1023.
+Double-word sources cover exponents -969 through 1022. MPFR constructs odd
+106-bit values; rounding the value and its exact residual produces the high
+and low words. Five percent of double-word inputs retain an ordinary binary64
+value with a zero low word. Signs are balanced in every exponent bin, and
+operand streams are shuffled independently. RQ1 and RQ2 use the same generated
+arrays and record the same numerical-input fingerprint.
+
+RQ1 reconstructs inputs and results in MPFR. It reports the relative error
+where the relative term of the bound dominates and the absolute error where
+the absolute term dominates. Each range is reported as a percentage of the
+operation's normally returned test cases. Bound fractions are computed per
+case before their maximum and mean are taken. QD is measured on the same test
+cases. Its error
+relative to the `dd_lib` bound is contextual information, not a bound for QD;
+QD may use a different algorithm. MPFR uses 2112-bit precision, with 4224 bits
+for division cases. The report also gives the input-check, conditional
+output-finiteness-check, and overall normal-return rates. Per-operation raw
+counts are retained in `summary.json`. Every result above the bound is listed
+with its case ID, inputs, result bits, reference, error, and bound.
+
+RQ2 evaluates QD once for every generated test case rejected by an applicable
+checked interface. Double-word operations are classified by finiteness,
+double-word validity, and whether the QD error is within the `dd_lib` bound.
+The default- and strong-interface results are reported in separate tables.
+Each above-bound QD result is listed once, including every interface that
+rejected its input.
+Error-free transformations are classified by finiteness, double-word
+validity, and exact reconstruction. The default- and strong-rejected
+double-word populations overlap. The 48 named boundary cases are checked
+separately and are excluded from reported percentages.
+
+All QD drivers include `qd_evaluation.hpp`, which selects QD's inline
+algorithms and maps `QD_FMA` and `QD_FMS` to C++ `std::fma`. This fixes the QD
+arithmetic configuration independently of how a system QD library was built.
+
+RQ3 compiles the same C sources once with CompCert and once with Clang using
+`-fno-fast-math -ffp-contract=off`. The two compiler builds run as independent
+timing blocks. Within each block, all measurement orders are balanced and
+wrapper-to-kernel and wrapper-to-QD ratios use paired trials. The C compiler
+label applies to the `dd_lib` objects; the harness and QD code use `CXX`.
+Cross-compiler results are not treated as paired measurements. RQ3 uses a
+separate timing-input set over exponents -100 through 100. Every timed series
+for an operation uses the same cases, and the CompCert and Clang blocks record
+the same timing-input fingerprint. Each timing observation is one complete
+input sweep normalized to ns/call.
+
+## Manual debugging
+
+From `bench`, the drivers can be run directly while debugging:
+
+```sh
+cd bench
+./rq1_accuracy [samples_per_exponent] [summary.tsv]
+./rq2_guard_acceptance [samples_per_exponent] [cases.tsv]
+./rq2_guard_acceptance --boundary-only [cases.tsv]
+./rq3_performance_compcert [input_count] [trial_count] [trials.tsv]
+./rq3_performance_clang [input_count] [trial_count] [trials.tsv]
+```
+
+Direct runs do not create a manifest or a generated report.
+
+## Multiplication-underflow example
+
+The standalone example contrasts the mixed `dw_times_dw` contract with the
+exact-reconstruction `fast_2mult_guarded` contract for
+`a = (1 + 2^-52) 2^-515`:
+
+```sh
+make multiplication_underflow_example
+./multiplication_underflow_example
+```

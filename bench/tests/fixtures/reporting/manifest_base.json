@@ -1,0 +1,183 @@
+{
+  "manifest_schema_version": 5,
+  "status": "complete",
+  "run_id": "synthetic-report-test",
+  "profile": {
+    "name": "unit test",
+    "kind": "smoke",
+    "source": {
+      "path": "/test/evaluation_profiles.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "bytes": 1
+    }
+  },
+  "started_utc": "2026-08-31T12:00:00Z",
+  "completed_utc": "2026-08-31T12:01:00Z",
+  "git": {
+    "revision": "0123456789abcdef",
+    "dirty": false,
+    "status": "clean"
+  },
+  "build": {
+    "dd_cc": "ccomp",
+    "dd_cflags": "-O3",
+    "clang_cc": "clang",
+    "clang_cflags": "-O3",
+    "cxx": "c++",
+    "cxxflags": "-O3 -std=c++14",
+    "strict_fp_flags": "-fno-fast-math -ffp-contract=off",
+    "qd_prefix": "/test/qd",
+    "configuration": {
+      "path": "/test/bench/.build/config.json",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "bytes": 1,
+      "values": {
+        "config_schema_version": 3,
+        "dd_cc": "ccomp",
+        "dd_cflags": "-O3",
+        "clang_cc": "clang",
+        "clang_cflags": "-O3",
+        "cxx": "c++",
+        "cxxflags": "-O3 -std=c++14",
+        "strict_fp_flags": "-fno-fast-math -ffp-contract=off",
+        "qd_prefix": "/test/qd",
+        "tool_identities": {
+          "clang_cc": {},
+          "cxx": {},
+          "dd_cc": {},
+          "qd": {
+            "headers": [
+              {
+                "path": "/test/qd/include/qd/dd_real.h",
+                "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+                "bytes": 1
+              },
+              {
+                "path": "/test/qd/include/qd/dd_inline.h",
+                "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+                "bytes": 1
+              },
+              {
+                "path": "/test/qd/include/qd/inline.h",
+                "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+                "bytes": 1
+              },
+              {
+                "path": "/test/qd/include/qd/qd_config.h",
+                "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+                "bytes": 1
+              }
+            ],
+            "policy": {
+              "path": "/test/bench/qd_evaluation.hpp",
+              "sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+              "bytes": 1
+            }
+          }
+        }
+      }
+    },
+    "binaries": {
+      "rq1": {
+        "path": "/test/bench/rq1_accuracy",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+        "bytes": 1,
+        "dynamic_dependencies": []
+      },
+      "rq2": {
+        "path": "/test/bench/rq2_guard_acceptance",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "bytes": 1,
+        "dynamic_dependencies": []
+      },
+      "rq3_compcert": {
+        "path": "/test/bench/rq3_performance_compcert",
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "bytes": 1,
+        "dynamic_dependencies": []
+      },
+      "rq3_clang": {
+        "path": "/test/bench/rq3_performance_clang",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bytes": 1,
+        "dynamic_dependencies": []
+      }
+    },
+    "qd_headers": [
+      {
+        "path": "/test/qd/include/qd/dd_real.h",
+        "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "bytes": 1
+      },
+      {
+        "path": "/test/qd/include/qd/dd_inline.h",
+        "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+        "bytes": 1
+      },
+      {
+        "path": "/test/qd/include/qd/inline.h",
+        "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+        "bytes": 1
+      },
+      {
+        "path": "/test/qd/include/qd/qd_config.h",
+        "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "bytes": 1
+      }
+    ],
+    "qd_policy": {
+      "path": "/test/bench/qd_evaluation.hpp",
+      "sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "bytes": 1
+    }
+  },
+  "environment": {
+    "os": "Test OS",
+    "architecture": "test64",
+    "cpu_model": "Synthetic CPU",
+    "cpu_count": 1,
+    "hostname": "test-host",
+    "python": "Python 3",
+    "compcert": "CompCert test",
+    "clang": "Clang test",
+    "cxx": "C++ test",
+    "qd": "QD test with FMA",
+    "mpfr": "MPFR test",
+    "gmp": "GMP test",
+    "compcert_executable": "/test/bin/ccomp",
+    "clang_executable": "/test/bin/clang",
+    "cxx_executable": "/test/bin/c++",
+    "qd_config_executable": "/test/qd/bin/qd-config",
+    "pkg_config_executable": "/test/bin/pkg-config"
+  },
+  "commands": [
+    {
+      "evaluation": "rq1",
+      "argv": ["./rq1_accuracy", "40", "raw/rq1.tsv"],
+      "exit_code": 0
+    },
+    {
+      "evaluation": "rq2",
+      "argv": ["./rq2_guard_acceptance", "40", "raw/rq2.tsv"],
+      "exit_code": 0
+    },
+    {
+      "evaluation": "rq3_compcert",
+      "argv": ["./rq3_performance_compcert", "64", "24", "raw/rq3-compcert.tsv"],
+      "exit_code": 0
+    },
+    {
+      "evaluation": "rq3_clang",
+      "argv": ["./rq3_performance_clang", "64", "24", "raw/rq3-clang.tsv"],
+      "exit_code": 0
+    }
+  ],
+  "parameters": {
+    "rq1_samples": 40,
+    "rq2_samples": 40,
+    "rq3_inputs": 64,
+    "rq3_trials": 24
+  },
+  "artifacts": {},
+  "tsv_metadata": {}
+}
