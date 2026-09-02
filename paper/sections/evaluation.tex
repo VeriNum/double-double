@@ -23,10 +23,9 @@ wrappers.  We investigated the following research questions:
     transformation?
 
   \item[(RQ3) Cost of the wrappers.]
-    On a common set of inputs for which every evaluated call is accepted, what
-    runtime overhead does each wrapper add relative to the
-    corresponding unchecked kernel, and how does its end-to-end runtime
-    compare with QD?
+    On a common set of inputs for which every evaluated call was accepted, what
+    runtime overhead did each wrapper add relative to the corresponding
+    unchecked kernel, and how did its total running time compare with QD?
 \end{description}
 
 \subsection{Experimental Setup}
@@ -216,32 +215,31 @@ tests produced the expected outcomes for the runtime checks.
 \FloatBarrier
 \subsection{Performance Cost of the Wrappers (RQ3)}
 
+On the timing tests, we found that the wrappers added only a few nanoseconds
+per call, although this represented a noticeable relative cost because the
+unchecked kernels were small.  The relative performance of the default and
+strong wrappers depended on the compiler.
+
 To address RQ3, we timed the default and strong wrappers for the six
 double-word operations and the wrapper for each of the three transformations.
-Each timing test used \RQThreeInputCount{} inputs
-whose operand exponents lay between $-100$ and $100$, together with
-\RQThreeTrialCount{} trials.  All runtime checks succeeded for these inputs.
-Before timing, we confirmed that every wrapper produced the same
-result as its unchecked kernel.
+Each timing test used \RQThreeInputCount{} inputs with operand exponents
+between $-100$ and $100$ and consisted of \RQThreeTrialCount{} trials.
 
-For the comparison with the kernels, each wrapper and its kernel were compiled
-with CompCert.  For the comparison with QD, both libraries were compiled with
-Clang.  The latter build was used only for the performance comparison and was
-not covered by the CompCert correctness theorem.  The experiments ran on an
-Apple M4 Max with 16 cores.  Compiler versions, options, and the complete
-timing procedure appear in \Cref{app:evaluation-timing}.
-
-\Cref{tab:rq3-performance} summarizes the resulting timing measurements for
-the default double-word wrappers and the transformation wrappers.  The
-underlying times and results for the strong wrappers appear in
-\cref{tab:rq3-performance-detail}.
+To isolate the cost of each wrapper, we compared it with the corresponding
+kernel after compiling both with CompCert.  We separately compiled
+\FenceDD{} and QD with Clang and compared their total running times.  The
+latter comparison included differences between the implementations and did
+not isolate the cost of the runtime checks.  Compiler versions, options, and
+the complete timing procedure appear in \Cref{app:evaluation-timing}.
 
 \begin{table}[t]
-  \caption{RQ3: Performance of the default double-word wrappers and the
-  transformation wrappers.  Under CompCert, Wrapper/Kernel is the ratio to the
-  unchecked kernel and Added is the paired difference in nanoseconds per call.
-  Under Clang, Wrapper/QD is the ratio to QD.  Entries are medians
-  [interquartile ranges] over paired trials.}
+  \caption{RQ3: Performance of the default wrappers for the six double-word
+  operations and the wrappers for the three transformations.  Under CompCert,
+  Wrapper/Kernel is the ratio to the unchecked kernel and Added is the paired
+  difference in nanoseconds per call.  Under Clang, Wrapper/QD is the ratio to
+  QD.  Entries are medians [interquartile ranges] over paired trials.  Results
+  for the strong wrappers appear in
+  \Cref{tab:rq3-performance-detail}.}
   \label{tab:rq3-performance}
   \centering
   \setlength{\tabcolsep}{3pt}
@@ -256,13 +254,10 @@ underlying times and results for the strong wrappers appear in
   \end{tabular}
 \end{table}
 
-We rotated the measurement order within paired trials to limit ordering effects
-and computed differences and ratios from the paired measurements.
-
-\paragraph{Answer to RQ3.}
-\Cref{tab:rq3-performance} and \Cref{tab:rq3-performance-detail} show that the
-wrappers have a noticeable relative cost because their kernels are small, but
-add only a few nanoseconds per call.  Under CompCert, the default wrappers took
+\Cref{tab:rq3-performance} and
+\Cref{tab:rq3-performance-detail} provide the evidence for our claim that the
+wrappers had a modest absolute cost but a noticeable relative cost.  Under
+CompCert, the default wrappers took
 \RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} times
 as long as their kernels and added
 \RQThreeDefaultMinimumAddedTime{}--\RQThreeDefaultMaximumAddedTime{}
@@ -270,18 +265,20 @@ nanoseconds per call.  The strong wrappers took
 \RQThreeStrongMinimumKernelRatio{}--\RQThreeStrongMaximumKernelRatio{} times
 as long and added
 \RQThreeStrongMinimumAddedTime{}--\RQThreeStrongMaximumAddedTime{}
-nanoseconds.  They were faster than the default wrappers for four operations
-under CompCert but slower for all six under Clang, showing that their relative
-cost depends on the operation and compiler.  The transformation wrappers took
-\RQThreeTransformationMinimumKernelRatio{}--\RQThreeTransformationMaximumKernelRatio{}
-times as long as their kernels.
+nanoseconds.  The transformation wrappers added
+\RQThreeTransformationMinimumAddedTime{}--%
+\RQThreeTransformationMaximumAddedTime{} nanoseconds and took
+\RQThreeTransformationMinimumKernelRatio{}--%
+\RQThreeTransformationMaximumKernelRatio{} times as long as their kernels.
 
-Under Clang, the default wrappers took
+With Clang, the default wrappers took
 \RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{} times as long
 as QD, the strong wrappers took
 \RQThreeStrongMinimumQDRatio{}--\RQThreeStrongMaximumQDRatio{} times as long,
 and the transformation wrappers took
-\RQThreeTransformationMinimumQDRatio{}--\RQThreeTransformationMaximumQDRatio{}
-times as long.  These measurements compare total running time and therefore
-also include differences between implementations and algorithms.
+\RQThreeTransformationMinimumQDRatio{}--%
+\RQThreeTransformationMaximumQDRatio{} times as long.  The strong wrappers
+were faster than the default wrappers for four operations under CompCert but
+slower for all six under Clang.  Thus, the choice between the two wrappers did
+not impose a consistent performance ordering across compilers.
 \FloatBarrier
