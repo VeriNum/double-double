@@ -390,100 +390,62 @@ $|\delta/y|\geq\nu$, the sharper bound holds:
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-Working backward through Lines~7--1, Hypothesis~(H3) implies that the operands
-and intermediate values are finite; in particular, $y\neq0$.  If $x_h=0$,
-Hypothesis~(H1) gives
-$x_\ell=0$, and the result follows directly.  Suppose therefore that
-$x_h\neq0$, so Hypothesis~(H2) gives
+Hypothesis~(H3) makes the operands and intermediate results finite and implies
+$y\neq0$.  If $x_h=0$, Hypothesis~(H1) gives $x_\ell=0$, and the result follows
+directly.  Otherwise, Hypothesis~(H2) gives
 $|x_h|\geq2^{e_{\min}+2p}$.
 
 \noindent\emph{Normal leading quotient.}
 Suppose first that $|q_0|\geq\nu$.  Rounding on Line~1 then agrees in FLT and
-FLX.  The lower bound on $|x_h|$, together with the rounding bound for $t_h$,
-gives
+FLX.  The lower bound on $|x_h|$ gives
 \[
   |t_hy|\geq2^{e_{\min}+2p-1}.
 \]
-Since $p\geq4$ and the components computed on Line~2 are finite, all
-hypotheses of \Cref{thm:fast-two-mult} hold, and
-$\pi_h+\pi_\ell=t_hy$.
-
-No additional assumption that the results of Lines~3--5 are normal is needed.
-The operands of the subtraction on Line~3 have the same sign and differ in
-magnitude by at most a factor of two, so the subtraction is exact by
-Sterbenz's lemma \citep{Sterbenz1974}.  The existing FLX analysis shows that
-$x_h-t_hy$, computed on Line~4, is representable.  If this value is normal,
-representability transfers to FLT; if it is subnormal, it lies on the fixed
-FLT lattice and is again represented exactly.  On Line~5, FLT and FLX
-rounding agree when the exact sum is normal, while a subnormal sum is exactly
-representable in FLT.  The FLX analysis therefore transfers through Line~5.
+Thus, \Cref{thm:fast-two-mult} makes the product reconstruction on Line~2
+exact.  Sterbenz's lemma makes the subtraction on Line~3 exact
+\citep{Sterbenz1974}; representability and the fixed spacing of subnormal
+values then transfer the existing FLX residual argument through Lines~4--5.
 
 If $\delta=0$ or $|\delta/y|\geq\nu$, rounding on Line~6 also agrees in the
-two formats, giving the inherited relative bound
-\[
-  |(t_h+t_\ell)-q|\leq3u^2|q|.
-\]
-If $0<|\delta/y|<\nu$, the two rounded corrections differ by at most $\eta$,
-which gives
-\[
-  |(t_h+t_\ell)-q|\leq3u^2|q|+\eta.
-\]
-In both cases, the residual analysis gives $|t_\ell|\leq|t_h|$.  Together
-with finiteness from Hypothesis~(H3), this supplies the hypotheses of the
-\FastTwoSum{} result in \Cref{thm:addition-transformations}.  Line~7 therefore
-preserves $t_h+t_\ell$ exactly and returns a double word.
+two formats and gives the sharper relative bound.  Otherwise, their rounded
+corrections differ by at most $\eta$, giving the mixed bound.  The residual
+analysis also gives $|t_\ell|\leq|t_h|$, so
+\Cref{thm:addition-transformations} shows that \FastTwoSum{} on Line~7
+preserves their sum and returns a double word.
 
 \noindent\emph{Subnormal leading quotient.}
 Now suppose that $|q_0|<\nu$.  The fixed FLT spacing gives
 $|t_h-q_0|\leq\eta/2$.  Because the input is a double word,
-$|x_\ell|\leq u|x_h|$, and hence
+$|x_\ell|\leq u|x_h|$, so
 \[
-  \left|\frac{x_\ell}{y}\right|
-    \leq u|q_0|
-    <\frac{\eta}{2}.
+  \left|\frac{x_\ell}{y}\right|<\frac{\eta}{2},
+  \qquad |t_h-q|\leq\eta.
 \]
-Since $q=q_0+x_\ell/y$, it follows that $|t_h-q|\leq\eta$.
-
-Hypothesis~(H2) and $|q_0|<\nu$ imply $|y|>2^{p+1}$.  Set
-$M=\eta|y|$.  Applying the FLT rounding bounds to Lines~2--5, including the
-reconstruction bound from \Cref{thm:fast-two-mult}, gives the aggregate
+Moreover, Hypothesis~(H2) implies $|y|>2^{p+1}$.  Applying the FLT rounding
+bounds and \Cref{thm:fast-two-mult} to Lines~2--5 gives the essential aggregate
 residual bound
 \[
   |\delta-(x_h+x_\ell-t_hy)|
-    \leq\frac{M}{2}.
+    \leq\frac{\eta|y|}{2},
+  \qquad
+  \left|\frac{\delta}{y}-(q-t_h)\right|\leq\frac{\eta}{2}.
 \]
-After division by $|y|$, this becomes
-\[
-  \left|\frac{\delta}{y}-(q-t_h)\right|
-    \leq\frac{\eta}{2}.
-\]
-Together with $|q-t_h|\leq\eta$, this gives
-$|\delta/y|<2\nu$, so rounding on Line~6 contributes at most another
-$\eta/2$.  Therefore
-\[
-  |t_\ell-(q-t_h)|\leq\eta.
-\]
-
-The same FLT bounds establish $|t_h+t_\ell|\leq2\nu$.  This bound and
-finiteness from Hypothesis~(H3) supply the hypotheses of
-\Cref{thm:fast-two-sum-small}.  Line~7 therefore preserves
-$t_h+t_\ell$ exactly and returns a double word.  Consequently,
+Rounding on Line~6 adds at most another $\eta/2$, while the same bounds give
+$|t_h+t_\ell|\leq2\nu$.  Hence \Cref{thm:fast-two-sum-small} shows that
+Line~7 preserves the sum and returns a double word, with
 \[
   |(z_h+z_\ell)-q|
     \leq\eta
     \leq3u^2|q|+\eta.
 \]
-The two cases establish the stated bounds and show that the returned pair is a
-double word.
+This proves both stated error bounds and the double-word property.
 \end{proof}
 
 \subsection{Conditions for the Division Guarantee}
 \label{sec:division-conditions}
 
-The first two hypotheses of \Cref{thm:dw-div-fp-numerical} concern the
-dividend and are collected in an input condition.  The third requires the
-computed pair to be finite.  Alternatively, a stronger condition on the
-inputs can establish this finiteness before the algorithm is executed.
+\Cref{thm:dw-div-fp-numerical} requires a condition on the dividend and
+finiteness of the returned pair.  A stronger input condition implies both.
 
 Write $\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite.
 For operands $x_h,x_\ell,y$, write $(z_h,z_\ell)$ for the result of
@@ -517,11 +479,9 @@ Suppressing the common arguments $(x_h,x_\ell,y)$, define
 \]
 \end{definition}
 
-The condition $\mathcal{I}_{\mathrm{div}}$ places no lower bound on $q_0$ and
-therefore includes the subnormal leading quotients analyzed in
-\Cref{sec:division-numerics}.  The explicit finiteness requirements are
-necessary because the real-valued interpretation used by the Rocq models maps
-infinities and NaNs to zero, so real-valued inequalities alone do not
+The condition $\mathcal{I}_{\mathrm{div}}$ permits subnormal $q_0$.  Explicit
+finiteness requirements remain necessary because the real interpretation in
+Rocq maps infinities and NaNs to zero, so real inequalities alone do not
 establish finiteness.
 
 \begin{lemma}[Finiteness from the stronger input condition]
