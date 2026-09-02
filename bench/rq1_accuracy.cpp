@@ -834,7 +834,7 @@ int main(int argc, char **argv) {
     reports.push_back(evaluate_operation(
         "dw_div_fp", mixed_count,
         [&](std::size_t i) {
-            return dw_div_fp_weak_precond_check(&inputs.mixed_dw[i].value,
+            return dw_div_fp_weak_check(&inputs.mixed_dw[i].value,
                                                 inputs.mixed_fp[i].value);
         },
         [&](std::size_t i) {

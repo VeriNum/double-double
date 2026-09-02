@@ -141,6 +141,9 @@ OBSOLETE_REPORT_OUTPUTS: Tuple[Path, ...] = (
     Path("paper/generated/rq2_failure_rows.tex"),
     Path("paper/generated/rq2-acceptance.pdf"),
     Path("paper/generated/rq2_performance_rows.tex"),
+    Path("paper/generated/rq3_performance_rows.tex"),
+    Path("paper/generated/rq3_compcert_rows.tex"),
+    Path("paper/generated/rq3_clang_rows.tex"),
     Path("paper/generated/rq3_acceptance_rows.tex"),
     Path("paper/generated/rq3_failure_rows.tex"),
 )
@@ -2660,7 +2663,7 @@ def _markdown_count(value: int) -> str:
 def _markdown_percent(numerator: int, denominator: int) -> str:
     if denominator == 0:
         return "n/a"
-    return f"{_paper_float_text(100.0 * numerator / denominator)}%"
+    return f"{_paper_percent_text(numerator, denominator)}%"
 
 
 def _paper_float_text(value: object) -> str:
@@ -2674,6 +2677,26 @@ def _paper_float_text(value: object) -> str:
         decimal_places = max(0, 1 - magnitude)
         return f"{decimal_value:.{decimal_places}f}"
     return f"{decimal_value:.1e}"
+
+
+def _paper_percent_text(numerator: int, denominator: int) -> str:
+    """Format a percentage without rounding a proper subset to 100%."""
+
+    with localcontext() as context:
+        context.prec = max(
+            28,
+            len(str(abs(numerator))) + len(str(abs(denominator))) + 5,
+        )
+        percentage = Decimal(100) * Decimal(numerator) / Decimal(denominator)
+        rendered = _paper_float_text(percentage)
+        if numerator < denominator and Decimal(rendered) == Decimal(100):
+            decimal_places = 1
+            while decimal_places < context.prec:
+                rendered = f"{percentage:.{decimal_places}f}"
+                if Decimal(rendered) < Decimal(100):
+                    break
+                decimal_places += 1
+        return rendered
 
 
 def _paper_decimal_text(text: str) -> str:
@@ -3785,35 +3808,65 @@ def render_latex_files(run: EvaluationRun) -> Mapping[str, str]:
     )
 
     compcert = run.rq3["compcert"]
-    kernel_ratios = [
-        (_rq3_ratio_to_kernel(compcert, operation, "default").median, operation)
-        for operation in OPERATIONS
-    ]
-    qd_ratios = [
-        (_rq3_ratio_to_qd(compcert, operation, "default").median, operation)
-        for operation in OPERATIONS
-    ]
-    added_times = []
-    for operation in OPERATIONS:
-        added = _rq3_paired_summary(
-            compcert,
-            operation,
-            ("dd_lib", "default"),
-            ("dd_lib", "kernel"),
-            lambda wrapper_ns, kernel_ns: wrapper_ns - kernel_ns,
+    clang = run.rq3["clang"]
+
+    def rq3_group_metrics(
+        prefix: str, operations: Sequence[str], wrapper: str
+    ) -> Tuple[List[Tuple[float, str]], List[Tuple[float, str]], List[Tuple[float, str]]]:
+        kernel_ratios = [
+            (_rq3_ratio_to_kernel(compcert, operation, wrapper).median, operation)
+            for operation in operations
+        ]
+        qd_ratios = [
+            (_rq3_ratio_to_qd(clang, operation, wrapper).median, operation)
+            for operation in operations
+        ]
+        added_times = []
+        for operation in operations:
+            added = _rq3_paired_summary(
+                compcert,
+                operation,
+                ("dd_lib", wrapper),
+                ("dd_lib", "kernel"),
+                lambda wrapper_ns, kernel_ns: wrapper_ns - kernel_ns,
+            )
+            added_times.append((added.median, operation))
+        macros.extend(
+            (
+                rf"\newcommand{{\RQThree{prefix}MinimumKernelRatio}}{{{_paper_float_text(min(kernel_ratios)[0])}}}",
+                rf"\newcommand{{\RQThree{prefix}MaximumKernelRatio}}{{{_paper_float_text(max(kernel_ratios)[0])}}}",
+                rf"\newcommand{{\RQThree{prefix}MedianKernelRatio}}{{{_paper_float_text(statistics.median(value for value, _operation in kernel_ratios))}}}",
+                rf"\newcommand{{\RQThree{prefix}MinimumAddedTime}}{{{_paper_float_text(min(added_times)[0])}}}",
+                rf"\newcommand{{\RQThree{prefix}MaximumAddedTime}}{{{_paper_float_text(max(added_times)[0])}}}",
+                rf"\newcommand{{\RQThree{prefix}MinimumQDRatio}}{{{_paper_float_text(min(qd_ratios)[0])}}}",
+                rf"\newcommand{{\RQThree{prefix}MaximumQDRatio}}{{{_paper_float_text(max(qd_ratios)[0])}}}",
+            )
         )
-        added_times.append((added.median, operation))
+        return kernel_ratios, qd_ratios, added_times
+
+    default_metrics = rq3_group_metrics(
+        "Default", COMPOSITE_OPERATIONS, "default"
+    )
+    strong_metrics = rq3_group_metrics(
+        "Strong", COMPOSITE_OPERATIONS, "strong"
+    )
+    transformation_metrics = rq3_group_metrics(
+        "Transformation", EFT_OPERATIONS, "default"
+    )
+
+    all_kernel_ratios = (
+        default_metrics[0] + strong_metrics[0] + transformation_metrics[0]
+    )
+    all_qd_ratios = default_metrics[1] + strong_metrics[1] + transformation_metrics[1]
+    all_added_times = default_metrics[2] + strong_metrics[2] + transformation_metrics[2]
     macros.extend(
         (
-            rf"\newcommand{{\RQThreeMinimumKernelRatio}}{{{_paper_float_text(min(kernel_ratios)[0])}}}",
-            rf"\newcommand{{\RQThreeMinimumKernelRatioOperation}}{{\textsc{{{DISPLAY_NAMES[min(kernel_ratios)[1]]}}}}}",
-            rf"\newcommand{{\RQThreeMaximumKernelRatio}}{{{_paper_float_text(max(kernel_ratios)[0])}}}",
-            rf"\newcommand{{\RQThreeMaximumKernelRatioOperation}}{{\textsc{{{DISPLAY_NAMES[max(kernel_ratios)[1]]}}}}}",
-            rf"\newcommand{{\RQThreeMedianKernelRatio}}{{{_paper_float_text(statistics.median(value for value, _operation in kernel_ratios))}}}",
-            rf"\newcommand{{\RQThreeMinimumAddedTime}}{{{_paper_float_text(min(added_times)[0])}}}",
-            rf"\newcommand{{\RQThreeMaximumAddedTime}}{{{_paper_float_text(max(added_times)[0])}}}",
-            rf"\newcommand{{\RQThreeMinimumQDRatio}}{{{_paper_float_text(min(qd_ratios)[0])}}}",
-            rf"\newcommand{{\RQThreeMaximumQDRatio}}{{{_paper_float_text(max(qd_ratios)[0])}}}",
+            rf"\newcommand{{\RQThreeMinimumKernelRatio}}{{{_paper_float_text(min(all_kernel_ratios)[0])}}}",
+            rf"\newcommand{{\RQThreeMaximumKernelRatio}}{{{_paper_float_text(max(all_kernel_ratios)[0])}}}",
+            rf"\newcommand{{\RQThreeMinimumAddedTime}}{{{_paper_float_text(min(all_added_times)[0])}}}",
+            rf"\newcommand{{\RQThreeMaximumAddedTime}}{{{_paper_float_text(max(all_added_times)[0])}}}",
+            rf"\newcommand{{\RQThreeMinimumQDRatio}}{{{_paper_float_text(min(all_qd_ratios)[0])}}}",
+            rf"\newcommand{{\RQThreeMaximumQDRatio}}{{{_paper_float_text(max(all_qd_ratios)[0])}}}",
         )
     )
 
@@ -3911,35 +3964,53 @@ def render_latex_files(run: EvaluationRun) -> Mapping[str, str]:
 
     timing_rows: List[str] = []
     for operation in OPERATIONS:
-        data = run.rq3["compcert"]
-        default = data.summaries[(operation, "dd_lib", "default")]
-        kernel = data.summaries[(operation, "dd_lib", "kernel")]
-        qd = data.summaries[(operation, "QD", "reference")]
-        added = _rq3_paired_summary(
-            data, operation, ("dd_lib", "default"), ("dd_lib", "kernel"),
-            lambda interface_ns, kernel_ns: interface_ns - kernel_ns,
+        compcert_data = run.rq3["compcert"]
+        clang_data = run.rq3["clang"]
+        compcert_kernel = compcert_data.summaries[
+            (operation, "dd_lib", "kernel")
+        ]
+        clang_qd = clang_data.summaries[(operation, "QD", "reference")]
+        wrappers = (
+            (("", "default"),)
+            if operation in EFT_OPERATIONS
+            else (("Default", "default"), ("Strong", "strong"))
         )
-        default_kernel = _rq3_ratio_to_kernel(data, operation, "default")
-        default_qd = _rq3_ratio_to_qd(data, operation, "default")
-        timing_rows.append(
-            " & ".join(
-                (
-                    rf"\textsc{{{DISPLAY_NAMES[operation]}}}",
-                    f"{_paper_float_text(default.median)} [{_paper_float_text(default.iqr)}]",
-                    f"{_paper_float_text(kernel.median)} [{_paper_float_text(kernel.iqr)}]",
-                    f"{_paper_float_text(qd.median)} [{_paper_float_text(qd.iqr)}]",
-                    f"{_paper_float_text(added.median)} [{_paper_float_text(added.iqr)}]",
-                    f"{_paper_float_text(default_kernel.median)} [{_paper_float_text(default_kernel.iqr)}]",
-                    f"{_paper_float_text(default_qd.median)} [{_paper_float_text(default_qd.iqr)}]",
-                )
-            ) + r" \\"
-        )
+        for index, (wrapper_label, wrapper) in enumerate(wrappers):
+            compcert_wrapper = compcert_data.summaries[
+                (operation, "dd_lib", wrapper)
+            ]
+            clang_wrapper = clang_data.summaries[
+                (operation, "dd_lib", wrapper)
+            ]
+            compcert_kernel_ratio = _rq3_ratio_to_kernel(
+                compcert_data, operation, wrapper
+            )
+            clang_qd_ratio = _rq3_ratio_to_qd(
+                clang_data, operation, wrapper
+            )
+            timing_rows.append(
+                " & ".join(
+                    (
+                        rf"\textsc{{{DISPLAY_NAMES[operation]}}}" if index == 0 else "",
+                        wrapper_label,
+                        f"{_paper_float_text(compcert_wrapper.median)} [{_paper_float_text(compcert_wrapper.iqr)}]",
+                        f"{_paper_float_text(compcert_kernel.median)} [{_paper_float_text(compcert_kernel.iqr)}]",
+                        f"{_paper_float_text(compcert_kernel_ratio.median)} [{_paper_float_text(compcert_kernel_ratio.iqr)}]",
+                        f"{_paper_float_text(clang_wrapper.median)} [{_paper_float_text(clang_wrapper.iqr)}]",
+                        f"{_paper_float_text(clang_qd.median)} [{_paper_float_text(clang_qd.iqr)}]",
+                        f"{_paper_float_text(clang_qd_ratio.median)} [{_paper_float_text(clang_qd_ratio.iqr)}]",
+                    )
+                ) + r" \\"
+            )
+        if operation == EFT_OPERATIONS[-1]:
+            timing_rows.append(r"\midrule")
 
     double_word_rejected_rows: Dict[str, List[str]] = {
         "default": [],
         "strong": [],
     }
     combined_double_word_rejected_rows: List[str] = []
+    compact_double_word_rejected_rows: List[str] = []
     for operation in COMPOSITE_OPERATIONS:
         name = rf"\textsc{{{DISPLAY_NAMES[operation]}}}"
         for wrapper in ("default", "strong"):
@@ -3970,8 +4041,29 @@ def render_latex_files(run: EvaluationRun) -> Mapping[str, str]:
                     )
                 ) + r" \\"
             )
+            compact_double_word_rejected_rows.append(
+                " & ".join(
+                    (
+                        name,
+                        "Default" if wrapper == "default" else "Strong",
+                        _latex_integer(value.rejected),
+                        _latex_percent(value.qd_nonfinite, value.rejected),
+                        _latex_percent(
+                            value.qd_finite_invalid_dw, value.rejected),
+                        _latex_percent(
+                            value.qd_finite_valid_above_bound,
+                            value.rejected,
+                        ),
+                        _latex_percent(
+                            value.qd_finite_valid_within_bound,
+                            value.rejected,
+                        ),
+                    )
+                ) + r" \\"
+            )
 
     eft_rejected_rows: List[str] = []
+    compact_eft_rejected_rows: List[str] = []
     for operation in EFT_OPERATIONS:
         name = rf"\textsc{{{DISPLAY_NAMES[operation]}}}"
         value = run.rq2.eft_rejected[operation]
@@ -3988,6 +4080,25 @@ def render_latex_files(run: EvaluationRun) -> Mapping[str, str]:
                         value.rejected,
                     ),
                     _latex_count_percent(
+                        value.qd_finite_valid_exact_reconstruction,
+                        value.rejected,
+                    ),
+                )
+            ) + r" \\"
+        )
+        compact_eft_rejected_rows.append(
+            " & ".join(
+                (
+                    name,
+                    _latex_integer(value.rejected),
+                    _latex_percent(value.qd_nonfinite, value.rejected),
+                    _latex_percent(
+                        value.qd_finite_invalid_dw, value.rejected),
+                    _latex_percent(
+                        value.qd_finite_valid_failed_reconstruction,
+                        value.rejected,
+                    ),
+                    _latex_percent(
                         value.qd_finite_valid_exact_reconstruction,
                         value.rejected,
                     ),
@@ -4021,8 +4132,11 @@ def render_latex_files(run: EvaluationRun) -> Mapping[str, str]:
         # combined table with an explicit wrapper column.
         "rq2_double_word_rejected_rows.tex": finish(
             combined_double_word_rejected_rows),
+        "rq2_double_word_compact_rows.tex": finish(
+            compact_double_word_rejected_rows),
         "rq2_eft_rejected_rows.tex": finish(eft_rejected_rows),
-        "rq3_performance_rows.tex": finish(timing_rows),
+        "rq2_eft_compact_rows.tex": finish(compact_eft_rejected_rows),
+        "rq3_combined_rows.tex": finish(timing_rows),
     }
 
 
