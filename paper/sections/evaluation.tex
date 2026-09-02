@@ -52,7 +52,8 @@ We classified a call as accepted when all runtime checks succeeded and the
 function returned a result.  We classified a call as rejected when a runtime
 check stopped its execution.  RQ1 and RQ2 used \RQOneSamplesPerExponent{}
 inputs at each exponent, giving 79,680 inputs per double-word operation and
-83,920 per transformation.  All floating-point computations used rounding to nearest with ties to even and
+83,920 per error-free transformation.  All floating-point computations used
+rounding to nearest with ties to even and
 gradual underflow.  \Cref{app:evaluation-details} gives the complete input
 construction, reference computation, boundary tests, and timing protocol.
 
@@ -170,7 +171,8 @@ rates in application workloads.
   percentages of that population.  For double-word operations, satisfying the
   properties means returning a finite result whose components form a double
   word and whose error is at most
-  $B(r)$.  For transformations, it means exact reconstruction.  Any remaining
+  $B(r)$.  For error-free transformations, it means exact reconstruction.  Any
+  remaining
   percentage consists of finite QD results that do not satisfy these
   properties.}
   \label{tab:rq2-results}
@@ -223,7 +225,8 @@ unchecked kernels were small.  The relative performance of the default and
 strong wrappers depended on the compiler.
 
 To address RQ3, we timed the default and strong wrappers for the six
-double-word operations and the wrapper for each of the three transformations.
+double-word operations and the wrapper for each of the three error-free
+transformations.
 Each timing test used \RQThreeInputCount{} inputs with operand exponents
 between $-100$ and $100$ and consisted of \RQThreeTrialCount{} trials.
 
@@ -236,7 +239,8 @@ the complete timing procedure appear in \Cref{app:evaluation-timing}.
 
 \begin{table}[t]
   \caption{RQ3: Performance of the default wrappers for the six double-word
-  operations and the wrappers for the three transformations.  Under CompCert,
+  operations and the wrappers for the three error-free transformations.  Under
+  CompCert,
   Wrapper/Kernel is the ratio to the unchecked kernel and Added is the paired
   difference in nanoseconds per call.  Under Clang, Wrapper/QD is the ratio to
   QD.  Entries are medians [interquartile ranges] over paired trials.  Results
@@ -267,7 +271,7 @@ nanoseconds per call.  The strong wrappers took
 \RQThreeStrongMinimumKernelRatio{}--\RQThreeStrongMaximumKernelRatio{} times
 as long and added
 \RQThreeStrongMinimumAddedTime{}--\RQThreeStrongMaximumAddedTime{}
-nanoseconds.  The transformation wrappers added
+nanoseconds.  The wrappers for error-free transformations added
 \RQThreeTransformationMinimumAddedTime{}--%
 \RQThreeTransformationMaximumAddedTime{} nanoseconds and took
 \RQThreeTransformationMinimumKernelRatio{}--%
@@ -277,7 +281,7 @@ With Clang, the default wrappers took
 \RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{} times as long
 as QD, the strong wrappers took
 \RQThreeStrongMinimumQDRatio{}--\RQThreeStrongMaximumQDRatio{} times as long,
-and the transformation wrappers took
+and the wrappers for error-free transformations took
 \RQThreeTransformationMinimumQDRatio{}--%
 \RQThreeTransformationMaximumQDRatio{} times as long.  The strong wrappers
 were faster than the default wrappers for four operations under CompCert but

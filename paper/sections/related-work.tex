@@ -16,8 +16,9 @@ Earlier work examines how underflow affects the error-free transformations
 used within double-word algorithms.  \citet{BoldoDaumas2003} characterize
 when the exact difference between a real result and its rounded result is
 representable, and \citet{Boldo2017} establish robust guarantees for
-\TwoSum{} and \FastTwoSum{}.  These results concern individual
-transformations.  Our analysis uses such transformations as building blocks
+\TwoSum{} and \FastTwoSum{}.  These results concern individual error-free
+transformations.  Our analysis uses such error-free transformations as building
+blocks
 and carries the effects of underflow through complete double-word addition,
 multiplication, and division algorithms.  It proves both an error bound and
 that the returned components form a double word.

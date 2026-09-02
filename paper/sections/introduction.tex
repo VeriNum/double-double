@@ -65,7 +65,8 @@ accounts for both ends of the exponent range.  The library provides six
 double-double operations covering addition, multiplication, and division,
 each with either a binary64 or double-double second operand.  Their
 implementations use three error-free transformations: \TwoSum{},
-\FastTwoSum{}, and \FastTwoMult{}.  For the transformations, we prove exact
+\FastTwoSum{}, and \FastTwoMult{}.  For these error-free transformations, we
+prove exact
 reconstruction under their required conditions.  For the double-double
 operations, we prove that the returned components form a double word and
 establish relative error bounds for addition and mixed relative and absolute
@@ -98,7 +99,8 @@ In summary, this paper makes the following contributions:
 
   \item \textbf{Numerical guarantees over IEEE~754
         (\Cref{sec:numerics}).}
-        We extend the mechanized analysis of three transformations and six
+        We extend the mechanized analysis of three error-free transformations
+        and six
         double-double operations to account for gradual underflow and overflow.
 
   \item \textbf{Verification of \FenceDD{}

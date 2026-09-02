@@ -47,7 +47,7 @@ For each double-word operation, we select the QD routine computing the same
 mathematical operation.  Addition of two double words uses
 \texttt{ieee\_add}, division of two double words uses
 \texttt{accurate\_div}, and the remaining operations use the corresponding QD
-operators.  For the transformations, we compare with QD's
+operators.  For the error-free transformations, we compare with QD's
 \texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod}.  QD may
 use algorithms different from the corresponding \FenceDD{} kernels, so the
 \FenceDD{} error bound is used only to compare their observed errors on a
@@ -81,7 +81,8 @@ disabled.  Measurements run on an Apple M4 Max with 16 cores under macOS
 26.6.2.
 
 The 24 trials for each double-word operation use every ordering of the kernel,
-default wrapper, strong wrapper, and QD once.  For each transformation, the
+default wrapper, strong wrapper, and QD once.  For each error-free
+transformation, the
 six orderings of the kernel, wrapper, and QD each occur four times.  Every
 implementation receives an untimed warm-up.  Differences and ratios are
 computed from paired trials.

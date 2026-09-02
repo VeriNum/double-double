@@ -29,7 +29,8 @@ where \DWDivFP{} is instantiated with binary64.
 The functional models use the types and IEEE~754 operations supplied by
 VCFloat2.  Its \texttt{FPCompCert} library relates them to the CompCert
 operations used by VST \citep{AppelKellison2024}.  Bridge lemmas for the
-CompCert operations and the VST specifications of the transformation kernels
+CompCert operations and the VST specifications of the error-free transformation
+kernels
 establish \Cref{eq:dw-div-fp-kernel-refinement}.  This refinement identifies
 the computed pair but requires no numerical condition and proves no error
 bound.  We prove an analogous result for every arithmetic kernel in the
