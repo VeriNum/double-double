@@ -1,8 +1,10 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-Each algorithm has a Rocq functional model over a generic radix-two format: a
-pure function over Flocq's IEEE~754 values that records its rounded operations.
+Each algorithm has a Rocq functional model over a generic radix-two format.
+The models are pure functions built from the floating-point types and
+IEEE~754 operations supplied by VCFloat2; these definitions use Flocq's
+binary floating-point representation.
 We state the models mathematically, omitting their Rocq definitions.
 
 For each model, we compare the value represented by its returned pair with the
@@ -16,9 +18,10 @@ that differ from this case and cite results inherited from earlier analyses.
 \label{sec:flx-to-ieee}
 
 The numerical analysis builds on the results of \citet{Joldes2017}, mechanized
-in FLX by \citet{Rideau2022}.  Our models instead use Flocq's IEEE~754
-operations.  We use FLT to account for the lower exponent bound and handle the
-upper limit of an IEEE~754 format separately.
+in FLX by \citet{Rideau2022}.  Our Rocq models evaluate IEEE~754 operations
+using VCFloat2.  Their numerical analysis uses Flocq's FLT format to account
+for the lower exponent bound and handles the upper limit of an IEEE~754 format
+separately.
 
 Flocq represents a floating-point value as $m\beta^q$, where $m$ and $q$ are
 integers.  For radix $\beta>1$ and precision $p>0$, the values representable
@@ -545,8 +548,9 @@ Suppressing the common arguments $(x_h,x_\ell,y)$, define
 The condition $\mathcal{I}_{\mathrm{div}}$ places no lower bound on $q_0$ and
 therefore includes the subnormal leading quotients analyzed in
 \Cref{sec:division-numerics}.  The explicit finiteness requirements are
-necessary because Flocq's real interpretation maps infinities and NaNs to
-zero, so real-valued inequalities alone do not establish finiteness.
+necessary because the real-valued interpretation used by the Rocq models maps
+infinities and NaNs to zero, so real-valued inequalities alone do not
+establish finiteness.
 
 \begin{lemma}[Finiteness from the stronger input condition]
 \label[lemma]{lem:dw-div-safe-implies-finite}

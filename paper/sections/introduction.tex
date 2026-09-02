@@ -113,7 +113,8 @@ return a valid double-double whose represented value satisfies the proved
 error bound.
 
 For each operation, we define in Rocq a functional model over a generic
-radix-two format and prove its numerical guarantee using Flocq.  We then use
+radix-two format using VCFloat2 \citep{AppelKellison2024}, and prove its
+numerical guarantee using Flocq.  We then use
 VST to prove that the C kernel implements the binary64 instance of this model
 and that the runtime checks establish the conditions required by its
 numerical theorem.  Together, these proofs establish the contracts of the

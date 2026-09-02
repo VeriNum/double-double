@@ -45,10 +45,11 @@ floating-point C expressions with Coq proofs \citep{Ramananandro2016}, while
 VCFloat2 supplies floating-point types and operations together with a bridge
 to CompCert \citep{AppelKellison2024}.  Layered developments combine VST
 proofs of C programs with separate proofs of their numerical properties
-\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.  We use this
-layered structure, but additionally verify C runtime checks that establish the
-conditions of the numerical theorems.  The resulting public contracts require
-no numerical precondition from the caller.
+\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.  We use
+VCFloat2 for the types used by the functional models, IEEE~754 operations, and
+CompCert bridge within this layered proof structure, but additionally verify C runtime
+checks that establish the conditions of the numerical theorems.  The resulting
+public contracts require no numerical precondition from the caller.
 
 Double-double implementations descend from techniques introduced by
 \citet{Dekker1971}.  \citet{Hida2001} develop practical algorithms for
