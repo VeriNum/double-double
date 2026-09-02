@@ -1,11 +1,11 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-Each algorithm has a Rocq functional model over a generic radix-two format.
-The models are pure functions built from the floating-point types and
-IEEE~754 operations supplied by VCFloat2; these definitions use Flocq's
-binary floating-point representation.
-We state the models mathematically, omitting their Rocq definitions.
+Each algorithm has a pure functional model over a generic radix-two format.
+The model defines the returned pair whose numerical properties we prove.  We
+present these models mathematically, omitting their Rocq definitions.  The
+definitions use the floating-point types and IEEE~754 operations supplied by
+VCFloat2, together with Flocq's binary floating-point representation.
 
 For each model, we compare the value represented by its returned pair with the
 corresponding exact real result and prove that the pair forms a double word.
@@ -17,11 +17,11 @@ that differ from this case and cite results inherited from earlier analyses.
 \subsection{From FLX Analysis to IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
-Our analysis builds on the results of \citet{Joldes2017}, mechanized by
-\citet{Rideau2022} using Flocq's FLX format.  FLX has an unbounded exponent
-range.  To account for gradual underflow, we instead use Flocq's FLT format,
-which has the same precision but imposes a lower exponent bound
-\citep[Sections~III-C and III-D]{Boldo2011}.
+To account for gradual underflow, we compare two Flocq formats with the same
+precision.  FLX has an unbounded exponent range, whereas FLT imposes a lower
+exponent bound.  The analysis of \citet{Joldes2017}, mechanized by
+\citet{Rideau2022}, uses FLX; our analysis uses FLT to cover the lower end of
+the IEEE~754 range \citep[Sections~III-C and III-D]{Boldo2011}.
 
 For a radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
 formats represent
@@ -76,16 +76,15 @@ corresponding FLT rounding.
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
 
-A double-word algorithm achieves higher precision by carefully accounting for
-errors introduced by its intermediate sums and products.  This is achieved by
-using the three error-free transformations in
-\Cref{fig:error-free-transformations}, which compute a rounded result together
-with a correction for the rounding error.  We use the forms and names given by
-\citet[Algorithms~1--3]{Joldes2017}.
-\TwoSum{} is due to Knuth; \FastTwoSum{} and the original product
-transformation are due to Dekker \citep{Knuth1997,Dekker1971}.  These
-transformations are standard tools in accurate floating-point computation
-\citep{Ogita2005}.
+The double-word algorithms use transformations that return a rounded sum or
+product together with a correction.
+
+\begin{definition}[Error-free result]
+\label[definition]{def:error-free-result}
+For an arithmetic operation whose exact real result is $r$, a pair
+$(r_h,r_\ell)$ is an error-free result when
+$r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
+\end{definition}
 
 \begin{figure*}[t]
   \centering
@@ -171,33 +170,29 @@ transformations are standard tools in accurate floating-point computation
   \Description{Three framed panels present the steps of TwoSum, FastTwoSum,
     and FastTwoMult.  TwoSum appears on the left; FastTwoSum and FastTwoMult
     are stacked on the right.}
-  \label{fig:error-free-transformations}
+\label{fig:error-free-transformations}
 \end{figure*}
 
-\begin{definition}[Error-free result]
-\label[definition]{def:error-free-result}
-For an arithmetic operation whose exact real result is $r$, a pair
-$(r_h,r_\ell)$ is an error-free result when
-$r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
-\end{definition}
-The operations within a transformation may round, but an error-free result
-represents the exact value.  Moreover,
+We use the forms and names given by
+\citet[Algorithms~1--3]{Joldes2017}.  \TwoSum{} is due to Knuth;
+\FastTwoSum{} and the original product transformation are due to Dekker
+\citep{Knuth1997,Dekker1971}.  These transformations are standard tools in
+accurate floating-point computation \citep{Ogita2005}.
+
+Every error-free result also forms a double word, since
 $r_h=\operatorname{RN}(r_h+r_\ell)$ follows from
-\Cref{def:error-free-result}, so every error-free result forms a double word
-according to \Cref{def:double-word}.
+\Cref{def:error-free-result}.
 
-\paragraph{Addition transformations.}
+\paragraph{Error-free transformations for addition.}
 
-Both transformations return the rounded sum from Line~1 together with its
-correction.  Their usual guarantees differ only in their input conditions:
-\TwoSum{} requires no ordering, whereas \FastTwoSum{} assumes
-$|b|\leq|a|$.  The guarantees remain valid for subnormal values when the
-returned components are finite \citep{Boldo2017}.
+\citet{Boldo2017} prove that \TwoSum{} and \FastTwoSum{} retain exact
+reconstruction when subnormal values occur.  \FastTwoSum{} additionally
+requires its usual ordering condition.
 
-\begin{theorem}[Addition transformations over IEEE~754]
+\begin{theorem}[Error-free transformations for addition over IEEE~754]
 \label{thm:addition-transformations}
 Let $a$ and $b$ be finite values in a radix-two format, and suppose the
-  components returned by the transformation are finite.
+  components returned by the error-free transformation are finite.
 \begin{enumerate}
   \item If $(s,t)=\TwoSum{}(a,b)$, then $(s,t)$ is an error-free result
     according to \Cref{def:error-free-result} for $r=a+b$.
@@ -229,18 +224,16 @@ $t=\operatorname{RN}(b-z)=0$.  Thus, $s+t=a+b$ and
 $s=\operatorname{RN}(a+b)$, so $(s,t)$ is an error-free result.
 \end{proof}
 
-\paragraph{Product transformation.}
-
-In \FastTwoMult{}, Line~1 computes the rounded product and Line~2 its correction
-using a fused multiply-add.  With an unbounded exponent range, the correction
-is representable, so the components reconstruct the exact product.  Near the
-lower exponent bound, the correction can be unrepresentable even when the
-inputs and rounded product are normal \citep{BoldoDaumas2003}.
+\paragraph{Error-free transformation for products.}
 
 For a radix-two format of precision $p$, define
-$\tau=2^{e_{\min}+2p-1}$.  The following theorem combines the sufficient
-condition of \citet{BoldoDaumas2003} with our absolute reconstruction bound
-for the remaining finite cases.
+\[
+  \tau=2^{e_{\min}+2p-1}.
+\]
+Above this threshold, the representability result of
+\citet{BoldoDaumas2003} establishes exact reconstruction.  The following
+theorem states this sufficient condition and gives an absolute reconstruction
+bound for the remaining finite cases.
 \begin{theorem}[\FastTwoMult{} over IEEE~754]
 \label{thm:fast-two-mult}
 Let the underlying radix-two format have precision $p\geq3$, with $\eta$ as
@@ -280,7 +273,8 @@ which proves both conclusions.
 Floating-Point Value under Gradual Underflow}
 \label{sec:division-numerics}
 
-To show how the preceding transformation results combine within a complete
+To show how the preceding error-free transformation results combine within a
+complete
 operation, we analyze Algorithm~15 of \citet{Joldes2017} for dividing a double
 word by a floating-point value.  This algorithm illustrates both effects of a
 finite exponent range identified in \Cref{sec:flx-to-ieee}: the relevant
@@ -494,9 +488,9 @@ inputs can establish this finiteness before the algorithm is executed.
 Write $\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite.
 For operands $x_h,x_\ell,y$, write $(z_h,z_\ell)$ for the result of
 \DWDivFP{}.  Let $t_h$ be the rounded leading quotient computed on Line~1 of
-\Cref{alg:dw-div-fp}, and let $q_0=x_h/y$ be the exact leading quotient.  As
-before, $\Omega$ denotes the power of two immediately above the largest finite
-magnitude of the target format.
+\Cref{alg:dw-div-fp}, and let $q_0=x_h/y$ be the exact leading quotient.  Let
+$\Omega$ denote the power of two immediately above the largest finite magnitude
+of the target format.
 
 \begin{definition}[Conditions for \DWDivFP{}]
 \label[definition]{def:dw-div-conditions}
@@ -620,7 +614,8 @@ interpreted using $u$ and $\eta$ for the underlying format.
 
 \paragraph{Proof overview.}
 The addition results require no lower-magnitude condition: by
-\Cref{thm:addition-transformations}, the addition transformations remain exact
+\Cref{thm:addition-transformations}, the error-free transformations for
+addition remain exact
 when subnormal values occur, so the relative bounds are unchanged.  For
 multiplication, \Cref{thm:fast-two-mult} bounds a product correction that
 is too small to be represented exactly.  Propagating this error through the

@@ -147,10 +147,10 @@ remaining conditions concern quotient arithmetic.
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
 
-\Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel, which follows
-Algorithm~15 of \citet{Joldes2017}.  It computes a leading quotient from the
-high component, estimates the unaccounted part of the dividend, and uses that
-residual to correct the quotient.
+\Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel.  It computes a leading
+quotient from the high component, estimates the part of the dividend not
+accounted for by that quotient, and uses the residual to correct the result.
+The kernel follows Algorithm~15 of \citet{Joldes2017}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]

@@ -52,10 +52,9 @@ CompCert bridge within this layered proof structure, but additionally verify C r
 checks that establish the conditions of the numerical theorems.  The resulting
 public contracts require no numerical precondition from the caller.
 
-Double-double implementations descend from techniques introduced by
-\citet{Dekker1971}.  \citet{Hida2001} develop practical algorithms for
-double-double and quad-double arithmetic, which are implemented by the QD
-library \citep{QD}.  We use QD as a comparison implementation in
+The QD library provides practical double-double and quad-double arithmetic
+using algorithms developed by \citet{Hida2001} from techniques introduced by
+\citet{Dekker1971} \citep{QD}.  We use QD as a comparison implementation in
 \Cref{sec:evaluation}, not as a correctness oracle.  Unlike an ordinary call
 to QD, every normally returning call to one of our public wrappers has a
 machine-checked C contract stating the error bound and, for a double-word

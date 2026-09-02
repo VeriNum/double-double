@@ -2,7 +2,9 @@
 \label{sec:evaluation}
 
 The verified contracts establish numerical guarantees on normal return.  We
-evaluated three complementary empirical questions: the
+classified a call as accepted when all runtime checks succeeded and the
+function returned a result, and as rejected when a runtime check stopped its
+execution.  We evaluated three complementary empirical questions: the
 tightness of the proved error bounds, the practical significance of calls
 rejected by the runtime checks, and the performance cost of the
 wrappers.  We investigated the following research questions:
@@ -48,11 +50,9 @@ kept all 106 source bits representable while ensuring that the high component
 was finite.  Signs were balanced, and every generated operand
 formed a double word according to \Cref{def:double-word}.
 
-We classified a call as accepted when all runtime checks succeeded and the
-function returned a result.  We classified a call as rejected when a runtime
-check stopped its execution.  RQ1 and RQ2 used \RQOneSamplesPerExponent{}
-inputs at each exponent, giving 79,680 inputs per double-word operation and
-83,920 per error-free transformation.  All floating-point computations used
+RQ1 and RQ2 used \RQOneSamplesPerExponent{} inputs at each exponent, giving
+79,680 inputs per double-word operation and 83,920 per error-free
+transformation.  All floating-point computations used
 rounding to nearest with ties to even and
 gradual underflow.  \Cref{app:evaluation-details} gives the complete input
 construction, reference computation, boundary tests, and timing protocol.
