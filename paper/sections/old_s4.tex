@@ -1,0 +1,65 @@
+\section{Specification and Verification Boundary}
+\label{sec:specification}
+
+The overview deliberately hid most notation.  This section states the
+mathematical model, the representative operation condition, and the
+caller-visible form of the running contract.
+
+We use IEEE~754 binary64 with round-to-nearest, ties-to-even.  Let
+$u=2^{-53}$ be unit roundoff, $\eta=2^{-1074}$ the smallest positive
+subnormal value, and $\Omega=2^{1024}$ the power of two immediately above the
+largest finite binary64 binade.  Flocq supplies the floating-point semantics
+and rounding definitions used in the development~\cite{Boldo2011}.
+
+\begin{definition}[Representative operation condition]
+\label[definition]{def:dw-times-fp-cond}
+The predicate $\DWTimesFPCond(x_h,x_\ell,y)$ combines the hypotheses used by the
+bounded-format theorem for the running example.  At the paper level, its main
+clauses state that the relevant values are finite, $(x_h,x_\ell)$ satisfies
+\eqref{eq:dw-representation}, and the leading product has sufficient upper-range
+headroom for the intermediate computation.
+\end{definition}
+
+The development's condition is stated over Flocq values and their real
+interpretations.  The C check cannot in general test an exact real expression
+directly.  Instead, its VST proof shows that the Boolean tests made by the
+program imply the condition.  This keeps the numerical condition independent
+of a particular implementation of its sufficient checker.
+
+The principal result for the running example can be stated without exposing
+the proof-assistant representation of every connective.
+
+\begin{theorem}[Guarded DW$\times$FP contract]
+\label{thm:guarded-dw-times-fp}
+Let $x$ point to a stored binary64 pair $(x_h,x_\ell)$, and let $z$ point to
+valid, suitably separated result storage.  If the guarded DW$\times$FP call
+returns normally with $(z_h,z_\ell)$, the returned pair is the result of the
+binary64 functional model, satisfies the error bound stated in
+\eqref{eq:dw-times-fp-mixed}, and satisfies the operation's output representation
+property.  If the check fails, the wrapper follows its specified nonreturning
+error path without invoking the numerical kernel.
+\end{theorem}
+
+The formal VST contract divides these facts among three zones.  Pure numerical
+propositions belong in \texttt{PROP}; function arguments and return values are
+described in \texttt{PARAMS}/\texttt{RETURN}; and ownership of the input and
+output structures belongs in \texttt{SEP}.  Write $R(x)$ for the memory
+representation, $C(x)$ for the numerical condition, and $G(x,z)$ for the
+operation result.  Schematically, the three relevant contracts are
+\[
+\begin{array}{c}
+\{R(x)\}\ \texttt{check}(x)\
+  \ \{b=\mathsf{true}\Rightarrow C(x)\},\\[2pt]
+\{R(x)\land C(x)\}\ \texttt{kernel}(x)\ \{R(z)\land G(x,z)\},\\[2pt]
+\{R(x)\}\ \texttt{guarded}(x)\
+  \ \{\text{normal return}\Rightarrow G(x,z)\}.
+\end{array}
+\]
+The logical conjunctions in this schematic display should not be confused with
+separating conjunction between memory resources.
+
+The theorem concerns functional correctness and numerical accuracy of normally
+returning calls.  It is not a termination theorem for arbitrary environments,
+a complexity result, or a claim that the pair is a correctly rounded binary128
+result.  Its compilation-level interpretation is limited to the verified path
+and assumptions described in Section~\ref{sec:overview-pipeline}.

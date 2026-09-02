@@ -1,0 +1,42 @@
+\section{Mechanization and Refinement Chain}
+\label{sec:mechanization}
+
+Each guarded operation is assembled from three proof layers and a linking step.
+
+\paragraph{Numerical theorem.}
+Rocq functional models describe the sequence of rounded operations.  Flocq
+theorems relate the represented output to the exact real operation and, where
+applicable, establish the output representation relation.  FLX--FLT bridge
+lemmas or direct bounded-format arguments discharge the exponent-range issues
+described in Section~\ref{sec:ideas}.
+
+\paragraph{Condition bridge.}
+The operation-specific condition packages finiteness, representation, ordering,
+and range hypotheses.  The numerical development proves a corollary from that
+condition to the result consumed by the VST wrapper proof.
+
+\paragraph{C refinement and guarded composition.}
+A VST refinement proof establishes that the C kernel implements the binary64
+functional model.  A separate body proof establishes the check specification
+\[
+  b=\mathsf{true}\Longrightarrow\operatorname{cond}(x).
+\]
+The wrapper proof follows its two branches.  On success, ordinary Hoare
+sequencing supplies the check postcondition as the condition needed at the
+internal call; after the kernel call, the numerical theorem supplies the
+postcondition.  On failure, the specification of the error path makes an unsafe
+kernel call unreachable.
+
+The check and operation translation units are packaged as Verified Software
+Units.  Linking verifies that imported and exported function specifications
+match across translation-unit boundaries.  CompCert's correctness theorem then
+applies to the linked Clight program along the selected compilation path
+\cite{Appel2014}.
+
+The trusted and assumed boundary must consequently be read in layers.  The
+machine-checked results rely on the Rocq kernel and the stated assumptions of
+the imported proof libraries.  The executable interpretation additionally
+relies on CompCert and the platform behavior assumed by the C and IEEE~754
+interfaces.  The runtime checks themselves are program components covered by
+VST proofs; builds produced through a different compiler are a distinct
+deployment choice and should not be described as the same verified binary.

@@ -1,0 +1,32 @@
+\section{Representative Case Study: Double-Word Multiplication}
+\label{sec:case-study}
+
+Double-word by double-word multiplication exercises all parts of the
+architecture.  For $x=x_h+x_\ell$ and $y=y_h+y_\ell$, the algorithm computes a
+leading product, accumulates cross terms, and uses a final Fast2Sum to construct
+its output pair.  Its condition combines valid double-word inputs, finiteness,
+and headroom for the relevant intermediate computations.
+
+The proof separates three obligations.  First, the leading product and cross
+terms must be related to the exact product $xy$.  Second, any contribution from
+bounded-exponent behavior must be included in the final error statement.
+Third, the final reconstruction must establish the output representation
+property independently of the real-number bound.
+
+The check proof does not repeat this analysis.  It proves instead that the C
+tests imply the named multiplication condition.  At the wrapper call site,
+that fact is exactly the precondition required to invoke the numerical
+corollary.  This small entailment is the program-logic connection between the
+runtime branch and the longer floating-point proof.
+
+Addition provides a useful contrast.  Its proof does not impose the same lower
+magnitude restrictions merely because multiplication contains an
+underflow-sensitive residual.  The operation-specific architecture therefore
+avoids exporting the strongest restriction of one kernel as a library-wide
+policy.
+
+For client composition, the important final step is to use only the properties
+actually exported by the preceding call.  When a first call exposes the
+double-word relation for its output, a second operation can consume that fact
+as part of its representation reasoning; its own check remains responsible for
+the other operation-specific conditions.

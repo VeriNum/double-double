@@ -1,0 +1,41 @@
+\section{Related Work and Discussion}
+\label{sec:related}
+
+\citet{Joldes2017} derived tight bounds for the principal double-word building
+blocks.  \citet{Rideau2022} subsequently mechanized these analyses in
+Rocq/Flocq, correcting a published multiplication bound in the process.  Their
+mechanized results provide the principal
+mathematical foundation reused here.  This work concentrates on the passage to
+bounded IEEE~754 computations and on connecting the resulting conditional
+theorems to checked C interfaces.
+
+Flocq provides floating-point semantics and reusable rounding results
+\cite{Boldo2011}.  Earlier work has mechanized rounding-error arguments and
+expansion renormalization~\cite{Roux2014,Boldo2015}.  VST and CompCert provide
+the program logic and compiler connection used here to carry numerical
+postconditions to C callers~\cite{Appel2014}.
+
+\citet{Zhang2025} automatically verify floating-point accumulation networks and
+synthesize an addition network.  Their adjacent-term
+nonoverlap relation specializes, for two components, to the rounding relation
+used for double words here.  The comparison dimensions relevant to this paper
+are the arithmetic model, numerical guarantee, treatment of finite exponent
+ranges, executable hypotheses, program-level refinement, and the interface
+property made available to clients.
+
+QD is a reference implementation of double-double and quad-double arithmetic
+\cite{QD}.  It prioritizes portable numerical performance and provides
+multiple algorithmic variants.  We use it as a performance and behavioral
+baseline while keeping the contract comparison explicit: the distinguishing
+question is which preconditions and postconditions are checked or proved at the
+call boundary.
+
+\paragraph{Limitations.}
+Runtime checks may be sufficient without being necessary and can therefore
+reject inputs for which a particular execution would have an acceptable
+result.  They also impose a runtime cost.  The current contracts assume the
+stated binary64 rounding and FMA behavior and the toolchain versions recorded
+by the artifact.  Extending the interface to other formats, rounding modes, or
+failure policies requires corresponding models, condition bridges, and program
+proofs.  The exact guarantee and closure property must be read per exported
+operation rather than inferred from the library name.

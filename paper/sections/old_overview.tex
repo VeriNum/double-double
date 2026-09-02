@@ -1,0 +1,491 @@
+\section{Library Overview}
+\label{sec:overview}
+
+This section introduces the library through the user-facing C interface for a
+guarded product of a double word and a binary64 value. 
+first we present the guarded c function. 
+then we present the double 
+
+garbage:
+We first define the double-word representation needed
+to understand the operation.  We then present the C implementation of the
+guarded interface, explain its nonreturning failure path and normal-return
+path, and state what normal return guarantees: agreement with the functional
+model, a proved accuracy bound, and a valid output representation.  Finally,
+we present the numerical kernel and use its intermediate computations to
+motivate the representation and range properties established by the check and
+the treatment of gradual underflow in the numerical analysis.
+Section~\ref{sec:specification} states the operation condition, error theorem,
+guarded contract, and verification boundary precisely.
+
+\subsection{The Guarded C Interface}
+\label{sec:overview-interface}
+
+Every guarded operation in the library follows the same control flow: an
+operation-specific check is evaluated before the arithmetic kernel is called.
+\Cref{fig:guarded-interface} shows the complete guarded function for
+multiplication of a double word by a binary64 value.
+
+\begin{figure}[t]
+  \begin{lstlisting}[language=C]
+void dw_times_fp_guarded(struct dword *z,
+                        struct dword *x,
+                        double y) {
+    if (!dw_times_fp_check(x, y))
+        exit(EXIT_FAILURE);
+
+    dw_times_fp(z, x, y);
+}
+  \end{lstlisting}
+  \caption{Guarded entry point for DW$\times$FP multiplication.  The
+  arithmetic kernel is called only when the check succeeds.}
+  \Description{A C function that exits when a runtime check fails and otherwise
+  calls the double-word multiplication kernel.}
+  \label{fig:guarded-interface}
+\end{figure}
+
+The argument \texttt{x} is a pointer to the structure storing the input double
+word, \texttt{y} is the binary64 operand, and \texttt{z} is a pointer to the
+structure in which the result is stored.  If the check fails, the function
+calls \texttt{exit(EXIT\_FAILURE)}.  The arithmetic kernel is not called, the
+function does not return normally, and no numerical result is returned.  If
+the check succeeds, \texttt{dw\_mult\_fp} stores the computed pair in
+\texttt{z} and the guarded function returns normally.  A normal return
+therefore means that the check succeeded and the arithmetic kernel completed.
+
+\begin{figure}[t]
+  \begin{lstlisting}[language=C]
+struct dword {
+    double s;  /* high word */
+    double t;  /* low word  */
+};
+  \end{lstlisting}
+  \caption{C storage representation for a double word.}
+  \Description{A C structure containing binary64 high-word and low-word
+  fields.}
+  \label{fig:dword-struct}
+\end{figure}
+
+\Cref{fig:dword-struct} shows the C structure used to store input and output
+double words.  The fields \texttt{s} and \texttt{t} store the two binary64
+components, referred to as the high and low words, respectively.
+
+The structure specifies only how these components are stored.  The guarantee
+on normal return concerns the value represented by the pair and the relation
+between its components.
+
+\subsection{Double-Word Representation}
+\label{sec:overview-values}
+
+A normally returning guarded call guarantees that a valid double-word
+representation is stored in the output structure.  Let
+$\operatorname{RN}(r)$ denote rounding a real number $r$ to binary64 using
+round-to-nearest, ties-to-even.
+
+\begin{definition}[Double word]
+\label[definition]{def:double-word}
+A double-word number $x$ is the unevaluated sum
+\[
+  x=x_h+x_\ell
+\]
+of two binary64 values $x_h$ and $x_\ell$ such that
+\begin{equation}
+  x_h=\operatorname{RN}(x_h+x_\ell).
+  \label{eq:dw-representation}
+\end{equation}
+\end{definition}
+
+A pair satisfying Equation~\eqref{eq:dw-representation} is a valid double
+word.  Its components $x_h$ and $x_\ell$ are called the high and low words,
+respectively.  The pair represents the real value $x=x_h+x_\ell$.  Since
+$x_h=\operatorname{RN}(x)$, the low word is the residual
+$x_\ell=x-x_h$ left after rounding $x$ to binary64.  Together, the two words
+represent $x$ exactly.  The following example takes $x$ to be the exact
+product of two binary64 values.
+
+For example, let $a=b=1+2^{-52}$.  Their exact product is
+\[
+  ab=1+2^{-51}+2^{-104}.
+\]
+Rounding this product to binary64 gives
+\[
+  p_h=\operatorname{RN}(ab)=1+2^{-51},
+\]
+while an FMA recovers the discarded term:
+\[
+  p_\ell=\operatorname{FMA}(a,b,-p_h)=2^{-104}.
+\]
+Thus, $p_h+p_\ell=ab$.  The value $p_h$ is the high word, while $p_\ell$
+retains the term discarded when the exact product is rounded to binary64.
+The pair is a valid double word according to \Cref{def:double-word}.
+
+Equation~\eqref{eq:dw-representation} relates the two components stored by a
+normally returning guarded call but says nothing about the accuracy of the
+operation.  Accuracy compares the value represented by the computed double
+word with the exact real result.  Establishing an accuracy bound for the
+running example, \texttt{dw\_mult\_fp\_guarded}, first requires specifying the
+algorithm that computes the output pair.
+
+\subsection{Accuracy of the Product of a Double Word and a Floating-Point Value}
+\label{sec:overview-running}
+
+\Cref{alg:dw-times-fp} presents \DWTimesFP{}, an algorithm for multiplying a
+double word by a floating-point value \citep[Algorithm~9]{Joldes2017}.  The
+inputs are a pair $(x_h,x_\ell)$, assumed to be a valid double-word
+representation, and a floating-point value $y$.  The algorithm returns a pair
+$(z_h,z_\ell)$, whose represented value $z_h+z_\ell$ approximates the exact
+real product $(x_h+x_\ell)y$.
+
+\begin{algorithm}[\DWTimesFP{}$(x_h,x_\ell,y)$]
+\label[algorithm]{alg:dw-times-fp}
+\begin{flushleft}
+\(
+  \begin{array}{@{}r@{\quad}l@{}}
+    1: & (c_h,c_{\ell,1}) \leftarrow \FastTwoMult{}(x_h,y)\\
+    2: & c_{\ell,3} \leftarrow \operatorname{FMA}(x_\ell,y,c_{\ell,1})\\
+    3: & (z_h,z_\ell) \leftarrow \FastTwoSum{}(c_h,c_{\ell,3})\\
+    4: & \mathbf{return}\ (z_h,z_\ell)
+  \end{array}
+\)
+\end{flushleft}
+\end{algorithm}
+
+In \Cref{alg:dw-times-fp}, \FastTwoMult{} and \FastTwoSum{} are standard
+building blocks for double-word arithmetic
+\citep{Dekker1971,Joldes2017}.
+
+The predicate $\DWTimesFPCond(x_h,x_\ell,y)$ denotes mathematical input and
+range conditions sufficient to prove the following result.
+
+\begin{theorem}[Accuracy and valid output of \DWTimesFP{}]
+\label{thm:dw-times-fp-numerical}
+Let $u=2^{-p}$ be unit roundoff for a radix-two format of precision $p\geq3$,
+and let $\eta$ be its smallest positive subnormal value.  Let
+\[
+  (z_h,z_\ell)=\DWTimesFP{}(x_h,x_\ell,y).
+\]
+If $\DWTimesFPCond(x_h,x_\ell,y)$ holds, then
+\begin{equation}
+  \left|(z_h+z_\ell)-(x_h+x_\ell)y\right|
+  \leq 2u^2\left|(x_h+x_\ell)y\right|+2.51\eta,
+  \label{eq:dw-times-fp-mixed}
+\end{equation}
+and $(z_h,z_\ell)$ is a valid double word:
+\[
+  z_h=\operatorname{RN}(z_h+z_\ell).
+\]
+\end{theorem}
+
+\citet{Joldes2017} proved a relative-error bound of $2u^2$ in a model
+without underflow or overflow.  Our condition for \DWTimesFP{},
+$\DWTimesFPCond(x_h,x_\ell,y)$, prevents overflow but permits intermediate
+values near the underflow threshold.  For such values, the usual
+relative-error model does not apply uniformly, so we
+bound rounding error in absolute terms using the smallest positive subnormal
+value, $\eta$.  For binary64, $\eta=2^{-1074}$.  Propagating these absolute
+bounds through the algorithm gives the absolute error term $2.51\eta$.
+
+% On Line~1, \FastTwoMult{}$(x_h,y)$ returns $(c_h,c_{\ell,1})$, where $c_h$
+% is the computed product and $c_{\ell,1}$ is a correction for its rounding
+% error.  When the exact correction is representable, the two terms recover the
+% exact leading product:
+%\[
+%  c_h+c_{\ell,1}=x_h\cdot y.
+%\]
+%Near underflow, this equality may fail; the absolute term in
+%\Cref{eq:dw-times-fp-mixed} accounts for the resulting error.
+
+%Line~2 uses a fused multiply-add to combine the residual $c_{\ell,1}$ with
+%the contribution from the input low word, producing $c_{\ell,3}$.  However,
+%$c_{\ell,3}$ is only a candidate low word: it combines the rounding error
+%from the high-word product with the contribution $x_\ell\cdot y$ from the
+%input low word.  This combined term may be large enough that
+%\[
+%  \operatorname{RN}(c_h+c_{\ell,3})\neq c_h.
+%\]
+%The pair $(c_h,c_{\ell,3})$ may therefore fail to satisfy the double-word
+%relation in \Cref{def:double-word}.
+
+%Line~3 therefore applies \FastTwoSum{} to $(c_h,c_{\ell,3})$ to construct a
+%valid double word, returning $(z_h,z_\ell)$ such that
+%\[
+%  z_h=\operatorname{RN}(c_h+c_{\ell,3})
+%  \qquad\text{and}\qquad
+%  z_h+z_\ell=c_h+c_{\ell,3}.
+%\]
+%Consequently,
+%\[
+%  z_h=\operatorname{RN}(z_h+z_\ell),
+%\]
+%so the returned pair is a valid double word according to
+%\Cref{def:double-word}.
+
+To use \Cref{thm:dw-times-fp-numerical} at the C interface, a successful
+executable check must establish $\DWTimesFPCond$.  The guard in
+\Cref{fig:guarded-interface} runs this check before invoking the arithmetic
+kernel.
+
+\subsection{The Runtime Check}
+\label{sec:overview-guard}
+
+\Cref{fig:dw-times-fp-check} gives the implementation of this check.
+
+\begin{figure}[t]
+  \begin{lstlisting}[language=C]
+int dw_times_fp_check(struct dword *x,
+                     double y) {
+    int fin_xh = isfinite_double(x->s);
+    int fin_xl = isfinite_double(x->t);
+    int fin_y  = isfinite_double(y);
+    int dwx = fin_xh && fin_xl &&
+              (x->s + x->t == x->s);
+
+    double z = x->s * y;
+    double q_prod = ldexp(1.0, 1023);
+    int prod_bnd = fabs(z) < q_prod;
+
+    return dwx && fin_y && prod_bnd;
+}
+  \end{lstlisting}
+  \caption{Runtime check for the product of a double word and a binary64
+  value.}
+  \Description{C code that checks input finiteness, the double-word relation,
+  and an upper bound on the rounded leading product.}
+  \label{fig:dw-times-fp-check}
+\end{figure}
+
+When \texttt{x} stores $(x_h,x_\ell)$, we prove
+\[
+  \texttt{dw\_mult\_fp\_check}(x,y)=1
+  \quad\Longrightarrow\quad
+  \DWTimesFPCond(x_h,x_\ell,y).
+\]
+Thus, a successful check establishes the sufficient condition used in
+\Cref{thm:dw-times-fp-numerical}.
+
+Lines~3--7 establish the required properties of the inputs.  The finiteness
+tests exclude infinities and NaNs.  Line~7 of
+\Cref{fig:dw-times-fp-check} checks the relation between the components of the
+input pair by evaluating
+\begin{lstlisting}[language=C,numbers=none,
+                   backgroundcolor=\color{gray!5}]
+x->s + x->t == x->s
+\end{lstlisting}
+Under the strict IEEE~754 semantics required by the library, the addition
+computes $\operatorname{RN}(x_h+x_\ell)$.  A true comparison therefore
+establishes the double-word relation in \Cref{def:double-word}.
+
+Lines~9--11 establish the upper-range bound.  The code computes
+$z=\operatorname{RN}(x_hy)$ and checks that $|z|<2^{1023}$.  The corresponding
+condition in $\DWTimesFPCond$ concerns the exact product $x_hy$, which cannot
+be computed directly using binary64 arithmetic.  However, $2^{1023}$ is
+exactly representable in binary64.  By monotonicity of round-to-nearest, an
+exact product with magnitude at least $2^{1023}$ cannot round to a value with
+smaller magnitude.  Passing the strict test therefore establishes
+$|x_hy|<2^{1023}$, providing the upper-range bound used to prevent overflow
+in \DWTimesFP{}.
+
+The implication is intentionally one way: the strict comparison may
+conservatively reject an input for which $\DWTimesFPCond$ holds.  At the lower
+end of the format, the check imposes no magnitude restriction.  The absolute
+term in \Cref{eq:dw-times-fp-mixed} accounts for rounding in this regime.
+
+On the successful branch of \Cref{fig:guarded-interface}, soundness of the check
+supplies the hypothesis of the numerical theorem before the arithmetic
+kernel is invoked.  Completing the guarantee for a normally returning call
+then requires a refinement proof showing that the C kernel stores the pair
+returned by \DWTimesFP{}.
+
+\subsection{Establishing the Guarded Contract}
+\label{sec:overview-pipeline}
+
+We can now state the guarantee provided by the running example at the C
+interface.  Suppose that \texttt{x} initially stores $(x_h,x_\ell)$ and that
+\texttt{dw\_mult\_fp\_guarded} returns normally with \texttt{z} storing
+$(z_h,z_\ell)$.  The stored pair is the binary64 pair specified by
+\DWTimesFP{} on the same inputs, its represented value satisfies the bound in
+\Cref{eq:dw-times-fp-mixed}, and it is a valid double word according to
+\Cref{def:double-word}.  Callers do not establish
+$\DWTimesFPCond(x_h,x_\ell,y)$; the guarded interface establishes a sufficient
+condition before invoking the arithmetic kernel.
+
+\definecolor{flocqshade}{RGB}{222,236,249}
+\definecolor{vstshade}{RGB}{224,241,229}
+\definecolor{compcertshade}{RGB}{252,232,211}
+\definecolor{artifactshade}{RGB}{243,243,243}
+\newcommand{\diagramboxtitle}[1]{%
+  \makebox[\linewidth][c]{{\normalsize\textbf{#1}}}}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  x=1cm,
+  y=1cm,
+  node distance=4mm,
+  flow/.style={-{Latex[length=2.1mm]},thick},
+  connector/.style={thick},
+  artifact/.style={draw,rounded corners=2pt,fill=artifactshade,
+    align=left,inner sep=5pt,font=\small},
+  flocqproof/.style={draw,rounded corners=2pt,fill=flocqshade,
+    align=left,inner sep=5pt,font=\small},
+  vstproof/.style={draw,rounded corners=2pt,fill=vstshade,
+    align=left,inner sep=5pt,font=\small},
+  compcertproof/.style={draw,rounded corners=2pt,fill=compcertshade,
+    align=left,inner sep=5pt,font=\small},
+  arrowlabel/.style={font=\scriptsize,fill=white,inner sep=1.5pt,align=center}
+]
+
+\node[artifact,text width=7.6cm,anchor=north] (csource) at (-4.15,0)
+  {\diagramboxtitle{Handwritten C sources}\\[2pt]
+   \makebox[\linewidth][c]{arithmetic kernel, runtime check, and guarded interface}};
+
+\node[artifact,text width=7.6cm,anchor=north] (model) at (4.15,0)
+  {\diagramboxtitle{Rocq models and definitions}\\[2pt]
+   \makebox[\linewidth][c]{\DWArithOp{} and $\DWArithOpCond$}};
+
+\node[vstproof,text width=5.55cm,minimum height=2cm,
+      anchor=north] (checkproof) at (-5.9,-2.1)
+  {\diagramboxtitle{Soundness of the check}\\[3pt]
+   \makebox[\linewidth][c]{successful check $\Rightarrow \DWArithOpCond$}};
+
+\node[vstproof,text width=5.2cm,minimum height=2cm,
+      anchor=north] (kernelproof) at (0,-2.1)
+  {\diagramboxtitle{C refinement proof}\\[3pt]
+   \makebox[\linewidth][c]{C kernel satisfies \DWArithOp{} spec}};
+
+\node[flocqproof,text width=5.55cm,minimum height=2cm,
+      anchor=north] (numproof) at (5.9,-2.1)
+  {\diagramboxtitle{Numerical guarantees}\\[3pt]
+   $\DWArithOpCond \Rightarrow$ result is accurate\\[-1pt]
+   and a valid double-word};
+
+\coordinate (cfork) at (-4.15,-1.75);
+\coordinate (mfork) at (4.15,-1.75);
+\draw[connector] (csource.south) -- (cfork);
+\draw[flow] (cfork) -| (checkproof.north);
+\draw[flow] (cfork) -| ([xshift=-11mm]kernelproof.north);
+\draw[connector] (model.south) -- (mfork);
+\draw[flow] (mfork) -| ([xshift=11mm]kernelproof.north);
+\draw[flow] (mfork) -| (numproof.north);
+
+\node[vstproof,text width=14cm,anchor=north] (wrapper)
+      at (0,-4.7)
+  {\diagramboxtitle{Guarded interface proof}\\[3pt]
+   \makebox[\linewidth][c]{successful branch combines the three results;
+   failure branch exits before calling the kernel}};
+\draw[flow] (checkproof.south) -- ([xshift=-59mm]wrapper.north);
+\draw[flow] (kernelproof.south) -- (wrapper.north);
+\draw[flow] (numproof.south) -- ([xshift=59mm]wrapper.north);
+
+\node[artifact,text width=10.5cm,below=of wrapper] (cguarantee)
+  {\diagramboxtitle{Verified C interface}\\[2pt]
+   check failure $\Rightarrow$ nonreturning error path\\[-1pt]
+   normal return $\Rightarrow$ result refines functional-model, satisfies
+   accuracy guarantee, and is a valid double-double};
+\draw[flow] (wrapper) -- (cguarantee);
+
+\node[compcertproof,text width=6.2cm,below=8mm of cguarantee] (compcert)
+  {\diagramboxtitle{CompCert compiler correctness}};
+
+\node[artifact,text width=5.8cm,below=of compcert] (assembly)
+  {\diagramboxtitle{Generated assembly}\\[-1pt]
+   \makebox[\linewidth][c]{preserves the verified C behavior}};
+\draw[flow] (compcert) -- (assembly);
+
+\node[draw,dashed,rounded corners=2pt,
+      fit=(compcert)(assembly),inner xsep=6mm,inner ysep=4mm]
+      (compcertgroup) {};
+\node[font=\small,fill=white,inner xsep=3pt]
+      at (compcertgroup.north) {When compiled with CompCert};
+\draw[flow] ([xshift=-30mm]cguarantee.south) --
+            ([xshift=-30mm]compcertgroup.north);
+\draw[flow] ([xshift=30mm]cguarantee.south) --
+            ([xshift=30mm]compcertgroup.north);
+
+\end{tikzpicture}
+\caption{For each guarded operation, soundness of the check, the C refinement
+proof, and the numerical theorem combine to establish the guarded C
+contract.  When CompCert is used, compiler correctness extends this guarantee
+to generated assembly.  Green boxes show VST proofs, the blue box shows the
+Flocq proof, and the orange box shows the CompCert correctness theorem.}
+\Description{A top-to-bottom diagram.  C sources and Rocq definitions lead
+to three verified results: soundness of the runtime check, a refinement proof
+showing that the C kernel implements its functional model, and an
+operation-specific numerical theorem proved in Rocq using Flocq.  A VST proof
+combines these results into the guarded C contract.  CompCert correctness
+preserves that behavior in generated assembly when CompCert is used.}
+\label{fig:overview-architecture}
+\end{figure*}
+
+Three separately proved results establish this contract.  Soundness of the
+check shows that a successful call to \texttt{dw\_mult\_fp\_check} establishes
+$\DWTimesFPCond(x_h,x_\ell,y)$.  A VST refinement proof for
+\texttt{dw\_mult\_fp} shows that the C kernel stores the pair returned by
+\DWTimesFP{} on the same inputs.  Finally,
+\Cref{thm:dw-times-fp-numerical} gives the error bound and valid double-word
+result whenever $\DWTimesFPCond$ holds.
+
+The VST proof of the guarded function combines these results by following the
+two branches in \Cref{fig:guarded-interface}.  A failed check reaches the
+nonreturning error path without invoking the kernel.  On the successful
+branch, soundness of the check supplies the condition needed by the numerical
+theorem, while the refinement proof identifies the stored result with the output
+of \DWTimesFP{}.  \Cref{fig:overview-architecture} generalizes this composition
+across the library.  In the figure, \DWArithOp{} denotes the functional model
+for an arbitrary operation and $\DWArithOpCond$ denotes its sufficient
+condition.
+
+\Cref{tab:operation-preview} summarizes the operations and normal-return
+accuracy guarantees provided by the library.  Let $r$ denote the exact real
+result and let $\widehat r=z_h+z_\ell$ denote the value represented by the
+returned pair.  Every normally returning call also guarantees that the pair
+is the result of the corresponding functional model and is a valid double
+word.
+
+\begin{table}[t]
+\centering
+\caption{Operations and normal-return accuracy guarantees provided by the
+library.  For each operation, $r$ denotes the exact real result and
+$\widehat r=z_h+z_\ell$ denotes the real value represented by the returned
+pair.  The value $u=2^{-53}$ is the unit roundoff and $\eta=2^{-1074}$ is the
+smallest positive subnormal value for binary64.  Normal return also guarantees
+that the pair is a valid double-double.}
+\Description{The library operations, their exact real results, and the
+accuracy guarantees provided when their guarded interfaces return normally.}
+\label{tab:operation-preview}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Operation & Exact result &
+  \shortstack[l]{Normal-return\\accuracy guarantee} \\
+\midrule
+\TwoSum{}         & $a+b$ & $\widehat r=r$ (exact) \\
+\FastTwoSum{}     & $a+b$ & $\widehat r=r$ (exact) \\
+\FastTwoMult{}    & $ab$  & $\widehat r=r$ (exact) \\
+\addlinespace
+\textsc{DWPlusFP} & $x+y$ &
+  $|\widehat r-r|\leq 2u^2|r|$ \\
+\textsc{DWPlusDW} & $x+y$ &
+  $|\widehat r-r|\leq \dfrac{3u^2}{1-4u}|r|$ \\
+\DWTimesFP{}       & $xy$ &
+  $|\widehat r-r|\leq 2u^2|r|+2.51\eta$ \\
+\textsc{DWTimesDW} & $xy$ &
+  $|\widehat r-r|\leq 4u^2|r|+2.5\eta$ \\
+\textsc{DWDivFP}  & $x/y$ &
+  $|\widehat r-r|\leq 3u^2|r|+\eta$ \\
+\textsc{DWDivDW}  & $x/y$ &
+  $|\widehat r-r|\leq 12.33u^2|r|+2\eta$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In this paper, \emph{end-to-end} means that machine-checked proofs connect the
+numerical guarantees for the functional model to the contract exposed by the
+linked guarded C interface and, when CompCert is used, to the behavior of the
+generated assembly.  The numerical and C proofs require strict IEEE~754
+semantics.  Any compiler used to build the library must preserve these
+semantics.  CompCert satisfies this requirement, and its correctness theorem
+additionally preserves the verified C behavior during compilation.  Code
+produced by another compiler is not covered by this compilation theorem.
+\Cref{sec:specification} states the mathematical condition, C contract, and
+verification boundary precisely.

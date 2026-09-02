@@ -1,0 +1,66 @@
+\section{Related Work}
+\label{sec:related-work}
+
+The closest numerical foundation for our work is the analysis of double-word
+arithmetic by \citet{Joldes2017} and its Rocq mechanization by
+\citet{Rideau2022}.  As discussed in \Cref{sec:intro-double-word}, these works
+establish error bounds and valid output pairs for the underlying mathematical
+algorithms under idealized exponent assumptions.  We build on those results
+but address the finite exponent range of IEEE~754, derive the sufficient
+conditions stated in \Cref{sec:numerics}, and connect the resulting guarantees
+to executable C interfaces.
+
+\citet{Shewchuk1997} uses error-free transformations and nonoverlapping
+floating-point expansions to implement adaptive-precision geometric
+predicates.  A double word is the two-component case of this broader style of
+representation, but the present work concerns fixed two-component addition,
+multiplication, and division.  \citet{BoldoDaumas2003} study representable
+correction terms for operations affected by underflow, while
+\citet{Boldo2017} establish robust guarantees for \TwoSum{} and
+\FastTwoSum{}.  We use these transformation results in
+\Cref{sec:error-free-transformations} and compose them within the complete
+double-word operations analyzed in the remainder of \Cref{sec:numerics}.
+
+Other work mechanizes proofs of rounding-error bounds \citep{Roux2016} and
+the normalization of floating-point expansions \citep{Boldo2017Renorm}.
+More recently,
+\citet{Zhang2025} automatically verify floating-point accumulation networks
+and synthesize an improved network for double-double addition.  For a
+two-component expansion, their adjacent-term nonoverlap condition corresponds
+to the valid double-word relation used here.  Their work focuses on automated
+verification and synthesis of arithmetic networks; ours is complementary in
+covering addition, multiplication, and division and in exposing their
+numerical guarantees through a verified C interface.
+
+Several systems produce machine-checked bounds for floating-point
+computations.  Gappa automates numerical bounds and can generate proofs
+checked in Coq \citep{deDinechin2011}.  FloVer checks certificates for error
+bounds in Coq and HOL4 \citep{Becker2018}.  The original VCFloat connects
+error analysis of floating-point C expressions with Coq proofs
+\citep{Ramananandro2016}, while VCFloat2 provides a language and supporting
+library for functional models that can be composed with other verification
+results \citep{AppelKellison2024}.  Our development uses the floating-point
+definitions and connection to CompCert provided by VCFloat2, but proves the
+numerical results for the double-word algorithms directly in Flocq.
+
+Prior work has also connected numerical models to verified C programs.
+\citet{AppelBertot2020} demonstrate a layered proof in which VST establishes
+that a C program implements a floating-point model and Flocq establishes the
+numerical properties of that model.  We follow this separation, but apply it
+to a C library whose wrappers establish the conditions required by
+the numerical theorems and provide those guarantees through their public
+contracts.
+
+QD serves as the established comparison implementation in
+\Cref{sec:evaluation}.  MPFR provides correctly rounded operations at a
+precision selected by the user \citep{Fousse2007} and supplies the independent
+reference values used in that comparison.  \Cref{sec:evaluation} compares the
+errors produced by accepted calls to the six default wrappers with those
+produced by QD.  It separately evaluates QD on inputs associated with calls
+rejected by runtime checks in both wrappers for the six double-word operations
+and in the single wrapper for each error-free transformation.  The runtime comparison uses the
+unchecked kernels and QD as timing baselines for the six default wrappers and
+three single transformation wrappers.  QD is used as an established comparison
+implementation rather than as a correctness oracle.  The
+distinguishing result of this work is the machine-checked guarantee attached
+to a normally returning C call.

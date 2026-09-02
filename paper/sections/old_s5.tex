@@ -1,0 +1,63 @@
+\section{Key Technical Ideas}
+\label{sec:ideas}
+
+The proof is organized around obstacles that recur across operations, rather
+than around the order of source files or tactics.
+
+\subsection{Relating idealized and bounded-exponent arithmetic}
+
+Earlier analyses express significand rounding in Flocq's FLX format, whose
+exponent range is unbounded~\cite{Rideau2022}.  Binary64 instead has finite
+upper and lower exponent bounds and gradual underflow.  A bounded-format proof
+therefore follows one of two routes.  When an intermediate lies outside the
+underflow region, a bridge lemma identifies its bounded FLT rounding with the
+corresponding FLX rounding, allowing the existing analysis to transfer at that
+node.  When a designated intermediate can be subnormal or zero, the proof
+reasons directly about FLT rounding and carries the resulting absolute error.
+
+This distinction is local to rounded nodes.  It does not justify one global
+rule that every operation must reject subnormal values, nor does the phrase
+``whole range'' mean that no other hypotheses are needed.  Finiteness,
+overflow headroom, input representation, and nonzero-result hypotheses remain
+operation-specific.
+
+\subsection{Mixed bounds near underflow}
+
+The standard relative model becomes uninformative when an exact result
+approaches zero, because a fixed absolute rounding quantum cannot always be
+absorbed into a uniform relative factor.  The running example therefore states
+both a relative-scale term and an absolute underflow term in
+\eqref{eq:dw-times-fp-mixed}.  The decisive proof step is to track which residual
+may be lost and to bound its contribution to the represented result, while
+separately proving that the remaining computation stays finite.
+
+Other operations make different choices: in some cases the same coefficient
+survives gradual underflow; in others the whole-range result has a different
+coefficient or a mixed form.  The library interface preserves these distinctions
+instead of forcing every operation into one generic error statement.
+
+\subsection{Conditions as an interface between proofs}
+
+An operation condition packages the facts expected by the numerical theorem in
+a form that the VST development can name in a function specification.  A bridge
+lemma proves that the condition implies the lower-level hypotheses of the
+accuracy and representation lemmas.  Independently, a check proof establishes
+that a successful Boolean result implies the condition.  The condition is thus
+the stable boundary between numerical reasoning and program verification.
+
+This separation also permits multiple interfaces to the same kernel.  One
+guard may enforce conditions for a stronger exactness or representation
+result, while another may accept a larger domain and expose only an accuracy
+property.  The theorem used by the wrapper, rather than the implementation name
+alone, determines the caller-visible guarantee.
+
+\subsection{Accuracy and closure}
+
+The real-number error bound and the double-word relation solve different
+client problems.  Accuracy controls the represented value.  Closure provides
+the representation fact expected at a subsequent call.  In algorithms ending
+with Fast2Sum, the closure proof typically depends on showing that the final
+high/low reconstruction preserves the intended intermediate sum under the
+applicable range and ordering facts.  The paper states these properties
+separately so that a contract does not silently treat one as a consequence of
+the other.

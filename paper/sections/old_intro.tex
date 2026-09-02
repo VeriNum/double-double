@@ -1,0 +1,138 @@
+\section{Introduction}
+\label{sec:intro}
+
+Floating-point arithmetic underlies nearly all scientific and numerical
+software, yet binary64 does not provide enough precision for every application
+\citep{Higham2002}.  When higher precision is needed, one option is a
+multiple-precision library such as MPFR, which supports a user-selected working
+precision \citep{Fousse2007}.  Double-word arithmetic is a more specialized
+option: it represents each value with a pair of floating-point numbers and
+provides roughly twice the precision of the underlying format
+\citep{Dekker1971,Joldes2017}.  Its binary64 instance, called double-double
+arithmetic, can be faster than a general-purpose multiple-precision arithmetic
+library when roughly twice the precision of binary64 is sufficient \citep{Li2002}.
+For example, double-double summation has been used to improve reproducibility
+in parallel climate modeling \citep{HeDing2001}, and double-double arithmetic
+has supplied additional precision for calculations in quantum electrodynamics
+\citep{Aoyama2015}.
+
+While double-word arithmetic offers performance advantages, using it safely
+requires vigilance.  \citet{Li2002} called double-double arithmetic ``an
+`attractive nuisance,' like an unfenced backyard swimming pool.''  The problem
+is that, while double-word arithmetic provides roughly twice the precision of
+the underlying format, it does not provide the usual guarantees of conventional
+IEEE~754 arithmetic with twice the precision.  IEEE~754 specifies each basic
+operation by correct rounding of its exact result \citep{IEEE754-2019}; under
+the standard model, this gives each basic arithmetic operation the same
+relative-error bound \citep{Higham2002}.  In contrast, for double-word
+arithmetic, error bounds can differ across operations and even between
+algorithms for the same operation.  Each algorithm must also be shown to
+produce a valid double-word representation so that its output can be used as
+an input to later operations.  Without this representation property,
+double-word operations cannot be used soundly in sequence.  Whether an
+algorithm for a double-word operation meets these two requirements depends on
+conditions over its inputs and intermediate values.
+
+To enable the safe use of double-word arithmetic, we put a verified fence
+around C implementations of double-word operations.  The fence is a guarded C
+interface for each double-word operation.  Before calling the arithmetic
+kernel, the interface checks a sufficient, operation-specific condition.  Our
+numerical analysis proves that any result produced under this condition
+satisfies an operation-specific error bound and is a valid double-word
+representation.  If the check fails, the kernel is not called and no numerical
+result is returned.  If the function returns normally, its contract guarantees
+that its result satisfies the error bound proved for that operation and is a
+valid double-word representation.  The conditions required for safe
+double-word arithmetic are therefore enforced by the library rather than left
+to callers.
+
+Our numerical analysis builds on existing work.  \citet{Joldes2017} established
+tight error bounds for basic double-word algorithms.  \citet{Rideau2022} later
+mechanized these analyses in Rocq using Flocq.  Both analyses assume an
+unbounded exponent range; the mechanization represents this assumption using
+Flocq's FLX format \citep{Boldo2011}.  Within FLX, these analyses establish
+operation-specific error bounds and valid double-word results under their
+stated hypotheses.  These guarantees do not carry directly to IEEE~754
+arithmetic because FLX omits overflow and gradual underflow.  Applying them to
+IEEE~754 arithmetic requires ruling out overflow and examining each rounded
+intermediate that may underflow.  Where IEEE~754 rounding agrees with FLX, the
+existing analysis applies.  Where it differs, the IEEE~754 behavior must be
+analyzed directly.  The difference can affect the provable error bound, which
+may have a larger relative-error coefficient or include an additional absolute
+error term. Finally, the existing results also concern numerical algorithms rather
+than their C implementations and do not provide executable checks for their
+conditions.
+
+We address the bounded-format problem independently of the C implementation.
+For each operation, we define a Rocq function that specifies the sequence of
+rounded floating-point operations in the numerical algorithm; we call this
+function its \emph{functional model}.  We then introduce a new,
+operation-specific sufficient condition that combines the hypotheses inherited
+from the FLX analysis with the range requirements of a bounded-exponent format,
+including conditions that rule out overflow.  Using Flocq's FLT rounding model,
+which captures gradual underflow through a lower exponent bound, we prove that
+whenever this condition holds, the functional model satisfies an
+operation-specific error bound and produces a valid double-word representation.
+These results are parameterized by the precision and exponent bounds of the
+underlying radix-two format, subject to the stated format assumptions.  The
+verified C library instantiates them for binary64.
+
+We then use the Verified Software Toolchain \citep{Appel2014} to connect these
+numerical results to the C implementations.  For each operation, a VST
+refinement proof shows that the C kernel produces the result specified by its
+binary64 functional model.
+We separately prove the runtime check sound: if the check succeeds, the
+operation-specific condition holds.  The checks may conservatively reject
+inputs.  The proof of the guarded entry point composes these results.  If the
+check succeeds, its postcondition establishes the condition and the wrapper
+calls the kernel.  If the check fails, the wrapper follows its specified
+nonreturning error path without calling the kernel.  For a normally returning
+call, the refinement proof identifies the returned pair with the functional-model
+result, and the numerical theorem establishes that this result satisfies the
+operation-specific error bound and is a valid double-word representation.  The
+guarded function's VST contract exposes these guarantees to C callers.
+
+We apply this structure to \TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}, which
+are building blocks of double-word arithmetic, and to addition, multiplication,
+and division with either one double-word and one binary64 operand or two
+double-word operands.  The machine-checked results establish functional
+correctness, operation-specific error bounds, and validity of the returned
+double-word representations for normally returning calls at the C interface
+modeled by VST.  These guarantees for both the runtime checks and the
+double-word operations require compilation that preserves the strict
+IEEE~754 semantics assumed by the proofs.  This requirement applies to any
+compiler used to build the library and is satisfied by the CompCert compiler.
+If CompCert is used, its correctness theorem additionally guarantees that the
+verified C behavior is preserved in the generated assembly.
+
+\paragraph{Contributions.}
+This paper makes the following contributions:
+\begin{itemize}
+  \item operation-specific conditions and guarded C interfaces that enforce
+        them through verified runtime checks.  The contract for a normally
+        returning call guarantees the proved error bound and a valid
+        double-word representation (\Cref{sec:overview,sec:specification});
+
+  \item Rocq and Flocq proofs showing that each operation-specific condition
+        implies an error bound and that the result is a valid double-word
+        representation.  These results are parameterized by precision and
+        exponent bounds and include conditions preventing overflow and bounds
+        accounting for gradual underflow (\Cref{sec:ideas});
+
+  \item VST proofs that the C kernels implement their functional models, the
+        runtime checks establish the required conditions, and the guarded
+        entry points provide the resulting contracts through the linked C
+        interface (\Cref{sec:mechanization,sec:case-study}); and
+
+  \item an evaluation of verification coverage, guarded-interface overhead,
+        and the input domains accepted by the checks, with QD as a reference
+        implementation (\Cref{sec:evaluation}).
+\end{itemize}
+
+The accompanying artifact contains the C sources, Rocq and VST proofs, and
+evaluation scripts at \url{ARTIFACT-URL}, revision
+\texttt{ARTIFACT-COMMIT}.  We begin by following one guarded multiplication
+from its C interface to its numerical contract.  We then separate the
+numerical and program-verification obligations, show how their results are
+connected across the library, and evaluate the resulting coverage, accepted
+input domains, and runtime cost.

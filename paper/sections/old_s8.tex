@@ -1,0 +1,32 @@
+\section{Evaluation}
+\label{sec:evaluation}
+
+The evaluation is organized around three questions tied to the paper's claims.
+
+\paragraph{RQ1: What assurance is present in the artifact?}
+The coverage report records, for every operation, the available numerical
+theorem, condition bridge, C-body refinement, check proof, guarded-wrapper
+proof, and linked interface.  It separately reports handwritten C, numerical
+proof, VST proof, and generated Clight sizes; clean-build time; dependency
+versions; and a transitive assumption audit for the linked library.  These
+measurements establish coverage and reproducibility, not the scientific value
+of the proof by line count alone.
+
+\paragraph{RQ2: What does the checked interface cost?}
+We compare guarded and unchecked functions with QD, matching algorithmic
+variants where the reference library offers multiple choices~\cite{QD}.  The
+unchecked core separates numerical work from guard cost.  The evaluation also
+separates a CompCert-produced library from builds in which another compiler
+inlines the same source, because those configurations have different
+performance and verification boundaries.  Each table records the processor,
+operating system, compiler and flags, QD version, input distribution, number of
+trials, and summary statistic.
+
+\paragraph{RQ3: What domains do the guards expose?}
+Boundary-focused tests sweep representative values around overflow and
+normal/subnormal transitions.  For each case, the report gives the input bit
+patterns, check outcome, contract tier, and applicable theorem.  An MPFR oracle
+is used to inspect experimental behavior and validate the harness; it is not
+evidence for the machine-checked theorem.  Comparisons with QD are presented as
+contract and domain comparisons rather than claims that QD violates a contract
+it does not advertise.

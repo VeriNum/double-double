@@ -1,0 +1,84 @@
+\section{Key Technical Results: Numerical Guarantees for Double-Word
+Operations over IEEE~754}
+
+\subsection{From Idealized Arithmetic to IEEE~754}
+\label{sec:flx-to-ieee}
+
+The existing mechanized analyses of double-word arithmetic are stated in
+Flocq's FLX format \citep{Rideau2022}.  FLX provides fixed precision over an
+unbounded exponent range and therefore models neither gradual underflow nor
+overflow.  We use Flocq's FLT format to model gradual underflow and establish
+separate upper-range bounds to prove that the absence of overflow.
+
+Flocq defines a floating-point format by the real numbers it represents.  An
+integer significand $m$ and integer exponent $q$ represent the real value
+$m\beta^q$.  For radix $\beta>1$ and precision $p>0$, FLX and FLT are defined
+as follows.
+\begingroup
+\small
+\begin{flalign}
+  &\mathbb{F}_{\mathrm{FLX}}(\beta,p)
+    =
+    \left\{m\beta^q \mathrel{}\middle|\mathrel{}
+      m,q\in\mathbb{Z},\ |m|<\beta^p\right\}
+    &&
+    \label{eq:flx-format}\\
+  &\mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
+    =
+    \left\{m\beta^q \mathrel{}\middle|\mathrel{}
+      m,q\in\mathbb{Z},\ |m|<\beta^p,\ e_{\min}\leq q\right\}
+    &&
+    \label{eq:flt-format}
+\end{flalign}
+\endgroup
+The lower bound $e_{\min}\leq q$ is the only additional constraint in FLT
+\citep[Sections~III-C and III-D]{Boldo2011}.  Even when the same rounding
+rule is applied in both formats, the rounded results may differ because the
+representable values have different spacing near zero.  Here, spacing refers
+to the distance between adjacent representable values at a given magnitude.
+
+In FLX, the spacing continues to decrease as the magnitude decreases.  FLT
+has the same spacing as FLX down to its smallest positive normal value
+$\nu=\beta^{e_{\min}+p-1}$.  Below $\nu$, the exponent cannot decrease below
+$e_{\min}$, so the representable values have a fixed spacing of
+$\eta=\beta^{e_{\min}}$.  The value $\eta$ is also the smallest positive
+value representable in FLT.  This fixed spacing enables gradual underflow:
+values below $\nu$ remain representable as multiples of $\eta$, but with fewer
+significant bits as they approach zero.  The difference in spacing may cause
+FLT and FLX rounding to produce different results.
+For binary64, $\eta=2^{-1074}$ and $\nu=2^{-1022}$.
+
+For round-to-nearest, ties-to-even, rounding a value whose magnitude is at
+least $\nu$ gives the same result in both formats.  Let
+$\operatorname{RN}_{\mathrm{FLX}}$ and
+$\operatorname{RN}_{\mathrm{FLT}}$ denote rounding in FLX and FLT,
+respectively.  Then for an exact real value $x$
+\begin{equation}
+  |x|\geq\nu
+  \quad\Longrightarrow\quad
+  \operatorname{RN}_{\mathrm{FLT}}(x)
+    =\operatorname{RN}_{\mathrm{FLX}}(x)
+  \label{eq:round-flt-flx}
+\end{equation}
+For double-word arithmetic in the normal range, this equality lets us reuse
+the analyses of \citet{Joldes2017} as mechanized in FLX by
+\citet{Rideau2022}.  For
+$0<|x|<\nu$, \cite{eq:round-flt-flx} does not apply.  However, the
+ roundings may nevertheless be equal, so
+we either prove their equality separately or reason directly about FLT
+rounding.
+
+The FLT format accounts for gradual underflow but it does not account
+overflow.  Neither FLX nor FLT has a largest representable real because the
+exponent $q$ remains unbounded above.  Binary64 instead has a largest finite
+value and may produce an infinity when an operation exceeds its finite range
+\citep{IEEE754-2019}.  We therefore prove operation-specific upper-range
+bounds that keep each relevant binary64 result finite.  Under these bounds,
+the correctness result for the binary64 operation identifies the real value
+of its result with the corresponding FLT rounding.
+
+Relating an FLX proof to IEEE~754 therefore creates two obligations at each
+rounded expression.  We must prove that the corresponding operation produces
+a finite result in the target format, and we must determine whether FLT and
+FLX rounding agree.  When they do not, the required numerical property must
+be proved directly in FLT.

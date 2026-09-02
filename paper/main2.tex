@@ -1,0 +1,166 @@
+%% Main manuscript for the double-word library paper.
+\documentclass[sigplan,10pt,anonymous,review]{acmart}
+\settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+\setcopyright{none}
+\acmConference[CPP '27]{Certified Programs and Proofs}
+  {January 11--12, 2027}{Mexico City, Mexico}
+
+\bibliographystyle{ACM-Reference-Format}
+\citestyle{acmauthoryear}
+
+\usepackage{microtype}
+\usepackage{amsmath,amsthm}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\input{generated/evaluation_numbers}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\crefname{definition}{Definition}{Definitions}
+\crefname{example}{Example}{Examples}
+\crefname{algorithm}{Algorithm}{Algorithms}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{blue!70!black},
+  commentstyle=\itshape\color{green!50!black},
+  stringstyle=\color{orange!80!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=6pt,
+  breaklines=true,
+  captionpos=b,
+  frame=single,
+  rulecolor=\color{gray!30},
+  backgroundcolor=\color{gray!5},
+}
+
+\lstdefinelanguage{Coq}{
+  keywords={Theorem,Lemma,Proof,Qed,Definition,Fixpoint,Inductive,
+            forall,exists,fun,let,in,match,with,end,if,then,else,
+            Variable,Hypothesis,Require,Import,Module,Section,
+            apply,exact,intro,intros,rewrite,simpl,reflexivity,
+            unfold,destruct,induction,case,split,left,right,
+            specialize,assert,have,enough,lra,nra,ring,field},
+  sensitive=true,
+  morecomment=[l]{(*},
+  morecomment=[s]{(*}{*)},
+  morestring=[b]",
+}
+
+\newcommand{\fl}[1]{\operatorname{fl}(#1)}
+\newcommand{\eps}{\varepsilon_{\mathrm{mach}}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\FF}{\mathbb{F}}
+\newcommand{\ulp}{\operatorname{ulp}}
+\newcommand{\TwoSum}{\textsc{TwoSum}}
+\newcommand{\FastTwoSum}{\textsc{Fast2Sum}}
+\newcommand{\FastTwoMult}{\textsc{Fast2Mult}}
+\newcommand{\DWTimesFP}{\textsc{DWTimesFP}}
+\newcommand{\DWDivFP}{\textsc{DWDivFP}}
+\newcommand{\DWTimesFPCond}{\mathsf{Cond}_{\mathrm{DWTimesFP}}}
+\newcommand{\DWArithOp}{\textsc{DWArithOp}}
+\newcommand{\DWArithOpCond}{\mathsf{Cond}_{\mathrm{DWArithOp}}}
+\newcommand{\DW}{\mathrm{DW}}
+
+\author{Ariel Kellison}
+\affiliation{%
+  \institution{Code Metal, Inc.}
+  \city{Boston}
+  \state{Massachusetts}
+  \country{USA}
+}
+
+\title{A Verified Library of Double-Double Arithmetic}
+
+\begin{abstract}
+Double-double arithmetic represents a real number as the unevaluated sum of two
+binary64 values, providing roughly twice the precision of binary64.  Existing
+analyses prove error and validity guarantees for its algorithms only under
+explicit conditions that conventional libraries do not enforce.
+
+We present a verified C library of double-double arithmetic consisting of
+three error-free transformations and six double-word operations.  Our Rocq
+development extends prior analysis that assumes an unbounded exponent range
+to IEEE~754 arithmetic, accounting for overflow and gradual underflow.  Using
+VST, we verify that the C kernels implement the analyzed algorithms and that
+runtime checks establish the input conditions and result finiteness required
+for the proved guarantees.  Thus, on normal return, the public double-word
+functions return valid double-doubles within their proved error bounds, while
+the error-free transformations guarantee exact reconstruction.
+
+Across tests of the six double-word operations spanning the binary64 exponent
+range, the result of every accepted call was valid and within its proved error
+bound.  The largest observed error was \RQOneMaximumBoundRatio{} times the
+corresponding bound.  To assess the usefulness of the runtime checks, we
+compare with QD, an established package for double-double arithmetic.  For
+calls rejected by the six default double-word functions, QD returned a finite,
+valid result within the corresponding library bound in only
+\RQTwoDefaultQDWithinPercent{} of cases.  For rejected calls to the
+\FastTwoSum{} and \FastTwoMult{} error-free transformations, it reconstructed
+the exact result in only \RQTwoFastSumExactPercent{} and
+\RQTwoFastMultExactPercent{} of cases.  With CompCert, the runtime checks added
+\RQThreeMinimumAddedTime{}--\RQThreeMaximumAddedTime{} nanoseconds per call
+relative to the unchecked kernels.  With Clang, the public functions were
+\RQThreeMinimumQDRatio{}--\RQThreeMaximumQDRatio{} times slower than QD.
+\end{abstract}
+
+\begin{CCSXML}
+<ccs2012>
+ <concept>
+  <concept_id>10003752.10003790.10003794</concept_id>
+  <concept_desc>Theory of computation~Automated reasoning</concept_desc>
+  <concept_significance>500</concept_significance>
+ </concept>
+ <concept>
+  <concept_id>10010583.10010786.10010813</concept_id>
+  <concept_desc>Hardware~Arithmetic and datapath circuits</concept_desc>
+  <concept_significance>300</concept_significance>
+ </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Theory of computation~Automated reasoning}
+\ccsdesc[300]{Hardware~Arithmetic and datapath circuits}
+
+\keywords{floating-point arithmetic, double-word arithmetic, formal verification,
+  Rocq, error analysis, IEEE 754}
+
+\begin{document}
+\maketitle
+
+\input{sections/introduction}
+\input{sections/overview}
+\input{sections/numerics}
+\input{sections/mechanization}
+\input{sections/evaluation}
+\input{sections/related-work}
+\input{sections/conclusion}
+
+
+\begin{acks}
+The author thanks Andrew Appel and Nate Foster for helpful discussions.
+\end{acks}
+
+\bibliography{refs}
+\end{document}

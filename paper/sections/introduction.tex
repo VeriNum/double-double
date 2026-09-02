@@ -1,0 +1,369 @@
+\section{Introduction}
+\label{sec:intro}
+
+Floating-point arithmetic underlies scientific and numerical software, but
+binary64 does not provide enough precision for every application
+\citep{Higham2002}.  When binary64 is insufficient, libraries such as MPFR
+provide correctly rounded arbitrary-precision arithmetic and support an
+independently specified precision for each variable \citep{Fousse2007}.  
+
+For computations that require roughly twice the precision of the underlying
+format, double-word arithmetic offers a more specialized alternative.  It
+represents a value using two floating-point numbers and performs arithmetic on
+the pair using operations in the underlying format
+\citep{Dekker1971,Joldes2017}.  Its binary64 instance, called double-double
+arithmetic, can be faster than software supporting arbitrary-precision arithmetic
+when this fixed increase in precision is sufficient \citep{Li2002}.
+Double-double arithmetic has been used to improve reproducibility in parallel
+climate modeling \citep{HeDing2001} and to provide additional precision for
+in quantum electrodynamic models \citep{Aoyama2015}.
+
+While double-word arithmetic offers performance advantages, using it safely
+requires vigilance.  \citet{Li2002} called double-double arithmetic ``an
+`attractive nuisance,' like an unfenced backyard swimming pool.''  The danger
+is that representing values with roughly twice the precision does not make
+double-double operations correctly rounded at that precision.  By contrast,
+in an implementation conforming to IEEE~754, each numeric result of a basic
+arithmetic operation is obtained by rounding its exact result to the
+destination format using the applicable rounding direction
+\citep[Clauses~2.1, 4.3, 5.1, and~5.4.1]{IEEE754-2019}.  Under
+round-to-nearest, ties-to-even, the basic arithmetic operations share a
+standard relative error bound whenever their results are finite and normal
+\citep{Higham2002}.
+
+An algorithm for a double-double operation combines several separately
+rounded binary64 operations instead of computing the exact result and rounding
+it once.  Consequently, its accuracy must be established by analyzing how
+rounding at each step affects the returned result.  The resulting error bound
+can differ across operations and even between algorithms implementing the same
+operation.  The analysis must separately prove that the returned pair is a
+valid double word, as required by later operations.  Both conclusions depend
+on conditions on the operands and on values computed by the algorithm.  An
+unchecked implementation can produce and return a result when those
+conditions do not hold, leaving callers without either guarantee.
+
+To ensure that clients of double-word arithmetic libraries can rely on proved
+numerical guarantees, we put a verified fence around C implementations of
+double-word operations.  For each operation, our numerical analysis gives
+sufficient conditions for which the result
+satisfies an error bound and is a valid double word.  The public functions use
+runtime checks to establish these conditions.  Consequently, their contracts
+guarantee that, on normal return, the result satisfies the proved error bound
+and is a valid double word.
+
+\subsection{Numerical Properties of Double-Word Arithmetic}
+\label{sec:intro-double-word}
+\newcounter{property}
+\crefname{property}{Property}{Properties}
+\Crefname{property}{Property}{Properties}
+\crefformat{property}{Property~#2#1#3}
+\Crefformat{property}{Property~#2#1#3}
+
+Double-word arithmetic is the two-component case of floating-point expansion
+arithmetic: a real value is represented as an unevaluated sum of two values in
+an underlying format \citep{Dekker1971,Priest1991}.
+
+The numerical foundation for this paper is the analysis of double-word
+arithmetic by \citet{Joldes2017} and its Rocq mechanization by
+\citet{Rideau2022}.  The analysis is parameterized by the precision of an
+underlying radix-two format but assumes that underflow and overflow do not
+occur.  The mechanization represents this idealized arithmetic using Flocq's
+FLX format, whose exponent range is unbounded \citep{Boldo2011}.
+
+We write $\mathbb{F}$ for the values in the underlying format and
+$\operatorname{RN}$ for round-to-nearest, ties-to-even.
+
+\begin{definition}[Double word,
+  {\citealp[Definition~1.4]{Joldes2017}}]
+\label[definition]{def:double-word}
+A double word $x$ over $\mathbb{F}$ is the unevaluated sum
+\begin{equation}
+  x=x_h+x_\ell
+\end{equation}
+of two values $x_h,x_\ell\in\mathbb{F}$ such that
+\begin{equation}
+  x_h=\operatorname{RN}(x).
+  \label{eq:dw-representation}
+\end{equation}
+\end{definition}
+
+The components $x_h$ and $x_\ell$ are called the high and low words,
+respectively.  The definition states that rounding the represented value
+recovers the high word; the low word is the exact real correction
+$x_\ell=x-x_h$.
+
+An operation using this representation approximates the corresponding
+exact real result as a valid double word.  Suppose an algorithm
+returns $(z_h,z_\ell)$ for an exact result $r$.   Its numerical analysis derives an
+error bound $\gamma$ and establishes two properties:
+\begingroup
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\abovedisplayshortskip}{4pt}
+\setlength{\belowdisplayskip}{-3pt}
+\setlength{\belowdisplayshortskip}{-3pt}
+\refstepcounter{property}
+\label[property]{p1}
+\begin{flalign*}
+  &\textbf{Property \theproperty:}\quad
+    \left|(z_h+z_\ell)-r\right|\leq\gamma &&
+\end{flalign*}
+\setlength{\abovedisplayskip}{-3pt}
+\setlength{\abovedisplayshortskip}{-3pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\belowdisplayshortskip}{4pt}
+\refstepcounter{property}
+\label[property]{p2}
+\begin{flalign*}
+  &\textbf{Property \theproperty:}\quad
+    z_h=\operatorname{RN}(z_h+z_\ell) &&
+\end{flalign*}
+\endgroup
+\Cref{p1} bounds the error in the value represented by the returned pair,
+whereas \Cref{p2} states that the pair is a valid double word according to
+\Cref{def:double-word}.
+
+For the double-word addition, multiplication, and division algorithms analyzed
+by \citet{Joldes2017} and mechanized in FLX by \citet{Rideau2022}, the two
+properties above hold under their stated preconditions.  Each returned pair is
+a valid double word, and its represented value satisfies a relative error
+bound proportional to $u^2$, where $u$ is the unit roundoff of the underlying
+floating-point format.
+
+\subsection{Key Numerical Challenges: Overflow and Gradual Underflow}
+
+When double-word algorithms are implemented using native IEEE~754 arithmetic,
+the key numerical challenge is to establish the two properties from the
+preceding subsection despite the finite exponent range.  Near the upper end of
+the format, one of the underlying floating-point operations used by an
+algorithm may overflow.  Near the lower end, the fixed spacing of subnormal
+values means that a relative error bound alone may be insufficient and an
+absolute error term may also be needed.  Guarantees proved in the idealized
+FLX format therefore do not transfer directly.
+
+The error-free transformations used as building blocks of double-word
+algorithms provide a concrete example of the lower-range challenge.
+\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{} decompose a basic arithmetic
+operation into a rounded result and a correction
+\citep[Algorithms~1--3]{Joldes2017}.  Their conventional guarantee is exact
+reconstruction: for an exact real result $r$, the transformation returns
+$(r_h,r_\ell)$ such that
+\begin{equation}
+  r=r_h+r_\ell.
+  \label{eq:eft-exact-reconstruction}
+\end{equation}
+This is \Cref{p1} with $\gamma=0$.  Because
+$r_h=\operatorname{RN}(r)$, the returned pair also satisfies \Cref{p2}.
+
+\TwoSum{} and \FastTwoSum{} retain both properties when gradual underflow
+occurs \citep{Boldo2017}.  \FastTwoMult{} does not always retain exact
+reconstruction: its correction can be too small to represent.  Exact
+reconstruction can fail even when both inputs and the rounded product lie in
+the normal range \citep{BoldoDaumas2003}.  To illustrate this behavior, we use
+QD, an established package implementing the
+double-double and quad-double algorithms of Hida, Li, and Bailey
+\citep{Hida2001,QD}.  The following example shows how QD's implementation of \FastTwoMult{} loses a
+correction near underflow and how that loss affects a complete double-double
+multiplication.
+
+\begin{example}[A lost product correction near underflow]
+\label[example]{ex:multiplication-underflow}
+Consider the binary64 value $a=2^{-515}(1+2^{-52})$.
+Although $a$ lies in the normal range, the magnitude of its exact square is
+below $2^{-1022}$, the smallest positive normal binary64 value:
+\[
+  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
+\]
+QD's implementation of \FastTwoMult{} returns
+\[
+  (\pi_h,\pi_\ell)=(2^{-1030},0).
+\]
+The first component, $\pi_h$, is the rounded product.  The second component,
+$\pi_\ell$, is intended to correct its rounding error.  Here, the exact
+correction satisfies
+\[
+  E=2^{-1081}+2^{-1134}<\frac{\eta}{2},
+  \qquad
+  \eta=2^{-1074}.
+\]
+The value $\eta$ is the smallest positive value representable in binary64.
+Thus, $E$ is smaller than the smallest positive representable value and rounds
+to zero.  Consequently, $\pi_h+\pi_\ell$ differs from $a^2$ by $E$, and the
+exact-reconstruction property in \Cref{eq:eft-exact-reconstruction} does not
+hold.
+
+In our library, the public function for \FastTwoMult{} checks a sufficient
+condition for exact reconstruction before invoking the kernel.  For the
+operands $(a,a)$ above, this check fails, so the kernel is not invoked.  The
+algorithm for multiplying two double words instead calls the
+\FastTwoMult{} kernel directly on the high components.  Its analysis uses
+exact reconstruction when the sufficient condition holds; otherwise, it
+includes the bound from the lost correction in the final error bound.
+
+More concretely, consider squaring the valid double word $x=(a,0)$.  Its
+high-component product is $a^2$, so the internal \FastTwoMult{} computation
+loses the correction $E$.  All runtime checks in our public function for
+multiplying two double words succeed, and both our function and the
+corresponding QD operation return $(2^{-1030},0)$.  This pair is a valid
+double word, but its relative error is approximately
+\begin{equation*}
+  E/|a^2|\approx 2^{-51}.
+\end{equation*}
+This is much larger than the relative bound $4u^2=2^{-104}$ proved by
+\citet{Joldes2017} in the absence of underflow, where $u=2^{-53}$ is the unit
+roundoff of binary64.  Our analysis accounts for the lost correction through
+the mixed bound
+\begin{equation*}
+  E\leq 4u^2|a^2|+2.5\eta.
+\end{equation*}
+Thus, the complete multiplication returns a valid double word satisfying the
+mixed bound even though the internal \FastTwoMult{} does
+not exactly reconstruct its product.
+\end{example}
+
+The example captures the central challenge near the lower end of the format:
+gradual underflow can invalidate an exact relation used by an intermediate
+computation and the relative bound established in FLX, even though the
+complete operation can still satisfy a useful guarantee.  Our analysis derives
+absolute bounds for the local errors affected by underflow, propagates them
+through the remaining computation, and proves separately that the returned
+pair is a valid double word.  The comparison with QD illustrates why the
+guarantee must account for underflow; it does not claim that QD violates its
+own contract.
+
+Near the upper end of the format, the numerical guarantees require the
+relevant intermediate computations and returned components remain finite.
+Finiteness may be established in advance from conditions on the inputs
+or, when the numerical theorem permits, checked after the computation.
+Conditions required by internal operations must also be established before
+execution.  Providing reliable C operations therefore requires numerical
+results that cover the finite IEEE~754 exponent range and public functions
+that establish the conditions required by those results.
+
+\subsection{This Work: A Verified Library for Double-Double Arithmetic}
+
+We extend the prior FLX analysis to radix-two IEEE~754 arithmetic parameterized
+by its precision and exponent range.  Our proofs account for overflow and
+gradual underflow.  For each algorithm, we derive sufficient conditions under which its result is
+a valid double word and satisfies an error bound.  The error bounds are
+relative for addition and mixed relative and absolute for multiplication and
+division.
+
+We make these results available through a verified binary64 C library by
+placing runtime checks in public wrappers around calls to arithmetic kernels.
+Each of the six double-word operations can be invoked through either of two
+wrappers.  The default wrapper checks the required input conditions before
+calling the kernel and checks result finiteness afterward.  Alternatively, a
+wrapper can check before execution conditions sufficient to establish result
+finiteness.  We call these the weak-precondition and strong-precondition
+wrappers, respectively.  The names describe the predicates tested inside the
+wrappers, not preconditions imposed on callers.  Both wrappers have the same
+contract: on normal return, the result satisfies the proved error bound and is
+a valid double word.
+
+Using VST, we connect the numerical results to the C kernels and prove the
+contracts of the public wrappers.  The library also provides one public
+wrapper for each of the three error-free transformations; these wrappers
+guarantee exact reconstruction on normal return.
+\Cref{fig:intro-verified-fence} illustrates the placement of runtime checks in
+the two wrappers.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  x=1cm,
+  y=1cm,
+  box/.style={draw,rounded corners=2pt,align=center,inner sep=2pt,
+    minimum height=0.88cm,text width=2.15cm,font=\small},
+  flow/.style={-{Latex[length=1.8mm]},thick},
+  rowlabel/.style={font=\small\bfseries,anchor=east,align=right}
+]
+
+\node[rowlabel] at (-6.6,0.8) {Strong-precondition\\wrapper};
+\node[box] (pre-input) at (-5.0,0.8) {Inputs};
+\node[box,text width=2.75cm] (pre-check) at (-1.9,0.8)
+  {Check required input conditions\\and establish finiteness};
+\node[box] (pre-kernel) at (1.4,0.8) {Execute kernel};
+\node[box,text width=2.45cm] (pre-contract) at (5.0,0.8)
+  {Error bound and valid\\double word};
+
+\node[rowlabel] at (-6.6,-0.8) {Weak-precondition\\wrapper};
+\node[box] (post-input) at (-5.0,-0.8) {Inputs};
+\node[box,text width=2.75cm] (post-check) at (-1.9,-0.8)
+  {Check required\\input conditions};
+\node[box] (post-kernel) at (1.4,-0.8)
+  {Execute kernel};
+\node[box] (post-finite) at (4.25,-0.8)
+  {Check result\\finiteness};
+\node[box,text width=2.45cm] (post-contract) at (7.25,-0.8)
+  {Error bound and valid\\double word};
+
+\draw[flow] (pre-input) -- (pre-check);
+\draw[flow] (pre-check) -- (pre-kernel);
+\draw[flow] (pre-kernel) -- (pre-contract);
+
+\draw[flow] (post-input) -- (post-check);
+\draw[flow] (post-check) -- (post-kernel);
+\draw[flow] (post-kernel) -- (post-finite);
+\draw[flow] (post-finite) -- (post-contract);
+
+\end{tikzpicture}
+\caption{The strong-precondition and weak-precondition wrappers provided for
+each of the six double-word operations.  The strong-precondition wrapper
+establishes finiteness before executing the kernel, whereas the
+weak-precondition wrapper checks the computed result.  Both provide the same
+numerical guarantees on normal return.}
+\Description{Two rows compare wrappers.  The strong-precondition
+wrapper checks required input conditions and bounds that establish finiteness
+before executing the arithmetic kernel.  The weak-precondition wrapper checks
+required input conditions, executes the kernel, and then checks result
+finiteness.  Both rows end with an error bound and a valid double word.}
+\label{fig:intro-verified-fence}
+\end{figure*}
+
+\subsection{Contributions}
+In summary, this paper makes the following contributions:
+
+\begin{itemize}
+  \item \textbf{Runtime Checks for Double-Double Arithmetic
+        (\Cref{sec:overview}).}
+        We provide a public C interface containing six double-word operations
+        and three error-free transformations.  For each double-word operation,
+        two functions use runtime checks at different points while
+        providing the same numerical guarantee on normal return.  Each
+        transformation has one public function whose runtime checks ensure
+        exact reconstruction.
+
+  \item \textbf{Numerical Guarantees over IEEE~754
+        (\Cref{sec:numerics}).}
+        We extend the prior FLX analysis to radix-two IEEE~754 arithmetic with
+        a finite exponent range.  We prove valid double-word results together
+        with relative error bounds for addition and mixed relative and absolute
+        bounds for multiplication and division.  We also derive the sufficient
+        conditions required for these results and characterize the behavior of
+        the error-free transformations under gradual underflow.
+
+  \item \textbf{A Verified C Implementation of Double-Word Arithmetic
+        (\Cref{sec:mechanization}).}
+        Using VST, we prove that the C kernels implement their Rocq functional
+        models and that successful runtime checks establish the conditions of
+        the numerical theorems.  The resulting public contracts guarantee that
+        every normally returned result satisfies its proved numerical
+        specification.
+
+  \item \textbf{Empirical Evaluation (\Cref{sec:evaluation}).}
+        Tests spanning the binary64 exponent range show that every result
+        from an accepted call satisfied its proved bound.  The largest
+        observed errors were \RQOneRelativeMaximumRatio{} of the bound away
+        from the lower end of the format and
+        \RQOneAbsoluteMaximumRatio{} near it.  QD met the corresponding
+        numerical criterion for only \RQTwoDefaultQDWithinPercent{} of inputs
+        associated with calls rejected by the default runtime checks.  The
+        runtime checks added $1.1$--$3.4$ nanoseconds per call when compiled
+        with Clang and \RQThreeMinimumAddedTime{}--%
+        \RQThreeMaximumAddedTime{} nanoseconds per call when compiled with
+        CompCert, relative to the unchecked kernels.
+\end{itemize}
+
+The accompanying artifact contains the C sources, Rocq and VST proofs, and
+evaluation scripts at \url{ARTIFACT-URL}, revision
+\texttt{ARTIFACT-COMMIT}.

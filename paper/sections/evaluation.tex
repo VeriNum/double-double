@@ -1,0 +1,401 @@
+\section{Evaluation}
+\label{sec:evaluation}
+
+The verified contracts establish numerical guarantees on normal return.  We
+evaluate three complementary empirical questions: the
+tightness of the proved error bounds, the practical significance of calls
+rejected by the runtime checks, and the performance cost of the
+wrappers.  We investigate the following research questions:
+
+\begin{description}
+  \item[(RQ1) Usefulness of the error bounds.]
+    For results produced by accepted calls to the default wrappers for the six
+    double-word operations, how closely do the observed errors approach the
+    proved bounds?
+    As secondary context, how do the errors produced by QD compare on the same
+    inputs?
+
+  \item[(RQ2) Usefulness of the wrappers.]
+    For generated inputs that cause a runtime check in each wrapper to
+    fail, how often does QD return a finite, valid double word whose
+    MPFR-measured error is within the corresponding \texttt{dd\_lib} bound?
+
+  \item[(RQ3) Cost of the wrappers.]
+    On a common set of inputs for which every evaluated call is accepted, what
+    runtime overhead does each wrapper add relative to the
+    corresponding unchecked kernel, and how does its end-to-end runtime
+    compare with QD?
+\end{description}
+
+\subsection{Experimental Setup}
+
+We evaluate \texttt{dd\_lib} using QD as a comparison implementation
+\citep{Hida2001,QD} and MPFR to compute high-precision reference values
+\citep{Fousse2007}.  Throughout this section,
+the \emph{default wrappers} are only the weak-precondition wrappers for the
+six double-word operations.  Each of the three error-free transformations
+instead has a single wrapper.
+
+To give equal coverage to values near the underflow and overflow boundaries
+and to values in the normal range, we group inputs by their base-two exponent
+and generate the same number of values for each exponent.  Binary64 operands
+cover exponents from $-1074$ through $1023$.  Double-word inputs cover
+exponents from $-969$ through $1022$.
+
+For 95 percent of the double-word inputs, we use MPFR to construct a source
+value with 106 significant bits and a nonzero final bit.  We round each source
+to binary64 to obtain its high component and round the exact residual to
+obtain its low component.  If the leading bit of the source is at $2^e$, its
+final bit is at $2^{e-105}$.  We therefore begin at $e=-969$, where the final
+bit is $2^{-1074}$, the smallest positive binary64 value.  Beginning at a
+smaller exponent would place this bit below the binary64 range, preventing the
+two components from retaining all 106 bits.  We stop at $e=1022$ because a
+source with exponent $1023$ could round to infinity when its high component is
+computed.  These endpoints are only important for the construction of the
+test inputs; they are not restrictions imposed by \texttt{dd\_lib}.
+
+For the remaining 5 percent of the double-word inputs, we generate a binary64
+value for the high component and set the low component to zero.  These inputs
+exercise the valid special case in which a double word represents a value
+exactly representable in binary64.  We check that every generated pair
+reconstructs its source value exactly and is a valid double word.  Positive
+and negative inputs occur equally often at each exponent.
+
+All generated binary64 operands are finite, and every generated double-word
+operand is valid according to \Cref{def:double-word}.  The generated tests
+therefore exclude immediate rejections of nonfinite operands or invalid input
+pairs.
+
+The inputs are generated without consulting the runtime checks, so rejected
+inputs remain among the reported test cases.  For each test case,
+\texttt{dd\_lib} and QD receive the same operands.  When an operand is a
+double word, both receive the same binary64 bit patterns for its high and low
+components.
+
+We classify a call as accepted when all runtime checks succeed and the
+function returns a result, and as rejected when a runtime check stops
+execution.  We do not distinguish which runtime check causes a rejection.
+For RQ2, when a call to a \texttt{dd\_lib} wrapper is rejected by a runtime
+check, we run the corresponding QD operation on the same input.
+
+We compile the \texttt{dd\_lib} sources with CompCert 3.17 using
+\texttt{-O3} when measuring the cost added by the wrappers.  For each
+operation, a direct call to the corresponding kernel serves as an ablation;
+both the wrapper and kernel are compiled with CompCert.  QD is implemented in
+C++, which CompCert does not support.  For the comparison with QD, we
+therefore use a Clang build of \texttt{dd\_lib}.  Its C objects are compiled
+with Homebrew Clang 19.1.7, while the C++ evaluation driver and QD are compiled
+with Apple Clang 17.0.0.  Both use \texttt{-O3}, with fast-math and implicit
+floating-point contraction disabled.  The Clang build of \texttt{dd\_lib} is
+used only for this performance comparison and is not covered by the CompCert
+correctness theorem.
+
+We use QD 2.3.24, MPFR 4.2.2, and GMP 6.3.0.  QD uses its FMA implementation
+of \texttt{two\_prod}.  All floating-point computations use round-to-nearest,
+ties-to-even, with gradual underflow.  The experiments run on an Apple M4 Max
+with 16 cores under macOS 26.6.2.
+
+RQ1 and RQ2 use \RQOneSamplesPerExponent{} values for each exponent, yielding
+79,680 generated inputs for each double-word operation and 83,920 for each
+error-free transformation.  The run identifier, random seed, fingerprint of
+the generated inputs, and input bit patterns are included in the artifact.
+
+\subsection{Usefulness of the Error Bounds (RQ1)}
+
+To address RQ1, we evaluate the six double-word operations on generated inputs
+for which calls to the default wrapper are accepted.  MPFR reconstructs the real
+values represented by the input and output pairs and computes the
+corresponding reference operation at 2112-bit precision.  If $r$ is the MPFR
+reference and $\widehat r$ is the value represented by the returned pair, the
+observed error is $|\widehat r-r|$.
+
+The bounds in \Cref{tab:operation-preview} have the form
+\[
+  B(r)=C u^2|r|+K\eta.
+\]
+We write
+\[
+  B_{\mathrm{rel}}(r)=C u^2|r|
+  \qquad\text{and}\qquad
+  B_{\mathrm{abs}}=K\eta
+\]
+for their relative and absolute terms.  An input lies in the relative region
+when $B_{\mathrm{rel}}(r)\geq B_{\mathrm{abs}}$ and in the absolute region
+otherwise.  The addition bounds have no absolute term, so all nonzero addition
+results lie in the relative region.
+
+For every result with $B(r)>0$, we measure how closely its error approaches
+the bound using
+\[
+  \rho=\frac{|\widehat r-r|}{B(r)}.
+\]
+A value of $\rho$ near one indicates that the observed error approaches the
+proved bound.  Smaller values indicate that the bound is less tightly attained
+on that input.  The numerical theorem implies $\rho\leq1$ for every
+\texttt{dd\_lib} result produced by an accepted call.  Addition results for which $B(r)=0$ are
+reported separately and must be exact.
+
+For each \texttt{dd\_lib} operation, we select the QD routine that computes
+the same mathematical operation on the same inputs.  Addition of two double
+words uses QD's \texttt{ieee\_add}, division of two double words uses
+\texttt{accurate\_div}, and the other four cases use the corresponding QD
+operators.  We compare the value returned by each routine with the same MPFR
+reference.
+
+This comparison aligns operations, not algorithms.  The QD routines may use
+a different sequence of binary64 operations from the corresponding
+\texttt{dd\_lib} kernels.  We nevertheless divide each finite QD error by the
+same expression $B(r)$ to provide a common numerical scale.  The expression
+is not a proved bound for QD, and the QD and \texttt{dd\_lib} ratios are not
+expected to be equal.  Nonfinite QD results are reported separately.
+
+\begin{table*}[t]
+  \caption{Observed error as a fraction of the corresponding
+  \texttt{dd\_lib} bound expression.  Region shares use the \texttt{dd\_lib}
+  results produced by accepted calls as their denominator.  For QD, the expression
+  provides a common scale rather than a proved bound.}
+  \label{tab:rq1-tightness}
+  \centering
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    & & \multicolumn{2}{c}{\texttt{dd\_lib}}
+        & \multicolumn{2}{c}{QD} \\
+    \cmidrule(lr){3-4}\cmidrule(l){5-6}
+    Operation & Share
+              & \multicolumn{1}{l}{Mean $\rho$}
+              & \multicolumn{1}{l}{Maximum $\rho$}
+              & \multicolumn{1}{l}{Mean $\rho$}
+              & \multicolumn{1}{l}{Maximum $\rho$} \\
+    \midrule
+    \multicolumn{6}{@{}l}{\emph{Relative region}} \\[2pt]
+    \input{generated/rq1_relative_compact_rows}\\
+    \addlinespace
+    \multicolumn{6}{@{}l}{\emph{Absolute region}} \\[2pt]
+    \input{generated/rq1_absolute_compact_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+No result produced by an accepted call had $B(r)=0$.  Division requires an MPFR rounding
+step.  We therefore
+recompute division results at 4224-bit precision whenever the initial
+precision could affect an error ratio or its region classification.  A ratio
+sufficiently close to one is confirmed using directed rounding or an interval
+calculation before it is reported.
+
+\paragraph{Answer to RQ1.}
+\Cref{tab:rq1-tightness} shows that the proved bounds can be approached, but
+are conservative for most generated inputs.  Across
+\RQOneNormalReturnCount{} results produced by accepted calls, no \texttt{dd\_lib}
+error exceeded its proved bound.  The largest observed values of $\rho$ were
+\RQOneRelativeMaximumRatio{} for \RQOneRelativeMaximumOperation{} in the
+relative region and \RQOneAbsoluteMaximumRatio{} for
+\RQOneAbsoluteMaximumOperation{} in the absolute region.  By contrast, the
+mean for every operation was at most \RQOneRelativeMaximumMean{} in the
+relative region.  For every operation with an absolute term, the mean in the
+absolute region was at most \RQOneAbsoluteMaximumMean{}.
+Thus, some observed errors came close to the proved limits, while the bounds
+retained substantial margin on average.
+
+As secondary context, QD produced the same observed ratios for both addition
+operations and \DWDivFP{}.  Its relative errors were somewhat larger for the
+two multiplication operations and smaller for \textsc{DWDivDW}.  One
+\DWTimesFP{} result exceeded $B(r)$ by \RQOneQDExcessPercent{}.  QD may
+compute the same mathematical operation using a different algorithm, so
+$B(r)$ is not a proved bound for its result.  We use $B(r)$ only to place the
+observed QD and \texttt{dd\_lib} errors on a common scale.
+
+\subsection{Usefulness of the Wrappers (RQ2)}
+
+A call is rejected when a runtime check cannot establish a condition required
+by the verified contract.  RQ2 examines the practical significance of these
+rejections.  For every generated input associated with a rejected call to an
+evaluated \texttt{dd\_lib} wrapper, we run the corresponding QD operation and
+compare its returned pair with an MPFR reference.
+
+For each of the six double-word operations, we consider separately the inputs
+associated with calls rejected by runtime checks in the default
+weak-precondition wrapper and those associated with rejected calls to the
+strong-precondition wrapper.  These populations overlap: every rejected call
+to the default wrapper has a corresponding rejected call to the strong
+wrapper.  Percentages are therefore calculated separately using the number of
+rejected calls to the indicated wrapper.
+
+Let $(z_h,z_\ell)$ be the pair returned by QD.  We classify it as nonfinite;
+finite but not a valid double word according to \Cref{def:double-word}; finite
+and valid with $|(z_h+z_\ell)-r|>B(r)$; or finite and valid with
+$|(z_h+z_\ell)-r|\leq B(r)$.
+
+Here, $r$ is the MPFR reference and $B(r)$ is the corresponding
+\texttt{dd\_lib} bound expression defined in RQ1.  The expression is used only
+as a common numerical criterion: it is not a proved bound for QD.
+
+\begin{table*}[t]
+  \caption{QD results on inputs for which calls to each wrapper were rejected
+  by runtime checks.  Each percentage uses the number of rejected calls to the
+  indicated wrapper as its denominator.  The default and strong
+  populations overlap and must not be added.}
+  \label{tab:rq2-double-word}
+  \centering
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}llrrrrr@{}}
+    \toprule
+    Operation & Wrapper & \shortstack{Rejected\\calls}
+              & \shortstack{QD\\nonfinite}
+              & \shortstack{Finite,\\invalid}
+              & \shortstack{Valid,\\above bound}
+              & \shortstack{Valid,\\within bound} \\
+    \midrule
+    \input{generated/rq2_double_word_compact_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+Each error-free transformation has a single wrapper.  We compare
+\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{} with QD's
+\texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod},
+respectively.  Because the transformation wrappers provide exactness
+guarantees, a finite, valid QD pair either reconstructs the exact MPFR result
+or fails to do so.
+
+\begin{table*}[t]
+  \caption{QD results on inputs for which calls to the wrapper for
+  each error-free transformation were rejected by a runtime check.
+  Percentages use the number of rejected calls for the corresponding
+  transformation as their denominator.}
+  \label{tab:rq2-transformations}
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Transformation & \shortstack{Rejected\\calls}
+                   & \shortstack{QD\\nonfinite}
+                   & \shortstack{Finite,\\invalid}
+                   & \shortstack{Valid,\\not exact}
+                   & \shortstack{Valid,\\exact} \\
+    \midrule
+    \input{generated/rq2_eft_compact_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+For the six double-word operations, we also examine inputs for which calls to
+the default wrapper are accepted but calls to the strong wrapper are rejected.
+We report the observed
+exponent ranges of the quantities constrained only by the strong wrapper.
+These ranges show where its sufficient input conditions are conservative on
+the generated tests; they do not characterize every input for which a call to
+either wrapper is accepted.
+
+A separate set of boundary tests places operands immediately below, at, and
+above the thresholds used by the checks.  It also includes zeros, exact
+cancellation, and cases that reach a result finiteness check.  These tests
+classify each call as accepted or rejected and are
+excluded from the percentages in the tables.  All
+\RQTwoBoundaryCases{} boundary tests produced their expected outcomes.
+
+\paragraph{Answer to RQ2.}
+\Cref{tab:rq2-double-word} shows that calls rejected by the runtime checks
+usually occur on inputs for which QD also fails the corresponding numerical
+criterion.  Calls to the default wrappers were rejected for
+\RQTwoDefaultRejected{} inputs, or
+\RQTwoDefaultRejectedPercent{} of the \RQTwoDoubleWordInputCount{} tested
+inputs.  QD returned a finite, valid double word within the comparison bound
+for only \RQTwoDefaultQDWithinPercent{} of them; it returned a nonfinite
+result in \RQTwoDefaultQDNonfinitePercent{} of cases.  Every QD result on an
+input associated with a rejected call to a default multiplication wrapper was
+nonfinite, while
+suitable QD results occurred only for division.
+
+Calls to the strong-precondition wrappers were rejected for
+\RQTwoStrongRejected{} inputs, of
+which \RQTwoStrongQDWithinPercent{} produced a finite, valid QD result within
+the comparison bound.  This population includes all \RQTwoDefaultOnly{}
+inputs for which calls to the default wrapper were accepted but calls to the
+strong-precondition wrapper were rejected.  These cases show the benefit of
+checking result finiteness after execution: all checks in the default wrapper
+succeed, whereas an input bound checked by the strong wrapper fails.  For
+multiplication, the differing cases had a leading-product exponent of $1023$;
+for division, they had leading-quotient exponents of $1022$ or $1023$.  The
+addition wrappers differed on 196 inputs because their strong preconditions
+bound the operands separately even though the computed sum remained finite.
+
+The transformation results in \Cref{tab:rq2-transformations} reinforce this
+pattern.  No generated call to the \TwoSum{} wrapper was rejected.  On inputs
+associated with rejected calls to the wrappers for \FastTwoSum{} and
+\FastTwoMult{}, QD reconstructed the exact
+result in only \RQTwoFastSumExactPercent{} and
+\RQTwoFastMultExactPercent{} of cases, respectively.  Thus, for the large
+majority of calls rejected by runtime checks in the evaluated wrappers, QD
+also did not
+produce a result satisfying the property specified by the verified contract.  Since
+QD may use different algorithms, this evidence does not establish how an
+unchecked \texttt{dd\_lib} kernel would behave on those inputs.
+
+\subsection{Performance Cost of the Wrappers (RQ3)}
+
+To address RQ3, we time the six default wrappers and the three single
+transformation wrappers.  Each timing test uses \RQThreeInputCount{} inputs
+whose operand exponents lie between $-100$ and $100$, together with
+\RQThreeTrialCount{} trials.  All runtime checks succeed for these inputs.
+Before timing, we confirm that each wrapper produces the same
+result as its unchecked kernel.  QD objects are constructed before
+measurement.
+
+For the six double-word operations, the measurement schedule cycles through all 24 orders
+of the kernel, the default wrapper, and QD.  For the transformations, it
+cycles through all six orders of the wrapper, kernel, and QD.  Every
+implementation receives an untimed warm-up.  We compute differences and
+ratios from paired trials rather than from separately aggregated measurements.
+The table reports the default wrapper for each double-word operation and the
+single wrapper for each transformation, as specified by RQ3.
+
+For the CompCert build, we report the wrapper and kernel times, their
+difference, and their ratio.  For the Clang comparison, we report the wrapper
+and QD times and their ratio.  Every entry gives the median and interquartile
+range across trials.
+
+\begin{table*}[t]
+  \caption{Timing in nanoseconds per call.  CompCert compares each wrapper
+  with its unchecked kernel; Clang compares each wrapper with QD.  Entries
+  report median [IQR] across trials.}
+  \label{tab:rq3-performance}
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lrrrrrrr@{}}
+    \toprule
+    & \multicolumn{4}{c}{CompCert}
+    & \multicolumn{3}{c}{Clang} \\
+    \cmidrule(lr){2-5}\cmidrule(l){6-8}
+    Operation
+      & Wrapper & Kernel & Added cost & Ratio
+      & Wrapper & QD & Ratio \\
+    \midrule
+    \input{generated/rq3_combined_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\paragraph{Answer to RQ3.}
+\Cref{tab:rq3-performance} shows that the runtime checks add a noticeable
+relative cost to these small kernels but a small absolute cost.  For the
+CompCert build, the median paired ratio between wrapper and kernel time was
+\RQThreeMedianKernelRatio{} across the nine operations and transformations.
+It ranged from \RQThreeMinimumKernelRatio{} for
+\RQThreeMinimumKernelRatioOperation{} to \RQThreeMaximumKernelRatio{} for
+\RQThreeMaximumKernelRatioOperation{}, corresponding to an additional
+\RQThreeMinimumAddedTime{}--\RQThreeMaximumAddedTime{} nanoseconds per call.
+The smaller ratio for \RQThreeMinimumKernelRatioOperation{} shows that the
+cost of checking is more readily amortized by a more expensive kernel; the
+larger ratio for \RQThreeMaximumKernelRatioOperation{} occurs because the
+underlying transformation is inexpensive.
+
+Compared with QD in the Clang comparison, the wrappers were
+\RQThreeMinimumQDRatio{}--\RQThreeMaximumQDRatio{} times slower in this
+microbenchmark.  Thus, checking the numerical contracts costs a small number
+of nanoseconds per call, although its relative overhead is substantial for
+the shortest kernels and QD remains faster in total.  The QD comparison
+still includes differences between the algorithms and between the two Clang
+versions; the CompCert ablation, rather than the QD comparison, measures the
+cost added by the wrapper.

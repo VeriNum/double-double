@@ -1,0 +1,205 @@
+\section{A Verified C Library of Double-Word Arithmetic}
+\label{sec:mechanization}
+
+% SOURCE OF TRUTH FOR SECTION 4 IDENTIFIERS:
+% C division functions:
+%   dw_div_fp_kernel, dw_div_fp, dw_div_fp_strong
+% C division checks:
+%   dw_div_fp_weak_precond_check, dw_div_fp_strong_precond_check,
+%   isfinite_dword
+% Rocq division model and conditions:
+%   DWDivFP, DWDivFP_weak_precond, DWDivFP_finite_post_cond,
+%   DWDivFP_weak_pre_and_finite_post_cond, DWDivFP_strong_precond,
+%   DWDivFP_guarantee
+% VST specifications:
+%   dw_div_fp_kernel_spec, dw_div_fp_spec, dw_div_fp_strong_spec,
+%   dw_div_fp_weak_precond_check_spec,
+%   dw_div_fp_strong_precond_check_spec, isfinite_dword_spec
+% VST body theorems:
+%   body_dw_div_fp_kernel, body_dw_div_fp, body_dw_div_fp_strong,
+%   body_dw_div_fp_weak_precond_check,
+%   body_dw_div_fp_strong_precond_check, body_isfinite_dword
+% Linked units:
+%   ChecksVSU, OpsVSU, DDLibVSU
+% Other Rocq functional models:
+%   TwoSumF, Fast2Sum, Fast2Mult, DWPlusFP, DWPlusDW,
+%   DWTimesFP, DWTimesDW, DWDivDW
+% Double-word multiplication operations use "Times" consistently across C,
+% Rocq, and VST identifiers (for example, dw_times_fp and DWTimesFP).  Retain
+% the standard name Fast2Mult for the error-free product transformation.  Do
+% not introduce paper-only aliases when referring to implementation or
+% mechanization identifiers.
+
+We follow the layered proof structure used by VCFloat and by Appel and Bertot:
+numerical properties are proved for a functional model and connected to C by
+a separate program proof \citep{Ramananandro2016,AppelBertot2020}.  Our
+development uses the floating-point definitions and the connection to
+CompCert values provided by VCFloat2 \citep{AppelKellison2024}, while the
+numerical theorems in \Cref{sec:numerics} are proved directly with Flocq
+\citep{Boldo2011}.  We use VST \citep{Appel2014} to establish the connection
+to C.  For each operation, we prove that
+the C kernel computes the pair specified by its functional model, that a
+successful runtime check establishes the corresponding mathematical
+condition, and that each wrapper combines these results to obtain
+its guarantee on normal return.  This section develops these proofs for the
+division example and then states the assumptions under which the resulting C
+contracts apply.
+
+\subsection{C Kernels Implement Their Functional Models}
+\label{sec:kernel-refinement}
+
+The numerical result in \Cref{thm:dw-div-fp-numerical} concerns
+\DWDivFP{}, whereas a caller executes the C kernel in
+\Cref{fig:dw-div-fp-kernel}.  We connect the two with a VST refinement proof.
+Suppose that \texttt{x} initially stores the binary64 pair
+$(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
+\texttt{z} storing $(z_h,z_\ell)$.  The refinement result establishes
+\begin{equation}
+  (z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y),
+  \label{eq:dw-div-fp-kernel-refinement}
+\end{equation}
+where \DWDivFP{} is instantiated with the binary64 format.  Thus, the pair
+stored by the C kernel is exactly the pair analyzed by the numerical theorem.
+
+The proof follows the computation in the C body.  Lemmas relating C binary64
+addition, subtraction, multiplication, and division to the corresponding
+Flocq operations identify the value produced by each assignment.  At the
+calls to \texttt{fast\_2mult} and \texttt{fast\_2sum}, the proof uses the VST
+specifications of those kernels to obtain the pairs returned by
+\FastTwoMult{} and \FastTwoSum{}.  These facts reduce the value stored in
+\texttt{z} to the definition of \DWDivFP{}, establishing
+\Cref{eq:dw-div-fp-kernel-refinement}.  The corresponding Rocq body theorem
+records that the C function satisfies this refinement specification.
+
+The kernel refinement does not assume
+$\mathcal{I}_{\mathrm{div}}$ or $\mathcal{S}_{\mathrm{div}}$.  It identifies
+the floating-point computation performed by C, independently of whether its
+result satisfies the numerical guarantee.  The conditions from
+\Cref{sec:division-conditions} are instead used after refinement to derive
+the error bound and show that the pair in
+\Cref{eq:dw-div-fp-kernel-refinement} is a valid double word.  The public
+interface specifications therefore differ from the kernel specification: as
+shown in
+\Cref{sec:division-wrapper-contracts}, their postconditions also contain the
+numerical guarantee.
+
+We prove the corresponding refinement result for every arithmetic kernel in
+the C library.  For example, the kernels for multiplying a double word by a
+floating-point value and for multiplying two double words implement
+\texttt{DWTimesFP} and \texttt{DWTimesDW}, respectively.  These results show
+that each kernel stores the pair specified by its functional model.  Applying
+the numerical theorems to those pairs still requires showing that the
+executable checks establish the mathematical conditions under which the
+theorems hold.
+
+\subsection{Runtime Checks Establish the Mathematical Conditions}
+\label{sec:check-soundness}
+
+Kernel refinement identifies the pair computed by C, but it does not establish
+the conditions needed to apply the numerical theorem.  The VST specifications
+of the runtime checks provide this connection.  Each specification gives a
+one-way guarantee: a successful check establishes the corresponding
+mathematical condition.
+
+\begin{theorem}[Soundness of the division checks]
+\label{thm:division-checks}
+Suppose that \texttt{x} stores the binary64 pair $(x_h,x_\ell)$.
+
+\begin{enumerate}
+  \item If
+    \texttt{dw\_div\_fp\_weak\_precond\_check(x,y)} returns $1$, then
+    $\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
+
+  \item If
+    \texttt{dw\_div\_fp\_strong\_precond\_check(x,y)} returns $1$, then
+    $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
+\end{enumerate}
+
+If \texttt{z} stores $(z_h,z_\ell)$ and
+\texttt{isfinite\_dword(z)} returns $1$, then both components are finite.
+\end{theorem}
+
+The VST proofs establish these results for the actual C bodies, including
+their short-circuit control flow.  They use the verified behavior of the
+finiteness functions in \Cref{fig:finite-checks} and the specifications of
+\texttt{fabs} and \texttt{ldexp} to interpret the range comparisons
+mathematically.  The principal additional argument concerns the strict bound
+on the rounded leading quotient in the strong check.  Because the threshold
+is exactly representable, passing this comparison establishes that the
+rounded quotient is finite and that the corresponding exact quotient
+satisfies the bound in $\mathcal{S}_{\mathrm{div}}$.  The specifications make
+no converse claim: an executable check may impose constraints beyond those
+required by the mathematical condition.
+
+These verified implications provide the condition-establishing premises for
+the proofs of the wrappers.  The next subsection shows how the
+weak-precondition and strong-precondition wrappers combine them with kernel
+refinement and the numerical theorem.
+
+\subsection{Verified Contracts for the Division Wrappers}
+\label{sec:division-wrapper-contracts}
+
+\Cref{thm:guarded-division} states the guarantee of the two division
+wrappers in mathematical terms.  \Cref{fig:dw-div-fp-vst-spec} shows how the
+default wrapper exposes this guarantee in its VST specification.
+
+\input{figures/dw-div-fp-vst-spec}
+
+The empty \texttt{PROP} clause in the precondition means that the caller
+supplies no numerical condition on the operands.  The \texttt{PARAMS} clause
+associates the C arguments with the logical values in the specification, and
+the \texttt{SEP} clause states that \texttt{x\_ptr} stores the input pair and
+that writable storage is available at \texttt{z\_ptr}.
+
+The postcondition contains the two conclusions needed at the public
+interface.  Its \texttt{SEP} clause states that \texttt{z\_ptr} stores the
+pair returned by the binary64 instance of \DWDivFP{} and that the input pair
+is unchanged.  Its \texttt{PROP} clause contains
+\texttt{DWDivFP\_guarantee}, which packages the error bound and valid
+double-word result proved in \Cref{thm:dw-div-fp-numerical}.  The specification
+therefore connects the pair stored by C directly to the numerical result.
+
+The strong-precondition wrapper has the same precondition and postcondition;
+its specification differs only in the declared C function.  The VST body proofs
+establish the common postcondition using the appropriate result from
+\Cref{thm:division-checks}, kernel refinement, and
+\Cref{cor:dw-div-conditions}.  If a check fails, execution reaches
+\texttt{exit} and does not produce a normal return to which the postcondition
+would apply.
+
+VST also verifies that calls across the check and operation source files use
+these specifications consistently, yielding the public contracts for the
+assembled C library.
+
+\subsection{Compilation and the Verification Boundary}
+\label{sec:verification-boundary}
+
+The public contracts established above apply under the floating-point
+semantics assumed by the C proofs.  The type \texttt{double} denotes binary64;
+operations use round-to-nearest, ties-to-even, with gradual underflow and
+without transformations such as reassociation or flushing subnormal values to
+zero.  The call to \texttt{fma} performs one correctly rounded fused
+multiply-add.  Floating-point exceptions are nontrapping, which is necessary
+for a weak-precondition wrapper to reach its finiteness check after the kernel
+produces an infinity or NaN \citep{IEEE754-2019}.
+
+The verified C functions call \texttt{fma}, \texttt{fabs}, \texttt{ldexp},
+and \texttt{exit}.  Their specifications state the behavior used by the
+proofs: \texttt{fma} implements fused multiply-add, \texttt{fabs} computes
+absolute value, \texttt{ldexp} constructs the required powers of two, and
+\texttt{exit} does not return.  The proofs use these specifications but do
+not verify their platform implementations; we assume that those
+implementations satisfy the specifications, following the treatment of
+unverified libraries in VSTlib \citep{Appel2023VSTlib}.  The correspondence
+between the assumed IEEE~754 semantics and the floating-point hardware is
+also outside our verification boundary.
+
+VST establishes the contracts at the C level.  When the library is compiled
+with CompCert, semantic preservation extends this verified C behavior to the
+generated assembly \citep{Leroy2009}.  CompCert's verified treatment of
+floating-point computations covers the compilation of the arithmetic
+operations used by the library \citep{Boldo2013CompCert}.  These results are
+subject to the same assumptions about the platform and external functions.
+A build produced by another compiler must also preserve the required
+IEEE~754 semantics, but its generated code is not covered by this
+machine-checked compilation result.
