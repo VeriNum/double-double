@@ -1,17 +1,16 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-This section proves the numerical guarantees summarized in
-\Cref{tab:operation-preview}.  Each result concerns a functional model defined
-in Rocq and parameterized by the underlying radix-two format.  A functional
-model records, as a pure function over Flocq's IEEE~754 values, the sequence
-of rounded operations performed by the corresponding double-word algorithm.
-We present these functions in mathematical notation rather than reproducing
-their Rocq definitions.  The numerical results compare the value represented
-by each returned pair with the corresponding exact real result and establish
-that the pair is a valid double word.  \Cref{sec:mechanization} subsequently
-relates the binary64 C kernels in \Cref{sec:overview} to the binary64
-instances of these models.
+For this analysis, each algorithm is represented by a functional model defined
+in Rocq over a generic radix-two format.  A functional model records, as a pure
+function over Flocq's IEEE~754 values, the sequence of rounded operations
+performed by the algorithm.  We present these models in mathematical notation
+rather than reproducing their Rocq definitions.
+
+For each model, we compare the value represented by its returned pair with the
+corresponding exact real result and prove that the pair is a valid double word.
+\Cref{sec:mechanization} subsequently proves that the binary64 C kernels
+implement the corresponding binary64 instances of these models.
 
 \subsection{From FLX Analysis to IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
@@ -370,8 +369,8 @@ and the low word $x_\ell$ of the dividend.  Line~6 divides this residual by
 $y$ to obtain the quotient correction $t_\ell$.  Finally, Line~7 combines
 $t_h$ and $t_\ell$ to produce the high and low words of the result.
 
-The following theorem states the resulting accuracy and valid double-word
-guarantees for a format-parameterized computation.  Its hypotheses identify
+The following theorem states the resulting accuracy guarantee and proves that
+the result is a valid double word.  Its hypotheses identify
 the properties that the interface conditions developed in the next subsection
 must establish.
 
@@ -593,7 +592,8 @@ It follows that
     \leq\eta
     \leq 3u^2|q|+\eta.
 \]
-This establishes the required bound and valid double-word result in Case~2.
+This establishes the required bound and proves that the result is a valid
+double word in Case~2.
 
 Case~1 establishes the relative bound when the quotient correction is normal
 or zero and the mixed bound otherwise.  Case~2 establishes the absolute
@@ -747,65 +747,64 @@ quotient or by the absolute term $\eta$, so it requires no corresponding
 upper bound on the divisor.
 
 For each remaining operation, \Cref{tab:remaining-numerical-conditions}
-distinguishes additional requirements used when finiteness is established
-from the computed pair from stronger requirements that establish finiteness
-from the inputs.  As explained in
-\Cref{rem:finiteness-and-real-bounds}, the real-valued bounds in the final
-column complement rather than replace its explicit finiteness requirements.
+distinguishes conditions used together with finiteness of the computed pair
+from stronger conditions that establish finiteness from the inputs.  As
+explained in \Cref{rem:finiteness-and-real-bounds}, the real-valued bounds in
+the ``From inputs'' alternative complement rather than replace its explicit
+finiteness requirements.
 The implemented checks may impose additional tests that fail on nonfinite
 operands before execution, even when those tests are not required
-by the mathematical condition in the middle column.
+by the corresponding mathematical condition.
 
-\begin{table*}[t]
+\begin{table}[t]
 \centering
 \caption{Additional sufficient conditions for the numerical guarantees in
 \Cref{tab:operation-preview}.  The pairs $(x_h,x_\ell)$ and $(y_h,y_\ell)$
 denote the first and second double-word operands, and $a$ denotes a
 floating-point operand.  Every alternative requires each double-word operand
-to be valid.  The middle column is used together with finiteness of both
-returned components; a dash indicates that no further input condition is
-required.  The final column establishes this finiteness from the inputs.}
+to be valid.  Each entry gives two alternatives: ``Finite output'' lists
+additional input conditions used together with finiteness of both returned
+components, while ``From inputs'' gives stronger conditions that establish
+this finiteness.  ``None'' means that no additional input condition is
+required.}
 \Description{For each remaining double-word addition, multiplication, and
 division operation, the table gives the additional mathematical input
 requirements and the stronger requirements that establish result finiteness
 from the inputs.}
 \label{tab:remaining-numerical-conditions}
-\small
-\begin{tabular}{@{}p{0.15\textwidth}p{0.28\textwidth}p{0.49\textwidth}@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{0.24\columnwidth}p{0.70\columnwidth}@{}}
 \toprule
-Model & Additional input requirements
-      & Stronger requirements establishing finiteness \\
+Model & Sufficient conditions \\
 \midrule
 \textsc{DWPlusFP}
-  & ---
-  & $x_h$, $x_\ell$, and $a$ are finite;
+  & \emph{Finite output:} none.\newline
+    \emph{From inputs:} $x_h$, $x_\ell$, and $a$ are finite;
     $|x_h|\leq\Omega/4$ and $|a|\leq\Omega/4$. \\
 \addlinespace
 \textsc{DWPlusDW}
-  & ---
-  & All four components are finite;
+  & \emph{Finite output:} none.\newline
+    \emph{From inputs:} all four components are finite;
     $|x_h|\leq\Omega/4$ and $|y_h|\leq\Omega/4$. \\
 \addlinespace
 \textsc{DWTimesFP}
-  & ---
-  & $x_\ell$ and the rounded leading product $x_ha$ are finite; and
-    $|x_ha|\leq\Omega/2$. \\
+  & \emph{Finite output:} none.\newline
+    \emph{From inputs:} $x_\ell$ and the rounded leading product $x_ha$
+    are finite; $|x_ha|\leq\Omega/2$. \\
 \addlinespace
 \textsc{DWTimesDW}
-  & ---
-  & $x_\ell$, $y_\ell$, and the rounded leading product $x_hy_h$ are finite;
-    and
-    $|x_hy_h|\leq\Omega/2$. \\
+  & \emph{Finite output:} none.\newline
+    \emph{From inputs:} $x_\ell$, $y_\ell$, and the rounded leading product
+    $x_hy_h$ are finite; $|x_hy_h|\leq\Omega/2$. \\
 \addlinespace
 \textsc{DWDivDW}
-  & $\displaystyle
-      2^{e_{\min}+2p}\leq |y_h|
-      \leq \frac{\Omega}{2^{p+5}}$
-  & All four components are finite; the same bounds on $|y_h|$ hold; and
-    $|x_h/y_h|\leq\Omega/4$. \\
+  & \emph{Finite output:}
+    $2^{e_{\min}+2p}\leq |y_h|\leq \Omega/2^{p+5}$.\newline
+    \emph{From inputs:} all four components are finite; the same bounds on
+    $|y_h|$ hold; $|x_h/y_h|\leq\Omega/4$. \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 The bounds in \Cref{tab:operation-preview} are instances of results
 parameterized by the underlying radix-two format.  The following theorem
@@ -824,10 +823,10 @@ value, $p\geq5$ for multiplication of two double words, and $p\geq14$ for
 division of two double words.  Suppose also that every double-word operand is
 valid.  If either
 \begin{enumerate}
-  \item the additional input requirements in the middle column of
+  \item the ``Finite output'' conditions in
     \Cref{tab:remaining-numerical-conditions} hold and $z_h$ and $z_\ell$ are
     finite, or
-  \item the stronger requirements in the final column hold,
+  \item the ``From inputs'' conditions hold,
 \end{enumerate}
 then $(z_h,z_\ell)$ satisfies the corresponding formula in
 \Cref{tab:operation-preview}, interpreted using the underlying format's $u$
