@@ -1,23 +1,94 @@
-\onecolumn
 \appendix
-\section{Detailed Performance Results}
-\label{app:rq3-performance}
+\section{Evaluation Details}
+\label{app:evaluation-details}
 
-This appendix supplements the RQ3 summary in \cref{tab:rq3-performance} by
-reporting the underlying timing measurements and the results for the strong
-wrappers.
+This appendix supplements the experimental setup in
+\Cref{sec:evaluation-setup}.  It records the construction of the generated
+inputs, the numerical reference calculations, and the timing protocol.
+\Cref{sec:evaluation} reports and interprets the resulting measurements.
 
-\begin{table}[H]
-  \caption{Detailed RQ3 runtime measurements.  Under CompCert, Time is the
-  wrapper time in nanoseconds per call, Kernel is the corresponding unchecked-
-  kernel time, and Ratio is Time/Kernel.  Under Clang, Time is the wrapper time
-  in nanoseconds per call, QD is the corresponding QD-operation time, and Ratio
-  is Time/QD.  A ratio greater than one means that the wrapper is slower than
-  its comparator.  Every entry reports the median [interquartile range] over
-  paired trials; time-column values are in nanoseconds per call and ratios are
-  dimensionless.  Wrapper identifies the default or strong wrapper for each
-  double-word operation; the dash denotes the single public wrapper for an
-  error-free transformation.}
+\subsection{Input Construction}
+
+Inputs are generated without consulting the runtime checks.  At every
+base-two exponent, positive and negative values occur equally often.  Both
+\FenceDD{} and QD receive the same binary64 values; for a double-word operand,
+the high and low components have identical bit patterns in the two calls.
+
+For 95\% of the double-word inputs, MPFR constructs a source value with 106
+significant bits and a nonzero final bit.  Rounding this value to binary64
+produces the high component, and rounding the exact residual produces the low
+component.  If the leading bit is at $2^e$, the final source bit is at
+$2^{e-105}$.  The range therefore begins at $e=-969$, where the final bit is
+$2^{-1074}$, and ends at $e=1022$, before rounding the high component can
+produce infinity.  For the remaining 5\%, a generated binary64 value becomes
+the high component and the low component is zero.  These endpoints belong to
+the test construction and are not restrictions imposed by \FenceDD{}.
+
+RQ1 and RQ2 use \RQOneSamplesPerExponent{} inputs at each exponent.  This
+produces 79,680 inputs for each double-word operation and 83,920 for each
+error-free transformation.  The artifact records the random seed, input
+fingerprint, and component bit patterns.
+
+\subsection{Numerical Reference Calculations}
+
+For RQ1, MPFR reconstructs the real values represented by the input and output
+pairs and computes each reference operation at 2112-bit precision.  Division
+cases whose reported error ratio or region classification could depend on
+this precision are recomputed at 4224-bit precision.  Candidate ratios close
+to one are confirmed using directed rounding or interval calculations.
+
+For each double-word operation, we select the QD routine computing the same
+mathematical operation.  Addition of two double words uses
+\texttt{ieee\_add}, division of two double words uses
+\texttt{accurate\_div}, and the remaining operations use the corresponding QD
+operators.  For the transformations, we compare with QD's
+\texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod}.  QD may
+use algorithms different from the corresponding \FenceDD{} kernels, so the
+\FenceDD{} error bound is used only as a common numerical criterion.
+
+For RQ2, QD results are classified as nonfinite; finite but not a valid double
+word; finite and valid with error above the corresponding \FenceDD{} bound; or
+finite and valid with error no greater than that bound.  For an error-free
+transformation, satisfying the criterion instead requires exact
+reconstruction.  Separate boundary tests exercise values immediately below,
+at, and above each runtime threshold, together with zeros, exact cancellation,
+and calls that reach a result finiteness check.
+
+\subsection{Timing Protocol}
+\label{app:evaluation-timing}
+
+Each RQ3 test uses \RQThreeInputCount{} inputs whose operand exponents lie
+between $-100$ and $100$, together with \RQThreeTrialCount{} paired trials.
+Every runtime check succeeds on these inputs, and before timing we confirm
+that each wrapper returns the same result as its unchecked kernel.  QD objects
+are constructed before measurement.
+
+For the comparison with the kernels, the \FenceDD{} wrappers and kernels are
+compiled with CompCert 3.17 using \texttt{-O3}.  For the comparison with QD,
+the \FenceDD{} C objects are compiled with Homebrew Clang 19.1.7, while QD and
+the C++ driver are compiled with Apple Clang 17.0.0.  Both Clang builds use
+\texttt{-O3}, with fast mathematics and implicit floating-point contraction
+disabled.  Measurements run on an Apple M4 Max with 16 cores under macOS
+26.6.2.
+
+For each double-word operation, the schedule cycles through all 24 orders of
+the kernel, default wrapper, strong wrapper, and QD.  For each transformation,
+it cycles through all six orders of the kernel, wrapper, and QD.  Every
+implementation receives an untimed warm-up.  Differences and ratios are
+computed from paired trials.
+
+\subsection{Detailed Performance Results}
+
+\Cref{tab:rq3-performance-detail} supplements the summary in
+\Cref{tab:rq3-performance} with the individual timing measurements and the
+results for the strong wrappers.
+
+\begin{table*}[t]
+  \caption{Detailed RQ3 measurements.  Under CompCert, Time and Kernel are the
+  wrapper and unchecked kernel times in nanoseconds per call; Ratio is
+  Time/Kernel.  Under Clang, QD is the QD time and Ratio is Time/QD.  Entries
+  are medians [interquartile ranges] over paired trials.  A dash denotes the
+  single public wrapper for an error-free transformation.}
   \label{tab:rq3-performance-detail}
   \centering
   \setlength{\tabcolsep}{4pt}
@@ -33,6 +104,5 @@ wrappers.
     \input{generated/rq3_combined_rows}\\
     \bottomrule
   \end{tabular}
-\end{table}
+\end{table*}
 \FloatBarrier
-\twocolumn
