@@ -58,55 +58,52 @@ construction, reference computation, boundary tests, and timing protocol.
 
 \subsection{Usefulness of the Error Bounds (RQ1)}
 
-To address RQ1, we evaluate the six double-word operations on generated inputs
-for which calls to the default wrapper are accepted.  MPFR reconstructs the real
-values represented by the input and output pairs and computes the
-corresponding reference operation at 2112-bit precision.  If $r$ is the MPFR
-reference and $\widehat r$ is the value represented by the returned pair, the
-observed error is $|\widehat r-r|$.
+On the generated tests, we found that the proved error bounds were useful:
+the largest observed errors approached the bounds, whereas the average errors
+remained well below them.
 
-The bounds in \Cref{tab:operation-preview} have the form
+To address RQ1, we evaluate the six double-word operations on inputs for which
+calls to the default wrapper are accepted.  For addition and multiplication,
+we reconstruct each double-word value and compute the reference result using
+2112-bit MPFR arithmetic; for division, we use 4224 bits.  In either case, the
+precision is sufficient to represent exactly the sum of two finite binary64
+components, so reconstructing the value represented by a pair introduces no
+rounding.  MPFR then computes the corresponding reference operation, correctly
+rounded to the selected precision \citep{Fousse2007}.
+
+Let $r$ be this reference result and let $(z_h,z_\ell)$ be the pair returned
+by \FenceDD{}.  We use MPFR to compute the observed error
+$|(z_h+z_\ell)-r|$ and compare it with the applicable proved error bound
 \begin{equation}
-  \begin{aligned}
-    B(r) &= C u^2|r|+K\eta,\\
-    B_{\mathrm{rel}}(r) &= C u^2|r|,
-    & B_{\mathrm{abs}} &= K\eta.
-  \end{aligned}
+  B(r)=C u^2|r|+K\eta.
   \label{eq:rq1-error-bound}
 \end{equation}
-We refer to $B_{\mathrm{rel}}(r)$ and $B_{\mathrm{abs}}$ as the relative and
-absolute terms.  An input lies in the relative region
-when $B_{\mathrm{rel}}(r)\geq B_{\mathrm{abs}}$ and in the absolute region
-otherwise.  The addition bounds have no absolute term, so all nonzero addition
-results lie in the relative region.
+The relative term $C u^2|r|$ dominates when
+$C u^2|r|\geq K\eta$; otherwise, the absolute term $K\eta$ dominates.  The
+addition bounds have no absolute term, so every nonzero addition result lies
+in the former category.
 
-For every result with $B(r)>0$, we measure how closely its error approaches
-the bound using
+For every result with $B(r)>0$, we measure the proportion of the bound used
+by the observed error:
 \begin{equation}
-  \rho=\frac{|\widehat r-r|}{B(r)}.
+  \rho=\frac{|(z_h+z_\ell)-r|}{B(r)}.
   \label{eq:rq1-error-ratio}
 \end{equation}
-A value of $\rho$ near one indicates that the observed error approaches the
-proved bound.  Smaller values indicate that the bound is less tightly attained
-on that input.  The numerical theorem implies $\rho\leq1$ for every
-\FenceDD{} result produced by an accepted call.  Addition results for which $B(r)=0$ are
-reported separately and must be exact.
+Thus, $\rho$ near one means that the error is close to the proved bound,
+whereas a smaller value indicates greater margin.  Addition results for which
+$B(r)=0$ are considered separately and must be exact.
 
-The QD routines may use a different sequence of binary64 operations from the
-corresponding \FenceDD{} kernels.  To provide a common numerical scale, we
-divide each finite QD error by the corresponding \FenceDD{} error bound
-$B(r)$.  This bound is not proved for QD, and the QD and \FenceDD{} ratios are
-not expected to be equal.  Nonfinite QD results are reported separately.
+We apply the same calculation to finite QD results on the same inputs.  QD
+may compute the same mathematical operation using a different algorithm, so
+$B(r)$ is not a proved bound for its result.  Dividing the QD error by $B(r)$
+serves only to place the observed errors from QD and \FenceDD{} on a common
+scale.  Nonfinite QD results are reported separately.
 
 \begin{table}[t]
-  \caption{RQ1: Mean and maximum values of the error ratio $\rho$ from
-  \Cref{eq:rq1-error-ratio}, separated into the regions determined by the terms
-  of the \FenceDD{} error bound in \Cref{eq:rq1-error-bound}.  Region share is
-  the percentage of results produced by accepted \FenceDD{} calls that fall in
-  each region; the shares for an operation sum to 100\%.  For QD,
-  the value of the \FenceDD{} error bound provides a common scale; the bound is
-  not proved for QD.  Region shares are reported to two decimal places and
-  ratios to four decimal places.}
+  \caption{RQ1: Mean and maximum proportions $\rho$ of the \FenceDD{} error
+  bound used by the observed errors.  Share is the percentage of results for
+  which the indicated term dominates.  For QD, $\rho$ provides a common
+  comparison scale rather than a proved bound.}
   \label{tab:rq1-tightness}
   \centering
   \setlength{\tabcolsep}{2pt}
@@ -121,40 +118,28 @@ not expected to be equal.  Nonfinite QD results are reported separately.
               & Mean
               & Max \\
     \midrule
-    \multicolumn{6}{@{}l}{\emph{Relative region}} \\[2pt]
+    \multicolumn{6}{@{}l}{\emph{Relative term dominates}} \\[2pt]
     \input{generated/rq1_relative_compact_rows}\\
     \addlinespace
-    \multicolumn{6}{@{}l}{\emph{Absolute region}} \\[2pt]
+    \multicolumn{6}{@{}l}{\emph{Absolute term dominates}} \\[2pt]
     \input{generated/rq1_absolute_compact_rows}\\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\paragraph{Answer to RQ1.}
-\Cref{tab:rq1-tightness} shows that the proved bounds can be approached, but
-are conservative for most generated inputs.  Across
-\RQOneNormalReturnCount{} results produced by accepted calls, no \FenceDD{}
-error exceeded its proved bound.  The largest observed values of $\rho$ were
-\RQOneRelativeMaximumRatio{} for \RQOneRelativeMaximumOperation{} in the
-relative region and \RQOneAbsoluteMaximumRatio{} for
-\RQOneAbsoluteMaximumOperation{} in the absolute region.  By contrast, the
-mean for every operation was at most \RQOneRelativeMaximumMean{} in the
-relative region.  For every operation with an absolute term, the mean in the
-absolute region was at most \RQOneAbsoluteMaximumMean{}.  The absolute region
-contained 14--16\% of the results for these operations, so these measurements
-represent a substantial portion of the generated tests rather than isolated
-boundary cases.
-Thus, some observed errors came close to the proved limits, while the bounds
-retained substantial margin on average.
+\Cref{tab:rq1-tightness} provides the evidence for this answer.  No observed
+error from \FenceDD{} exceeded its proved bound in the
+\RQOneNormalReturnCount{} results produced by accepted calls.  The largest observed proportion
+was $0.87$ when the relative term dominated and $0.56$ when the absolute term
+dominated.  The corresponding largest means were $0.082$ and $0.049$.
+Moreover, the absolute term dominated for 14--16\% of the relevant results,
+so the measurements near the lower end of the format were not isolated
+boundary cases.  The bounds can therefore be approached, but retain
+substantial margin on average.
 
-As secondary context, QD produced the same observed ratios for both addition
-operations and \DWDivFP{}.  Its relative errors were somewhat larger for the
-two multiplication operations and smaller for \textsc{DWDivDW}.  One
-\DWTimesFP{} result reached $\rho=1.038$, exceeding $B(r)$ by
-\RQOneQDExcessPercent{}.  QD may
-compute the same mathematical operation using a different algorithm, so
-$B(r)$ is not a proved bound for its result.  We use $B(r)$ only to place the
-observed QD and \FenceDD{} errors on a common scale.
+As secondary context, QD produced similar errors for several operations.
+One QD multiplication result exceeded the common comparison scale by
+$3.8\%$.
 
 \FloatBarrier
 \subsection{Usefulness of the Wrappers (RQ2)}
@@ -215,12 +200,9 @@ criterion for every call rejected by the strong addition checks, showing that
 these sufficient checks can be conservative.
 
 Each error-free transformation has one public wrapper; it is not classified as
-default or strong.  For inputs associated with rejected calls, we compare
-\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{} with QD's
-\texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod},
-respectively.  Because the verified contracts require exact reconstruction, a
-finite, valid QD pair either reconstructs the MPFR result exactly or fails the
-criterion.
+default or strong.  Because the verified contracts for these transformations
+require exact reconstruction, a finite, valid QD pair either reconstructs the
+MPFR result exactly or fails the criterion.
 
 \begin{table}[t]
   \caption{RQ2: QD results for inputs on which a runtime check stopped a call to

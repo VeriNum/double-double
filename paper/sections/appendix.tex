@@ -26,16 +26,22 @@ the test construction and are not restrictions imposed by \FenceDD{}.
 
 RQ1 and RQ2 use \RQOneSamplesPerExponent{} inputs at each exponent.  This
 produces 79,680 inputs for each double-word operation and 83,920 for each
-error-free transformation.  The artifact records the random seed, input
-fingerprint, and component bit patterns.
+error-free transformation.  We do not distinguish rejected calls according to
+which runtime check failed.  The artifact records the run identifier, random
+seed, input fingerprint, and component bit patterns.
 
 \subsection{Numerical Reference Calculations}
+
+We use QD 2.3.24 with its FMA implementation of \texttt{two\_prod}, MPFR
+4.2.2, and GMP 6.3.0.  All floating-point computations use rounding to nearest
+with ties to even and gradual underflow.
 
 For RQ1, MPFR reconstructs the real values represented by the input and output
 pairs and computes each reference operation at 2112-bit precision.  Division
 cases whose reported error ratio or region classification could depend on
 this precision are recomputed at 4224-bit precision.  Candidate ratios close
-to one are confirmed using directed rounding or interval calculations.
+to one are confirmed using directed rounding or interval calculations.  No
+result produced by an accepted RQ1 call had $B(r)=0$.
 
 For each double-word operation, we select the QD routine computing the same
 mathematical operation.  Addition of two double words uses
@@ -52,7 +58,9 @@ finite and valid with error no greater than that bound.  For an error-free
 transformation, satisfying the criterion instead requires exact
 reconstruction.  Separate boundary tests exercise values immediately below,
 at, and above each runtime threshold, together with zeros, exact cancellation,
-and calls that reach a result finiteness check.
+and calls that reach a result finiteness check.  All \RQTwoBoundaryCases{}
+tests produced the expected outcome and are excluded from the reported
+percentages.
 
 \subsection{Timing Protocol}
 \label{app:evaluation-timing}
@@ -71,9 +79,9 @@ the C++ driver are compiled with Apple Clang 17.0.0.  Both Clang builds use
 disabled.  Measurements run on an Apple M4 Max with 16 cores under macOS
 26.6.2.
 
-For each double-word operation, the schedule cycles through all 24 orders of
-the kernel, default wrapper, strong wrapper, and QD.  For each transformation,
-it cycles through all six orders of the kernel, wrapper, and QD.  Every
+The 24 trials for each double-word operation use every ordering of the kernel,
+default wrapper, strong wrapper, and QD once.  For each transformation, the
+six orderings of the kernel, wrapper, and QD each occur four times.  Every
 implementation receives an untimed warm-up.  Differences and ratios are
 computed from paired trials.
 
