@@ -161,11 +161,9 @@ In summary, this paper makes four contributions:
 
   \item \textbf{Verification of \FenceDD
         (\Cref{sec:mechanization}).}
-        Using VST, we prove that each C kernel performs the binary64
-        computation analyzed in Rocq and that each successful runtime check
-        establishes the corresponding condition defined by the numerical
-        analysis.  These proofs connect the numerical guarantees to the
-        contracts of the public C interface.
+        Using VST, we verify the contracts of the public C interface by
+        connecting each binary64 C computation and its runtime checks to the
+        corresponding numerical theorem in Rocq.
 
   \item \textbf{Evaluation of usefulness and cost
         (\Cref{sec:evaluation}).}

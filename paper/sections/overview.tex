@@ -327,10 +327,9 @@ the cost of establishing result finiteness before execution.
 \subsection{The Division Contract}
 \label{sec:overview-division-guarantee}
 
-The two wrappers establish result finiteness at different points but provide
-the same contract on normal return.  Their runtime checks establish the
-required numerical conditions, so callers need not establish those conditions
-before making the call.
+Although the two wrappers establish result finiteness at different points,
+they provide the same contract below.  Callers need not establish its
+numerical conditions before making the call.
 
 \begin{theorem}[Normal-Return Guarantee for the Division Wrappers]
 \label{thm:division-wrapper-contract}
@@ -392,13 +391,9 @@ Division $(x,y)$ & $x/y$ & $9.8u^2|r|+2.5\eta$ \\
 \end{tabular}
 \end{table}
 
-Each of the six double-word operations has a default wrapper that performs a
-weak check before execution and a result finiteness check
-afterward, and a strong wrapper that performs a strong check.
-For a given operation, the two wrappers provide the same guarantee
-shown in \Cref{tab:operation-preview}, although their runtime checks can
-succeed on different inputs.  Each error-free transformation has one public
-wrapper.
+All six double-word operations have both wrapper forms, although their runtime
+checks can succeed on different inputs.  Each error-free transformation has
+one public wrapper.
 
 The guarantees in \Cref{tab:operation-preview} rely on conditions that vary
 with the arithmetic performed by each algorithm.  \Cref{sec:numerics} derives
