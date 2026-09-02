@@ -5,7 +5,7 @@
 % C division functions:
 %   dw_div_fp_kernel, dw_div_fp, dw_div_fp_strong
 % C division checks:
-%   dw_div_fp_weak_precond_check, dw_div_fp_strong_precond_check,
+%   dw_div_fp_weak_check, dw_div_fp_strong_check,
 %   isfinite_dword
 % Rocq division model and conditions:
 %   DWDivFP, DWDivFP_weak_precond, DWDivFP_finite_post_cond,
@@ -13,12 +13,12 @@
 %   DWDivFP_guarantee
 % VST specifications:
 %   dw_div_fp_kernel_spec, dw_div_fp_spec, dw_div_fp_strong_spec,
-%   dw_div_fp_weak_precond_check_spec,
-%   dw_div_fp_strong_precond_check_spec, isfinite_dword_spec
+%   dw_div_fp_weak_check_spec,
+%   dw_div_fp_strong_check_spec, isfinite_dword_spec
 % VST body theorems:
 %   body_dw_div_fp_kernel, body_dw_div_fp, body_dw_div_fp_strong,
-%   body_dw_div_fp_weak_precond_check,
-%   body_dw_div_fp_strong_precond_check, body_isfinite_dword
+%   body_dw_div_fp_weak_check,
+%   body_dw_div_fp_strong_check, body_isfinite_dword
 % Linked units:
 %   ChecksVSU, OpsVSU, DDLibVSU
 % Other Rocq functional models:
@@ -100,11 +100,11 @@ Suppose that \texttt{x} stores the binary64 pair $(x_h,x_\ell)$.
 
 \begin{enumerate}
   \item If
-    \texttt{dw\_div\_fp\_weak\_precond\_check(x,y)} returns $1$, then
+    \texttt{dw\_div\_fp\_weak\_check(x,y)} returns $1$, then
     $\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 
   \item If
-    \texttt{dw\_div\_fp\_strong\_precond\_check(x,y)} returns $1$, then
+    \texttt{dw\_div\_fp\_strong\_check(x,y)} returns $1$, then
     $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{enumerate}
 
@@ -118,7 +118,7 @@ functions in \Cref{fig:finite-checks} and the specifications of \texttt{fabs}
 and \texttt{ldexp} to interpret the range comparisons mathematically.
 
 The principal additional argument concerns the leading quotient tested by the
-strong-precondition check.  The check compares its rounded value with an
+strong check.  The check compares its rounded value with an
 exactly representable threshold.  A successful strict comparison excludes
 infinities and NaNs.  Exact representability of the threshold, together with
 monotonicity of rounding, establishes the bound on the exact quotient required
@@ -156,15 +156,15 @@ validity property proved in \Cref{thm:dw-div-fp-numerical}.  In particular,
 the returned components form a double word according to
 \Cref{def:double-word}.
 
-For the default wrapper, a successful weak-precondition check establishes
+For the default wrapper, a successful weak check establishes
 $\mathcal{I}_{\mathrm{div}}$.  The wrapper then invokes the kernel, whose
 refinement theorem identifies the stored pair with the result of \DWDivFP{}.
 A successful finiteness check on that pair establishes
 $\mathcal{F}_{\mathrm{div}}$.  These two conditions satisfy the first
 alternative in \Cref{cor:dw-div-conditions} and yield the numerical guarantee.
 
-For the strong-precondition wrapper, a successful strong-precondition check
-establishes $\mathcal{S}_{\mathrm{div}}$.  This condition establishes result
+For the strong wrapper, a successful initial check establishes
+$\mathcal{S}_{\mathrm{div}}$.  This condition establishes result
 finiteness from the inputs and satisfies the second alternative in
 \Cref{cor:dw-div-conditions}, so no check is required after kernel execution.
 The two wrappers therefore have the same precondition and postcondition even

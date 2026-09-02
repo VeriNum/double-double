@@ -104,10 +104,9 @@ proofs.
 We present a verified C library containing three error-free transformations
 and six double-word operations.  Our Rocq development extends earlier analysis
 based on an unbounded exponent range to IEEE~754 arithmetic with overflow and
-gradual underflow.  The public functions use runtime checks to establish the
-conditions required by the numerical analysis.  VST proofs show that the C
-kernels implement the analyzed algorithms and that the runtime checks
-establish the required conditions.  On normal return, each double-word
+gradual underflow.  VST proofs show that the C kernels implement the analyzed
+algorithms and that the runtime checks establish the conditions required by
+the numerical analysis.  On normal return, each double-word
 operation produces a valid double word within its proved error bound, while
 each error-free transformation guarantees exact reconstruction.
 

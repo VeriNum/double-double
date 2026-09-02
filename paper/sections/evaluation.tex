@@ -32,8 +32,9 @@ wrappers.  We investigate the following research questions:
 We evaluate \texttt{dd\_lib} using QD as a comparison implementation
 \citep{Hida2001,QD} and MPFR to compute high-precision reference values
 \citep{Fousse2007}.  Throughout this section,
-the \emph{default wrappers} are only the weak-precondition wrappers for the
-six double-word operations.  Each of the three error-free transformations
+the \emph{default wrappers} are only the wrappers that perform a
+weak check for the six double-word operations.  Each of the
+three error-free transformations
 instead has a single wrapper.
 
 To give equal coverage to values near the underflow and overflow boundaries
@@ -215,9 +216,9 @@ evaluated \texttt{dd\_lib} wrapper, we run the corresponding QD operation and
 compare its returned pair with an MPFR reference.
 
 For each of the six double-word operations, we consider separately the inputs
-associated with calls rejected by runtime checks in the default
-weak-precondition wrapper and those associated with rejected calls to the
-strong-precondition wrapper.  These populations overlap: every rejected call
+associated with calls rejected by runtime checks in the default wrapper and
+those associated with rejected calls to the strong wrapper.  These
+populations overlap: every rejected call
 to the default wrapper has a corresponding rejected call to the strong
 wrapper.  Percentages are therefore calculated separately using the number of
 rejected calls to the indicated wrapper.
@@ -308,12 +309,12 @@ input associated with a rejected call to a default multiplication wrapper was
 nonfinite, while
 suitable QD results occurred only for division.
 
-Calls to the strong-precondition wrappers were rejected for
+Calls to the strong wrappers were rejected for
 \RQTwoStrongRejected{} inputs, of
 which \RQTwoStrongQDWithinPercent{} produced a finite, valid QD result within
 the comparison bound.  This population includes all \RQTwoDefaultOnly{}
 inputs for which calls to the default wrapper were accepted but calls to the
-strong-precondition wrapper were rejected.  These cases show the benefit of
+strong wrapper were rejected.  These cases show the benefit of
 checking result finiteness after execution: all checks in the default wrapper
 succeed, whereas an input bound checked by the strong wrapper fails.  For
 multiplication, the differing cases had a leading-product exponent of $1023$;
@@ -335,42 +336,46 @@ unchecked \texttt{dd\_lib} kernel would behave on those inputs.
 
 \subsection{Performance Cost of the Wrappers (RQ3)}
 
-To address RQ3, we time the six default wrappers and the three single
-transformation wrappers.  Each timing test uses \RQThreeInputCount{} inputs
+To address RQ3, we time the default and strong wrappers for the six
+double-word operations and the wrapper for each of the three transformations.
+Each timing test uses \RQThreeInputCount{} inputs
 whose operand exponents lie between $-100$ and $100$, together with
 \RQThreeTrialCount{} trials.  All runtime checks succeed for these inputs.
-Before timing, we confirm that each wrapper produces the same
+Before timing, we confirm that every wrapper produces the same
 result as its unchecked kernel.  QD objects are constructed before
 measurement.
 
-For the six double-word operations, the measurement schedule cycles through all 24 orders
-of the kernel, the default wrapper, and QD.  For the transformations, it
+For each double-word operation, the measurement schedule cycles through all
+24 orders of the kernel, the default wrapper, the strong wrapper, and QD.
+For each transformation, it
 cycles through all six orders of the wrapper, kernel, and QD.  Every
-implementation receives an untimed warm-up.  We compute differences and
-ratios from paired trials rather than from separately aggregated measurements.
-The table reports the default wrapper for each double-word operation and the
-single wrapper for each transformation, as specified by RQ3.
+implementation receives an untimed warm-up.  Across the 24 trials, each order
+for a double-word operation occurs once and each order for a transformation
+occurs four times.  We compute differences and ratios from paired trials
+rather than from separately aggregated measurements.
 
-For the CompCert build, we report the wrapper and kernel times, their
-difference, and their ratio.  For the Clang comparison, we report the wrapper
-and QD times and their ratio.  Every entry gives the median and interquartile
-range across trials.
+For the CompCert build, we report each wrapper time together with the kernel
+time and their ratio.  For the Clang comparison, we report each wrapper time
+together with the QD time and their ratio.  Every entry gives the median and
+interquartile range across trials.
 
 \begin{table*}[t]
   \caption{Timing in nanoseconds per call.  CompCert compares each wrapper
-  with its unchecked kernel; Clang compares each wrapper with QD.  Entries
+  with its unchecked kernel; Clang compares each wrapper with QD.  The
+  wrapper column distinguishes the default and strong wrappers for the six
+  double-word operations; each transformation has only one wrapper.  Entries
   report median [IQR] across trials.}
   \label{tab:rq3-performance}
   \centering
   \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}lrrrrrrr@{}}
+  \begin{tabular}{@{}llrrrrrr@{}}
     \toprule
-    & \multicolumn{4}{c}{CompCert}
+    & & \multicolumn{3}{c}{CompCert}
     & \multicolumn{3}{c}{Clang} \\
-    \cmidrule(lr){2-5}\cmidrule(l){6-8}
-    Operation
-      & Wrapper & Kernel & Added cost & Ratio
-      & Wrapper & QD & Ratio \\
+    \cmidrule(lr){3-5}\cmidrule(l){6-8}
+    Operation & Wrapper
+      & Time & Kernel & Ratio
+      & Time & QD & Ratio \\
     \midrule
     \input{generated/rq3_combined_rows}\\
     \bottomrule
@@ -378,24 +383,33 @@ range across trials.
 \end{table*}
 
 \paragraph{Answer to RQ3.}
-\Cref{tab:rq3-performance} shows that the runtime checks add a noticeable
-relative cost to these small kernels but a small absolute cost.  For the
-CompCert build, the median paired ratio between wrapper and kernel time was
-\RQThreeMedianKernelRatio{} across the nine operations and transformations.
-It ranged from \RQThreeMinimumKernelRatio{} for
-\RQThreeMinimumKernelRatioOperation{} to \RQThreeMaximumKernelRatio{} for
-\RQThreeMaximumKernelRatioOperation{}, corresponding to an additional
-\RQThreeMinimumAddedTime{}--\RQThreeMaximumAddedTime{} nanoseconds per call.
-The smaller ratio for \RQThreeMinimumKernelRatioOperation{} shows that the
-cost of checking is more readily amortized by a more expensive kernel; the
-larger ratio for \RQThreeMaximumKernelRatioOperation{} occurs because the
-underlying transformation is inexpensive.
+\Cref{tab:rq3-performance} shows that both wrappers add a noticeable relative
+cost to these small kernels but a small absolute cost.  For the six
+double-word operations in the CompCert build, the default wrappers took
+\RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} times
+as long as their kernels and added
+\RQThreeDefaultMinimumAddedTime{}--\RQThreeDefaultMaximumAddedTime{}
+nanoseconds per call.  The strong wrappers took
+\RQThreeStrongMinimumKernelRatio{}--\RQThreeStrongMaximumKernelRatio{} times
+as long as the same kernels and added
+\RQThreeStrongMinimumAddedTime{}--\RQThreeStrongMaximumAddedTime{}
+nanoseconds per call.  With CompCert, the strong wrapper was faster than the
+default wrapper for four operations and slower for two.  Avoiding the result
+check is therefore not uniformly cheaper: the strong input check performs
+additional work whose cost depends on the operation and compiler.  The
+transformation wrappers took
+\RQThreeTransformationMinimumKernelRatio{}--\RQThreeTransformationMaximumKernelRatio{}
+times as long as their kernels.
 
-Compared with QD in the Clang comparison, the wrappers were
-\RQThreeMinimumQDRatio{}--\RQThreeMaximumQDRatio{} times slower in this
-microbenchmark.  Thus, checking the numerical contracts costs a small number
-of nanoseconds per call, although its relative overhead is substantial for
-the shortest kernels and QD remains faster in total.  The QD comparison
-still includes differences between the algorithms and between the two Clang
-versions; the CompCert ablation, rather than the QD comparison, measures the
-cost added by the wrapper.
+In the Clang build, the default wrappers took
+\RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{} times as long
+as QD, while the strong wrappers took
+\RQThreeStrongMinimumQDRatio{}--\RQThreeStrongMaximumQDRatio{} times as long.
+The transformation wrappers took
+\RQThreeTransformationMinimumQDRatio{}--\RQThreeTransformationMaximumQDRatio{}
+times as long as QD.  In this build, the strong wrapper was slower than the
+default wrapper for all six operations, further showing that their relative
+cost depends on compilation.  The QD comparisons measure total running time and
+therefore include differences between algorithms as well as implementations.
+The CompCert comparison with the common kernel isolates the performance cost
+of each wrapper.

@@ -19,17 +19,18 @@ They therefore provide roughly twice the relative precision where the
 relative term dominates and a small absolute error near the smallest
 representable values.
 
-For each double-word operation, the strong-precondition and weak-precondition
-wrappers provide the same contract on normal return.  The former establishes
-before execution conditions sufficient for result finiteness, whereas the
-latter checks result finiteness after execution, allowing its runtime checks
-to succeed for more inputs.  Each error-free transformation has one wrapper.
+For each double-word operation, the default and strong wrappers provide
+the same contract on normal return.  The strong wrapper uses a
+strong check to establish result finiteness before execution.
+The default wrapper uses a weak check before execution and checks
+result finiteness afterward, allowing its runtime checks to succeed for more
+inputs.  Each error-free transformation has one wrapper.
 
 Across \RQOneNormalReturnCount{} results produced by accepted calls, the largest
 fractions of the proved bounds were \RQOneRelativeMaximumRatio{} in
 the relative region and \RQOneAbsoluteMaximumRatio{} in the absolute region.
 On inputs associated with calls rejected by runtime checks in the default and
-strong-precondition wrappers, QD
+strong wrappers, QD
 returned a finite, valid result within the corresponding bound expression in
 \RQTwoDefaultQDWithinPercent{} and \RQTwoStrongQDWithinPercent{} of cases,
 respectively; on inputs associated with rejected calls to the wrappers

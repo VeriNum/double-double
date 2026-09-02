@@ -12,31 +12,36 @@ been used to improve reproducibility in parallel climate models
 and to provide additional precision in quantum electrodynamic calculations
 \citep{HeDing2001,Aoyama2015}.
 
-The apparent simplicity of the representation hides an important hazard.
-\citet{Li2002} described double-double arithmetic as ``an `attractive
-nuisance,' like an unfenced backyard swimming pool.''  A pair of binary64
-values does not form an ordinary wider IEEE~754 format, and a double-double
-operation is not obtained by computing an exact result and rounding it once.
-Instead, a double-double operation is implemented as a sequence of rounded
-binary64 computations.  Different algorithms can implement the same
-double-double operation, and the error bound depends on the chosen algorithm.
-A separate argument must also show that the returned pair is a valid
-double-double.  The error bound and validity guarantee hold only under
-conditions on the operands and intermediate results.
+Despite the apparent simplicity of the representation, using double-word
+arithmetic safely in practice requires vigilance.  As \citet{Li2002}
+described it, double-double arithmetic is ``an `attractive nuisance,' like an
+unfenced backyard swimming pool.''  The hazard is that a pair of binary64
+values is not equivalent to an ordinary wider IEEE~754 format, and arithmetic
+on the pair does not behave like arithmetic in such a format.  A basic
+operation in an IEEE~754 format computes an exact result and rounds it once.
+A double-double operation instead performs a sequence of rounded binary64
+computations.  Several algorithms can implement the same operation, and the
+resulting rounding-error bound depends on the algorithm chosen.  Whether that
+bound holds depends on conditions on the operands and intermediate results.
+Additional conditions may be required to ensure that the returned components
+form a double-double.
 
 We present a verified C library whose public C interface enforces these
-conditions.  The library provides three error-free transformations and six
-double-double operations.  On normal return, each double-double operation produces 
-a valid double-double within its proved error bound, while each error-free 
-transformation guarantees exact reconstruction.
+conditions.  The library provides six double-double operations together with
+three error-free transformations that the operations use as building blocks.
+On normal return, each double-double operation returns components that form a
+double-double, and their sum satisfies the proved error bound.  Each
+error-free transformation returns two binary64 values whose sum equals the
+exact result of the corresponding basic operation.
 
 \subsection{Double-Word Arithmetic and Its Numerical Guarantees}
 \label{sec:intro-double-word}
 
-We state the numerical analysis for double-word arithmetic over a generic
-underlying floating-point format.  Double-double arithmetic is the binary64
-instance of double-word arithmetic.  A double word is a floating-point
-expansion with two components \citep{Dekker1971,Priest1991}.  Let
+To make the library's numerical guarantees precise, we formulate the analysis
+for double-word arithmetic over a generic underlying floating-point format.
+Double-double arithmetic is the binary64 instance of double-word arithmetic.
+A double word is a floating-point expansion with two components
+\citep{Dekker1971,Priest1991}.  Let
 $\mathbb{F}$ denote the underlying format, and let $\operatorname{RN}$ denote
 round-to-nearest, ties-to-even. Following
 \citet[Definition~1.4]{Joldes2017}, we use the following definition.
@@ -105,12 +110,11 @@ establish the appropriate conditions before or after the kernel call.
 
 For each of the six double-double operations, the library provides two public
 wrappers around the same arithmetic kernel.  The default wrapper performs a
-weak-precondition check before execution, invokes the kernel, and then checks
-that both returned components are finite.  The other wrapper performs a
-strong-precondition check that establishes result finiteness before execution,
-so no result check is needed afterward.  The terms \emph{weak} and
-\emph{strong} describe the precondition checks, not the wrappers.  Both
-wrappers provide the same contract on normal return: the represented result
+weak check before execution, invokes the kernel, and then checks
+that both returned components are finite.  The strong wrapper performs a
+strong check that establishes result finiteness before execution,
+so no result check is needed afterward.  Both wrappers provide the same
+contract on normal return: the represented result
 satisfies the proved error bound, and the returned pair is a valid double word
 over binary64---that is, a valid double-double result.
 
@@ -137,17 +141,19 @@ methods and results.
 In summary, this paper makes four contributions:
 
 \begin{itemize}
-  \item \textbf{Runtime checks for double-double arithmetic
+  \item \textbf{A checked C interface for double-double arithmetic
         (\Cref{sec:overview}).}
-        We implement public wrappers whose runtime checks establish the
-        sufficient conditions required by these numerical results.
+        We provide public wrappers that require no numerical preconditions
+        from callers.  On normal return, each double-word operation satisfies
+        its proved error bound and returns components that form a double word
+        according to \Cref{def:double-word}.
 
-  \item \textbf{Numerical guarantees over IEEE~754
+  \item \textbf{Numerical analysis over IEEE~754
         (\Cref{sec:numerics}).}
         We extend prior mechanized analysis to the finite exponent range of
-        IEEE~754, proving error bounds and valid double-word results for six
-        operations and guarantees of exact reconstruction for three
-        error-free transformations.
+        IEEE~754.  For six double-word operations, we prove error bounds and
+        prove that the returned components form a double word.  For three
+        error-free transformations, we prove exact reconstruction.
 
   \item \textbf{A verified C implementation of double-double arithmetic
         (\Cref{sec:mechanization}).}
