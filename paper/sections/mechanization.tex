@@ -3,21 +3,14 @@
 
 The numerical theorems in \Cref{sec:numerics} concern functional models,
 whereas users call the public C wrappers presented in \Cref{sec:overview}.
-We connect these levels by proving
-three facts: each arithmetic kernel implements its functional model,
+We connect these levels by proving three facts: each arithmetic kernel
+implements its functional model,
 successful runtime checks establish the mathematical conditions required by
 the numerical theorem, and each wrapper composes these results into its public
-contract.
-
-This proof structure follows earlier layered verifications of numerical C
-programs
-\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
-The functional models use the floating-point types and operations supplied by
-VCFloat2, whose \texttt{FPCompCert} library relates them to the CompCert
-operations used by VST \citep{AppelKellison2024}.  We prove their numerical
-properties directly with Flocq \citep{Boldo2011}.  We illustrate the
-connection using division of a double word by a binary64 value; the remaining
-operations follow the same structure.
+contract.  This structure follows earlier layered verifications of numerical
+C programs \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
+We illustrate it using division of a double word by a binary64 value; the
+remaining operations follow the same structure.
 
 \subsection{C Kernels Implement Their Functional Models}
 \label{sec:kernel-refinement}
@@ -33,9 +26,12 @@ $(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
 \end{equation}
 where \DWDivFP{} is instantiated with binary64.
 
-The proof follows the assignments in the C kernel.  Bridge lemmas relate each
-CompCert arithmetic operation to the corresponding operation in the
-functional model.  The calls to \texttt{fast\_2mult} and
+The functional models use the floating-point types and operations supplied by
+VCFloat2, whose \texttt{FPCompCert} library relates them to the CompCert
+operations used by VST \citep{AppelKellison2024}.  The proof follows the
+assignments in the C kernel, using bridge lemmas to relate each CompCert
+arithmetic operation to the corresponding operation in the functional model.
+The calls to \texttt{fast\_2mult} and
 \texttt{fast\_2sum} on Lines~12 and~17 of \Cref{fig:dw-div-fp-kernel} use the
 VST specifications of those kernels.  The final store then gives
 \Cref{eq:dw-div-fp-kernel-refinement}.  This refinement result
@@ -56,19 +52,15 @@ in \Cref{fig:finite-checks} connect their C return values to the predicates in
 Suppose that \texttt{x} stores the binary64 pair $(x_h,x_\ell)$.
 
 \begin{enumerate}
-  \item If
-    \texttt{dw\_div\_fp\_}\allowbreak
-    \texttt{weak\_check(x,y)} returns $1$, then
+  \item If the weak check returns $1$, then
     $\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 
-  \item If
-    \texttt{dw\_div\_fp\_}\allowbreak
-    \texttt{strong\_check(x,y)} returns $1$, then
+  \item If the strong check returns $1$, then
     $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{enumerate}
 
-If \texttt{z} stores $(z_h,z_\ell)$ and
-\texttt{isfinite\_dword(z)} returns $1$, then both components are finite.
+If \texttt{z} stores $(z_h,z_\ell)$ and the finiteness check returns $1$,
+then both components are finite.
 \end{theorem}
 
 The proofs follow these C bodies, including their short-circuit control flow,
@@ -87,18 +79,18 @@ condition is false.
 The wrapper proofs combine kernel refinement, check soundness, and the
 numerical theorem for the default wrapper in
 \Cref{fig:default-division-wrapper} and the strong wrapper described in
-\Cref{sec:overview-strong-check}.  \Cref{fig:dw-div-fp-vst-spec} shows the VST
-specification of the default wrapper.
+\Cref{sec:overview-strong-check}.
 
 \input{figures/dw-div-fp-vst-spec}
 
-The empty \texttt{PROP} clause in the precondition means that the caller
-supplies no numerical hypothesis.  The \texttt{PARAMS} clause associates the
-C arguments with their logical values, while the \texttt{SEP} clause describes
-the input and output objects in memory.  On normal return, the postcondition
-states that the output object stores the binary64 result of \DWDivFP{} and
-includes \texttt{DWDivFP\_guarantee}, which packages the error bound and the
-valid double word proved in \Cref{thm:dw-div-fp-numerical}.
+\Cref{fig:dw-div-fp-vst-spec} shows the clauses relevant to the numerical
+contract; routine memory assertions are omitted.  The empty \texttt{PROP}
+clause means that the caller supplies no numerical hypothesis.  On normal
+return, the postcondition states that the output object stores the binary64
+result of \DWDivFP{} and that \texttt{DWDivFP\_guarantee} holds.  In the Rocq
+development, \texttt{DWDivFP\_guarantee} names the conclusion of
+\Cref{thm:dw-div-fp-numerical}: the represented result satisfies the stated
+error bound, and the returned pair satisfies the double-word relation.
 
 For the default wrapper, a successful weak check establishes
 $\mathcal{I}_{\mathrm{div}}$, kernel refinement identifies the computed pair
@@ -108,11 +100,6 @@ $\mathcal{F}_{\mathrm{div}}$.  These facts satisfy the first alternative in
 establishes $\mathcal{S}_{\mathrm{div}}$, which implies result finiteness and
 satisfies the second alternative.  Thus, both wrappers provide the same
 contract even though they establish its numerical conditions differently.
-
-If a required check fails, the wrapper calls \texttt{exit} and does not return
-normally, so the postcondition for normal return does not apply.  VST verifies the
-calls among the check and operation source files and exports these public
-contracts for the assembled \FenceDD{} library.
 
 \subsection{Compilation and the Verification Boundary}
 \label{sec:verification-boundary}
@@ -124,7 +111,6 @@ floating-point expressions or flushing subnormal values to zero.
 Floating-point exceptions are nontrapping, which allows the default wrapper to
 reach the result check on Line~9 of \Cref{fig:default-division-wrapper} when
 the kernel produces an infinity or NaN \citep{IEEE754-2019}.
-
 The verified functions call \texttt{fma}, \texttt{fabs}, \texttt{ldexp}, and
 \texttt{exit}.  Their VST specifications provide the behavior used in the
 proofs, but the platform implementations of these functions and the
