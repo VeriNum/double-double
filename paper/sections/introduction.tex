@@ -26,13 +26,13 @@ bound holds depends on conditions on the operands and intermediate results.
 Additional conditions may be required to ensure that the returned components
 form a double-double.
 
-We present a verified C library whose public C interface enforces these
-conditions.  The library provides six double-double operations together with
-three error-free transformations that the operations use as building blocks.
-On normal return, each double-double operation returns components that form a
-double-double, and their sum satisfies the proved error bound.  Each
-error-free transformation returns two binary64 values whose sum equals the
-exact result of the corresponding basic operation.
+We present \FenceDD, a verified C library whose public C interface enforces
+these conditions.  The library provides six double-double operations together
+with three error-free transformations that the operations use as building
+blocks.  On normal return, each double-double operation returns components
+that form a double-double, and their sum satisfies the proved error bound.
+Each error-free transformation returns two binary64 values whose sum equals
+the exact result of the corresponding basic operation.
 
 \subsection{Double-Word Arithmetic and Its Numerical Guarantees}
 \label{sec:intro-double-word}
@@ -106,9 +106,9 @@ returned components can be checked afterward.  Making the numerical results
 available through ordinary C calls therefore requires runtime checks that
 establish the appropriate conditions before or after the kernel call.
 
-\subsection{This Work: A Verified C Library for Double-Double Arithmetic}
+\subsection{This Work: \FenceDD}
 
-For each of the six double-double operations, the library provides two public
+For each of the six double-double operations, \FenceDD{} provides two public
 wrappers around the same arithmetic kernel.  The default wrapper performs a
 weak check before execution, invokes the kernel, and then checks
 that both returned components are finite.  The strong wrapper performs a
@@ -131,7 +131,7 @@ returned normally was valid and within its proved error bound; the largest
 observed error was \RQOneMaximumBoundRatio{} times the corresponding bound.
 For calls stopped by a runtime check, the experiment ran the corresponding QD
 operation on the same inputs and measured whether its result satisfied the
-corresponding numerical criterion.  Finally,
+corresponding numerical criteria.  Finally,
 the performance measurements separate the cost of the runtime checks from the
 cost of the arithmetic kernels.  \Cref{sec:evaluation} gives the experimental
 methods and results.
@@ -141,33 +141,39 @@ methods and results.
 In summary, this paper makes four contributions:
 
 \begin{itemize}
-  \item \textbf{A checked C interface for double-double arithmetic
+  \item \textbf{A public C interface with runtime checks
         (\Cref{sec:overview}).}
-        We provide public wrappers that require no numerical preconditions
-        from callers.  On normal return, each double-word operation satisfies
-        its proved error bound and returns components that form a double word
-        according to \Cref{def:double-word}.
+        We place runtime checks in public wrappers around unchecked arithmetic
+        kernels.  The wrappers require no numerical preconditions from
+        callers.  On normal return, each double-word operation satisfies its
+        error bound and returns components that form a double word, while each
+        error-free transformation reconstructs the exact result.
 
-  \item \textbf{Numerical analysis over IEEE~754
+  \item \textbf{Numerical guarantees over IEEE~754
         (\Cref{sec:numerics}).}
-        We extend prior mechanized analysis to the finite exponent range of
-        IEEE~754.  For six double-word operations, we prove error bounds and
-        prove that the returned components form a double word.  For three
-        error-free transformations, we prove exact reconstruction.
+        We extend prior mechanized analysis from an unbounded exponent range
+        to IEEE~754 arithmetic with gradual underflow and overflow.  For six
+        double-word operations, we establish error bounds and show that the
+        returned components form a double word.  For three error-free
+        transformations, we establish exact reconstruction.  The analysis
+        also defines the sufficient conditions used to design the runtime
+        checks.
 
-  \item \textbf{A verified C implementation of double-double arithmetic
+  \item \textbf{Verification of \FenceDD
         (\Cref{sec:mechanization}).}
-        Using VST, we connect the Rocq functional models and numerical
-        theorems to the binary64 C kernels, runtime checks, and contracts of
-        the public C interface.
+        Using VST, we prove that each C kernel performs the binary64
+        computation analyzed in Rocq and that each successful runtime check
+        establishes the corresponding condition defined by the numerical
+        analysis.  These proofs connect the numerical guarantees to the
+        contracts of the public C interface.
 
-  \item \textbf{Empirical evaluation
+  \item \textbf{Evaluation of usefulness and cost
         (\Cref{sec:evaluation}).}
-        We evaluate the tightness of the proved bounds, the behavior of QD on
-        inputs associated with calls for which a runtime check failed, and the
-        cost of the public wrappers relative to the arithmetic kernels and QD.
+        We show that observed errors can approach the proved bounds, making
+        the bounds practically useful.  On inputs for which runtime checks in the
+        double-word wrappers stop a call, QD rarely satisfies the numerical criteria.  The checks add 2.5--11 nanoseconds
+        per call relative to the unchecked kernels.
 \end{itemize}
 
-The accompanying artifact contains the C sources, Rocq and VST proofs, and
-evaluation scripts at \url{ARTIFACT-URL}, revision
-\texttt{ARTIFACT-COMMIT}.
+The accompanying artifact contains the C sources, Rocq development, and
+evaluation scripts at \url{ARTIFACT-URL}.
