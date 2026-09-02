@@ -17,78 +17,61 @@ that differ from this case and cite results inherited from earlier analyses.
 \subsection{From FLX Analysis to IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
-The numerical analysis builds on the results of \citet{Joldes2017}, mechanized
-in FLX by \citet{Rideau2022}.  Our Rocq models evaluate IEEE~754 operations
-using VCFloat2.  Their numerical analysis uses Flocq's FLT format to account
-for the lower exponent bound and handles the upper limit of an IEEE~754 format
-separately.
+Our analysis builds on the results of \citet{Joldes2017}, mechanized by
+\citet{Rideau2022} using Flocq's FLX format.  FLX has an unbounded exponent
+range.  To account for gradual underflow, we instead use Flocq's FLT format,
+which has the same precision but imposes a lower exponent bound
+\citep[Sections~III-C and III-D]{Boldo2011}.
 
-Flocq represents a floating-point value as $m\beta^q$, where $m$ and $q$ are
-integers.  For radix $\beta>1$ and precision $p>0$, the values representable
-in FLX are
+For a radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
+formats represent
 \[
+\begin{aligned}
   \mathbb{F}_{\mathrm{FLX}}(\beta,p)
-    =
+    &=
     \left\{m\beta^q \mathrel{}\middle|\mathrel{}
-      m,q\in\mathbb{Z},\ |m|<\beta^p\right\}
-\]
-FLT restricts this set by imposing a lower bound $e_{\min}$ on $q$:
-{\small
-\[
+      m,q\in\mathbb{Z},\ |m|<\beta^p\right\},\\
   \mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
-    =
+    &=
     \left\{m\beta^q \mathrel{}\middle|\mathrel{}
-      m,q\in\mathbb{Z},\ |m|<\beta^p,\ q\geq e_{\min}\right\}
+      m,q\in\mathbb{Z},\ |m|<\beta^p,\ q\geq e_{\min}\right\}.
+\end{aligned}
 \]
-}
-FLT adds no other constraint
-\citep[Sections~III-C and III-D]{Boldo2011}, so its values are a subset of FLX:
-\begin{equation}
-  \mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
-    \subseteq
-  \mathbb{F}_{\mathrm{FLX}}(\beta,p)
-  \label{eq:flt-subset-flx}
-\end{equation}
+Consequently,
+$\mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
+ \subseteq\mathbb{F}_{\mathrm{FLX}}(\beta,p)$.
 
-The FLT spacing and normal threshold are
+The lower exponent bound determines the smallest positive value $\eta$ and the
+smallest positive normal value $\nu$:
 \begin{equation}
   \eta=\beta^{e_{\min}}
   \qquad\text{and}\qquad
   \nu=\beta^{e_{\min}+p-1}.
   \label{eq:flt-thresholds}
 \end{equation}
-In FLX, adjacent-value spacing decreases with magnitude.  In FLT, the exponent
-cannot fall below $e_{\min}$, so $\eta$ is the smallest positive value and
-$\nu$ the smallest positive normal value.  Values below $\nu$ are multiples of
-$\eta$ with fewer significant bits.  For binary64, $\eta=2^{-1074}$ and
+Values below $\nu$ are multiples of the fixed spacing $\eta$ and therefore
+have fewer significant bits.  For binary64, $\eta=2^{-1074}$ and
 $\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
 $\operatorname{RN}_{\mathrm{FLT}}$ denote round-to-nearest, ties-to-even in
-the two formats.  Flocq proves that their results agree when the exact value
-being rounded lies in the normal range:
+the two formats.  Flocq proves that the rounded values agree when the exact
+value lies in the normal range:
 \begin{equation}
   |x|\geq\nu
   \quad\Longrightarrow\quad
   \operatorname{RN}_{\mathrm{FLT}}(x)
-    =\operatorname{RN}_{\mathrm{FLX}}(x)
+    =\operatorname{RN}_{\mathrm{FLX}}(x).
   \label{eq:round-flt-flx}
 \end{equation}
-Below $\nu$, equality does not follow from this result and must be established
-separately when it is needed.
+Below $\nu$, the required rounding property must instead be established
+directly in FLT.
 
-FLT accounts for the lower exponent bound but not overflow.  Both FLX and FLT
-allow arbitrarily large exponents, whereas an IEEE~754 format has a largest
-finite value \citep{IEEE754-2019}.  Relating an IEEE~754 operation to FLT
-rounding therefore also requires the relevant operands and rounded result to
-be finite.  Once this is established, the real value of the IEEE~754 result
-is the corresponding FLT rounding.
-
-We apply this reasoning to each rounded operation: after establishing the
-required finiteness properties, we use \Cref{eq:round-flt-flx} when its premise
-holds and otherwise prove the required property directly in FLT.  The
-error-free transformations used by double-word algorithms are the first place
-where this distinction matters.
+FLT models the lower exponent bound but, like FLX, has no upper exponent
+bound.  Relating an IEEE~754 operation to FLT rounding therefore also requires
+the relevant operands and rounded result to be finite.  Once their finiteness
+is established, the real value of the IEEE~754 result agrees with the
+corresponding FLT rounding.
 
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
