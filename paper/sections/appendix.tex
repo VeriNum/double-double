@@ -1,0 +1,38 @@
+\onecolumn
+\appendix
+\section{Detailed Performance Results}
+\label{app:rq3-performance}
+
+This appendix supplements the RQ3 summary in \cref{tab:rq3-performance} by
+reporting the underlying timing measurements and the results for the strong
+wrappers.
+
+\begin{table}[H]
+  \caption{Detailed RQ3 runtime measurements.  Under CompCert, Time is the
+  wrapper time in nanoseconds per call, Kernel is the corresponding unchecked-
+  kernel time, and Ratio is Time/Kernel.  Under Clang, Time is the wrapper time
+  in nanoseconds per call, QD is the corresponding QD-operation time, and Ratio
+  is Time/QD.  A ratio greater than one means that the wrapper is slower than
+  its comparator.  Every entry reports the median [interquartile range] over
+  paired trials; time-column values are in nanoseconds per call and ratios are
+  dimensionless.  Wrapper identifies the default or strong wrapper for each
+  double-word operation; the dash denotes the single public wrapper for an
+  error-free transformation.}
+  \label{tab:rq3-performance-detail}
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}llrrrrrr@{}}
+    \toprule
+    & & \multicolumn{3}{c}{CompCert}
+    & \multicolumn{3}{c}{Clang} \\
+    \cmidrule(lr){3-5}\cmidrule(l){6-8}
+    Operation & Wrapper
+      & Time & Kernel & Ratio
+      & Time & QD & Ratio \\
+    \midrule
+    \input{generated/rq3_combined_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+\FloatBarrier
+\twocolumn

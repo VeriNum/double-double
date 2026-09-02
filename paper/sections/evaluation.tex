@@ -357,35 +357,32 @@ This Clang build is used only for the performance comparison and is not
 covered by the CompCert correctness theorem.  The experiments run on an Apple
 M4 Max with 16 cores under macOS 26.6.2.
 
-\Cref{tab:rq3-performance} reports the resulting timing measurements.
+\Cref{tab:rq3-performance} summarizes the resulting timing measurements for
+the default double-word wrappers and the transformation wrappers.  The
+underlying times and strong-wrapper results appear in
+\cref{tab:rq3-performance-detail}.
 
-\begin{table*}[t]
-  \caption{RQ3: Runtime measurements.  Under CompCert, Time is the wrapper
-  time in nanoseconds per call, Kernel is the corresponding unchecked-kernel
-  time, and Ratio is Time/Kernel.  Under Clang, Time is the wrapper time in
-  nanoseconds per call, QD is the corresponding QD-operation time, and Ratio
-  is Time/QD.  A ratio greater than one means that the wrapper is slower than
-  its comparator.  Every entry reports the median [interquartile range] over
-  paired trials; time-column values are in nanoseconds per call and ratios are
-  dimensionless.  Wrapper identifies the default or strong wrapper for each
-  double-word operation; the dash denotes the single public wrapper for an
-  error-free transformation.}
+\begin{table}[t]
+  \caption{RQ3: Performance summary for the default wrapper of each
+  double-word operation and the sole public wrapper of each error-free
+  transformation.  The CompCert ratio is wrapper time divided by unchecked-
+  kernel time, Added is their paired difference in nanoseconds per call, and
+  the Clang ratio is wrapper time divided by QD-operation time.  A ratio
+  greater than one means that the wrapper is slower than its comparator.
+  Entries report median [interquartile range] over paired trials.}
   \label{tab:rq3-performance}
   \centering
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}llrrrrrr@{}}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}lrrr@{}}
     \toprule
-    & & \multicolumn{3}{c}{CompCert}
-    & \multicolumn{3}{c}{Clang} \\
-    \cmidrule(lr){3-5}\cmidrule(l){6-8}
-    Operation & Wrapper
-      & Time & Kernel & Ratio
-      & Time & QD & Ratio \\
+    & \multicolumn{2}{c}{CompCert} & Clang \\
+    \cmidrule(lr){2-3}\cmidrule(l){4-4}
+    Operation & Wrapper/Kernel & Added (ns) & Wrapper/QD \\
     \midrule
-    \input{generated/rq3_combined_rows}\\
+    \input{generated/rq3_compact_rows}\\
     \bottomrule
   \end{tabular}
-\end{table*}
+\end{table}
 
 For each double-word operation, the measurement schedule cycles through all
 24 orders of the kernel, the default wrapper, the strong wrapper, and QD.
@@ -396,19 +393,19 @@ for a double-word operation occurs once and each order for a transformation
 occurs four times.  We compute differences and ratios from paired trials
 rather than from separately aggregated measurements.
 
-For the CompCert build, we report each wrapper time together with the kernel
-time and their ratio.  For the Clang comparison, we report each wrapper time
-together with the QD time and their ratio.  Every entry gives the median and
-interquartile range across trials.
+The main summary reports ratios and the paired CompCert time difference; the
+appendix reports the individual wrapper, kernel, and QD times.  Every entry
+gives the median and interquartile range across trials.
 
 \paragraph{Answer to RQ3.}
-\Cref{tab:rq3-performance} shows that both wrappers add a noticeable relative
+\Cref{tab:rq3-performance} shows that the wrappers add a noticeable relative
 cost to these small kernels but a small absolute cost.  For the six
 double-word operations in the CompCert build, the default wrappers took
 \RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} times
 as long as their kernels and added
 \RQThreeDefaultMinimumAddedTime{}--\RQThreeDefaultMaximumAddedTime{}
-nanoseconds per call.  The strong wrappers took
+nanoseconds per call.  As detailed in
+\cref{tab:rq3-performance-detail}, the strong wrappers took
 \RQThreeStrongMinimumKernelRatio{}--\RQThreeStrongMaximumKernelRatio{} times
 as long as the same kernels and added
 \RQThreeStrongMinimumAddedTime{}--\RQThreeStrongMaximumAddedTime{}
