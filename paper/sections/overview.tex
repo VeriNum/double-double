@@ -21,19 +21,21 @@
   showstringspaces=false
 }
 
-This section uses division of a double-double number by a binary64 value to
-illustrate a library interface.  We present its two public wrappers, relate
-their C data type to the mathematical definition of a double word, and explain
-their shared kernel and runtime checks.  We then state their common contract
-and summarize the remaining library operations.
+The public C interface must establish the conditions required by the
+numerical theorems while presenting ordinary functions to callers.  We
+illustrate how the library does so using division of a double-double value by
+a binary64 value.  Beginning with the default public function, we follow the
+stored operands through the arithmetic kernel and its surrounding runtime
+checks.  We then present an alternative that establishes result finiteness
+before executing the same kernel.
 
-\subsection{Runtime Checks for Dividing a Double-Double by a Binary64 Value}
+\subsection{Dividing a Double-Double by a Binary64 Value}
 \label{sec:overview-division-wrappers}
 
-The C library provides two public wrappers for dividing a double-double
-number by a binary64 value.  Both call the same arithmetic kernel and use the
-\texttt{struct dword} type shown in \Cref{fig:dword-struct} to store their
-double-double operands and results.
+The default public function divides the double-double value pointed to by
+\texttt{x} by the binary64 value \texttt{y} and writes the quotient to the
+object pointed to by \texttt{z}.  Both \texttt{x} and \texttt{z} have type
+\texttt{struct dword}, shown in \Cref{fig:dword-struct}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -48,15 +50,12 @@ struct dword {
   \label{fig:dword-struct}
 \end{figure}
 
-The default public function is the weak-precondition wrapper shown in
-\Cref{fig:weak-precondition-division-wrapper}.  The argument \texttt{x}
-points to the stored dividend, \texttt{y} is the binary64 divisor, and
-\texttt{z} points to storage for the quotient.  Before invoking the kernel,
-the wrapper calls
-\texttt{dw\_div\_fp\_\allowbreak weak\_precond\_\allowbreak check}.  After the
-kernel writes the quotient to \texttt{z}, it calls
-\texttt{isfinite\_dword} to check the computed pair.  If either runtime check
-fails, the function exits.
+\Cref{fig:weak-precondition-division-wrapper} shows
+\texttt{dw\_div\_fp}, the default public wrapper around the arithmetic kernel.
+Before invoking the kernel, it checks the conditions that must hold for the
+operands.  Afterward, it checks that the returned components are finite.  If
+either runtime check fails, the function terminates without returning a
+quotient.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -72,115 +71,78 @@ void dw_div_fp(
         exit(EXIT_FAILURE);
 }
 \end{lstlisting}
-  \caption{The weak-precondition division wrapper.  It checks the operands
-  before invoking the kernel and checks result finiteness afterward.}
-  \Description{A C function that checks its operands, computes a
-  double-double quotient, and checks both result components for finiteness.}
+  \caption{\texttt{dw\_div\_fp}, the default wrapper for dividing a
+  double-double value by a binary64 value.  It invokes the weak-precondition
+  check before the arithmetic kernel and checks the returned components
+  afterward.}
+  \Description{A public C function that calls an input check, invokes the
+  arithmetic kernel, and then checks both result components for finiteness.}
   \label{fig:weak-precondition-division-wrapper}
 \end{figure}
 
-Some callers may want the runtime checks to establish result finiteness before
-the arithmetic kernel is executed.  The strong-precondition wrapper in
-\Cref{fig:strong-precondition-division-wrapper} calls
-\texttt{dw\_div\_fp\_\allowbreak strong\_precond\_\allowbreak check} for this
-purpose.  If the check
-fails, the function exits without invoking the kernel.  If it succeeds, the
-kernel writes the quotient directly to \texttt{z}; no result check is needed
-afterward.
+One condition tested before the kernel is invoked is that the two components
+stored in \texttt{x} form a valid double-double value.
 
-\begin{figure}[t]
-  \begin{lstlisting}[style=sectiontwoc]
-void dw_div_fp_strong(
-    struct dword *z, struct dword *x, double y)
-{
-    if (!dw_div_fp_strong_precond_check(x, y))
-        exit(EXIT_FAILURE);
-
-    dw_div_fp_kernel(z, x, y);
-}
-\end{lstlisting}
-  \caption{The strong-precondition division wrapper.  Its runtime check
-  establishes the required conditions, including result finiteness, before
-  the kernel is invoked.}
-  \Description{A C function that exits when its strong precondition check
-  fails and otherwise calls the division kernel with the caller-provided
-  output structure.}
-  \label{fig:strong-precondition-division-wrapper}
-\end{figure}
-
-The following subsections explain the stored representation, the shared
-kernel, and the runtime checks used by these two functions.
-
-\subsection{The Double-Double Data Type}
+\subsection{Valid Double-Double Values}
 \label{sec:overview-values}
 
-% Connect struct dword, which is specific to the binary64 C library, to the
-% general definition of a double word in Section 1.  Keep the distinction
-% explicit: the C fields store the binary64 components; the cited mathematical
-% relation determines whether their unevaluated sum is a valid double word.
-% End by motivating the C kernel that computes the returned pair.  Do not
-% promise a displayed generic algorithm or functional model in Section 2.
-
 \Cref{def:double-word} defines a double word over a generic underlying
-floating-point format $\mathbb{F}$.  The C library instantiates $\mathbb{F}$
-as binary64 and uses round-to-nearest, ties-to-even.  A double word over
-binary64 is a double-double number.  The fields \texttt{s} and \texttt{t} in
-\Cref{fig:dword-struct} store its high and low words, respectively.
+floating-point format.  The C library uses its binary64 instance: a
+double-double value whose high and low words are stored in the fields
+\texttt{s} and \texttt{t} of \Cref{fig:dword-struct}.
 
-The C type does not itself enforce the double-word relation.  Because the
-numerical guarantee assumes that the dividend is a valid double word, both
-wrappers check this property before calling the arithmetic kernel.
-\Cref{ex:struct-dword} illustrates how the stored components represent a value
-and how this relation is checked.
+The structure stores the two components but does not enforce the relation
+between them.  Because the numerical guarantee requires a valid double-word
+dividend, the default wrapper tests this relation before calling the arithmetic
+kernel.  The following example illustrates the represented value and the
+corresponding runtime test.
 
 \begin{example}[Checking a \texttt{struct dword}]
 \label[example]{ex:struct-dword}
 The following object stores the binary64 values $1$ and $2^{-54}$:
 
-\begin{lstlisting}[language=C]
+\begin{lstlisting}[
+  language=C,
+  xleftmargin=1.5em,
+  framexleftmargin=1.2em,
+  framexrightmargin=3pt
+]
 struct dword x = {
     .s = 1.0,
     .t = 0x1p-54
 };
 \end{lstlisting}
 
-The value represented by this object is the unevaluated real sum
-$1+2^{-54}$.  Under binary64 round-to-nearest, ties-to-even,
-$\operatorname{RN}(1+2^{-54})=1$, so the stored pair is a valid double word according to
-\Cref{def:double-word}.  Its represented value is not merely the value stored
-in \texttt{x.s}; the field \texttt{x.t} retains the correction $2^{-54}$.
+The object represents the unevaluated real sum $1+2^{-54}$.  The field
+\texttt{x.t} retains the correction $2^{-54}$ that is not part of the value
+stored in \texttt{x.s}.
 
-The runtime checks used by the wrappers first require both fields
-to be finite and then evaluate
+The runtime test first requires both fields to be finite and then evaluates
 \begin{lstlisting}[language=C,numbers=none]
-x->s + x->t == x->s
+x->s == x->s + x->t
 \end{lstlisting}
-using binary64 arithmetic.  This comparison succeeds for the object above
-because the computed sum rounds to \texttt{x.s}.  Soundness of the check
-shows that a successful comparison, together with the finiteness tests,
-establishes the mathematical relation in
-\Cref{eq:dw-representation}.  In contrast, replacing \texttt{0x1p-54} with
-\texttt{0x1p-52} makes the computed sum different from \texttt{x.s}, so the
-check fails for the pair.
+using binary64 arithmetic.  Under rounding to nearest with ties to even,
+$1+2^{-54}$ rounds to $1$, so the comparison succeeds.  As shown in
+\Cref{sec:check-soundness}, this comparison together with the finiteness tests
+establishes \Cref{eq:dw-representation}; the pair is therefore a valid double
+word according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
+\texttt{0x1p-52} makes the computed sum differ from \texttt{x.s}, so the
+runtime test fails.
 \end{example}
 
-This test establishes one of the input preconditions required for the
-numerical guarantee of the division kernel.  Division has additional
-preconditions involving the range of the operands and computations performed
-within the kernel.  Their purpose is best understood from the implementation,
-so we present the shared C kernel before examining the complete checks
-performed by the two wrappers.
+Dividend validity addresses the representation stored in \texttt{x}.  The
+remaining conditions arise from the arithmetic used to compute the quotient.
+Their purpose becomes apparent in the division kernel.
 
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
 
-The weak-precondition wrapper in
-\Cref{fig:weak-precondition-division-wrapper} and the strong-precondition
-wrapper in \Cref{fig:strong-precondition-division-wrapper} call the same
-arithmetic kernel.
-\Cref{fig:dw-div-fp-kernel} shows \texttt{dw\_div\_fp\_kernel}, the C
-implementation of the division method given as Algorithm~15 by
-\citet{Joldes2017}.
+The arithmetic kernel follows Algorithm~15 of \citet{Joldes2017}.  It computes
+the quotient as a leading term and a correction.  Because the leading term
+uses only the high component of the dividend, the kernel also estimates the
+part of the represented value not accounted for by that term.  It then uses
+this residual to correct the quotient.  \Cref{fig:dw-div-fp-kernel} shows the
+C implementation.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -203,70 +165,30 @@ void dw_div_fp_kernel(
     fast_2sum(z, th, tl);
 }
 \end{lstlisting}
-  \caption{The binary64 C kernel for dividing a double-double number by a
-  binary64 value.}
-  \Description{A C function that computes a leading quotient, forms a
-  correction from the reconstructed product and the low word of the dividend,
-  and combines the leading quotient and correction using FastTwoSum.}
+  \caption{\texttt{dw\_div\_fp\_kernel}, the arithmetic kernel for dividing a
+  double-double value by a binary64 value.  The surrounding wrapper performs
+  the runtime checks.}
+  \Description{An internal C function that computes a leading quotient,
+  forms its correction, and combines the two components of the result.}
   \label{fig:dw-div-fp-kernel}
 \end{figure}
 
-The kernel first computes the leading quotient \texttt{th} from the high word
-of the dividend.  The call to \texttt{fast\_2mult} multiplies this quotient by
-the divisor and returns two components used to reconstruct the product.  The
-computations of \texttt{dh}, \texttt{dt}, and \texttt{d} use this product and
-the low word of the dividend to form a residual.  Dividing the residual by
-\texttt{y} produces the quotient correction \texttt{tl}.  Finally,
-\texttt{fast\_2sum} combines the leading quotient and correction into the pair
-stored in \texttt{z}.
+Lines~11--12 compute the leading quotient and its corresponding rounded
+product and correction.  Lines~13--16 subtract this product from the value
+represented by the dividend and divide the resulting residual by \texttt{y}
+to obtain the quotient correction.  Line~17 combines the leading term and
+correction into the returned pair.
 
-\Cref{sec:numerics} presents \texttt{DWDivFP}, the generic Rocq functional
-model that specifies this computation, and proves its numerical guarantees
-using Flocq.  As described in \Cref{sec:kernel-refinement}, a VST refinement
-proof establishes that \texttt{dw\_div\_fp\_kernel} implements the binary64
-instance of \texttt{DWDivFP}.
-
-The refinement result identifies the pair computed by C, but the accuracy and
-valid-double-word guarantees require additional mathematical conditions.  The
-two wrappers establish these conditions differently.  The following
-subsections present their executable C checks, beginning with the
-weak-precondition wrapper in
-\Cref{fig:weak-precondition-division-wrapper}, which checks the computed
-result for finiteness.
-
-\subsection{Checking Finiteness after Division}
+\subsection{Runtime Checks before and after Kernel Execution}
 \label{sec:overview-post-check}
 
-The weak-precondition wrapper uses the helper functions in
-\Cref{fig:finite-checks} to test the operands and the pair computed by the
-kernel.  Under strict IEEE~754 semantics, $x-x$ is zero when $x$ is finite
-and NaN when $x$ is an infinity or NaN.  Because comparison with NaN returns
-false, \texttt{isfinite\_double} returns $1$ exactly when its argument is
-finite.  The function \texttt{isfinite\_dword} applies this test to both
-stored components.  The complete input check is shown in
-\Cref{fig:dw-div-fp-input-check}.
+The kernel computes the quotient pair but does not test the conditions needed
+to establish its error bound and validity.  The default wrapper performs the
+corresponding runtime checks before and after kernel execution.
 
-\begin{figure}[t]
-  \begin{lstlisting}[style=sectiontwoc]
-int isfinite_double(double x)
-{
-    return (x - x) == 0.0;
-}
-
-int isfinite_dword(
-    const struct dword *x)
-{
-    return isfinite_double(x->s) &&
-           isfinite_double(x->t);
-}
-\end{lstlisting}
-  \caption{The C functions used to check a binary64 value and both components
-  of a \texttt{struct dword} for finiteness.}
-  \Description{Two C functions.  The first tests whether a binary64 value is
-  finite by subtracting it from itself and comparing the result with zero.
-  The second applies this test to both fields of a double-double value.}
-  \label{fig:finite-checks}
-\end{figure}
+\paragraph{Before kernel execution.}
+Line~4 of \Cref{fig:weak-precondition-division-wrapper} invokes the
+weak-precondition check shown in \Cref{fig:dw-div-fp-input-check}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -287,42 +209,105 @@ int dw_div_fp_weak_precond_check(
     return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
-  \caption{The input check used by the weak-precondition division wrapper.
-  It tests operand finiteness, dividend validity, and the lower bound required
-  by the kernel.}
-  \Description{A C function that checks the finiteness of the operands, the
-  double-word relation for the dividend, and either a zero high word or a
-  lower bound on its magnitude.}
-  \label{fig:dw-div-fp-input-check}
+  \caption{The weak-precondition check
+  \texttt{dw\_div\_fp\_}\allowbreak
+  \texttt{weak\_precond\_}\allowbreak\texttt{check}, invoked before the
+  kernel by the default wrapper.  It checks operand finiteness,
+  dividend validity, and the lower bound required by the kernel.}
+  \Description{A C function that checks the operands, the double-word
+  relation for the dividend, and either a zero high component or a lower bound
+  on its magnitude.}
+\label{fig:dw-div-fp-input-check}
 \end{figure}
 
-The clause \texttt{dwx} combines finiteness tests for the two stored
-components with the comparison illustrated in \Cref{ex:struct-dword}.
-The check also tests the divisor for finiteness.  These finiteness tests provide
-early rejection for infinities and NaNs; they are not separate hypotheses of
-the numerical theorem.
+The weak-precondition check has two parts.  Lines~4--9 test operand finiteness
+and dividend validity, while Lines~11--13 test the lower bound required by the
+kernel.
 
-The remaining condition permits $x_h=0$ or requires
-$|x_h|\geq2^{-968}$.  In the first case, the double-word relation
-checked by \texttt{dwx} also implies $x_\ell=0$, so the dividend is exactly
-zero.  For a nonzero high word, the lower bound is required by the product
-reconstruction performed by \texttt{fast\_2mult} in
-\Cref{fig:dw-div-fp-kernel}.  \Cref{sec:division-numerics} derives this
-requirement from the numerical analysis.
+Lines~4--6 use \texttt{isfinite\_double}.
+\Cref{fig:finite-checks} defines this function together with
+\texttt{isfinite\_dword}, which is used after kernel execution.  Under strict
+IEEE~754 semantics, $x-x$ is zero when $x$ is finite and NaN when $x$ is an
+infinity or NaN.  Because a comparison with NaN is false,
+\texttt{isfinite\_double} returns $1$ exactly when its argument is finite;
+\texttt{isfinite\_\allowbreak dword} applies this test to both stored
+components.
 
-The input check imposes no upper bound on the operands or leading quotient.
-After the kernel executes, \texttt{isfinite\_\allowbreak dword} checks both
-components of the computed pair.  It succeeds for normal values, subnormal
-values, and zeros, and fails if either component is an infinity or NaN.
+\begin{figure}[t]
+  \begin{lstlisting}[style=sectiontwoc]
+int isfinite_double(double x)
+{
+    return (x - x) == 0.0;
+}
 
-\subsection{Guaranteeing Finiteness before Division}
+int isfinite_dword(
+    const struct dword *x)
+{
+    return isfinite_double(x->s) &&
+           isfinite_double(x->t);
+}
+\end{lstlisting}
+  \caption{The helper functions \texttt{isfinite\_double} and
+  \texttt{isfinite\_dword}, which test one binary64 value and both components
+  of a double-double value, respectively.}
+  \Description{Two C functions.  The first checks whether a binary64 value is
+  finite, and the second applies this check to both fields of a double-double
+  value.}
+  \label{fig:finite-checks}
+\end{figure}
+
+The first three tests apply this function to the two stored components and the
+divisor.  Lines~8--9 combine the component tests with the comparison from
+\Cref{ex:struct-dword}.  Thus, an infinity or NaN causes the wrapper to stop
+before kernel execution.  These finiteness tests provide convenient early
+rejection; they are stronger than the weak mathematical condition itself.
+
+The second part permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  In the zero
+case, dividend validity implies $x_\ell=0$.  For a nonzero high component, the
+lower bound supports the product reconstruction on Line~12 of
+\Cref{fig:dw-div-fp-kernel}, as analyzed in
+\Cref{sec:division-numerics}.
+
+\paragraph{After kernel execution.}
+The weak-precondition check places no upper bound on the operands or leading
+quotient, so the wrapper tests the computed pair after kernel execution.
+Line~9 of \Cref{fig:weak-precondition-division-wrapper} invokes
+\texttt{isfinite\_dword}; the test permits normal values, subnormal values,
+and zeros but fails for any infinity or NaN.
+
+\subsection{Establishing Result Finiteness before Kernel Execution}
 \label{sec:overview-strong-precondition-check}
 
-The strong-precondition wrapper extends the preceding input check with
-bounds that establish result finiteness before the kernel executes.  Its
-complete check is shown in \Cref{fig:dw-div-fp-check}.  The additional
-comparisons bound the high word of the dividend and the rounded leading
-quotient.
+Some callers may want result finiteness established before the arithmetic
+kernel executes.  The alternative wrapper in
+\Cref{fig:strong-precondition-division-wrapper} provides this option.
+
+\begin{figure}[t]
+  \begin{lstlisting}[style=sectiontwoc]
+void dw_div_fp_strong(
+    struct dword *z, struct dword *x, double y)
+{
+    if (!dw_div_fp_strong_precond_check(x, y))
+        exit(EXIT_FAILURE);
+
+    dw_div_fp_kernel(z, x, y);
+}
+\end{lstlisting}
+  \caption{\texttt{dw\_div\_fp\_strong}, the alternative wrapper for dividing
+  a double-double value by a binary64 value.  Its strong-precondition check
+  establishes result finiteness before the kernel is invoked.}
+  \Description{A public C wrapper that terminates when its
+  strong-precondition check fails and otherwise invokes the division kernel.}
+  \label{fig:strong-precondition-division-wrapper}
+\end{figure}
+
+The wrapper invokes the kernel only after the strong-precondition check
+succeeds.  Unlike the default wrapper, it requires no runtime check after the
+kernel call.
+
+Compared with the weak-precondition check, the strong-precondition check adds
+upper bounds on the high component of the dividend and the rounded leading
+quotient.  \Cref{fig:dw-div-fp-check} shows its complete implementation.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -350,42 +335,39 @@ int dw_div_fp_strong_precond_check(
            xh_hi && xh_lo && qt_hi;
 }
 \end{lstlisting}
-  \caption{The input check used by the strong-precondition division wrapper.
-  In addition to the tests in \Cref{fig:dw-div-fp-input-check}, it bounds the
-  high word and rounded leading quotient.}
+  \caption{The strong-precondition check used by the alternative division
+  wrapper.  In addition to the tests in \Cref{fig:dw-div-fp-input-check}, it
+  bounds the high word and rounded leading quotient.}
   \Description{A C function that checks the operands and requires upper
   bounds on the high word and rounded leading quotient before allowing the
   division kernel to execute.}
   \label{fig:dw-div-fp-check}
 \end{figure}
 
-The first additional test requires $|x_h|\leq 2^{1022}$.  The second computes
-the same leading quotient as the first line of
-\texttt{dw\_div\_fp\_kernel}, $t_h=\operatorname{RN}(x_h/y)$, and requires
-$|t_h|<2^{1022}$.  The C variable \texttt{q} stores this rounded
-leading quotient.  In particular, the strict comparison fails for a nonfinite
-leading quotient.  The two upper bounds are sufficient to show before
-execution that the computations in the kernel and both components of its
-result remain finite.  No lower bound is imposed on the leading quotient, so
-the check permits subnormal values.
+Line~14 places an upper bound on $x_h$.  Lines~18 and~19 compute and
+bound the rounded leading quotient from Line~11 of
+\Cref{fig:dw-div-fp-kernel}.  The strict comparison on Line~19 also fails when
+that quotient is an infinity or NaN.  Together, these bounds establish before
+kernel execution that its intermediate computations and returned components
+will be finite.  \Cref{sec:division-conditions} derives the corresponding
+mathematical condition.
 
-These bounds are sufficient but not necessary.  Checks based on them may
-therefore fail for operands whose kernel result would be a finite pair.  This
-conservative rejection is the cost of establishing finiteness before execution.
-\Cref{sec:numerics} derives the bounds and connects them to the generic
-numerical conditions.
+The check places no lower bound on the leading quotient and therefore permits
+subnormal values.  Its upper bounds are sufficient but not necessary, however,
+so the check can fail even when the kernel would produce a finite result.  This
+conservative rejection is the cost of establishing result finiteness before
+execution.
 
 \subsection{The Division Contract}
 \label{sec:overview-division-guarantee}
 
-Although the weak-precondition wrapper in
-\Cref{fig:weak-precondition-division-wrapper} and the strong-precondition
-wrapper in \Cref{fig:strong-precondition-division-wrapper} establish
-result finiteness at different points, they provide the same contract on
-normal return.
+The two wrappers establish result finiteness at different points but provide
+the same contract on normal return.  Their runtime checks establish the
+required numerical conditions, so callers need not establish those conditions
+before making the call.
 
 \begin{theorem}[Normal-Return Guarantee for the Division Wrappers]
-\label{thm:guarded-division}
+\label{thm:division-wrapper-contract}
 Suppose that \texttt{x} initially stores $(x_h,x_\ell)$ and that a call to
 either \texttt{dw\_div\_fp} or
 \texttt{dw\_div\_fp\_\allowbreak strong} returns normally
@@ -401,15 +383,7 @@ positive subnormal value for binary64.  The returned pair is also a valid
 double-double according to \Cref{def:double-word}.
 \end{theorem}
 
-Callers need not supply numerical preconditions.  Instead, each wrapper
-establishes the sufficient conditions required by the underlying
-numerical result.  The guarantee is conditional on normal return: if any
-check fails, the wrapper follows its nonreturning error path and provides no
-numerical result.
-
-\Cref{sec:mechanization} shows how the VST proofs combine soundness of the
-corresponding check, refinement of the C kernel, and the numerical theorem to
-establish this contract.
+\Cref{sec:mechanization} gives the VST proof of this contract.
 
 \subsection{Operations and Guarantees of the C Library}
 \label{sec:overview-library-guarantees}
@@ -419,7 +393,7 @@ each double-word operation in the C library.  \Cref{tab:operation-preview}
 places division alongside the other available operations and summarizes the
 accuracy guarantee provided when a wrapper returns normally.
 
-\begin{table*}[t]
+\begin{table}[b]
 \centering
 \caption{Normal-return accuracy guarantees provided by the C library.  Here
 $a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
@@ -431,50 +405,33 @@ double-double number.}
 \Description{The operations provided by the C library, their exact real
 results, and their accuracy guarantees when a wrapper returns normally.}
 \label{tab:operation-preview}
-\small
-\begin{tabular}{@{}p{0.49\textwidth}p{0.45\textwidth}@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{0.38\columnwidth}p{0.18\columnwidth}p{0.38\columnwidth}@{}}
 \toprule
-Operation & Normal-return accuracy guarantee \\
+Operation & Exact $r$ & Bound on $|\widehat r-r|$ \\
 \midrule
-\multicolumn{2}{@{}l}{\emph{Error-free transformations}} \\[2pt]
-\TwoSum{}$(a,b)$ and \FastTwoSum{}$(a,b)$; $r=a+b$
-  & $\widehat r=r$ \\
-\FastTwoMult{}$(a,b)$; $r=ab$
-  & $\widehat r=r$ \\
+\multicolumn{3}{@{}l}{\emph{Error-free transformations}} \\
+\TwoSum{} $(a,b)$ & $a+b$ & $0$ \\
+\FastTwoSum{} $(a,b)$ & $a+b$ & $0$ \\
+\FastTwoMult{} $(a,b)$ & $ab$ & $0$ \\
 \addlinespace
-\multicolumn{2}{@{}l}{\emph{Double-word operations}} \\[2pt]
-Addition $(x,a)$; $r=x+a$
-  & $|\widehat r-r|\leq 2u^2|r|$ \\
-Addition $(x,y)$; $r=x+y$
-  & $|\widehat r-r|
-       \leq \dfrac{3u^2}{1-4u}|r|$ \\
-Multiplication $(x,a)$; $r=xa$
-  & $|\widehat r-r|
-       \leq 2u^2|r|+2.51\eta$ \\
-Multiplication $(x,y)$; $r=xy$
-  & $|\widehat r-r|
-       \leq 4u^2|r|+2.5\eta$ \\
-Division $(x,a)$; $r=x/a$
-  & $|\widehat r-r|
-       \leq 3u^2|r|+\eta$ \\
-Division $(x,y)$; $r=x/y$
-  & $|\widehat r-r|
-       \leq 9.8u^2|r|+2.5\eta$ \\
+\multicolumn{3}{@{}l}{\emph{Double-word operations}} \\
+Addition $(x,a)$ & $x+a$ & $2u^2|r|$ \\
+Addition $(x,y)$ & $x+y$ & $\dfrac{3u^2}{1-4u}|r|$ \\
+Multiplication $(x,a)$ & $xa$ & $2u^2|r|+2.51\eta$ \\
+Multiplication $(x,y)$ & $xy$ & $4u^2|r|+2.5\eta$ \\
+Division $(x,a)$ & $x/a$ & $3u^2|r|+\eta$ \\
+Division $(x,y)$ & $x/y$ & $9.8u^2|r|+2.5\eta$ \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 Each of the six double-word operations in \Cref{tab:operation-preview} is
-available through both wrappers.  The two wrappers provide the same
-guarantee shown in the table, although their checks can succeed on different
-sets of inputs.
-Each error-free transformation instead has one wrapper for its
-exactness guarantee.
+available through a default and an alternative wrapper.  For a given
+operation, the two wrappers provide the same guarantee shown in the table,
+although their runtime checks can succeed on different inputs.  Each
+error-free transformation instead has one wrapper for its exactness guarantee.
 
-The set of inputs for which all runtime checks succeed depends on which
-computations in the corresponding algorithm must remain finite and
-how rounding near the lower end of the format affects its result.  Determining
-these domains therefore requires a numerical analysis that accounts for the
-finite exponent range of IEEE~754 arithmetic.  \Cref{sec:numerics} develops
-this analysis and derives sufficient conditions for each error bound and valid
-double-word result.
+The guarantees in \Cref{tab:operation-preview} rely on conditions that vary
+with the arithmetic performed by each algorithm.  \Cref{sec:numerics} derives
+these conditions for IEEE~754 arithmetic.
