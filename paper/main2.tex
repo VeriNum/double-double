@@ -106,18 +106,19 @@ proofs.
 We present \FenceDD, a verified C library containing three error-free
 transformations and six double-word operations.  Our Rocq development extends
 earlier analysis from an unbounded exponent range to IEEE~754 arithmetic with
-overflow and gradual underflow.  VST proofs show that the C kernels implement
-the analyzed algorithms and the runtime checks establish the conditions their
-analysis requires.  On normal return, each double-double operation produces a
-double-double within its proved error bound, while each error-free
-transformation guarantees exact reconstruction.
+overflow and gradual underflow.  Using the Verified Software Toolchain (VST),
+we prove that the C kernels implement the analyzed algorithms and that the
+runtime checks establish the conditions required by their analysis.  On normal
+return, each double-double operation produces a double-double within its proved
+error bound, while each error-free transformation guarantees exact
+reconstruction.
 
 Across tests spanning the binary64 exponent range, every result returned
 normally was a double-double within its proved bound.  For inputs on which
-a runtime check in a default public function failed, QD returned a finite
-double-double within the corresponding bound in only
+a runtime check in a default public function failed, the QD double-double
+library returned a finite double-double within the corresponding bound in only
 \RQTwoDefaultQDWithinPercent{} of cases.
-With CompCert, the runtime checks added
+When compiled with CompCert, the runtime checks added
 \RQThreeMinimumAddedTime{}--\RQThreeMaximumAddedTime{} nanoseconds per call
 relative to the unchecked kernels.
 \end{abstract}
@@ -153,7 +154,6 @@ relative to the unchecked kernels.
 \input{sections/evaluation}
 \input{sections/related-work}
 \input{sections/conclusion}
-\input{sections/appendix}
 
 
 \begin{acks}
@@ -161,4 +161,5 @@ The author thanks Andrew Appel and Nate Foster for helpful discussions.
 \end{acks}
 
 \bibliography{refs}
+\input{sections/appendix}
 \end{document}
