@@ -1,4 +1,4 @@
-\section{Runtime Checks for Double-Double Arithmetic}
+\section{Runtime Checks in \FenceDD}
 \label{sec:overview}
 
 \lstdefinestyle{sectiontwoc}{
@@ -23,7 +23,7 @@
 
 The public C interface must establish the conditions required by the
 numerical theorems while presenting ordinary functions to callers.  We
-illustrate how the library does so using division of a double-double value by
+illustrate how \FenceDD{} does so using division of a double-double value by
 a binary64 value.  The two public functions call the same arithmetic kernel:
 the default function checks result finiteness afterward, whereas the
 alternative establishes it before kernel execution.
@@ -86,7 +86,7 @@ stored in \texttt{x} form a valid double-double value.
 \label{sec:overview-values}
 
 \Cref{def:double-word} defines a double word over a generic underlying
-floating-point format.  The C library uses its binary64 instance: a
+floating-point format.  \FenceDD{} uses its binary64 instance: a
 double-double value whose high and low words are stored in the fields
 \texttt{s} and \texttt{t} of \Cref{fig:dword-struct}.
 
@@ -351,24 +351,24 @@ double-double according to \Cref{def:double-word}.
 
 \Cref{sec:mechanization} gives the VST proof of this contract.
 
-\subsection{Operations and Guarantees of the C Library}
+\subsection{Operations and Guarantees of \FenceDD}
 \label{sec:overview-library-guarantees}
 
 The two division wrappers illustrate the form of the contract provided for
-each double-word operation in the C library.  \Cref{tab:operation-preview}
+each double-word operation in \FenceDD.  \Cref{tab:operation-preview}
 places division alongside the other available operations and summarizes the
 accuracy guarantee provided when a wrapper returns normally.
 
 \begin{table}[b]
 \centering
-\caption{Normal-return accuracy guarantees provided by the C library.  Here
+\caption{Normal-return accuracy guarantees provided by \FenceDD.  Here
 $a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
 double-double operands, $r$ is the exact result, and
 $\widehat r=z_h+z_\ell$ is the value represented by the returned pair.  For
 binary64, the unit roundoff is $u=2^{-53}$ and the smallest positive
 subnormal value is $\eta=2^{-1074}$.  Every returned pair is also a valid
 double-double number.}
-\Description{The operations provided by the C library, their exact real
+\Description{The operations provided by FenceDD, their exact real
 results, and their accuracy guarantees when a wrapper returns normally.}
 \label{tab:operation-preview}
 \setlength{\tabcolsep}{3pt}

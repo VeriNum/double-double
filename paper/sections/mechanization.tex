@@ -1,35 +1,6 @@
 \section{Verification of \FenceDD}
 \label{sec:mechanization}
 
-% SOURCE OF TRUTH FOR SECTION 4 IDENTIFIERS:
-% C division functions:
-%   dw_div_fp_kernel, dw_div_fp, dw_div_fp_strong
-% C division checks:
-%   dw_div_fp_weak_check, dw_div_fp_strong_check,
-%   isfinite_dword
-% Rocq division model and conditions:
-%   DWDivFP, DWDivFP_weak_precond, DWDivFP_finite_post_cond,
-%   DWDivFP_weak_pre_and_finite_post_cond, DWDivFP_strong_precond,
-%   DWDivFP_guarantee
-% VST specifications:
-%   dw_div_fp_kernel_spec, dw_div_fp_spec, dw_div_fp_strong_spec,
-%   dw_div_fp_weak_check_spec,
-%   dw_div_fp_strong_check_spec, isfinite_dword_spec
-% VST body theorems:
-%   body_dw_div_fp_kernel, body_dw_div_fp, body_dw_div_fp_strong,
-%   body_dw_div_fp_weak_check,
-%   body_dw_div_fp_strong_check, body_isfinite_dword
-% Linked units:
-%   ChecksVSU, OpsVSU, DDLibVSU
-% Other Rocq functional models:
-%   TwoSumF, Fast2Sum, Fast2Mult, DWPlusFP, DWPlusDW,
-%   DWTimesFP, DWTimesDW, DWDivDW
-% Double-word multiplication operations use "Times" consistently across C,
-% Rocq, and VST identifiers (for example, dw_times_fp and DWTimesFP).  Retain
-% the standard name Fast2Mult for the error-free product transformation.  Do
-% not introduce paper-only aliases when referring to implementation or
-% mechanization identifiers.
-
 The numerical theorems in \Cref{sec:numerics} concern functional models,
 whereas users call the public C wrappers presented in \Cref{sec:overview}.
 We connect these levels by proving
