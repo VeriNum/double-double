@@ -77,7 +77,7 @@ void dw_div_fp(
   \label{fig:default-division-wrapper}
 \end{figure}
 
-A runtime check confirms the validity of \texttt{x}.
+A runtime check confirms that \texttt{x} stores a double-double.
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
@@ -88,7 +88,7 @@ double-double value whose high and low words are stored in the fields
 \texttt{s} and \texttt{t} of \Cref{fig:dword-struct}.
 
 The structure stores the two components but does not enforce the relation
-between them.  Because the numerical guarantee requires a valid double-word
+between them.  Because the numerical guarantee requires a double-word
 dividend, the default wrapper tests this relation before calling the arithmetic
 kernel.  The following example illustrates the represented value and the
 corresponding runtime test.
@@ -119,13 +119,13 @@ x->s == x->s + x->t
 using binary64 arithmetic.  Under rounding to nearest with ties to even,
 $1+2^{-54}$ rounds to $1$, so the comparison succeeds.  As shown in
 \Cref{sec:check-soundness}, this comparison together with the finiteness tests
-establishes \Cref{eq:dw-representation}; the pair is therefore a valid double
-word according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
+establishes \Cref{eq:dw-representation}; the pair therefore forms a
+double-double according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
 \texttt{0x1p-52} makes the computed sum differ from \texttt{x.s}, so the
 runtime test fails.
 \end{example}
 
-Dividend validity addresses the representation stored in \texttt{x}; the
+That \texttt{x} stores a double-double addresses its representation; the
 remaining conditions concern quotient arithmetic.
 
 \subsection{The Division Kernel}
@@ -175,7 +175,7 @@ correction into the returned pair.
 \label{sec:overview-post-check}
 
 The kernel computes the quotient pair but does not test the conditions needed
-to establish its error bound and validity.  The default wrapper performs the
+to establish its error bound and double-word property.  The default wrapper performs the
 corresponding runtime checks before and after kernel execution.
 
 \paragraph{Before kernel execution.}
@@ -204,7 +204,7 @@ int dw_div_fp_weak_check(
   \caption{The default wrapper's weak check
   \texttt{dw\_div\_fp\_}\allowbreak
   \texttt{weak\_}\allowbreak\texttt{check} establishes operand finiteness,
-  dividend validity, and the kernel's lower bound.}
+  the dividend's double-word property, and the kernel's lower bound.}
   \Description{A C function that checks the operands, the double-word
   relation for the dividend, and either a zero high component or a lower bound
   on its magnitude.}
@@ -248,8 +248,8 @@ Lines~8--9 combine these tests with the comparison illustrated in
 calls involving infinities or NaNs before kernel execution; they are not
 required by the weak mathematical condition itself.
 
-The check permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$,
-validity implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
+The check permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$, the
+double-word property implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
 shows that the lower bound supports Line~12 of \cref{fig:dw-div-fp-kernel}.
 
 \paragraph{After kernel execution.}
@@ -330,7 +330,7 @@ satisfies
   \leq 3u^2|q|+\eta,
 \]
 where $u=2^{-53}$ is the unit roundoff and $\eta=2^{-1074}$ is the smallest
-positive subnormal value for binary64.  The returned pair is also a valid
+positive subnormal value for binary64.  The returned pair is also a
 double-double according to \Cref{def:double-word}.
 \end{theorem}
 
@@ -351,8 +351,8 @@ $a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
 double-double operands, $r$ is the exact result, and
 $\widehat r=z_h+z_\ell$ is the value represented by the returned pair.  For
 binary64, the unit roundoff is $u=2^{-53}$ and the smallest positive
-subnormal value is $\eta=2^{-1074}$.  Every returned pair is also a valid
-double-double number.}
+subnormal value is $\eta=2^{-1074}$.  Every returned pair is also a
+double-double.}
 \Description{The operations provided by FenceDD, their exact real
 results, and their accuracy guarantees when a wrapper returns normally.}
 \label{tab:operation-preview}

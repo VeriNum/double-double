@@ -65,8 +65,8 @@ derived by the analysis, the accuracy property is
   \left|(z_h+z_\ell)-r\right|\leq\gamma,
   \label{eq:intro-accuracy-property}
 \end{equation}
-and the validity property is that the returned components form a double word
-$z$ according to \cref{def:double-word}.  The validity property supplies the
+and the double-word property is that the returned components form a double word
+$z$ according to \cref{def:double-word}.  This property supplies the
 representation precondition required when the result is used by a later
 double-word operation.
 
@@ -80,7 +80,7 @@ Native IEEE~754 arithmetic requires both ends of the exponent range to be
 considered.  Near the upper end, an intermediate computation can overflow even when its
 operands are finite, and the returned pair may consequently contain an
 infinity or NaN.  Neither an infinity nor a NaN represents a real value, so
-such a pair can satisfy neither the accuracy property nor the valid
+such a pair can satisfy neither the accuracy property nor the
 double-word property.  Both properties
 therefore require the returned components to be finite.  Near the lower end,
 the fixed spacing of subnormal values can invalidate exact relations used by
@@ -93,8 +93,8 @@ Multiplication and division instead satisfy mixed bounds: a relative term
 accounts for ordinary rounding error, while an absolute term accounts for
 errors introduced near the smallest representable values.  For every
 operation, the resulting theorem gives sufficient conditions under which the
-returned pair is a valid double word and its represented value satisfies the
-stated error bound.
+returned components form a double word and their represented value satisfies
+the stated error bound.
 
 Internal-computation conditions must hold before execution.  Result finiteness
 can follow from stronger input conditions or a check of the returned
@@ -109,7 +109,7 @@ weak check before execution, invokes the kernel, and then checks
 that both returned components are finite.  The strong wrapper performs a
 strong check that establishes result finiteness before execution,
 so no result check is needed afterward.  Both wrappers guarantee on normal
-return a valid double-double whose represented value satisfies the proved
+return a double-double whose represented value satisfies the proved
 error bound.
 
 For each operation, we define in Rocq a functional model over a generic
@@ -121,8 +121,8 @@ numerical theorem.  Together, these proofs establish the contracts of the
 public C interface.
 
 We evaluate whether the resulting checks are both effective and practical.
-Across tests spanning the binary64 exponent range, every double-double result
-returned normally was valid and within its proved error bound; the largest
+Across tests spanning the binary64 exponent range, every returned pair formed
+a double-double and its represented value was within the proved error bound; the largest
 observed error was \RQOneMaximumBoundRatio{} times the corresponding bound.
 For calls stopped by a runtime check, the experiment ran the corresponding QD
 operation on the same inputs and measured whether its result satisfied the

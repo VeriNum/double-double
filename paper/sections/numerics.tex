@@ -8,7 +8,7 @@ binary floating-point representation.
 We state the models mathematically, omitting their Rocq definitions.
 
 For each model, we compare the value represented by its returned pair with the
-corresponding exact real result and prove that the pair is a valid double word.
+corresponding exact real result and prove that the pair forms a double word.
 All results stated in this section are mechanized in Rocq.  We give a detailed
 proof sketch for division of a double word by a floating-point value as a
 representative case.  For the remaining operations, we present the proof ideas
@@ -200,7 +200,7 @@ $r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
 The operations within a transformation may round, but an error-free result
 represents the exact value.  Moreover,
 $r_h=\operatorname{RN}(r_h+r_\ell)$ follows from
-\Cref{def:error-free-result}, so every error-free result is a valid double word
+\Cref{def:error-free-result}, so every error-free result forms a double word
 according to \Cref{def:double-word}.
 
 \paragraph{Addition transformations.}
@@ -208,8 +208,8 @@ according to \Cref{def:double-word}.
 Both transformations return the rounded sum from Line~1 together with its
 correction.  Their usual guarantees differ only in their input conditions:
 \TwoSum{} requires no ordering, whereas \FastTwoSum{} assumes
-$|b|\leq|a|$.  These guarantees remain valid when subnormal values occur,
-provided the returned components are finite \citep{Boldo2017}.
+$|b|\leq|a|$.  The guarantees remain valid for subnormal values when the
+returned components are finite \citep{Boldo2017}.
 
 \begin{theorem}[Addition transformations over IEEE~754]
 \label{thm:addition-transformations}
@@ -230,11 +230,10 @@ established, the following theorem instead uses a bound on the exact sum.
 
 \begin{theorem}[\FastTwoSum{} for small exact sums]
 \label{thm:fast-two-sum-small}
-Let $\nu$ denote the smallest positive normal value of the underlying
-radix-two format, as defined in \Cref{eq:flt-thresholds}.  Suppose
-$(s,t)=\FastTwoSum{}(a,b)$ has finite components.  If
-$|a+b|\leq2\nu$, then $(s,t)$ is an error-free result according to
-\Cref{def:error-free-result} for $r=a+b$.
+Let $\nu$ be the format's smallest positive normal value, as defined in
+\Cref{eq:flt-thresholds}.  If $(s,t)=\FastTwoSum{}(a,b)$ has finite components
+and $|a+b|\leq2\nu$, then according to \cref{def:error-free-result}, $(s,t)$ is
+an error-free result for $r=a+b$.
 \end{theorem}
 
 \begin{proof}
@@ -249,17 +248,16 @@ $s=\operatorname{RN}(a+b)$, so $(s,t)$ is an error-free result.
 
 \paragraph{Product transformation.}
 
-In \FastTwoMult{}, Line~1 computes the rounded product and Line~2 computes its
-correction using a fused multiply-add.  With an unbounded exponent range, the
-correction is representable and the returned components reconstruct the exact
-product.  Near the lower exponent bound, this correction may not be
-representable even when the inputs and rounded product are normal
-\citep{BoldoDaumas2003}.
+In \FastTwoMult{}, Line~1 computes the rounded product and Line~2 its correction
+using a fused multiply-add.  With an unbounded exponent range, the correction
+is representable, so the components reconstruct the exact product.  Near the
+lower exponent bound, the correction can be unrepresentable even when the
+inputs and rounded product are normal \citep{BoldoDaumas2003}.
 
 For a radix-two format of precision $p$, define
 $\tau=2^{e_{\min}+2p-1}$.  The following theorem combines the sufficient
-condition for exact reconstruction from \citet{BoldoDaumas2003} with an
-absolute reconstruction bound that we prove for the remaining finite cases.
+condition of \citet{BoldoDaumas2003} with our absolute reconstruction bound
+for the remaining finite cases.
 \begin{theorem}[\FastTwoMult{} over IEEE~754]
 \label{thm:fast-two-mult}
 Let the underlying radix-two format have precision $p\geq3$, with $\eta$ as
@@ -306,7 +304,7 @@ finite exponent range identified in \Cref{sec:flx-to-ieee}: the relevant
 computations must remain finite, while steps in the subnormal range may
 require direct analysis in FLT.
 
-Given a valid double word $x=x_h+x_\ell$ and a nonzero floating-point divisor
+Given a double word $x=x_h+x_\ell$ and a nonzero floating-point divisor
 $y$, the exact quotient is
 \begingroup
 \setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
@@ -318,11 +316,9 @@ $y$, the exact quotient is
   \label{eq:dw-div-exact-quotient}
 \end{equation}
 \endgroup
-The division method approximates $q$ using a leading quotient and a
-correction.  The Rocq function \DWDivFP{} formalizes this computation for a
-generic underlying format, and \Cref{alg:dw-div-fp} presents its definition in
-mathematical notation.  Each occurrence of $\operatorname{RN}$ denotes
-round-to-nearest, ties-to-even in that format.
+The Rocq function \DWDivFP{} formalizes this method over a generic underlying
+format.  \Cref{alg:dw-div-fp} gives its mathematical definition; each
+$\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
 
 \begin{figure}[t]
   \centering
@@ -335,7 +331,7 @@ round-to-nearest, ties-to-even in that format.
       \textbf{\DWDivFP{}$(x_h,x_\ell,y)$}
       \par\smallskip
       \raggedright\small
-      \textit{Input:} A valid double word $(x_h,x_\ell)$ and a nonzero
+      \textit{Input:} A double word $(x_h,x_\ell)$ and a nonzero
       floating-point value $y$\par
       \textit{Output:} A pair $(z_h,z_\ell)$ approximating $q$
       \setlength{\abovedisplayskip}{4pt}
@@ -354,7 +350,7 @@ round-to-nearest, ties-to-even in that format.
       \]
     \end{minipage}}
   \endgroup
-  \caption{The Rocq functional model \DWDivFP{} for a generic underlying
+  \caption{The Rocq model \DWDivFP{} for a generic underlying
     format, following Algorithm~15 of \citet{Joldes2017}.}
   \Description{The eight steps of the DWDivFP algorithm.  The algorithm
     computes a leading quotient, reconstructs and divides the residual, and
@@ -368,13 +364,12 @@ The structure of the algorithm follows the identity
     =t_h+\frac{x-t_hy}{y}.
 \]
 Line~1 computes the leading quotient $t_h$.  Lines~2--5 approximate the
-residual $x-t_hy$, using \FastTwoMult{} for the product $t_hy$ and including
-the low word $x_\ell$ of the dividend.  Line~6 divides the residual by $y$ to
-obtain the quotient correction $t_\ell$, and Line~7 combines the two quotient
-components into the returned pair.
+residual $x-t_hy$ using \FastTwoMult{} for the product and including the low
+word $x_\ell$.  Line~6 divides the residual by $y$ for the correction $t_\ell$;
+Line~7 combines them.
 
 The following theorem bounds the error in the value represented by the
-returned pair and proves that the pair is a valid double word.  The next
+returned pair and proves that the pair forms a double word.  The next
 subsection collects its hypotheses into mathematical conditions.
 
 \begin{theorem}[Numerical guarantee for \DWDivFP{}]
@@ -386,7 +381,7 @@ normal value, and let
 $(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$.
 Suppose that the following requirements hold:
 \begin{enumerate}
-  \item[(H1)] $(x_h,x_\ell)$ is a valid double word;
+  \item[(H1)] $(x_h,x_\ell)$ is a double word;
   \item[(H2)] the high word satisfies
     \begin{equation}
       x_h=0
@@ -404,18 +399,17 @@ quotient.  Then
     \leq 3u^2|q|+\eta
   \label{eq:dw-div-fp-mixed}
 \end{equation}
-and $(z_h,z_\ell)$ is a valid double word:
+and $(z_h,z_\ell)$ is a double word:
 \[
   z_h=\operatorname{RN}(z_h+z_\ell).
 \]
 Let $\delta$ denote the residual computed on Line~5 of
 \Cref{alg:dw-div-fp}.  If $|q_0|\geq\nu$ and either $\delta=0$ or
-$|\delta/y|\geq\nu$, the sharper bound
+$|\delta/y|\geq\nu$, the sharper bound holds:
 \[
   \left|(z_h+z_\ell)-q\right|
     \leq 3u^2|q|
 \]
-holds.
 \end{theorem}
 
 \begin{proof}[Proof sketch]
@@ -460,11 +454,11 @@ which gives
 In both cases, the residual analysis gives $|t_\ell|\leq|t_h|$.  Together
 with finiteness from Hypothesis~(H3), this supplies the hypotheses of the
 \FastTwoSum{} result in \Cref{thm:addition-transformations}.  Line~7 therefore
-preserves $t_h+t_\ell$ exactly and returns a valid double word.
+preserves $t_h+t_\ell$ exactly and returns a double word.
 
 \noindent\emph{Subnormal leading quotient.}
 Now suppose that $|q_0|<\nu$.  The fixed FLT spacing gives
-$|t_h-q_0|\leq\eta/2$.  Validity of the input gives
+$|t_h-q_0|\leq\eta/2$.  The input's double-word property gives
 $|x_\ell|\leq u|x_h|$, and hence
 \[
   \left|\frac{x_\ell}{y}\right|
@@ -496,13 +490,13 @@ $\eta/2$.  Therefore
 The same FLT bounds establish $|t_h+t_\ell|\leq2\nu$.  This bound and
 finiteness from Hypothesis~(H3) supply the hypotheses of
 \Cref{thm:fast-two-sum-small}.  Line~7 therefore preserves
-$t_h+t_\ell$ exactly and returns a valid double word.  Consequently,
+$t_h+t_\ell$ exactly and returns a double word.  Consequently,
 \[
   |(z_h+z_\ell)-q|
     \leq\eta
     \leq3u^2|q|+\eta.
 \]
-The two cases establish the stated bounds and validity result.
+The two cases establish the stated bounds and double-word property.
 \end{proof}
 
 \subsection{Conditions for the Division Guarantee}
@@ -527,7 +521,7 @@ Suppressing the common arguments $(x_h,x_\ell,y)$, define
 \begin{aligned}
 \mathcal{I}_{\mathrm{div}}
   \quad\triangleq\quad&
-  (x_h,x_\ell)\text{ is a valid double word}\\
+  (x_h,x_\ell)\text{ is a double word}\\
   &{}\land
   \left(x_h=0
     \;\lor\;
@@ -572,18 +566,16 @@ holds, or if $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \subsection{Conditions for the Remaining Numerical Guarantees}
 \label{sec:remaining-numerical-conditions}
 
-Rather than repeat the algorithms of the five remaining models, we state the
-conditions needed to extend their existing analyses to IEEE~754 arithmetic.
-Their names and additional hypotheses appear in
-\Cref{tab:remaining-numerical-conditions}; their error bounds appear in
-\Cref{tab:operation-preview}.
+\Cref{tab:remaining-numerical-conditions} gives the conditions extending the
+five remaining analyses to IEEE~754; \cref{tab:operation-preview} gives their
+error bounds.
 
 \begin{table*}[t]
 \centering
 \caption{Sufficient conditions for the numerical guarantees in
 \Cref{thm:remaining-numerical-guarantees}.  The pairs $(x_h,x_\ell)$ and
 $(y_h,y_\ell)$ denote the first and second double-word operands, and $a$
-denotes a floating-point operand.  Every row assumes valid double-word
+denotes a floating-point operand.  Every row assumes double-word
 operands.  The middle column lists the additional hypotheses of the
 corresponding numerical theorem.  The final column lists sufficient
 hypotheses from which finiteness of the returned components can be proved.}
@@ -634,10 +626,10 @@ by a floating-point value,
 $p\geq5$ for multiplication of two double words, and $p\geq14$ for division
 of two double words.
 
-Suppose every double-word operand is valid and the additional hypotheses in
+Suppose the additional hypotheses in
 the middle column of \Cref{tab:remaining-numerical-conditions} hold.  Suppose
 also that the returned components are finite or that the hypotheses in the
-final column hold.  Then the returned pair is a valid double word and
+final column hold.  Then the returned pair is a double word and
 satisfies the corresponding error bound in \Cref{tab:operation-preview},
 interpreted using $u$ and $\eta$ for the underlying format.
 \end{theorem}

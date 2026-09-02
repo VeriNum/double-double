@@ -53,9 +53,9 @@ use algorithms different from the corresponding \FenceDD{} kernels, so the
 \FenceDD{} error bound is used only to compare their observed errors on a
 common scale.
 
-For RQ2, QD results are classified as nonfinite; finite but not a valid double
-word; finite and valid with error above the corresponding \FenceDD{} bound; or
-finite and valid with error no greater than that bound.  For an error-free
+For RQ2, QD results are classified as nonfinite; finite with components that do
+not form a double word; or finite with components that form a double word,
+subdivided by whether the error exceeds the corresponding \FenceDD{} bound.  For an error-free
 transformation, the relevant numerical property instead requires exact
 reconstruction.  Separate boundary tests exercise values immediately below,
 at, and above each runtime threshold, together with zeros, exact cancellation,

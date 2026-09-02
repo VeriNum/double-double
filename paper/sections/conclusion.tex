@@ -3,7 +3,7 @@
 
 We presented \FenceDD, a verified library of double-double arithmetic that
 provides machine-checked numerical guarantees through ordinary C calls: on
-normal return, the result satisfies the proved error bound and is a valid
+normal return, the result satisfies the proved error bound and is a
 double-double.
 
 Our numerical analysis extends the results of \citet{Joldes2017}, mechanized
@@ -31,7 +31,7 @@ fractions of the proved bounds were \RQOneRelativeMaximumRatio{} in
 the relative region and \RQOneAbsoluteMaximumRatio{} in the absolute region.
 On inputs associated with calls rejected by runtime checks in the default and
 strong wrappers, QD
-returned a finite, valid result with observed error no greater than the
+returned a finite double-double result with observed error no greater than the
 corresponding \FenceDD{} error bound in
 \RQTwoDefaultQDWithinPercent{} and \RQTwoStrongQDWithinPercent{} of cases,
 respectively; on inputs associated with rejected calls to the wrappers

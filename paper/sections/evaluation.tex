@@ -18,7 +18,7 @@ wrappers.  We investigated the following research questions:
   \item[(RQ2) Usefulness of the wrappers.]
     For generated inputs on which a runtime check stops a call to \FenceDD{},
     how often does QD produce a result satisfying the corresponding numerical
-    properties: the error bound and the property of being a valid double word for a
+    properties: the error bound and the double-word property for a
     double-word operation, or exact reconstruction for an error-free
     transformation?
 
@@ -45,8 +45,8 @@ For 95\% of the double-word inputs, MPFR constructed a 106-bit source value,
 which was rounded into high and low components.  The remaining 5\% had a
 binary64 high component and a zero low component.  The narrower exponent range
 kept all 106 source bits representable while ensuring that the high component
-was finite.  Signs were balanced, and every generated double-word operand was
-valid according to \Cref{def:double-word}.
+was finite.  Signs were balanced, and every generated operand
+formed a double word according to \Cref{def:double-word}.
 
 We classified a call as accepted when all runtime checks succeeded and the
 function returned a result.  We classified a call as rejected when a runtime
@@ -150,8 +150,8 @@ corresponding numerical properties guaranteed by \FenceDD{}.
 
 To address RQ2, we ran the corresponding QD operation on every input associated
 with a rejected \FenceDD{} call.  For a double-word operation, we classified
-the QD result as satisfying the relevant properties when it was finite, was a
-valid double word, and had MPFR-measured error no greater than $B(r)$ from
+the QD result as satisfying the relevant properties when it was finite, its
+components formed a double word, and its MPFR-measured error was no greater than $B(r)$ from
 \Cref{eq:rq1-error-bound}.  For an error-free transformation, the QD result
 was classified as satisfying the relevant property when its returned pair
 reconstructed the MPFR reference exactly.
@@ -168,7 +168,8 @@ rates in application workloads.
   \caption{RQ2: QD results on inputs associated with rejected \FenceDD{}
   calls.  Failed checks gives the population size; the remaining columns give
   percentages of that population.  For double-word operations, satisfying the
-  properties means returning a finite, valid double word with error at most
+  properties means returning a finite result whose components form a double
+  word and whose error is at most
   $B(r)$.  For transformations, it means exact reconstruction.  Any remaining
   percentage consists of finite QD results that do not satisfy these
   properties.}
@@ -191,7 +192,8 @@ rates in application workloads.
 \end{table}
 
 \Cref{tab:rq2-results} provides the evidence for our claim that the wrappers
-are useful.  QD returned a finite, valid double word with error no greater than
+are useful.  QD returned a finite result whose components formed a double word
+and whose error was no greater than
 $B(r)$ for only $5.4\%$ of failed checks in default wrappers and $6.1\%$ of
 failed checks in alternative wrappers.  Every QD result corresponding to a
 call stopped in a default multiplication wrapper was nonfinite.  The strong
