@@ -1,11 +1,9 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-For this analysis, each algorithm is represented by a functional model defined
-in Rocq over a generic radix-two format.  A functional model records, as a pure
-function over Flocq's IEEE~754 values, the sequence of rounded operations
-performed by the algorithm.  We present these models in mathematical notation
-rather than reproducing their Rocq definitions.
+Each algorithm has a Rocq functional model over a generic radix-two format: a
+pure function over Flocq's IEEE~754 values that records its rounded operations.
+We state the models mathematically, omitting their Rocq definitions.
 
 For each model, we compare the value represented by its returned pair with the
 corresponding exact real result and prove that the pair is a valid double word.
@@ -18,9 +16,9 @@ that differ from this case and cite results inherited from earlier analyses.
 \label{sec:flx-to-ieee}
 
 The numerical analysis builds on the results of \citet{Joldes2017}, mechanized
-in FLX by \citet{Rideau2022}.  Our functional models instead use Flocq's
-IEEE~754 operations.  We relate the two by using FLT to account for the lower
-exponent bound and treating the upper limit of an IEEE~754 format separately.
+in FLX by \citet{Rideau2022}.  Our models instead use Flocq's IEEE~754
+operations.  We use FLT to account for the lower exponent bound and handle the
+upper limit of an IEEE~754 format separately.
 
 Flocq represents a floating-point value as $m\beta^q$, where $m$ and $q$ are
 integers.  For radix $\beta>1$ and precision $p>0$, the values representable
@@ -40,30 +38,27 @@ FLT restricts this set by imposing a lower bound $e_{\min}$ on $q$:
       m,q\in\mathbb{Z},\ |m|<\beta^p,\ q\geq e_{\min}\right\}
 \]
 }
-This is the only additional constraint imposed by FLT
-\citep[Sections~III-C and III-D]{Boldo2011}.  Consequently,
+FLT adds no other constraint
+\citep[Sections~III-C and III-D]{Boldo2011}, so its values are a subset of FLX:
 \begin{equation}
   \mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
     \subseteq
   \mathbb{F}_{\mathrm{FLX}}(\beta,p)
   \label{eq:flt-subset-flx}
 \end{equation}
-and every value representable in FLT is also representable in FLX.
 
-The difference between the formats appears near zero.  In FLX, the spacing
-between adjacent values continues to decrease with their magnitude.  In FLT,
-the exponent cannot decrease below $e_{\min}$, so values below $\nu$ have the
-fixed spacing $\eta$, where
+The FLT spacing and normal threshold are
 \begin{equation}
   \eta=\beta^{e_{\min}}
   \qquad\text{and}\qquad
   \nu=\beta^{e_{\min}+p-1}.
   \label{eq:flt-thresholds}
 \end{equation}
-$\eta$ is the smallest positive value representable in FLT, and $\nu$ is the
-smallest positive normal value.  Values below $\nu$ remain representable as
-multiples of $\eta$, but with fewer significant bits as their magnitude
-decreases.  For binary64, $\eta=2^{-1074}$ and $\nu=2^{-1022}$.
+In FLX, adjacent-value spacing decreases with magnitude.  In FLT, the exponent
+cannot fall below $e_{\min}$, so $\eta$ is the smallest positive value and
+$\nu$ the smallest positive normal value.  Values below $\nu$ are multiples of
+$\eta$ with fewer significant bits.  For binary64, $\eta=2^{-1074}$ and
+$\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
 $\operatorname{RN}_{\mathrm{FLT}}$ denote round-to-nearest, ties-to-even in

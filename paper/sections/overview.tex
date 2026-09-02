@@ -201,11 +201,10 @@ int dw_div_fp_weak_check(
     return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
-  \caption{The weak check
+  \caption{The default wrapper's weak check
   \texttt{dw\_div\_fp\_}\allowbreak
-  \texttt{weak\_}\allowbreak\texttt{check}, invoked before the
-  kernel by the default wrapper.  It checks operand finiteness,
-  dividend validity, and the lower bound required by the kernel.}
+  \texttt{weak\_}\allowbreak\texttt{check} establishes operand finiteness,
+  dividend validity, and the kernel's lower bound.}
   \Description{A C function that checks the operands, the double-word
   relation for the dividend, and either a zero high component or a lower bound
   on its magnitude.}
@@ -249,27 +248,23 @@ Lines~8--9 combine these tests with the comparison illustrated in
 calls involving infinities or NaNs before kernel execution; they are not
 required by the weak mathematical condition itself.
 
-The second part permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  In the zero
-case, dividend validity implies $x_\ell=0$.  For a nonzero high component, the
-lower bound supports the product reconstruction on Line~12 of
-\Cref{fig:dw-div-fp-kernel}, as analyzed in
-\Cref{sec:division-numerics}.
+The check permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$,
+validity implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
+shows that the lower bound supports Line~12 of \cref{fig:dw-div-fp-kernel}.
 
 \paragraph{After kernel execution.}
-The weak check places no upper bound on the operands or leading
-quotient, so the wrapper tests the computed pair after kernel execution.
-Line~9 of \Cref{fig:default-division-wrapper} invokes
-\texttt{isfinite\_dword}; the test permits normal values, subnormal values,
-and zeros but fails for any infinity or NaN.
+The weak check does not bound the operands or leading quotient from above, so
+the wrapper tests the pair after kernel execution.  Line~9 of
+\Cref{fig:default-division-wrapper} invokes \texttt{isfinite\_dword}, which
+accepts normal values, subnormal values, and zeros but rejects infinities and
+NaNs.
 
 \subsection{Establishing Result Finiteness before Kernel Execution}
 \label{sec:overview-strong-check}
 
-Some callers may want result finiteness established before the arithmetic
-kernel executes.  The alternative public function
-\texttt{dw\_div\_fp\_strong} uses the strong check before calling
-the same arithmetic kernel.  Because this check establishes result finiteness
-before execution, the function requires no result check afterward.
+Some callers may want to establish result finiteness before kernel execution.
+The alternative, \texttt{dw\_div\_fp\_\allowbreak strong}, applies its strong check before
+invoking the same kernel and therefore needs no result check afterward.
 
 The strong check reuses the weak check, then bounds the high
 component of the dividend and the rounded leading quotient.
@@ -309,8 +304,7 @@ Lines~13--14 compute and bound the rounded leading quotient from Line~11 of
 \Cref{fig:dw-div-fp-kernel}.  The strict comparison on Line~14 also fails when
 that quotient is an infinity or NaN.  These additional tests establish before
 kernel execution that its intermediate computations and returned components
-will be finite.  \Cref{sec:division-conditions} derives the corresponding
-mathematical condition.
+will be finite.  \Cref{sec:division-conditions} derives this condition.
 
 The check places no lower bound on the leading quotient and therefore permits
 subnormal values.  The strong check can nevertheless fail even
@@ -320,9 +314,8 @@ the cost of establishing result finiteness before execution.
 \subsection{The Division Contract}
 \label{sec:overview-division-guarantee}
 
-Although the two wrappers establish result finiteness at different points,
-they provide the same contract below.  Callers need not establish its
-numerical conditions before making the call.
+The wrappers have the same contract and no numerical preconditions despite
+establishing finiteness at different points.
 
 \begin{theorem}[Normal-Return Guarantee for the Division Wrappers]
 \label{thm:division-wrapper-contract}
