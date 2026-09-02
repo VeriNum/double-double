@@ -579,13 +579,30 @@ class ReportingTests(unittest.TestCase):
                 Path("paper/generated/rq2_default_double_word_rejected_rows.tex"),
                 Path("paper/generated/rq2_strong_double_word_rejected_rows.tex"),
                 Path("paper/generated/rq2_double_word_rejected_rows.tex"),
+                Path("paper/generated/rq2_double_word_compact_rows.tex"),
                 Path("paper/generated/rq2_eft_rejected_rows.tex"),
-                Path("paper/generated/rq3_performance_rows.tex"),
+                Path("paper/generated/rq2_eft_compact_rows.tex"),
+                Path("paper/generated/rq3_combined_rows.tex"),
             },
         )
         self.assertNotIn(Path("rq2-bins.tsv"), outputs)
         self.assertNotIn(Path("paper/generated/rq2_acceptance_rows.tex"), outputs)
         self.assertNotIn(Path("paper/generated/rq2_failure_rows.tex"), outputs)
+
+    def test_latex_rq3_rows_are_combined_and_grouped(self) -> None:
+        rows = reporting.render_latex_files(self.load())[
+            "rq3_combined_rows.tex"
+        ]
+        lines = rows.splitlines()
+        two_sum = next(line for line in lines if r"\textsc{TwoSum}" in line)
+        self.assertEqual(two_sum.count(" & "), 7)
+        self.assertTrue(two_sum.endswith(r" \\"))
+        self.assertEqual(rows.count(r"\textsc{"), len(reporting.OPERATIONS))
+        self.assertEqual(rows.count(" & Default & "), len(reporting.COMPOSITE_OPERATIONS))
+        self.assertEqual(rows.count(" & Strong & "), len(reporting.COMPOSITE_OPERATIONS))
+        self.assertEqual(rows.count(r"\midrule"), 1)
+        self.assertLess(rows.index(r"\textsc{Fast2Mult}"), rows.index(r"\midrule"))
+        self.assertLess(rows.index(r"\midrule"), rows.index(r"\textsc{DWPlusFP}"))
 
     def test_markdown_has_rq1_ranges_and_rq2_tables(self) -> None:
         run = self.load()
@@ -949,6 +966,40 @@ class ReportingTests(unittest.TestCase):
             "| `two_sum` | 4 | 1 (25%) | 1 (25%) | 1 (25%) "
             "| 1 (25%) |",
             text,
+        )
+
+    def test_proper_subset_percentage_does_not_round_to_one_hundred(self) -> None:
+        rejected = 41_945
+        valid_not_exact = 41_830
+        self.assertEqual(
+            reporting._markdown_percent(valid_not_exact, rejected),
+            "99.7%",
+        )
+        self.assertEqual(
+            reporting._latex_count_percent(valid_not_exact, rejected),
+            r"41{,}830 (99.7\%)",
+        )
+        self.assertEqual(
+            reporting._markdown_percent(rejected, rejected),
+            "100%",
+        )
+        self.assertEqual(
+            reporting._markdown_percent(9_999, 10_000),
+            "99.99%",
+        )
+
+    def test_latex_compact_rq2_rows_use_safe_percentages(self) -> None:
+        run = self.load()
+        fast_sum = run.rq2.eft_rejected["fast_2sum"]
+        fast_sum.rejected = 41_945
+        fast_sum.qd_nonfinite = 0
+        fast_sum.qd_finite_invalid_dw = 12
+        fast_sum.qd_finite_valid_failed_reconstruction = 41_830
+        fast_sum.qd_finite_valid_exact_reconstruction = 103
+        rows = reporting.render_latex_files(run)["rq2_eft_compact_rows.tex"]
+        self.assertIn(
+            r"\textsc{Fast2Sum} & 41{,}945 & 0\% & 0.029\% & 99.7\% & 0.25\%",
+            rows,
         )
 
     def test_markdown_lists_every_rq1_above_bound_result(self) -> None:

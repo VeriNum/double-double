@@ -701,7 +701,7 @@ int weak_check(const bench_eval::DwFpBoundaryCase &item) {
     case CompositeOperation::dw_times_fp:
         return dw_times_fp_weak_precond_check(&item.first, item.second);
     case CompositeOperation::dw_div_fp:
-        return dw_div_fp_weak_precond_check(&item.first, item.second);
+        return dw_div_fp_weak_check(&item.first, item.second);
     default:
         std::abort();
     }
@@ -714,7 +714,7 @@ int strong_check(const bench_eval::DwFpBoundaryCase &item) {
     case CompositeOperation::dw_times_fp:
         return dw_times_fp_strong_precond_check(&item.first, item.second);
     case CompositeOperation::dw_div_fp:
-        return dw_div_fp_strong_precond_check(&item.first, item.second);
+        return dw_div_fp_strong_check(&item.first, item.second);
     default:
         std::abort();
     }
@@ -1270,11 +1270,11 @@ int main(int argc, char **argv) {
     run_dw_fp(CompositeOperation::dw_div_fp,
         VerifiedBound::dw_div_fp, true,
         [&](std::size_t i) {
-            return dw_div_fp_weak_precond_check(
+            return dw_div_fp_weak_check(
                 &inputs.mixed_dw[i].value, inputs.mixed_fp[i].value);
         },
         [&](std::size_t i) {
-            return dw_div_fp_strong_precond_check(
+            return dw_div_fp_strong_check(
                 &inputs.mixed_dw[i].value, inputs.mixed_fp[i].value);
         },
         [&](std::size_t i) {
