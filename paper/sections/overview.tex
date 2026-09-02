@@ -82,10 +82,26 @@ A runtime check confirms that \texttt{x} stores a double-double.
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
 
-\Cref{def:double-word} defines a double word over a generic underlying
-floating-point format.  \FenceDD{} uses its binary64 instance: a
-double-double value whose high and low words are stored in the fields
-\texttt{s} and \texttt{t} of \Cref{fig:dword-struct}.
+We first define a double word over a generic floating-point format
+$\mathbb{F}$.  Let $\operatorname{RN}$ denote rounding to nearest with ties to
+even.
+
+\begin{definition}[Double word]
+\label[definition]{def:double-word}
+A double word $x$ over $\mathbb{F}$ is the unevaluated sum
+\[
+  x=x_h+x_\ell
+\]
+of two values $x_h,x_\ell\in\mathbb{F}$ such that
+\begin{equation}
+  x_h=\operatorname{RN}(x_h+x_\ell).
+  \label{eq:dw-representation}
+\end{equation}
+\end{definition}
+
+\FenceDD{} uses the binary64 instance of this definition.  The high and low
+words of a double-double value are stored in the fields \texttt{s} and
+\texttt{t} of \Cref{fig:dword-struct}.
 
 The structure stores the two components but does not enforce the relation
 between them.  Because the numerical guarantee requires a double-word
@@ -175,7 +191,7 @@ correction into the returned pair.
 \label{sec:overview-post-check}
 
 The kernel computes the quotient pair but does not test the conditions needed
-to establish its error bound and double-word property.  The default wrapper performs the
+to establish its error bound or ensure that the pair is a double-double.  The default wrapper performs the
 corresponding runtime checks before and after kernel execution.
 
 \paragraph{Before kernel execution.}
@@ -204,7 +220,7 @@ int dw_div_fp_weak_check(
   \caption{The default wrapper's weak check
   \texttt{dw\_div\_fp\_}\allowbreak
   \texttt{weak\_}\allowbreak\texttt{check} establishes operand finiteness,
-  the dividend's double-word property, and the kernel's lower bound.}
+  that the dividend is a double-double, and the kernel's lower bound.}
   \Description{A C function that checks the operands, the double-word
   relation for the dividend, and either a zero high component or a lower bound
   on its magnitude.}
@@ -249,7 +265,7 @@ calls involving infinities or NaNs before kernel execution; they are not
 required by the weak mathematical condition itself.
 
 The check permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$, the
-double-word property implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
+fact that $(x_h,x_\ell)$ is a double word implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
 shows that the lower bound supports Line~12 of \cref{fig:dw-div-fp-kernel}.
 
 \paragraph{After kernel execution.}

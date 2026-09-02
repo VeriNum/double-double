@@ -458,7 +458,7 @@ preserves $t_h+t_\ell$ exactly and returns a double word.
 
 \noindent\emph{Subnormal leading quotient.}
 Now suppose that $|q_0|<\nu$.  The fixed FLT spacing gives
-$|t_h-q_0|\leq\eta/2$.  The input's double-word property gives
+$|t_h-q_0|\leq\eta/2$.  Because the input is a double word,
 $|x_\ell|\leq u|x_h|$, and hence
 \[
   \left|\frac{x_\ell}{y}\right|
@@ -496,7 +496,8 @@ $t_h+t_\ell$ exactly and returns a double word.  Consequently,
     \leq\eta
     \leq3u^2|q|+\eta.
 \]
-The two cases establish the stated bounds and double-word property.
+The two cases establish the stated bounds and show that the returned pair is a
+double word.
 \end{proof}
 
 \subsection{Conditions for the Division Guarantee}

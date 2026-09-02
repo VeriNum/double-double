@@ -1,171 +1,115 @@
 \section{Introduction}
 \label{sec:intro}
 
-Binary64 arithmetic is fast and widely available, but its precision is not
-enough for every numerical computation \citep{Higham2002}.  Arbitrary-precision
-libraries such as MPFR address this limitation by allowing each variable to
-have an independently chosen precision \citep{Fousse2007}.  When roughly twice
-the precision of binary64 is sufficient, double-double arithmetic offers a
-more specialized alternative.  It represents a number as the unevaluated sum
-of two binary64 values and performs arithmetic on the pair.  This approach has
-been used to improve reproducibility in parallel climate models
-and to provide additional precision in quantum electrodynamic calculations
-\citep{HeDing2001,Aoyama2015}.
+Numerical software sometimes needs more precision than a single hardware
+floating-point value provides.  Libraries such as MPFR
+provide arithmetic at arbitrary precision \citep{Fousse2007}; when roughly
+twice the precision of binary64 is sufficient, double-double arithmetic offers
+a faster alternative.  A double-double value is represented by two binary64
+components.  Double-double arithmetic and the more general technique of
+floating-point expansion arithmetic are used in numerical linear algebra
+\citep{Li2002,Evstigneev2022}, numerical quadrature
+\citep{BaileyBorwein2012}, computational geometry
+\citep{Shewchuk1997}, fluid dynamics
+\citep{BaileyKrasnyPelz1993,HeDing2001}, quantum calculations
+\citep{Frolov2000,FrolovBailey2003,Aoyama2015}, and correctly rounded
+elementary functions \citep{CRLibm2006,CoreMath2022}.  Implementations include
+XBLAS and the QD package \citep{Li2002,Hida2001,QD}.  Their performance is
+attractive, but their numerical behavior can be subtle: \citet{Li2002} called
+double-double arithmetic ``an `attractive nuisance,' like an unfenced backyard
+swimming pool.''
 
-Using double-word arithmetic safely requires vigilance.  As \citet{Li2002}
-described it, double-double arithmetic is ``an `attractive nuisance,' like an
-unfenced backyard swimming pool.''  The hazard is that a pair of binary64
-values is not equivalent to an ordinary wider IEEE~754 format, and arithmetic
-on the pair does not behave like arithmetic in such a format.  A basic
-operation in an IEEE~754 format computes an exact result and rounds it once.
-A double-double operation instead performs a sequence of rounded binary64
-computations.  The algorithm chosen determines its rounding-error bound, which
-holds only under conditions on the operands and intermediate results.  Further
-conditions may be needed for the returned components to form a double-double.
+The difficulty is that double-double arithmetic does not behave like an
+ordinary floating-point format with twice the precision.  Each operation
+combines several rounded binary64 operations.  Near underflow, an intermediate
+correction carrying the additional precision can round to zero, and analyses
+that exclude underflow do not describe the resulting computation.
 
-We present \FenceDD, a verified C library whose public C interface enforces
-these conditions.  The library provides six double-double operations together
-with three error-free transformations that the operations use as building
-blocks.  On normal return, each double-double operation returns components
-that form a double-double, and their sum satisfies the proved error bound.
-Each error-free transformation returns two binary64 values whose sum equals
-the exact result of the corresponding basic operation.
+To see where the difficulty in double-double arithmetic arises, consider
+squaring $x=(a,0)$, where
+\[
+  a=2^{-515}(1+2^{-52}).
+\]
+QD's double-double multiplication returns $(2^{-1030},0)$, although
+\[
+  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
+\]
+The returned pair is a double word, but its relative error is approximately
+$2^{-51}$. This is much larger than the $2^{-104}$ bound proved for this 
+algorithm by \citet{Joldes2017} in the case when underflow does not occur.
 
-\subsection{Double-Word Arithmetic and Its Numerical Guarantees}
-\label{sec:intro-double-word}
+The lost term comes from \FastTwoMult{}, which the multiplication algorithm
+uses to multiply the high components.  Given $a$ and $b$, \FastTwoMult{}
+returns a rounded product $p_h$ and a correction $p_\ell$ intended to satisfy
+\[
+  p_h+p_\ell=ab.
+\]
+For the product above, $p_h=2^{-1030}$, so exact reconstruction would require
+\[
+  p_\ell=2^{-1081}+2^{-1134}.
+\]
+This correction is smaller than the smallest positive binary64 value and
+rounds to zero, so it is absent from the output of \FastTwoMult{} and,
+consequently, from the value returned by the double-double multiplication.
 
-To state the guarantees, we analyze double-word arithmetic over a generic
-floating-point format.
-Double-double arithmetic is the binary64 instance of double-word arithmetic.
-A double word is a floating-point expansion with two components
-\citep{Dekker1971,Priest1991}.  Let
-$\mathbb{F}$ denote the underlying format, and let $\operatorname{RN}$ denote
-round-to-nearest, ties-to-even. Following
-\citet[Definition~1.4]{Joldes2017}, we use the following definition.
+The complete multiplication can nevertheless satisfy a useful guarantee.  Its
+analysis can bound the lost correction and include that error in the final
+bound.  The appropriate guarantee near underflow combines a relative term with
+an absolute term, rather than relying only on the relative bound proved when
+underflow is absent.  Near the upper end of binary64, overflow presents a
+different problem: an intermediate computation can produce an infinity or
+NaN, for which no error bound over real values applies.
 
-\begin{definition}[Double word]
-\label[definition]{def:double-word}
-A double word $x$ over $\mathbb{F}$ is the unevaluated sum
-\begin{equation}
-  x=x_h+x_\ell
-\end{equation}
-of two values $x_h,x_\ell\in\mathbb{F}$ such that
-\begin{equation}
-  x_h=\operatorname{RN}(x).
-  \label{eq:dw-representation}
-\end{equation}
-\end{definition}
+We present \FenceDD{}, a verified C library for double-double arithmetic that
+accounts for both ends of the exponent range.  The library provides six
+double-double operations covering addition, multiplication, and division,
+each with either a binary64 or double-double second operand.  Their
+implementations use three error-free transformations: \TwoSum{},
+\FastTwoSum{}, and \FastTwoMult{}.  For the transformations, we prove exact
+reconstruction under their required conditions.  For the double-double
+operations, we prove that the returned components form a double word and
+establish relative error bounds for addition and mixed relative and absolute
+bounds for multiplication and division.
 
-Thus, rounding the represented value $x$ recovers the high component $x_h$,
-while the low component is the exact residual $x_\ell=x-x_h$.  For an exact
-real result $r$, a double-word algorithm should return $(z_h,z_\ell)$
-satisfying two distinct properties.  Writing $\gamma$ for an error bound
-derived by the analysis, the accuracy property is
-\begin{equation}
-  \left|(z_h+z_\ell)-r\right|\leq\gamma,
-  \label{eq:intro-accuracy-property}
-\end{equation}
-and the double-word property is that the returned components form a double word
-$z$ according to \cref{def:double-word}.  This property supplies the
-representation precondition required when the result is used by a later
-double-word operation.
+We verify the library in Rocq.  Our numerical development extends prior
+mechanized analyses from arithmetic with an unbounded exponent range to
+IEEE~754 arithmetic.  The public C functions use runtime checks to establish
+the conditions required by these numerical results.  Using the Verified
+Software Toolchain (VST) \citep{Appel2014}, we prove that the C kernels implement the analyzed
+algorithms and that their public contracts provide the proved guarantees on
+normal return.
 
-The numerical results on which we build
-\citep{Joldes2017,Rideau2022} establish both properties for double-word
-addition, multiplication, and division when underflow and overflow do not
-occur.  \citet{Rideau2022} mechanize these results using Flocq's FLX format
-\citep{Boldo2011}, whose unbounded exponent range represents this assumption.
+Our evaluation shows that the numerical guarantees and runtime checks are
+useful in practice.  Across tests spanning the binary64 exponent range, the
+largest observed error reached $0.87$ of its proved bound.  For inputs on which
+runtime checks stopped a call, QD produced a
+result satisfying the corresponding numerical properties in only $5.4\%$ of
+double-double cases and fewer than $0.5\%$ of error-free transformation cases.  The
+runtime checks added 2.5--11 nanoseconds per call relative to the unchecked
+kernels.
 
-Native IEEE~754 arithmetic requires both ends of the exponent range to be
-considered.  Near the upper end, an intermediate computation can overflow even when its
-operands are finite, and the returned pair may consequently contain an
-infinity or NaN.  Neither an infinity nor a NaN represents a real value, so
-such a pair can satisfy neither the accuracy property nor the
-double-word property.  Both properties
-therefore require the returned components to be finite.  Near the lower end,
-the fixed spacing of subnormal values can invalidate exact relations used by
-the basic building blocks of double-word algorithms and prevent rounding
-errors from being bounded solely relative to the exact result.
-
-Our analysis determines how these effects change the guarantee for each
-operation.  Addition retains the relative bounds of the earlier analysis.
-Multiplication and division instead satisfy mixed bounds: a relative term
-accounts for ordinary rounding error, while an absolute term accounts for
-errors introduced near the smallest representable values.  For every
-operation, the resulting theorem gives sufficient conditions under which the
-returned components form a double word and their represented value satisfies
-the stated error bound.
-
-Internal-computation conditions must hold before execution.  Result finiteness
-can follow from stronger input conditions or a check of the returned
-components.  Ordinary C calls therefore need runtime checks that establish
-each condition at the appropriate point.
-
-\subsection{This Work: \FenceDD}
-
-For the six double-double operations, \FenceDD{} provides two public wrappers
-around one arithmetic kernel.  The default wrapper performs a
-weak check before execution, invokes the kernel, and then checks
-that both returned components are finite.  The strong wrapper performs a
-strong check that establishes result finiteness before execution,
-so no result check is needed afterward.  Both wrappers guarantee on normal
-return a double-double whose represented value satisfies the proved
-error bound.
-
-For each operation, we define in Rocq a functional model over a generic
-radix-two format using VCFloat2 \citep{AppelKellison2024}, and prove its
-numerical guarantee using Flocq.  We then use
-VST to prove that the C kernel implements the binary64 instance of this model
-and that the runtime checks establish the conditions required by its
-numerical theorem.  Together, these proofs establish the contracts of the
-public C interface.
-
-We evaluate whether the resulting checks are both effective and practical.
-Across tests spanning the binary64 exponent range, every returned pair formed
-a double-double and its represented value was within the proved error bound; the largest
-observed error was \RQOneMaximumBoundRatio{} times the corresponding bound.
-For calls stopped by a runtime check, the experiment ran the corresponding QD
-operation on the same inputs and measured whether its result satisfied the
-corresponding numerical criteria.  Finally,
-the performance measurements separate the cost of the runtime checks from the
-cost of the arithmetic kernels.  \Cref{sec:evaluation} gives the experimental
-methods and results.
-
-\subsection{Contributions}
-
-In summary, this paper makes four contributions:
+In summary, this paper makes the following contributions:
 
 \begin{itemize}
   \item \textbf{A public C interface with runtime checks
         (\Cref{sec:overview}).}
-        We place runtime checks in public wrappers around unchecked arithmetic
-        kernels.  The wrappers require no numerical preconditions from
-        callers.  On normal return, each double-word operation satisfies its
-        error bound and returns components that form a double word, while each
-        error-free transformation reconstructs the exact result.
+        We provide public functions whose runtime checks establish the
+        conditions required by their numerical guarantees.
 
   \item \textbf{Numerical guarantees over IEEE~754
         (\Cref{sec:numerics}).}
-        We extend prior mechanized analysis from an unbounded exponent range
-        to IEEE~754 arithmetic with gradual underflow and overflow.  For six
-        double-word operations, we establish error bounds and show that the
-        returned components form a double word.  For three error-free
-        transformations, we establish exact reconstruction.  The analysis
-        also defines the sufficient conditions used to design the runtime
-        checks.
+        We extend the mechanized analysis of three transformations and six
+        double-double operations to account for gradual underflow and overflow.
 
-  \item \textbf{Verification of \FenceDD
+  \item \textbf{Verification of \FenceDD{}
         (\Cref{sec:mechanization}).}
-        Using VST, we verify the public C contracts by connecting each binary64
-        C computation and its runtime checks to the corresponding numerical
-        theorem in Rocq.
+        We connect the Rocq numerical results to the binary64 C kernels and
+        verify their public contracts using VST.
 
-  \item \textbf{Evaluation of usefulness and cost
-        (\Cref{sec:evaluation}).}
-        We show that observed errors can approach the proved bounds, making
-        the bounds practically useful.  On inputs for which runtime checks in the
-        double-word wrappers stop a call, QD rarely satisfies the numerical criteria.  The checks add 2.5--11 nanoseconds
-        per call relative to the unchecked kernels.
+\item \textbf{Evaluation of usefulness and cost
+      (\Cref{sec:evaluation}).}
+      We evaluate the tightness of the error bounds, and the usefulness
+      and performance cost of the  runtime checks.
 \end{itemize}
 
 The accompanying artifact contains the C sources, Rocq development, and
