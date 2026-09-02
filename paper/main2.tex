@@ -105,12 +105,12 @@ proofs.
 
 We present \FenceDD, a verified C library containing three error-free
 transformations and six double-word operations.  Our Rocq development extends
-earlier analysis based on an unbounded exponent range to IEEE~754 arithmetic
-with overflow and gradual underflow.  VST proofs show that the C kernels
-implement the analyzed algorithms and that the runtime checks establish the
-conditions required by the numerical analysis.  On normal return, each double-word
-operation produces a valid double word within its proved error bound, while
-each error-free transformation guarantees exact reconstruction.
+earlier analysis from an unbounded exponent range to IEEE~754 arithmetic with
+overflow and gradual underflow.  VST proofs show that the C kernels implement
+the analyzed algorithms and the runtime checks establish the conditions their
+analysis requires.  On normal return, each double-double operation produces a
+valid double word within its proved error bound, while each error-free
+transformation guarantees exact reconstruction.
 
 Across tests spanning the binary64 exponent range, every double-word result
 returned normally was valid and within its proved bound.  For inputs on which
@@ -153,6 +153,7 @@ relative to the unchecked kernels.
 \input{sections/evaluation}
 \input{sections/related-work}
 \input{sections/conclusion}
+\input{sections/appendix}
 
 
 \begin{acks}
@@ -160,5 +161,4 @@ The author thanks Andrew Appel and Nate Foster for helpful discussions.
 \end{acks}
 
 \bibliography{refs}
-\input{sections/appendix}
 \end{document}

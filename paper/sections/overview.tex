@@ -50,11 +50,9 @@ struct dword {
 \end{figure}
 
 \Cref{fig:default-division-wrapper} shows
-\texttt{dw\_div\_fp}, the default public wrapper around the arithmetic kernel.
-Before invoking the kernel, it checks the conditions that must hold for the
-operands.  Afterward, it checks that the returned components are finite.  If
-either runtime check fails, the function terminates without returning a
-quotient.
+\texttt{dw\_div\_fp}, the default public wrapper.  It checks the operand
+conditions before invoking the kernel and result finiteness afterward.  Either
+failure terminates the function without a quotient.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -79,8 +77,7 @@ void dw_div_fp(
   \label{fig:default-division-wrapper}
 \end{figure}
 
-One condition tested before the kernel is invoked is that the two components
-stored in \texttt{x} form a valid double-double value.
+A runtime check confirms the validity of \texttt{x}.
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
@@ -112,9 +109,8 @@ struct dword x = {
 };
 \end{lstlisting}
 
-The object represents the unevaluated real sum $1+2^{-54}$.  The field
-\texttt{x.t} retains the correction $2^{-54}$ that is not part of the value
-stored in \texttt{x.s}.
+The object represents the unevaluated real sum $1+2^{-54}$; \texttt{x.t}
+retains the correction $2^{-54}$ absent from \texttt{x.s}.
 
 The runtime test first requires both fields to be finite and then evaluates
 \begin{lstlisting}[language=C,numbers=none]
@@ -129,19 +125,16 @@ word according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
 runtime test fails.
 \end{example}
 
-Dividend validity addresses the representation stored in \texttt{x}.  The
-remaining conditions arise from the arithmetic used to compute the quotient.
-Their purpose becomes apparent in the division kernel.
+Dividend validity addresses the representation stored in \texttt{x}; the
+remaining conditions concern quotient arithmetic.
 
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
 
-The arithmetic kernel follows Algorithm~15 of \citet{Joldes2017}.  It computes
-the quotient as a leading term and a correction.  Because the leading term
-uses only the high component of the dividend, the kernel also estimates the
-part of the represented value not accounted for by that term.  It then uses
-this residual to correct the quotient.  \Cref{fig:dw-div-fp-kernel} shows the
-C implementation.
+\Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel, which follows
+Algorithm~15 of \citet{Joldes2017}.  It computes a leading quotient from the
+high component, estimates the unaccounted part of the dividend, and uses that
+residual to correct the quotient.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]

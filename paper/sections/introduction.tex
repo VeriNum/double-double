@@ -12,19 +12,16 @@ been used to improve reproducibility in parallel climate models
 and to provide additional precision in quantum electrodynamic calculations
 \citep{HeDing2001,Aoyama2015}.
 
-Despite the apparent simplicity of the representation, using double-word
-arithmetic safely in practice requires vigilance.  As \citet{Li2002}
+Using double-word arithmetic safely requires vigilance.  As \citet{Li2002}
 described it, double-double arithmetic is ``an `attractive nuisance,' like an
 unfenced backyard swimming pool.''  The hazard is that a pair of binary64
 values is not equivalent to an ordinary wider IEEE~754 format, and arithmetic
 on the pair does not behave like arithmetic in such a format.  A basic
 operation in an IEEE~754 format computes an exact result and rounds it once.
 A double-double operation instead performs a sequence of rounded binary64
-computations.  Several algorithms can implement the same operation, and the
-resulting rounding-error bound depends on the algorithm chosen.  Whether that
-bound holds depends on conditions on the operands and intermediate results.
-Additional conditions may be required to ensure that the returned components
-form a double-double.
+computations.  The algorithm chosen determines its rounding-error bound, which
+holds only under conditions on the operands and intermediate results.  Further
+conditions may be needed for the returned components to form a double-double.
 
 We present \FenceDD, a verified C library whose public C interface enforces
 these conditions.  The library provides six double-double operations together
@@ -37,8 +34,8 @@ the exact result of the corresponding basic operation.
 \subsection{Double-Word Arithmetic and Its Numerical Guarantees}
 \label{sec:intro-double-word}
 
-To make the library's numerical guarantees precise, we formulate the analysis
-for double-word arithmetic over a generic underlying floating-point format.
+To state the guarantees, we analyze double-word arithmetic over a generic
+floating-point format.
 Double-double arithmetic is the binary64 instance of double-word arithmetic.
 A double word is a floating-point expansion with two components
 \citep{Dekker1971,Priest1991}.  Let
@@ -99,24 +96,21 @@ operation, the resulting theorem gives sufficient conditions under which the
 returned pair is a valid double word and its represented value satisfies the
 stated error bound.
 
-Conditions governing internal computations must be established before
-execution.  Result finiteness can be established in either of two
-ways: stronger conditions on the inputs can imply it before execution, or the
-returned components can be checked afterward.  Making the numerical results
-available through ordinary C calls therefore requires runtime checks that
-establish the appropriate conditions before or after the kernel call.
+Internal-computation conditions must hold before execution.  Result finiteness
+can follow from stronger input conditions or a check of the returned
+components.  Ordinary C calls therefore need runtime checks that establish
+each condition at the appropriate point.
 
 \subsection{This Work: \FenceDD}
 
-For each of the six double-double operations, \FenceDD{} provides two public
-wrappers around the same arithmetic kernel.  The default wrapper performs a
+For the six double-double operations, \FenceDD{} provides two public wrappers
+around one arithmetic kernel.  The default wrapper performs a
 weak check before execution, invokes the kernel, and then checks
 that both returned components are finite.  The strong wrapper performs a
 strong check that establishes result finiteness before execution,
-so no result check is needed afterward.  Both wrappers provide the same
-contract on normal return: the represented result
-satisfies the proved error bound, and the returned pair is a valid double word
-over binary64---that is, a valid double-double result.
+so no result check is needed afterward.  Both wrappers guarantee on normal
+return a valid double-double whose represented value satisfies the proved
+error bound.
 
 For each operation, we define in Rocq a functional model over a generic
 radix-two format and prove its numerical guarantee using Flocq.  We then use
@@ -161,9 +155,9 @@ In summary, this paper makes four contributions:
 
   \item \textbf{Verification of \FenceDD
         (\Cref{sec:mechanization}).}
-        Using VST, we verify the contracts of the public C interface by
-        connecting each binary64 C computation and its runtime checks to the
-        corresponding numerical theorem in Rocq.
+        Using VST, we verify the public C contracts by connecting each binary64
+        C computation and its runtime checks to the corresponding numerical
+        theorem in Rocq.
 
   \item \textbf{Evaluation of usefulness and cost
         (\Cref{sec:evaluation}).}
