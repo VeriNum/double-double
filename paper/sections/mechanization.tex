@@ -72,7 +72,7 @@ condition is false.
 
 For the wrapper proofs, we combine kernel refinement, check soundness, and the
 numerical theorem for the default wrapper in
-\Cref{fig:default-division-wrapper} and the strong wrapper described in
+\Cref{fig:default-division-wrapper} and the alternative wrapper described in
 \Cref{sec:overview-strong-check}.
 
 \input{figures/dw-div-fp-vst-spec}
@@ -90,7 +90,7 @@ For the default wrapper, a successful weak check establishes
 $\mathcal{I}_{\mathrm{div}}$, kernel refinement identifies the computed pair
 with \DWDivFP{}, and the result check establishes
 $\mathcal{F}_{\mathrm{div}}$.  These facts satisfy the first alternative in
-\Cref{cor:dw-div-conditions}.  For the strong wrapper, the strong check
+\Cref{cor:dw-div-conditions}.  For the alternative wrapper, the strong check
 establishes $\mathcal{S}_{\mathrm{div}}$, which implies result finiteness and
 satisfies the second alternative.  Thus, both wrappers provide the same
 contract even though they establish its numerical conditions differently.

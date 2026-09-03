@@ -18,8 +18,8 @@ They therefore provide roughly twice the relative precision where the
 relative term dominates and a small absolute error near the smallest
 representable values.
 
-For each double-word operation, the default and strong wrappers provide
-the same contract on normal return.  The strong wrapper uses a
+For each double-word operation, the default and alternative wrappers provide
+the same contract on normal return.  The alternative wrapper uses a
 strong check to establish result finiteness before execution.
 The default wrapper uses a weak check before execution and checks
 result finiteness afterward, allowing its runtime checks to succeed for more
@@ -29,7 +29,7 @@ Across \RQOneNormalReturnCount{} results produced by accepted calls, the largest
 fractions of the proved bounds are \RQOneRelativeMaximumRatio{} in
 the relative region and \RQOneAbsoluteMaximumRatio{} in the absolute region.
 On inputs associated with calls rejected by runtime checks in the default and
-strong wrappers, using QD we obtain a finite double-double result whose
+alternative wrappers, using QD we obtain a finite double-double result whose
 observed error is no greater than the
 corresponding \FenceDD{} error bound in
 \RQTwoDefaultQDWithinPercent{} and \RQTwoStrongQDWithinPercent{} of cases,

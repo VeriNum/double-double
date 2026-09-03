@@ -151,8 +151,7 @@ pair reconstructs the MPFR reference exactly.
 For the six double-word operations, we examine failed checks in the default
 and alternative wrappers separately.  These populations overlap: every call
 stopped in a default wrapper is also stopped in the corresponding alternative
-wrapper.  We calculate percentages separately using the number of rejected
-calls in each population.  They describe the generated tests, which contain
+wrapper.  The percentages describe the generated tests, which contain
 the same number of inputs at each exponent, and are not estimates of rejection
 rates in application workloads.
 
@@ -205,9 +204,9 @@ boundary tests in \Cref{app:evaluation-details}.
 On the timing tests, we find that the wrappers have only a few nanoseconds per
 call of overhead, although this represents a noticeable relative cost because
 the unchecked kernels are small.  The relative performance of the default and
-strong wrappers depends on the compiler.
+alternative wrappers depends on the compiler.
 
-To address RQ3, we time the default and strong wrappers for the six
+To address RQ3, we time the default and alternative wrappers for the six
 double-word operations and the wrapper for each of the three error-free
 transformations.
 Each timing test uses \RQThreeInputCount{} inputs with operand exponents
@@ -229,7 +228,7 @@ timing procedure in
   Wrapper/Kernel is the ratio to the unchecked kernel and Added is the paired
   difference in nanoseconds per call.  Under Clang, Wrapper/QD is the ratio to
   QD.  Entries are medians [interquartile ranges] over paired trials.  Results
-  for the strong wrappers appear in
+  for the alternative wrappers appear in
   \Cref{tab:rq3-performance-detail}.}
   \label{tab:rq3-performance}
   \centering
@@ -252,14 +251,14 @@ CompCert, we measure default wrapper/kernel ratios of
 \RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} and
 added times of
 \RQThreeDefaultMinimumAddedTime{}--\RQThreeDefaultMaximumAddedTime{}
-nanoseconds per call.  For the strong wrappers, we measure ratios of
+nanoseconds per call.  For the alternative wrappers, we measure ratios of
 \RQThreeStrongMinimumKernelRatio{}--\RQThreeStrongMaximumKernelRatio{} and
 added times of
 \RQThreeStrongMinimumAddedTime{}--\RQThreeStrongMaximumAddedTime{}
 nanoseconds.  The added times for wrappers of error-free transformations are
 \RQThreeTransformationMinimumAddedTime{}--\RQThreeTransformationMaximumAddedTime{}
 nanoseconds.  With Clang, the default wrapper/QD ratios are
-\RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{}.  The strong
+\RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{}.  The alternative
 wrappers are faster than the default wrappers for four operations under
 CompCert but slower for all six under Clang, so their relative ordering depends
 on the compiler.
