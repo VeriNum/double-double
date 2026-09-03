@@ -100,54 +100,18 @@ In \FenceDD, the components $x_h$ and $x_\ell$ are stored in the
 fields \texttt{s} and \texttt{t} of \texttt{struct dword}, shown in
 \Cref{fig:dword-struct}.
 
-The structure stores the two components but does not enforce the relation
-between them.  Because the numerical guarantee requires a double-word
-dividend, the default wrapper tests this relation before calling the arithmetic
-kernel.  The following example illustrates the represented value and the
-corresponding runtime test.
-
-\begin{example}[Checking a \texttt{struct dword}]
-\label[example]{ex:struct-dword}
-The following object stores the binary64 values $1$ and $2^{-54}$:
-
-\begin{lstlisting}[
-  language=C,
-  xleftmargin=1.5em,
-  framexleftmargin=1.2em,
-  framexrightmargin=3pt
-]
-struct dword x = {
-    .s = 1.0,
-    .t = 0x1p-54
-};
-\end{lstlisting}
-
-The object represents the unevaluated real sum $1+2^{-54}$; \texttt{x.t}
-retains the correction $2^{-54}$ absent from \texttt{x.s}.
-
-The runtime test first requires both fields to be finite and then evaluates
-\begin{lstlisting}[language=C,numbers=none]
-x->s == x->s + x->t
-\end{lstlisting}
-using binary64 arithmetic.  Under rounding to nearest with ties to even,
-$1+2^{-54}$ rounds to $1$, so the comparison succeeds.  As shown in
-\Cref{sec:check-soundness}, this comparison together with the finiteness tests
-establishes \Cref{eq:dw-representation}; the pair therefore forms a
-double-double according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
-\texttt{0x1p-52} makes the computed sum differ from \texttt{x.s}, so the
-runtime test fails.
-\end{example}
-
-This test establishes the required representation of the dividend.  The other
-conditions arise from the quotient computations inside the arithmetic kernel.
+A \texttt{struct dword} can store any pair of binary64 values, so the C type
+alone does not enforce \Cref{eq:dw-representation}.  The default wrapper tests
+this relation before passing the operand to the arithmetic kernel.
 
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
 
-\Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel.  It computes a leading
+\Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel
+\texttt{dw\_div\_fp\_kernel}.  It computes a leading
 quotient from the high component, estimates the part of the dividend not
 accounted for by that quotient, and uses the residual to correct the result.
-Both division wrappers call this kernel, which performs no runtime checks.  The
+The default wrapper calls this kernel, which itself performs no runtime checks.  The
 kernel follows Algorithm~15 of \citet{Joldes2017}.
 
 \begin{figure}[t]
@@ -183,16 +147,13 @@ Lines~11--12 compute the leading quotient and its corresponding rounded
 product and correction.  Lines~13--16 subtract this product from the value
 represented by the dividend and divide the resulting residual by \texttt{y}
 to obtain the quotient correction.  Line~17 combines the leading term and
-correction into the returned pair.  The runtime checks surrounding the kernel
-establish the conditions under which the numerical theorem applies to these
-computations.
+correction into the returned pair.
 
 \subsection{Runtime Checks before and after Kernel Execution}
 \label{sec:overview-post-check}
 
-The default wrapper places these checks on either side of the kernel call.  Its
-weak check establishes the required operand conditions before execution, and
-its result check establishes finiteness afterward.
+The default wrapper performs a weak check on the operands before calling the
+kernel and checks the returned components for finiteness afterward.
 
 \paragraph{Before kernel execution.}
 Line~4 of \Cref{fig:default-division-wrapper} invokes the
@@ -227,9 +188,6 @@ int dw_div_fp_weak_check(
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
-The check first establishes the required representation of the stored
-dividend and stops the call early on nonfinite operands.  It then applies the
-lower-bound test required by the internal product reconstruction.
 Lines~4--6 use \texttt{isfinite\_\allowbreak double}, defined together with
 \texttt{isfinite\_\allowbreak dword} in \Cref{fig:finite-checks}.
 
@@ -259,12 +217,49 @@ int isfinite_dword(
 Under strict IEEE~754 semantics, $x-x$ is zero when $x$ is finite and NaN
 when $x$ is an infinity or NaN.  Because a comparison with NaN is false,
 \texttt{isfinite\_\allowbreak double} returns $1$ exactly when its argument is finite.
-Lines~8--9 combine these tests with the comparison illustrated in
-\Cref{ex:struct-dword}.  The operand finiteness tests are included to stop
-calls involving infinities or NaNs before kernel execution; they are not
-required by the weak mathematical condition itself.
+The operand finiteness tests are included to stop calls involving infinities or
+NaNs before kernel execution; they are not required by the weak mathematical
+condition itself.
 
-The check permits either $x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$, the
+Lines~8--9 combine these finiteness tests with the comparison
+\texttt{x->s + x->t == x->s} to check
+\Cref{eq:dw-representation}.  The following example shows how this comparison
+acts on a concrete \texttt{struct dword}.
+
+\begin{example}[Checking a \texttt{struct dword}]
+\label[example]{ex:struct-dword}
+The following object stores the binary64 values $1$ and $2^{-54}$:
+
+\begin{lstlisting}[
+  language=C,
+  xleftmargin=1.5em,
+  framexleftmargin=1.2em,
+  framexrightmargin=3pt
+]
+struct dword x = {
+    .s = 1.0,
+    .t = 0x1p-54
+};
+\end{lstlisting}
+
+The object represents the unevaluated real sum $1+2^{-54}$; \texttt{x.t}
+retains the correction $2^{-54}$ absent from \texttt{x.s}.
+
+The runtime test first requires both fields to be finite and then evaluates
+\begin{lstlisting}[language=C,numbers=none]
+x->s == x->s + x->t
+\end{lstlisting}
+using binary64 arithmetic.  Under rounding to nearest with ties to even,
+$1+2^{-54}$ rounds to $1$, so the comparison succeeds.  As shown in
+\Cref{sec:check-soundness}, this comparison together with the finiteness tests
+establishes \Cref{eq:dw-representation}; the pair therefore forms a
+double-double according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} with
+\texttt{0x1p-52} makes the computed sum differ from \texttt{x.s}, so the
+runtime test fails.
+\end{example}
+
+Lines~11--13 impose the remaining operand condition.  The check permits either
+$x_h=0$ or $|x_h|\geq2^{-968}$.  When $x_h=0$, the
 fact that $(x_h,x_\ell)$ is a double word implies $x_\ell=0$.  For nonzero $x_h$, \cref{sec:division-numerics}
 shows that the lower bound supports Line~12 of \cref{fig:dw-div-fp-kernel}.
 
