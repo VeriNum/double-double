@@ -113,14 +113,9 @@ return, each double-double operation produces a double-double within its proved
 error bound, while each error-free transformation guarantees exact
 reconstruction.
 
-Across tests spanning the binary64 exponent range, every result returned
-normally was a double-double within its proved bound.  For inputs on which
-a runtime check in a default public function failed, the QD double-double
-library returned a finite double-double within the corresponding bound in only
-\RQTwoDefaultQDWithinPercent{} of cases.
-When compiled with CompCert, the runtime checks added
-\RQThreeMinimumAddedTime{}--\RQThreeMaximumAddedTime{} nanoseconds per call
-relative to the unchecked kernels.
+Our evaluation shows that the proved bounds can be approached in practice and
+that runtime checks usually stop calls for which QD does not satisfy the same
+numerical properties.
 \end{abstract}
 
 \begin{CCSXML}
