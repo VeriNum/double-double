@@ -1,46 +1,28 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We present \FenceDD, a verified library of double-double arithmetic.  For each
-ordinary C call that returns normally, we prove that the result satisfies the
-stated error bound and is a double-double.
+We present \FenceDD, a verified C library for double-double arithmetic.
+Through its ordinary C interface, a double-word operation that returns
+normally produces a double-double satisfying its proved error bound, while an
+error-free transformation that returns normally reconstructs its exact result.
 
 Our numerical analysis extends the results of \citet{Joldes2017}, mechanized
-in FLX by \citet{Rideau2022}, which assume that underflow and overflow do not
-occur.  Building on results for error-free transformations near
-underflow \citep{BoldoDaumas2003,Boldo2017}, we carry the analysis through the
-double-word algorithms and prove their guarantees under IEEE~754
-semantics.  Addition retains a relative error bound proportional to the square
-of the unit roundoff even when gradual underflow occurs.  Multiplication and
-division instead satisfy mixed bounds that combine such a relative term with
-an absolute term proportional to the smallest positive representable value.
-They therefore provide roughly twice the relative precision where the
-relative term dominates and a small absolute error near the smallest
-representable values.
+by \citet{Rideau2022}, from an unbounded exponent range to IEEE~754
+arithmetic.  Building on results for individual transformations near
+underflow \citep{BoldoDaumas2003,Boldo2017}, we carry underflow errors through
+the complete double-word operations and identify conditions that ensure finite
+results.  Addition retains a relative
+error bound proportional to the square of the unit roundoff under gradual
+underflow.  Multiplication and division instead require mixed bounds whose
+absolute terms account for errors near the smallest representable values.
 
-For each double-word operation, the default and alternative wrappers provide
-the same contract on normal return.  The alternative wrapper uses a
-strong check to establish result finiteness before execution.
-The default wrapper uses a weak check before execution and checks
-result finiteness afterward, allowing its runtime checks to succeed for more
-inputs.  Each error-free transformation has one wrapper.
-
-Across \RQOneNormalReturnCount{} results produced by accepted calls, the largest
-fractions of the proved bounds are \RQOneRelativeMaximumRatio{} in
-the relative region and \RQOneAbsoluteMaximumRatio{} in the absolute region.
-On inputs associated with calls rejected by runtime checks in the default and
-alternative wrappers, using QD we obtain a finite double-double result whose
-observed error is no greater than the
-corresponding \FenceDD{} error bound in
-\RQTwoDefaultQDWithinPercent{} and \RQTwoStrongQDWithinPercent{} of cases,
-respectively; on inputs associated with rejected calls to the wrappers
-for \FastTwoSum{} and \FastTwoMult{}, we obtain exact reconstructions using
-QD in only
-\RQTwoFastSumExactPercent{} and \RQTwoFastMultExactPercent{} of cases.  The
-wrappers take
-\RQThreeMinimumKernelRatio{}--\RQThreeMaximumKernelRatio{} times as long as
-their unchecked kernels and
-\RQThreeMinimumQDRatio{}--\RQThreeMaximumQDRatio{} times as long as QD.
+In our evaluation, the largest observed errors reached $0.87$ of their proved
+bound when the relative term dominated and $0.56$ when the absolute term
+dominated.  For inputs on which runtime checks stopped calls to double-word
+operations, QD produced a result satisfying the corresponding numerical
+properties in at most $6.1\%$ of cases; exact reconstruction was similarly
+rare for transformation calls stopped by runtime checks.  Relative to the
+unchecked kernels, the wrappers added $2.5$--$11$ nanoseconds per call.
 Together, these results show that proved numerical guarantees for double-word
-arithmetic can be provided through a C interface over a useful range of
-inputs.
+arithmetic can be provided through an ordinary C interface at modest absolute
+cost.
