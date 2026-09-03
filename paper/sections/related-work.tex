@@ -36,15 +36,17 @@ renormalization, or addition networks.  We study fixed two-component
 representations, cover addition, multiplication, and division, and connect
 their numerical properties to a verified C interface.
 
-Several systems support machine-checked floating-point error analysis.  Gappa
-automates numerical bounds and can generate proofs checked in Coq
-\citep{deDinechin2011}; FloVer checks certificates for error bounds in Coq and
-HOL4 \citep{Becker2018}; and \citet{Roux2016} formalizes general techniques for
-proving rounding-error bounds.  Other projects connect such numerical results
-to C program proofs.  The original VCFloat connects the analysis of
-floating-point C expressions with Coq proofs \citep{Ramananandro2016}, while
-VCFloat2 supplies floating-point types and operations together with a bridge
-to CompCert \citep{AppelKellison2024}.  Layered developments combine VST
+Researchers can conduct machine-checked floating-point error analysis with
+several systems.  They can use Gappa to automate numerical bounds and generate
+proofs checked in Coq \citep{deDinechin2011}.  They can use FloVer to check
+error-bound certificates in Coq and HOL4 \citep{Becker2018}.
+\citet{Roux2016} formalizes general techniques for proving rounding-error
+bounds.  In other projects, researchers connect such numerical results to C
+program proofs.  Researchers can connect the analysis of floating-point C
+expressions with Coq proofs using the original VCFloat
+\citep{Ramananandro2016}.  Floating-point types and operations together with a
+bridge to CompCert are available in VCFloat2 \citep{AppelKellison2024}.
+Layered developments combine VST
 proofs of C programs with separate proofs of their numerical properties
 \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.  We use
 VCFloat2 for the types used by the functional models, IEEE~754 operations, and
@@ -52,8 +54,9 @@ CompCert bridge within this layered proof structure, but additionally verify C r
 checks that establish the conditions of the numerical theorems.  The resulting
 public contracts require no numerical precondition from the caller.
 
-The QD library provides practical double-double and quad-double arithmetic
-using algorithms developed by \citet{Hida2001} from techniques introduced by
+Practical double-double and quad-double arithmetic is available in the QD
+library through algorithms developed by \citet{Hida2001} from techniques
+introduced by
 \citet{Dekker1971} \citep{QD}.  We use QD as a comparison implementation in
 \Cref{sec:evaluation}, not as a correctness oracle.  Unlike an ordinary call
 to QD, every normally returning call to one of our public wrappers has a

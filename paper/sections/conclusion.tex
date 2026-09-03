@@ -1,10 +1,9 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented \FenceDD, a verified library of double-double arithmetic that
-provides machine-checked numerical guarantees through ordinary C calls: on
-normal return, the result satisfies the proved error bound and is a
-double-double.
+We present \FenceDD, a verified library of double-double arithmetic.  For each
+ordinary C call that returns normally, we prove that the result satisfies the
+stated error bound and is a double-double.
 
 Our numerical analysis extends the results of \citet{Joldes2017}, mechanized
 in FLX by \citet{Rideau2022}, which assume that underflow and overflow do not
@@ -27,17 +26,18 @@ result finiteness afterward, allowing its runtime checks to succeed for more
 inputs.  Each error-free transformation has one wrapper.
 
 Across \RQOneNormalReturnCount{} results produced by accepted calls, the largest
-fractions of the proved bounds were \RQOneRelativeMaximumRatio{} in
+fractions of the proved bounds are \RQOneRelativeMaximumRatio{} in
 the relative region and \RQOneAbsoluteMaximumRatio{} in the absolute region.
 On inputs associated with calls rejected by runtime checks in the default and
-strong wrappers, QD
-returned a finite double-double result with observed error no greater than the
+strong wrappers, using QD we obtain a finite double-double result whose
+observed error is no greater than the
 corresponding \FenceDD{} error bound in
 \RQTwoDefaultQDWithinPercent{} and \RQTwoStrongQDWithinPercent{} of cases,
 respectively; on inputs associated with rejected calls to the wrappers
-for \FastTwoSum{} and \FastTwoMult{}, QD reconstructed the exact result in only
+for \FastTwoSum{} and \FastTwoMult{}, we obtain exact reconstructions using
+QD in only
 \RQTwoFastSumExactPercent{} and \RQTwoFastMultExactPercent{} of cases.  The
-wrappers took
+wrappers take
 \RQThreeMinimumKernelRatio{}--\RQThreeMaximumKernelRatio{} times as long as
 their unchecked kernels and
 \RQThreeMinimumQDRatio{}--\RQThreeMaximumQDRatio{} times as long as QD.

@@ -2,8 +2,8 @@
 \label{sec:intro}
 
 Numerical software sometimes needs more precision than a single hardware
-floating-point value provides.  Libraries such as MPFR
-provide arithmetic at arbitrary precision \citep{Fousse2007}; when roughly
+floating-point value provides.  Arbitrary-precision arithmetic is available
+through libraries such as MPFR \citep{Fousse2007}; when roughly
 twice the precision of binary64 is sufficient, double-double arithmetic offers
 a faster alternative.  A double-double value is represented by two binary64
 components.  Double-double arithmetic and the more general technique of
@@ -30,7 +30,7 @@ squaring $x=(a,0)$, where
 \[
   a=2^{-515}(1+2^{-52}).
 \]
-QD's double-double multiplication returns $(2^{-1030},0)$, although
+Using QD, we obtain $(2^{-1030},0)$, although
 \[
   a^2=2^{-1030}+2^{-1081}+2^{-1134}.
 \]
@@ -60,8 +60,8 @@ underflow is absent.  Near the upper end of binary64, overflow presents a
 different problem: an intermediate computation can produce an infinity or
 NaN, for which no error bound over real values applies.
 
-We present \FenceDD{}, a verified C library for double-double arithmetic that
-accounts for both ends of the exponent range.  The library provides six
+We present \FenceDD{}, a verified C library for double-double arithmetic over
+both ends of the exponent range.  In the library, we implement six
 double-double operations covering addition, multiplication, and division,
 each with either a binary64 or double-double second operand.  Their
 implementations use three error-free transformations: \TwoSum{},
@@ -72,22 +72,22 @@ operations, we prove that the returned components form a double word and
 establish relative error bounds for addition and mixed relative and absolute
 bounds for multiplication and division.
 
-We verify the library in Rocq.  Our numerical development extends prior
+We verify the library in Rocq.  In the numerical development, we extend prior
 mechanized analyses from arithmetic with an unbounded exponent range to
-IEEE~754 arithmetic.  The public C functions use runtime checks to establish
-the conditions required by these numerical results.  Using the Verified
+IEEE~754 arithmetic.  We use runtime checks in the public C functions to
+establish the conditions required by these numerical results.  Using the Verified
 Software Toolchain (VST) \citep{Appel2014}, we prove that the C kernels implement the analyzed
 algorithms and that their public contracts provide the proved guarantees on
 normal return.
 
 Our evaluation shows that the numerical guarantees and runtime checks are
 useful in practice.  Across tests spanning the binary64 exponent range, the
-largest observed error reached $0.87$ of its proved bound.  For inputs on which
-runtime checks stopped a call, QD produced a
-result satisfying the corresponding numerical properties in only $5.4\%$ of
-double-double cases and fewer than $0.5\%$ of error-free transformation cases.  The
-runtime checks added 2.5--11 nanoseconds per call relative to the unchecked
-kernels.
+largest observed error reaches $0.87$ of its proved bound.  For inputs on which
+runtime checks stop a call, we obtain a result satisfying the
+corresponding numerical properties using QD in only $5.4\%$ of
+double-double cases and fewer than $0.5\%$ of error-free transformation cases.
+We measure 2.5--11 nanoseconds per call of runtime-check overhead relative to
+the unchecked kernels.
 
 In summary, this paper makes the following contributions:
 

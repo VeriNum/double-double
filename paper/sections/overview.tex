@@ -23,7 +23,7 @@
 
 The public C interface must establish the conditions required by the
 numerical theorems while presenting ordinary functions to callers.  We
-illustrate how \FenceDD{} does so using division of a double-double value by
+illustrate our approach in \FenceDD{} using division of a double-double value by
 a binary64 value.  The two public functions call the same arithmetic kernel:
 the default function checks result finiteness afterward, whereas the
 alternative establishes it before kernel execution.
@@ -99,7 +99,7 @@ of two values $x_h,x_\ell\in\mathbb{F}$ such that
 \end{equation}
 \end{definition}
 
-\FenceDD{} uses the binary64 instance of this definition.  The high and low
+In \FenceDD{}, we use the binary64 instance of this definition.  The high and low
 words of a double-double value are stored in the fields \texttt{s} and
 \texttt{t} of \Cref{fig:dword-struct}.
 
@@ -355,21 +355,21 @@ double-double according to \Cref{def:double-word}.
 \subsection{Operations and Guarantees of \FenceDD}
 \label{sec:overview-library-guarantees}
 
-The two division wrappers illustrate the form of the contract provided for
+The two division wrappers illustrate the form of the contract we prove for
 each double-word operation in \FenceDD.  \Cref{tab:operation-preview}
 places division alongside the other available operations and summarizes the
 accuracy guarantee provided when a wrapper returns normally.
 
 \begin{table}[b]
 \centering
-\caption{Normal-return accuracy guarantees provided by \FenceDD.  Here
+\caption{Normal-return accuracy guarantees we prove for \FenceDD.  Here
 $a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
 double-double operands, $r$ is the exact result, and
 $\widehat r=z_h+z_\ell$ is the value represented by the returned pair.  For
 binary64, the unit roundoff is $u=2^{-53}$ and the smallest positive
 subnormal value is $\eta=2^{-1074}$.  Every returned pair is also a
 double-double.}
-\Description{The operations provided by FenceDD, their exact real
+\Description{The operations available in FenceDD, their exact real
 results, and their accuracy guarantees when a wrapper returns normally.}
 \label{tab:operation-preview}
 \setlength{\tabcolsep}{3pt}

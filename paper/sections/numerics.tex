@@ -3,13 +3,13 @@
 
 Each algorithm has a pure functional model over a generic radix-two format.
 The model defines the returned pair whose numerical properties we prove.  We
-present these models mathematically, omitting their Rocq definitions.  The
-definitions use the floating-point types and IEEE~754 operations supplied by
+present these models mathematically, omitting their Rocq definitions.  We
+define them using the floating-point types and IEEE~754 operations from
 VCFloat2, together with Flocq's binary floating-point representation.
 
 For each model, we compare the value represented by its returned pair with the
 corresponding exact real result and prove that the pair forms a double word.
-All results stated in this section are mechanized in Rocq.  We give a detailed
+We mechanize all results stated in this section using Rocq.  We give a detailed
 proof sketch for division of a double word by a floating-point value as a
 representative case.  For the remaining operations, we present the proof ideas
 that differ from this case and cite results inherited from earlier analyses.
@@ -55,8 +55,8 @@ $\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
 $\operatorname{RN}_{\mathrm{FLT}}$ denote round-to-nearest, ties-to-even in
-the two formats.  Flocq proves that the rounded values agree when the exact
-value lies in the normal range:
+the two formats.  Using a theorem from Flocq, we establish that the rounded
+values agree when the exact value lies in the normal range:
 \begin{equation}
   |x|\geq\nu
   \quad\Longrightarrow\quad
@@ -67,8 +67,9 @@ value lies in the normal range:
 Below $\nu$, the required rounding property must instead be established
 directly in FLT.
 
-FLT models the lower exponent bound but, like FLX, has no upper exponent
-bound.  Relating an IEEE~754 operation to FLT rounding therefore also requires
+We use FLT to model the lower exponent bound; neither FLT nor FLX has an upper
+exponent bound.  Relating an IEEE~754 operation to FLT rounding therefore also
+requires
 the relevant operands and rounded result to be finite.  Once their finiteness
 is established, the real value of the IEEE~754 result agrees with the
 corresponding FLT rounding.
@@ -76,8 +77,8 @@ corresponding FLT rounding.
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
 
-The double-word algorithms use transformations that return a rounded sum or
-product together with a correction.
+The double-word algorithms use error-free transformations that return a
+rounded sum or product together with a correction.
 
 \begin{definition}[Error-free result]
 \label[definition]{def:error-free-result}
@@ -175,8 +176,9 @@ $r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
 
 We use the forms and names given by
 \citet[Algorithms~1--3]{Joldes2017}.  \TwoSum{} is due to Knuth;
-\FastTwoSum{} and the original product transformation are due to Dekker
-\citep{Knuth1997,Dekker1971}.  These transformations are standard tools in
+\FastTwoSum{} and the original error-free transformation for products are due
+to Dekker \citep{Knuth1997,Dekker1971}.  These error-free transformations are
+standard tools in
 accurate floating-point computation \citep{Ogita2005}.
 
 Every error-free result also forms a double word, since
@@ -293,8 +295,8 @@ $y$, the exact quotient is
   \label{eq:dw-div-exact-quotient}
 \end{equation}
 \endgroup
-The Rocq function \DWDivFP{} formalizes this method over a generic underlying
-format.  \Cref{alg:dw-div-fp} gives its mathematical definition; each
+We formalize this method over a generic underlying format as the Rocq function
+\DWDivFP{}.  \Cref{alg:dw-div-fp} gives its mathematical definition; each
 $\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
 
 \begin{figure}[t]
@@ -480,9 +482,9 @@ Suppressing the common arguments $(x_h,x_\ell,y)$, define
 \end{definition}
 
 The condition $\mathcal{I}_{\mathrm{div}}$ permits subnormal $q_0$.  Explicit
-finiteness requirements remain necessary because the real interpretation in
-Rocq maps infinities and NaNs to zero, so real inequalities alone do not
-establish finiteness.
+finiteness requirements remain necessary because, in the real interpretation
+we define using Rocq, we map infinities and NaNs to zero.  Real inequalities
+alone therefore do not establish finiteness.
 
 \begin{lemma}[Finiteness from the stronger input condition]
 \label[lemma]{lem:dw-div-safe-implies-finite}

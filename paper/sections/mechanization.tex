@@ -4,10 +4,10 @@
 The numerical theorems in \Cref{sec:numerics} concern functional models,
 whereas users call the public C wrappers presented in \Cref{sec:overview}.
 We connect these levels by proving three facts: each arithmetic kernel
-implements its functional model,
-successful runtime checks establish the mathematical conditions required by
-the numerical theorem, and each wrapper composes these results into its public
-contract.  This structure follows earlier layered verifications of numerical
+implements its functional model, successful runtime checks establish the
+mathematical conditions required by the numerical theorem, and we can compose
+these results to prove each wrapper's public contract.  This structure follows
+earlier layered verifications of numerical
 C programs \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
 We illustrate it using division of a double word by a binary64 value; the
 remaining operations follow the same structure.
@@ -19,19 +19,18 @@ The numerical theorem in \Cref{thm:dw-div-fp-numerical} concerns
 \DWDivFP{}, while the wrappers call the C kernel in
 \Cref{fig:dw-div-fp-kernel}.  Suppose that \texttt{x} initially stores
 $(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
-\texttt{z} storing $(z_h,z_\ell)$.  The VST refinement proof establishes
+\texttt{z} storing $(z_h,z_\ell)$.  Using VST, we prove
 \begin{equation}
   (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y),
   \label{eq:dw-div-fp-kernel-refinement}
 \end{equation}
 where \DWDivFP{} is instantiated with binary64.
 
-The functional models use the types and IEEE~754 operations supplied by
-VCFloat2.  Its \texttt{FPCompCert} library relates them to the CompCert
-operations used by VST \citep{AppelKellison2024}.  Bridge lemmas for the
-CompCert operations and the VST specifications of the error-free transformation
-kernels
-establish \Cref{eq:dw-div-fp-kernel-refinement}.  This refinement identifies
+We define the functional models with IEEE~754 types and operations from
+VCFloat2.  Using \texttt{FPCompCert}, we relate them to the CompCert operations
+in the VST proof \citep{AppelKellison2024}.  To prove
+\Cref{eq:dw-div-fp-kernel-refinement}, we combine CompCert bridge lemmas with
+VST specifications for the error-free transformation kernels.  This refinement identifies
 the computed pair but requires no numerical condition and proves no error
 bound.  We prove an analogous result for every arithmetic kernel in the
 library.
@@ -39,9 +38,9 @@ library.
 \subsection{Runtime Checks Establish the Mathematical Conditions}
 \label{sec:check-soundness}
 
-The VST specifications of the weak and strong checks in
+Using the VST specifications of the weak and strong checks in
 \Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check} and the finiteness check
-in \Cref{fig:finite-checks} connect their C return values to the predicates in
+in \Cref{fig:finite-checks}, we connect their C return values to the predicates in
 \Cref{sec:division-conditions}.
 
 \begin{theorem}[Soundness of the division checks]
@@ -71,7 +70,7 @@ condition is false.
 \subsection{Verified Contracts for the Division Wrappers}
 \label{sec:division-wrapper-contracts}
 
-The wrapper proofs combine kernel refinement, check soundness, and the
+For the wrapper proofs, we combine kernel refinement, check soundness, and the
 numerical theorem for the default wrapper in
 \Cref{fig:default-division-wrapper} and the strong wrapper described in
 \Cref{sec:overview-strong-check}.
@@ -107,13 +106,13 @@ Floating-point exceptions are nontrapping, which allows the default wrapper to
 reach the result check on Line~9 of \Cref{fig:default-division-wrapper} when
 the kernel produces an infinity or NaN \citep{IEEE754-2019}.
 The verified functions call \texttt{fma}, \texttt{fabs}, \texttt{ldexp}, and
-\texttt{exit}.  Their VST specifications provide the behavior used in the
-proofs, but the platform implementations of these functions and the
+\texttt{exit}.  In the proofs, we use the behavior described by their VST
+specifications, but the platform implementations of these functions and the
 floating-point hardware are outside the verification boundary
 \citep{Appel2023VSTlib}.
 
-VST establishes the contracts at the C level.  When the library is compiled
-with CompCert, semantic preservation extends these results to the generated
-assembly \citep{Leroy2009,Boldo2013CompCert}.  Compilation with another
+We prove the C-level contracts using VST.  For a CompCert build, we apply
+semantic preservation to carry these results to assembly
+\citep{Leroy2009,Boldo2013CompCert}.  Compilation with another
 compiler is not covered by this result and must independently preserve the
 required IEEE~754 semantics.
