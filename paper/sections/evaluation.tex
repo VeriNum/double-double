@@ -93,7 +93,7 @@ divide the QD error by $B(r)$ only to place the observed errors from QD and
 \FenceDD{} on a common scale, and we report nonfinite results obtained using QD
 separately.
 
-\begin{table}[t]
+\begin{table}[tbp]
   \caption{RQ1: Mean and maximum proportions $\rho$ of the \FenceDD{} error
   bound used by the observed errors.  Share is the percentage of results for
   which the indicated term dominates.  For QD, $\rho$ provides a common
@@ -132,7 +132,6 @@ boundary cases.  We observed similar errors using QD for several operations,
 although
 one multiplication result exceeds the common comparison scale by $3.8\%$.
 
-\FloatBarrier
 \subsection{Usefulness of the Wrappers (RQ2)}
 
 On the generated tests, we find that the wrappers are useful: when a runtime
@@ -155,7 +154,7 @@ wrapper.  The percentages describe the generated tests, which contain
 the same number of inputs at each exponent, and are not estimates of rejection
 rates in application workloads.
 
-\begin{table}[t]
+\begin{table}[tbp]
   \caption{RQ2: QD results on inputs for which a runtime check stops a
   \FenceDD{} call.  The Calls stopped column gives the denominator for the two percentage
   columns.  For double-word operations, a result obtained using QD satisfies
@@ -198,7 +197,6 @@ $0.25\%$ and $0.48\%$ of cases, respectively.
 We record where the two wrappers differ and the results of the targeted
 boundary tests in \Cref{app:evaluation-details}.
 
-\FloatBarrier
 \subsection{Performance Cost of the Wrappers (RQ3)}
 
 On the timing tests, we find that the wrappers have only a few nanoseconds per
@@ -221,7 +219,7 @@ of the runtime checks.  We record compiler versions, options, and the complete
 timing procedure in
 \Cref{app:evaluation-timing}.
 
-\begin{table}[t]
+\begin{table}[tbp]
   \caption{RQ3: Performance of the default wrappers for the six double-word
   operations and the wrappers for the three error-free transformations.  Under
   CompCert,

@@ -1,4 +1,27 @@
 \appendix
+\begin{table*}[t]
+  \caption{Detailed RQ3 measurements.  Under CompCert, Time and Kernel are the
+  wrapper and unchecked kernel times in nanoseconds per call; Ratio is
+  Time/Kernel.  Under Clang, QD is the QD time and Ratio is Time/QD.  Entries
+  are medians [interquartile ranges] over paired trials.  A dash denotes the
+  single public wrapper for an error-free transformation.}
+  \label{tab:rq3-performance-detail}
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}llrrrrrr@{}}
+    \toprule
+    & & \multicolumn{3}{c}{CompCert}
+    & \multicolumn{3}{c}{Clang} \\
+    \cmidrule(lr){3-5}\cmidrule(l){6-8}
+    Operation & Wrapper
+      & Time & Kernel & Ratio
+      & Time & QD & Ratio \\
+    \midrule
+    \input{generated/rq3_combined_rows}\\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
 \section{Evaluation Details}
 \label{app:evaluation-details}
 
@@ -84,26 +107,4 @@ We report the individual timing measurements and results for the alternative
 wrappers in \Cref{tab:rq3-performance-detail}, supplementing the summary in
 \Cref{tab:rq3-performance}.
 
-\begin{table*}[t]
-  \caption{Detailed RQ3 measurements.  Under CompCert, Time and Kernel are the
-  wrapper and unchecked kernel times in nanoseconds per call; Ratio is
-  Time/Kernel.  Under Clang, QD is the QD time and Ratio is Time/QD.  Entries
-  are medians [interquartile ranges] over paired trials.  A dash denotes the
-  single public wrapper for an error-free transformation.}
-  \label{tab:rq3-performance-detail}
-  \centering
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}llrrrrrr@{}}
-    \toprule
-    & & \multicolumn{3}{c}{CompCert}
-    & \multicolumn{3}{c}{Clang} \\
-    \cmidrule(lr){3-5}\cmidrule(l){6-8}
-    Operation & Wrapper
-      & Time & Kernel & Ratio
-      & Time & QD & Ratio \\
-    \midrule
-    \input{generated/rq3_combined_rows}\\
-    \bottomrule
-  \end{tabular}
-\end{table*}
 \FloatBarrier

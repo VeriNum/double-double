@@ -21,23 +21,18 @@
   showstringspaces=false
 }
 
-The public C interface must establish the conditions required by the
-numerical theorems while presenting ordinary functions to callers.  We
-illustrate our approach in \FenceDD{} using division of a double-double value by
-a binary64 value.  The two public C functions wrap the same arithmetic kernel.
-We call \texttt{dw\_div\_fp} the default wrapper and
-\texttt{dw\_div\_fp\_\allowbreak strong} the alternative wrapper.  The default
-wrapper performs a weak check before kernel execution and checks result
-finiteness afterward; the alternative wrapper performs a strong check before
-execution.
+\FenceDD{} exposes ordinary C functions for double-double arithmetic.  Their
+runtime checks ensure that a call returns a result only when the library can
+provide its numerical guarantee.  We illustrate how these functions are
+organized using division of a double-double value by a binary64 value.
 
 \subsection{Dividing a Double-Double by a Binary64 Value}
 \label{sec:overview-division-wrappers}
 
-The default wrapper divides the double-double value pointed to by
-\texttt{x} by the binary64 value \texttt{y} and writes the quotient to the
-object pointed to by \texttt{z}.  Both \texttt{x} and \texttt{z} have type
-\texttt{struct dword}, shown in \Cref{fig:dword-struct}.
+The public function \texttt{dw\_div\_fp} divides the double-double value
+pointed to by \texttt{x} by the binary64 value \texttt{y} and writes the
+quotient to \texttt{z}.  The input and result use the \texttt{struct dword}
+type shown in \Cref{fig:dword-struct}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -52,7 +47,7 @@ struct dword {
   \label{fig:dword-struct}
 \end{figure}
 
-\Cref{fig:default-division-wrapper} shows the resulting control flow in
+\Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, which we call
 the default wrapper.  A failed operand check stops
 the call before the kernel, while a failed result check stops it without
 returning the computed quotient.
@@ -72,16 +67,16 @@ void dw_div_fp(
 }
 \end{lstlisting}
   \caption{\texttt{dw\_div\_fp}, the default wrapper for dividing a
-  double-double value by a binary64 value.  It invokes the weak
-  check before the arithmetic kernel and checks the returned components
+  double-double value by a binary64 value.  It invokes a runtime check on the
+  operands before the arithmetic kernel and checks the returned components
   afterward.}
   \Description{A wrapper that calls an input check, invokes the
   arithmetic kernel, and then checks both result components for finiteness.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
-The operand check begins by determining whether the two fields of \texttt{x}
-represent a double-double suitable for the kernel.
+The operand check depends on how the two fields of \texttt{struct dword}
+represent a double-double value.
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
@@ -154,7 +149,8 @@ conditions arise from the quotient computations inside the arithmetic kernel.
 \Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel.  It computes a leading
 quotient from the high component, estimates the part of the dividend not
 accounted for by that quotient, and uses the residual to correct the result.
-The kernel follows Algorithm~15 of \citet{Joldes2017}.
+Both division wrappers call this kernel, which performs no runtime checks.  The
+kernel follows Algorithm~15 of \citet{Joldes2017}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -285,9 +281,9 @@ kernel executes before a nonfinite result is detected.
 \subsection{Establishing Result Finiteness before Kernel Execution}
 \label{sec:overview-strong-check}
 
-The alternative wrapper instead establishes result finiteness before kernel
-execution.  It applies the strong check before invoking the same kernel and
-therefore needs no result check afterward.
+The alternative wrapper, \texttt{dw\_div\_fp\_strong}, establishes result
+finiteness before kernel execution.  It applies the strong check before
+invoking the same kernel and therefore needs no result check afterward.
 
 The strong check reuses the weak check, then bounds the high
 component of the dividend and the rounded leading quotient.

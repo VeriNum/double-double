@@ -72,13 +72,25 @@ operations, we prove that the returned components form a double word and
 establish relative error bounds for addition and mixed relative and absolute
 bounds for multiplication and division.
 
-We verify the library in Rocq.  In the numerical development, we extend prior
-mechanized analyses from arithmetic with an unbounded exponent range to
-IEEE~754 arithmetic.  We use runtime checks in the public C functions to
-establish the conditions required by these numerical results.  Using the Verified
-Software Toolchain (VST) \citep{Appel2014}, we prove that the C kernels implement the analyzed
-algorithms and that their public contracts provide the proved guarantees on
-normal return.
+We perform the verification of \FenceDD{} once, during development of the
+library.  In Rocq,
+we extend prior mechanized analyses from arithmetic with an unbounded exponent
+range to IEEE~754 arithmetic.  Using the Verified Software Toolchain (VST)
+\citep{Appel2014}, we prove that the C kernels implement the analyzed
+algorithms, that the runtime checks are sound, and that the public contracts
+provide the proved guarantees on normal return.
+
+The runtime checks are executable C tests performed on each library call;
+they do not test whether these proofs remain valid.  They establish sufficient,
+operation-specific conditions for applying the numerical results.  If a
+runtime check fails, the wrapper follows its nonreturning error path.  Such a
+rejection does not invalidate the proof: it means that the runtime test did not
+establish the normal-return guarantee for that particular call.
+\Cref{fig:proof-runtime-roles} shows how \FenceDD{} separates one-time
+verification from per-call execution through each public function's
+normal-return contract.
+
+\input{figures/proof-runtime-roles}
 
 Our evaluation shows that the numerical guarantees and runtime checks are
 useful in practice.  Across tests spanning the binary64 exponent range, the
