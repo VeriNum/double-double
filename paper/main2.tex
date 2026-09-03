@@ -104,18 +104,20 @@ where overflow and gradual underflow can invalidate assumptions used in the
 proofs.
 
 We present \FenceDD, a verified C library containing three error-free
-transformations and six double-word operations.  Our Rocq development extends
-earlier analysis from an unbounded exponent range to IEEE~754 arithmetic with
-overflow and gradual underflow.  Using the Verified Software Toolchain (VST),
-we prove that the C kernels implement the analyzed algorithms and that the
-runtime checks establish the conditions required by their analysis.  On normal
-return, each double-double operation produces a double-double within its proved
-error bound, while each error-free transformation guarantees exact
-reconstruction.
+transformations and six double-word operations.  Our Rocq development proves
+numerical guarantees for these algorithms, extending earlier analyses based on
+an unbounded exponent range to IEEE~754 arithmetic with overflow and gradual
+underflow.  Using the Verified Software Toolchain (VST), we prove that the C
+kernels implement the analyzed algorithms and that runtime checks in the
+\FenceDD functions establish the conditions required by the numerical theorems.
+Consequently, every normally returned result from a double-word operation in 
+\FenceDD is a double-double satisfying its proved error bound, while every 
+normally returned transformation result reconstructs the exact value.
 
-Our evaluation shows that the proved bounds can be approached in practice and
-that runtime checks usually stop calls for which QD does not satisfy the same
-numerical properties.
+Our evaluation shows that the proved bounds can be approached in practice.
+Among generated inputs rejected by the runtime checks, QD, an established
+library for double-double arithmetic, rarely produces results satisfying the
+expected numerical properties.  The runtime checks add little absolute cost.
 \end{abstract}
 
 \begin{CCSXML}
