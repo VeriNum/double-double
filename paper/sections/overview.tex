@@ -24,14 +24,17 @@
 The public C interface must establish the conditions required by the
 numerical theorems while presenting ordinary functions to callers.  We
 illustrate our approach in \FenceDD{} using division of a double-double value by
-a binary64 value.  The two public functions call the same arithmetic kernel:
-the default function checks result finiteness afterward, whereas the
-alternative establishes it before kernel execution.
+a binary64 value.  The two public C functions wrap the same arithmetic kernel.
+We call \texttt{dw\_div\_fp} the default wrapper and
+\texttt{dw\_div\_fp\_\allowbreak strong} the alternative wrapper.  The default
+wrapper performs a weak check before kernel execution and checks result
+finiteness afterward; the alternative wrapper performs a strong check before
+execution.
 
 \subsection{Dividing a Double-Double by a Binary64 Value}
 \label{sec:overview-division-wrappers}
 
-The default public function divides the double-double value pointed to by
+The default wrapper divides the double-double value pointed to by
 \texttt{x} by the binary64 value \texttt{y} and writes the quotient to the
 object pointed to by \texttt{z}.  Both \texttt{x} and \texttt{z} have type
 \texttt{struct dword}, shown in \Cref{fig:dword-struct}.
@@ -49,10 +52,10 @@ struct dword {
   \label{fig:dword-struct}
 \end{figure}
 
-\Cref{fig:default-division-wrapper} shows
-\texttt{dw\_div\_fp}, the default public wrapper.  It checks the operand
-conditions before invoking the kernel and result finiteness afterward.  Either
-failure terminates the function without a quotient.
+\Cref{fig:default-division-wrapper} shows the resulting control flow in
+the default wrapper.  A failed operand check stops
+the call before the kernel, while a failed result check stops it without
+returning the computed quotient.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -72,19 +75,20 @@ void dw_div_fp(
   double-double value by a binary64 value.  It invokes the weak
   check before the arithmetic kernel and checks the returned components
   afterward.}
-  \Description{A public C function that calls an input check, invokes the
+  \Description{A wrapper that calls an input check, invokes the
   arithmetic kernel, and then checks both result components for finiteness.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
-A runtime check confirms that \texttt{x} stores a double-double.
+The operand check begins by determining whether the two fields of \texttt{x}
+represent a double-double suitable for the kernel.
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
 
-We first define a double word over a generic floating-point format
-$\mathbb{F}$.  Let $\operatorname{RN}$ denote rounding to nearest with ties to
-even.
+A double-double is the binary64 instance of a double word over a generic
+floating-point format $\mathbb{F}$.  Let $\operatorname{RN}$ denote rounding
+to nearest with ties to even.
 
 \begin{definition}[Double word]
 \label[definition]{def:double-word}
@@ -99,7 +103,7 @@ of two values $x_h,x_\ell\in\mathbb{F}$ such that
 \end{equation}
 \end{definition}
 
-In \FenceDD{}, we use the binary64 instance of this definition.  The high and low
+We use the binary64 instance of this definition in \FenceDD{}.  The high and low
 words of a double-double value are stored in the fields \texttt{s} and
 \texttt{t} of \Cref{fig:dword-struct}.
 
@@ -141,8 +145,8 @@ double-double according to \Cref{def:double-word}.  Replacing \texttt{0x1p-54} w
 runtime test fails.
 \end{example}
 
-That \texttt{x} stores a double-double addresses its representation; the
-remaining conditions concern quotient arithmetic.
+This test establishes the required representation of the dividend.  The other
+conditions arise from the quotient computations inside the arithmetic kernel.
 
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
@@ -185,14 +189,16 @@ Lines~11--12 compute the leading quotient and its corresponding rounded
 product and correction.  Lines~13--16 subtract this product from the value
 represented by the dividend and divide the resulting residual by \texttt{y}
 to obtain the quotient correction.  Line~17 combines the leading term and
-correction into the returned pair.
+correction into the returned pair.  The runtime checks surrounding the kernel
+establish the conditions under which the numerical theorem applies to these
+computations.
 
 \subsection{Runtime Checks before and after Kernel Execution}
 \label{sec:overview-post-check}
 
-The kernel computes the quotient pair but does not test the conditions needed
-to establish its error bound or ensure that the pair is a double-double.  The default wrapper performs the
-corresponding runtime checks before and after kernel execution.
+The default wrapper places these checks on either side of the kernel call.  Its
+weak check establishes the required operand conditions before execution, and
+its result check establishes finiteness afterward.
 
 \paragraph{Before kernel execution.}
 Line~4 of \Cref{fig:default-division-wrapper} invokes the
@@ -273,14 +279,15 @@ The weak check does not bound the operands or leading quotient from above, so
 the wrapper tests the pair after kernel execution.  Line~9 of
 \Cref{fig:default-division-wrapper} invokes \texttt{isfinite\_dword}, which
 accepts normal values, subnormal values, and zeros but rejects infinities and
-NaNs.
+NaNs.  This placement avoids conservative upper bounds on the inputs, but the
+kernel executes before a nonfinite result is detected.
 
 \subsection{Establishing Result Finiteness before Kernel Execution}
 \label{sec:overview-strong-check}
 
-Some callers may want to establish result finiteness before kernel execution.
-The alternative, \texttt{dw\_div\_fp\_\allowbreak strong}, applies its strong check before
-invoking the same kernel and therefore needs no result check afterward.
+The alternative wrapper instead establishes result finiteness before kernel
+execution.  It applies the strong check before invoking the same kernel and
+therefore needs no result check afterward.
 
 The strong check reuses the weak check, then bounds the high
 component of the dividend and the rounded leading quotient.
@@ -325,13 +332,13 @@ will be finite.  \Cref{sec:division-conditions} derives this condition.
 The check places no lower bound on the leading quotient and therefore permits
 subnormal values.  The strong check can nevertheless fail even
 when the kernel would produce a finite result.  This conservative behavior is
-the cost of establishing result finiteness before execution.
+the cost of establishing result finiteness before execution.  The two wrappers
+therefore differ in which calls complete, but not in the guarantee they provide.
 
 \subsection{The Division Contract}
 \label{sec:overview-division-guarantee}
 
-The wrappers have the same contract and no numerical preconditions despite
-establishing finiteness at different points.
+Their shared contract requires no numerical precondition from the caller.
 
 \begin{theorem}[Normal-Return Guarantee for the Division Wrappers]
 \label{thm:division-wrapper-contract}
