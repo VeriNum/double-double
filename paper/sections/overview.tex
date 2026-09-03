@@ -29,28 +29,15 @@ organized using division of a double-double value by a binary64 value.
 \subsection{Dividing a Double-Double by a Binary64 Value}
 \label{sec:overview-division-wrappers}
 
-The public function \texttt{dw\_div\_fp} divides the double-double value
-pointed to by \texttt{x} by the binary64 value \texttt{y} and writes the
-quotient to \texttt{z}.  The input and result use the \texttt{struct dword}
-type shown in \Cref{fig:dword-struct}.
+The public function \texttt{dw\_div\_fp} shown in
+\Cref{fig:default-division-wrapper} divides a double-double value by a
+binary64 value.  We call it the \emph{default wrapper}.
 
-\begin{figure}[t]
-  \begin{lstlisting}[style=sectiontwoc]
-struct dword {
-    double s;
-    double t;
-};
-\end{lstlisting}
-  \caption{The C structure used to store a double-double number.  The fields
-  contain its two binary64 components.}
-  \Description{A C structure containing two binary64 fields named s and t.}
-  \label{fig:dword-struct}
-\end{figure}
-
-\Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, which we call
-the default wrapper.  A failed operand check stops
-the call before the kernel, while a failed result check stops it without
-returning the computed quotient.
+The wrapper checks the operands, invokes the division kernel, and then checks
+that both components of the quotient are finite.  If either check fails,
+\texttt{exit(EXIT\_FAILURE)} terminates the program with a failure status
+instead of returning to the caller.  One operand test determines whether the
+two fields of \texttt{struct dword} form a double-double value.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -75,8 +62,19 @@ void dw_div_fp(
   \label{fig:default-division-wrapper}
 \end{figure}
 
-The operand check depends on how the two fields of \texttt{struct dword}
-represent a double-double value.
+
+\begin{figure}[t]
+  \begin{lstlisting}[style=sectiontwoc]
+struct dword {
+    double s;
+    double t;
+};
+\end{lstlisting}
+  \caption{The C structure used to store a double-double number.  The fields
+  contain its two binary64 components.}
+  \Description{A C structure containing two binary64 fields named s and t.}
+  \label{fig:dword-struct}
+\end{figure}
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
@@ -98,9 +96,9 @@ of two values $x_h,x_\ell\in\mathbb{F}$ such that
 \end{equation}
 \end{definition}
 
-We use the binary64 instance of this definition in \FenceDD{}.  The high and low
-words of a double-double value are stored in the fields \texttt{s} and
-\texttt{t} of \Cref{fig:dword-struct}.
+In \FenceDD, the components $x_h$ and $x_\ell$ are stored in the
+fields \texttt{s} and \texttt{t} of \texttt{struct dword}, shown in
+\Cref{fig:dword-struct}.
 
 The structure stores the two components but does not enforce the relation
 between them.  Because the numerical guarantee requires a double-word

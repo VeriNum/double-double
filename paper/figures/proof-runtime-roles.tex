@@ -1,0 +1,103 @@
+\definecolor{introproofshade}{RGB}{226,238,250}
+\definecolor{introruntimeshade}{RGB}{229,243,233}
+\definecolor{introrejectshade}{RGB}{252,238,220}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  x=1cm,
+  y=1cm,
+  flow/.style={-{Latex[length=2.1mm]},thick},
+  proofbox/.style={draw,rounded corners=1.5pt,fill=introproofshade,
+    align=left,inner sep=3.5pt,font=\scriptsize},
+  runtimebox/.style={draw,rounded corners=1.5pt,fill=introruntimeshade,
+    align=left,inner sep=3.5pt,font=\scriptsize},
+  rejectbox/.style={draw,rounded corners=1.5pt,fill=introrejectshade,
+    align=left,inner sep=3.5pt,font=\scriptsize},
+  edgelabel/.style={font=\tiny,fill=white,inner sep=1pt,align=center}
+]
+
+% Static verification, performed once.
+\node[anchor=west,font=\small\bfseries] at (-3.85,0)
+  {Proof time \normalfont(once, during development)};
+
+\node[proofbox,text width=3.5cm,minimum height=1.7cm,anchor=north] (numerical)
+  at (-2.05,-0.35)
+  {{\centering\textbf{Numerical proof}\par}\vspace{2pt}
+numerical conditions $\Longrightarrow$\\
+model returns a {double-double}\\
+result satisfying the error bound};
+
+\node[proofbox,text width=3.15cm,minimum height=1.7cm,anchor=north] (program)
+  at (2.05,-0.35)
+  {{\centering\textbf{C verification}\par}\vspace{2pt}
+   \emph{Runtime check soundness:}\\[-1pt]
+   successful checks establish \\
+   the numerical conditions\\[1pt]
+   \emph{Kernel correctness:}\\[-1pt]
+   the C kernel implements \\
+   the numerical model};
+
+\node[proofbox,align=center,text width=7.2cm,minimum height=0.85cm,anchor=north] (contract)
+  at (0,-2.87)
+  {\textbf{Verified contract for each \FenceDD{} public function}\\[2pt]
+   normal return $\Rightarrow$ \mbox{double-double} result with error bound};
+
+\draw[flow] (numerical.south) -- (numerical.south |- contract.north);
+\draw[flow] (program.south) -- (program.south |- contract.north);
+
+% Separation between proof time and execution time.
+\draw[gray!65] (-3.85,-3.87) -- (3.85,-3.87);
+\node[anchor=west,font=\small\bfseries] at (-3.85,-4.24)
+  {Runtime \normalfont(on each library call)};
+\node[anchor=west,font=\scriptsize\itshape,text=black!75]
+  at (-3.85,-4.63) {The C program runs; the proofs are not rerun.};
+
+\node[runtimebox,align=center,text width=1.4cm,minimum height=0.82cm,anchor=north] (call)
+  at (-2.9,-4.97)
+  {Concrete\\operands};
+
+\node[runtimebox,text width=3.5cm,minimum height=1.05cm,inner xsep=7pt,anchor=north] (wrapper)
+  at (0.65,-4.97)
+  {{\centering\textbf{\FenceDD{} public C wrapper}\par}\vspace{2pt}
+   performs runtime checks around
+   a call to the arithmetic kernel};
+
+\node[runtimebox,text width=3.5cm,minimum height=1.35cm,anchor=north] (success)
+  at (-1.95,-7.11)
+  {{\centering\textbf{Normal return}\par}\vspace{2pt}
+    numerical proof applies: \mbox{double-double} result satisfies\\
+   the proved error bound};
+
+\node[rejectbox,text width=3.5cm,minimum height=1.35cm,anchor=north] (rejection)
+  at (1.95,-7.11)
+  {{\centering\textbf{Failed Check}\par}\vspace{2pt}
+   sufficient condition for
+   numerical proof not established;
+   early exit};
+
+\draw[flow] (call.east) -- (call.east -| wrapper.west);
+\coordinate (runtimefork) at (0.65,-6.64);
+\coordinate (successdrop) at (-1.95,-6.64);
+\coordinate (rejectiondrop) at (1.95,-6.64);
+\draw[thick] (wrapper.south) -- (runtimefork);
+\draw[thick] (successdrop) -- (rejectiondrop);
+\draw[flow] (successdrop) -- (success.north);
+\draw[flow] (rejectiondrop) -- (rejection.north);
+\node[edgelabel,above] at (-1.0,-6.59) {normal return};
+\node[edgelabel,above] at (1.25,-6.59) {check fails};
+
+\end{tikzpicture}
+\caption{Verification and execution in \FenceDD{}.  During development,
+formal proofs establish the numerical guarantee for each public function.
+During each call, its wrapper performs runtime checks around a call to the
+arithmetic kernel; the proofs are not rerun.  If a check fails, the program
+exits.  Otherwise, the returned result satisfies the proved guarantee.}
+\Description{A two-part diagram of proof time and runtime in \FenceDD{}.  At
+proof time, a conditional numerical proof and proofs of the C checks and kernel
+establish a public normal-return contract.  At runtime, concrete operands enter
+a \FenceDD{} public wrapper.  The wrapper either returns normally with a
+double-double result satisfying the proved error bound or follows an early-exit
+path for that call while the proof remains valid.}
+\label{fig:proof-runtime-roles}
+\end{figure}
