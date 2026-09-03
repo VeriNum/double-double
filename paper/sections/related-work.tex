@@ -1,64 +1,46 @@
 \section{Related Work}
 \label{sec:related-work}
 
+\paragraph{Double-word error analysis.}
 The closest numerical basis for our work is the analysis of double-word
-arithmetic by \citet{Joldes2017} and its Rocq mechanization by
-\citet{Rideau2022}.  They prove error bounds and show that the returned
-components form a double word for addition, multiplication, and division
-algorithms.  Their results exclude underflow and overflow;
-\citet{Rideau2022} model this setting with Flocq's FLX format, whose exponent
-range is unbounded.  We extend this analysis to IEEE~754 arithmetic with a
-finite exponent range.  The resulting theorems account for gradual underflow
-and overflow and give sufficient conditions that the public C wrappers
-establish with runtime checks.
+addition, multiplication, and division by \citet{Joldes2017} and its Rocq
+mechanization by \citet{Rideau2022}.  These results assume that underflow and
+overflow do not occur; the mechanization represents this setting using
+Flocq's FLX format with an unbounded exponent range.  Earlier results
+characterize product corrections near underflow
+\citep{BoldoDaumas2003} and establish robust guarantees for \TwoSum{} and
+\FastTwoSum{} \citep{Boldo2017}.  We extend these results through the complete
+double-word operations under IEEE~754 arithmetic with a finite exponent
+range.
 
-Earlier work examines how underflow affects the error-free transformations
-used within double-word algorithms.  \citet{BoldoDaumas2003} characterize
-when the exact difference between a real result and its rounded result is
-representable, and \citet{Boldo2017} establish robust guarantees for
-\TwoSum{} and \FastTwoSum{}.  These results concern individual error-free
-transformations.  Our analysis uses such error-free transformations as building
-blocks
-and carries the effects of underflow through complete double-word addition,
-multiplication, and division algorithms.  It proves both an error bound and
-that the returned components form a double word.
+\paragraph{Floating-point expansions.}
+Floating-point expansions provide additional precision using several values
+from an underlying format.  \citet{Shewchuk1997} uses error-free transformations
+and nonoverlapping expansions for adaptive geometric predicates, while
+\citet{Boldo2017Renorm} formally verify expansion renormalization.  More
+recently, \citet{Zhang2025} automatically verify floating-point accumulation
+networks and synthesizes an improved network for double-double addition.  Our
+work instead considers fixed two-component representations and includes
+multiplication and division as well as addition.
 
-Floating-point expansions provide another way to obtain more precision from
-a fixed underlying format.  \citet{Shewchuk1997} use error-free
-transformations and nonoverlapping expansions for adaptive-precision
-geometric predicates, and \citet{Boldo2017Renorm} formally verify an
-algorithm for renormalizing expansions.  \citet{Zhang2025} automatically
-verify floating-point accumulation networks and synthesize an improved
-network for double-double addition.  The nonoverlap relation between adjacent
-expansion components is closely related to the rounding relation in our
-double-word definition.  These works address arbitrary-length expansions,
-renormalization, or addition networks.  We study fixed two-component
-representations, cover addition, multiplication, and division, and connect
-their numerical properties to a verified C interface.
+\paragraph{Floating-point verification.}
+Several systems support verified floating-point error analysis.  Gappa
+automates numerical bounds and produces proofs checked in Coq
+\citep{deDinechin2011}; FloVer checks error-bound certificates in Coq and HOL4
+\citep{Becker2018}; and \citet{Roux2016} formalizes general techniques for
+rounding-error proofs.  VCFloat connects the analysis of floating-point
+expressions to C program proofs \citep{Ramananandro2016}, while VCFloat2
+provides IEEE~754 types and operations together with a bridge to CompCert
+\citep{AppelKellison2024}.  We use VCFloat2 within the layered VST proof
+structure developed for numerical C programs
+\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}, adding proofs
+that the runtime checks establish the conditions required by the numerical
+theorems.
 
-Researchers can conduct machine-checked floating-point error analysis with
-several systems.  They can use Gappa to automate numerical bounds and generate
-proofs checked in Coq \citep{deDinechin2011}.  They can use FloVer to check
-error-bound certificates in Coq and HOL4 \citep{Becker2018}.
-\citet{Roux2016} formalizes general techniques for proving rounding-error
-bounds.  In other projects, researchers connect such numerical results to C
-program proofs.  Researchers can connect the analysis of floating-point C
-expressions with Coq proofs using the original VCFloat
-\citep{Ramananandro2016}.  Floating-point types and operations together with a
-bridge to CompCert are available in VCFloat2 \citep{AppelKellison2024}.
-Layered developments combine VST
-proofs of C programs with separate proofs of their numerical properties
-\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.  We use
-VCFloat2 for the types used by the functional models, IEEE~754 operations, and
-CompCert bridge within this layered proof structure, but additionally verify C runtime
-checks that establish the conditions of the numerical theorems.  The resulting
-public contracts require no numerical precondition from the caller.
-
-Practical double-double and quad-double arithmetic is available in the QD
-library through algorithms developed by \citet{Hida2001} from techniques
-introduced by
-\citet{Dekker1971} \citep{QD}.  We use QD as a comparison implementation in
-\Cref{sec:evaluation}, not as a correctness oracle.  Unlike an ordinary call
-to QD, every normally returning call to one of our public wrappers has a
-machine-checked C contract stating the error bound and, for a double-word
-operation, that the returned components form a double word.
+\paragraph{Double-double libraries.}
+The QD library provides practical double-double and quad-double arithmetic
+using algorithms developed by \citet{Hida2001} from techniques introduced by
+\citet{Dekker1971} \citep{QD}.  QD does not use runtime checks to establish the
+numerical conditions considered in this paper.  We therefore use it as a
+comparison implementation in \Cref{sec:evaluation}, while MPFR supplies the
+independent reference values.
