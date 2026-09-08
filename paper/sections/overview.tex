@@ -21,10 +21,11 @@
   showstringspaces=false
 }
 
-\FenceDD{} exposes ordinary C functions for double-double arithmetic.  Their
-runtime checks ensure that a call returns a result only when the library can
-provide its numerical guarantee.  We illustrate how these functions are
-organized using division of a double-double value by a binary64 value.
+\FenceDD{} exposes ordinary C functions for double-double arithmetic.  Each
+function performs runtime checks: if any check fails, the program exits;
+otherwise, the function returns a result satisfying its proved numerical
+guarantee.  We illustrate this structure using division of a double-double
+value by a binary64 value.
 
 \subsection{Dividing a Double-Double by a Binary64 Value}
 \label{sec:overview-division-wrappers}
@@ -32,12 +33,11 @@ organized using division of a double-double value by a binary64 value.
 The public function \texttt{dw\_div\_fp} shown in
 \Cref{fig:default-division-wrapper} divides a double-double value by a
 binary64 value.  We call it the \emph{default wrapper}.
-
-The wrapper checks the operands, invokes the division kernel, and then checks
+The default wrapper checks the operands, invokes the division kernel, and then checks
 that both components of the quotient are finite.  If either check fails,
-\texttt{exit(EXIT\_FAILURE)} terminates the program with a failure status
-instead of returning to the caller.  One operand test determines whether the
-two fields of \texttt{struct dword} form a double-double value.
+the wrapper terminates the program with a failure status instead of returning
+to the caller.  The operand test determines if the two fields of
+\texttt{struct dword} form a double-double value.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -53,12 +53,10 @@ void dw_div_fp(
         exit(EXIT_FAILURE);
 }
 \end{lstlisting}
-  \caption{\texttt{dw\_div\_fp}, the default wrapper for dividing a
+  \caption{The default wrapper for dividing a
   double-double value by a binary64 value.  It invokes a runtime check on the
-  operands before the arithmetic kernel and checks the returned components
-  afterward.}
-  \Description{A wrapper that calls an input check, invokes the
-  arithmetic kernel, and then checks both result components for finiteness.}
+  operands before calling the arithmetic kernel and checks the returned components
+  after kernel execution.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
@@ -71,8 +69,7 @@ struct dword {
 };
 \end{lstlisting}
   \caption{The C structure used to store a double-double number.  The fields
-  contain its two binary64 components.}
-  \Description{A C structure containing two binary64 fields named s and t.}
+  contain the two binary64 components.}
   \label{fig:dword-struct}
 \end{figure}
 
@@ -89,30 +86,27 @@ A double word $x$ over $\mathbb{F}$ is the unevaluated sum
 \[
   x=x_h+x_\ell
 \]
-of two values $x_h,x_\ell\in\mathbb{F}$ such that
+of two values $x_h,x_\ell\in\mathbb{F}$, called its high and low components,
+respectively, such that
 \begin{equation}
   x_h=\operatorname{RN}(x_h+x_\ell).
   \label{eq:dw-representation}
 \end{equation}
 \end{definition}
 
-In \FenceDD, the components $x_h$ and $x_\ell$ are stored in the
-fields \texttt{s} and \texttt{t} of \texttt{struct dword}, shown in
-\Cref{fig:dword-struct}.
-
-A \texttt{struct dword} can store any pair of binary64 values, so the C type
-alone does not enforce \Cref{eq:dw-representation}.  The default wrapper tests
-this relation before passing the operand to the arithmetic kernel.
+In \FenceDD{}, the high and low components are stored in the fields
+\texttt{s} and \texttt{t}, respectively, of the \texttt{struct dword} shown
+in \Cref{fig:dword-struct}.  A \texttt{struct dword} can store any pair of
+binary64 values, so the C type alone does not enforce
+\Cref{eq:dw-representation}.
 
 \subsection{The Division Kernel}
 \label{sec:overview-division-kernel}
 
 \Cref{fig:dw-div-fp-kernel} shows the arithmetic kernel
-\texttt{dw\_div\_fp\_kernel}.  It computes a leading
-quotient from the high component, estimates the part of the dividend not
-accounted for by that quotient, and uses the residual to correct the result.
-The default wrapper calls this kernel, which itself performs no runtime checks.  The
-kernel follows Algorithm~15 of \citet{Joldes2017}.
+\texttt{dw\_div\_fp\_kernel}.  The kernel reads \texttt{x->s} and
+\texttt{x->t} as the high and low components of the dividend.  It follows
+Algorithm~15 of \citet{Joldes2017} and performs no runtime checks.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -135,11 +129,8 @@ void dw_div_fp_kernel(
     fast_2sum(z, th, tl);
 }
 \end{lstlisting}
-  \caption{\texttt{dw\_div\_fp\_kernel}, the arithmetic kernel for dividing a
-  double-double value by a binary64 value.  The surrounding wrapper performs
-  the runtime checks.}
-  \Description{An internal C function that computes a leading quotient,
-  forms its correction, and combines the two components of the result.}
+  \caption{The arithmetic kernel for dividing a
+  double-double value by a binary64 value.}
   \label{fig:dw-div-fp-kernel}
 \end{figure}
 
@@ -152,12 +143,13 @@ correction into the returned pair.
 \subsection{Runtime Checks before and after Kernel Execution}
 \label{sec:overview-post-check}
 
-The default wrapper performs a weak check on the operands before calling the
-kernel and checks the returned components for finiteness afterward.
+The default wrapper uses runtime checks before and after kernel execution.
 
 \paragraph{Before kernel execution.}
-Line~4 of \Cref{fig:default-division-wrapper} invokes the
-weak check shown in \Cref{fig:dw-div-fp-input-check}.
+Before calling the kernel, the default wrapper performs the weak check shown
+in \Cref{fig:dw-div-fp-input-check}.  This check tests the relation in
+\Cref{eq:dw-representation} together with the remaining conditions on the
+operands.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -178,13 +170,8 @@ int dw_div_fp_weak_check(
     return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
-  \caption{The default wrapper's weak check
-  \texttt{dw\_div\_fp\_}\allowbreak
-  \texttt{weak\_}\allowbreak\texttt{check} establishes operand finiteness,
+  \caption{The weak check in the default wrapper establishes operand finiteness,
   that the dividend is a double-double, and the kernel's lower bound.}
-  \Description{A C function that checks the operands, the double-word
-  relation for the dividend, and either a zero high component or a lower bound
-  on its magnitude.}
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
@@ -208,9 +195,6 @@ int isfinite_dword(
   \caption{The helper functions \texttt{isfinite\_double} and
   \texttt{isfinite\_dword}, which test one binary64 value and both components
   of a double-double value, respectively.}
-  \Description{Two C functions.  The first checks whether a binary64 value is
-  finite, and the second applies this check to both fields of a double-double
-  value.}
   \label{fig:finite-checks}
 \end{figure}
 
@@ -304,9 +288,6 @@ int dw_div_fp_strong_check(
   weak check.  It reuses the tests in
   \Cref{fig:dw-div-fp-input-check} and then bounds the high word and rounded
   leading quotient.}
-  \Description{A C function that first invokes the weak check,
-  then applies upper bounds to the high word and rounded leading quotient
-  before allowing the division kernel to execute.}
   \label{fig:dw-div-fp-check}
 \end{figure}
 
@@ -365,8 +346,6 @@ $\widehat r=z_h+z_\ell$ is the value represented by the returned pair.  For
 binary64, the unit roundoff is $u=2^{-53}$ and the smallest positive
 subnormal value is $\eta=2^{-1074}$.  Every returned pair is also a
 double-double.}
-\Description{The operations available in FenceDD, their exact real
-results, and their accuracy guarantees when a wrapper returns normally.}
 \label{tab:operation-preview}
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}p{0.38\columnwidth}p{0.18\columnwidth}p{0.38\columnwidth}@{}}

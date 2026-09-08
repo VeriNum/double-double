@@ -54,8 +54,7 @@ we obtain $(2^{-1030},0)$. However,
  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
 \]
 The returned pair is still a double-double, but its relative error is
-approximately $2^{-51}$. For this input, the double-double multiplication
-therefore provides about the same relative precision as a binary64
+approximately $2^{-51}$. For this input, double-double multiplication provides about the same relative precision as a binary64
 multiplication rather than roughly twice that precision.
 
 The precision loss occurs in \FastTwoMult{}, a building block used by the
