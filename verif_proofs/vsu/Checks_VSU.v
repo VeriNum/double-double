@@ -24,7 +24,7 @@ Require Import DD.verif_proofs.verif_fp_utils_dw_times_dw_strong_precond_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_strong_precond_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_interface_checks.
 Require Import DD.verif_proofs.verif_fp_utils_dw_times_fp_strong_precond_check.
-Require Import DD.verif_proofs.verif_fp_utils_dw_div_fp_strong_precond_check.
+Require Import DD.verif_proofs.verif_fp_utils_dw_div_fp_strong_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_div_dw_strong_precond_check.
 Require Import DD.verif_proofs.vsu.VSU_tactics.
 
@@ -46,8 +46,8 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_fp_strong_precond_check. }
   1:{ solve_SF_dd body_dw_plus_fp_weak_precond_check. }
   1:{ solve_SF_dd body_isfinite_dword. }
-  1:{ solve_SF_dd body_dw_div_fp_strong_precond_check. }
-  1:{ solve_SF_dd body_dw_div_fp_weak_precond_check. }
+  1:{ solve_SF_dd body_dw_div_fp_strong_check. }
+  1:{ solve_SF_dd body_dw_div_fp_weak_check. }
   1:{ solve_SF_dd body_dw_div_dw_strong_precond_check. }
   1:{ solve_SF_dd body_dw_div_dw_weak_precond_check. }
 Qed.

@@ -467,8 +467,8 @@ Definition Ops_Imports : funspecs :=
     fp_utils_specs.dw_times_fp_strong_precond_check_spec;
     fp_utils_specs.dw_times_dw_weak_precond_check_spec;
     fp_utils_specs.dw_times_dw_strong_precond_check_spec;
-    fp_utils_specs.dw_div_fp_weak_precond_check_spec;
-    fp_utils_specs.dw_div_fp_strong_precond_check_spec;
+    fp_utils_specs.dw_div_fp_weak_check_spec;
+    fp_utils_specs.dw_div_fp_strong_check_spec;
     fp_utils_specs.dw_div_dw_weak_precond_check_spec;
     fp_utils_specs.dw_div_dw_strong_precond_check_spec ].
 
@@ -489,7 +489,6 @@ Definition Ops_Internal : funspecs :=
    the same guarantee. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
-    fast_2mult_acc_guarded_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;

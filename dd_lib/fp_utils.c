@@ -214,95 +214,19 @@ int dw_times_dw_weak_precond_check(const struct dword *x, const struct dword *y)
     return dw_plus_dw_weak_precond_check(x, y);
 }
 
-int dw_div_fp_strong_precond_check(const struct dword *x, double y) {
-    /* Verifies DWDivFP_strong_precond (DDConds.v): xh, xl, y finite; (x->s, x->t) a
-       double-word; RN(x->s / y) finite; |x->s| <= Omega/4; |x->s / y| <=
-       Omega/4; and either x->s is zero or |x->s| >= 2^(emin+2p).  There is NO
-       quotient lower bound.
+int dw_div_fp_strong_check(const struct dword *x, double y) {
+    if (!dw_div_fp_weak_check(x, y))
+        return 0;
 
-       HISTORY, and why the floor is gone.  This test carried a quotient floor
-       through two rounds of relaxation:
+    double q_omega = ldexp(1.0, 1022);
+    if (!(fabs(x->s) <= q_omega) || y == 0.0)
+        return 0;
 
-         2^(emin+2p-1) = 2^-969   the floor of an earlier, quotient-window
-                                  formulation of the relative tier;
-         2^(emin+p-1)  = 2^-1022  the floor of the internal
-                                  DWDivFP_relative_normal_quotient_precond in
-                                  DWDivFP_relative_acc.v, which is what Layer 1's
-                                  FLX->FLT bridge for the leading quotient
-                                  node needs;
-         (none)                   DWDivFP_strong_precond, this guard.
-
-       The last step is not a bridge relaxation but a separate proof: below
-       2^(emin+p-1) the leading node RN(x->s/y) is subnormal and Layer 1 does
-       not apply at all, so that region gets its own argument
-       (DWDivFP_subnormal.v, DWDivFP3_subnormal_leg).  It works because the
-       whole computation there sits on the 2^emin lattice -- the correction
-       lands within half an ulp of the exact one and the closing Fast2Sum is
-       exact -- and it yields the SAME contract, with the SAME constant:
-
-         |(zh+zl) - (x->s + x->t)/y| <= 3u^2 |(x->s + x->t)/y| + 2^emin
-
-       (DWDivFP_mixed_acc.DWDivFP_guarantee_from_strong_precond), which
-       bundles the accuracy bound and output double-word closure; finiteness of
-       the computed pair is established while deriving the mixed condition.
-
-       The PURE relative bound 3u^2 is a separate, NORMAL-RANGE tier
-       (DWDivFP_relative_acc.DWDivFP_relative_accuracy); its condition constrains the
-       computed nodes, not just the inputs, so no runtime input check
-       discharges it.
-       So the guard now admits EVERY quotient magnitude the format can
-       represent, and the exported postcondition did not weaken.
-
-       WHAT REPLACES THE FLOOR.  The cond's fifth conjunct is now
-       `is_finite (BDIV x->s y)` -- the division analogue of requiring
-       `is_finite (BMULT a b)`.  It is established here by
-       qt_hi alone: a STRICT comparison against a finite constant rejects NaN
-       (unordered) and +Inf, so it forces RN(x->s/y) finite, which in turn forces
-       y != 0 in R (BDIV_denom_ne0).  That is exactly what the old floor was
-       secretly providing, at the cost of also rejecting tiny quotients.
-
-       The STRICT `<` in qt_hi remains load-bearing and must not become `<=`:
-       2^1022 is a representable power of two on which RN is monotone and
-       idempotent, so a real quotient at or beyond it rounds to at or beyond it.
-       The check may reject the measure-zero boundary |x->s/y| = 2^1022 (a
-       harmless false negative) but never accepts an input violating the cond.
-
-       CLAUSE 8 HAS A ZERO DISJUNCT.  For nonzero x->s, the lower bound
-       2^(emin+2p) remains load-bearing: it makes the division residual
-       representable to relative accuracy u.  Zero is different.  The
-       double-word property forces x->t to zero too, so the dividend and every
-       residual node are exactly zero; no product-node floor is needed.
-
-       The DW prop alone does not pin down finiteness of x->t in R (FT2R sends
-       NaN/Inf to 0), so fin_xl is asserted, even though x->s + x->t == x->s
-       implies it under IEEE comparison semantics. */
-    int fin_xh = isfinite_double(x->s);
-    int fin_xl = isfinite_double(x->t);
-    int fin_y  = isfinite_double(y);
-    int dwx = fin_xh && fin_xl && (x->s + x->t == x->s);
-
-    double q_omega = ldexp(1.0, 1022);   /* Omega/4 = 2^(femax-2) = 2^1022 */
-    double q_plo   = ldexp(1.0, -968);   /* 2^(emin+2*p)  product-node lower bound */
-
-    /* |x->s| window, with the exact-zero dividend admitted separately. */
-    int xh_hi = fabs(x->s) <= q_omega;
-    int xh_lo = (x->s == 0.0) || q_plo <= fabs(x->s);
-
-    /* Reject before evaluating the quotient.  The explicit zero-divisor test
-       does not change the accepted set: qt_hi rejected both finite/0 and 0/0
-       already.  It prevents those rejected inputs from raising FE_DIVBYZERO
-       or FE_INVALID merely by being checked. */
-    int ready = dwx && fin_y && xh_hi && xh_lo && (y != 0.0);
-    if (!ready) return 0;
-
-    /* Quotient CEILING only, on the rounded quotient q = RN(x->s / y).  There
-       is deliberately no quotient floor: see the comment block above. */
     double q = x->s / y;
-    int qt_hi = fabs(q) < q_omega;   /* STRICT: |x->s/y| <= Omega/4; also forces q finite */
-    return qt_hi;
+    return fabs(q) < q_omega;
 }
 
-int dw_div_fp_weak_precond_check(const struct dword *x, double y) {
+int dw_div_fp_weak_check(const struct dword *x, double y) {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
     int fin_y = isfinite_double(y);
@@ -347,7 +271,7 @@ int dw_div_dw_strong_precond_check(const struct dword *x, const struct dword *y)
        (y->s, y->t) double-words; |y->s| <= 2^(femax-p-5);
        2^(emin+2p) <= |y->s|; and |x->s/y->s| <= Omega/4.
 
-       The quotient CEILING is the same construction as dw_div_fp_strong_precond_check's: it is
+       The quotient CEILING is the same construction as dw_div_fp_strong_check's: it is
        tested on the ROUNDED quotient q = RN(x->s / y->s), and the rounded->exact
        transfer is one-directional in Coq (BDIV_abs_le_bpow).  The STRICT `<` on
        qt_hi does double duty, giving the cond's real-quotient upper bound AND

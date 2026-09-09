@@ -191,8 +191,8 @@ Definition dw_plus_fp_strong_precond_check_spec :=
    computed nodes and so is not an input test; see
    dw_div_fp_strong_spec in DDOpsASI.v.
    The product node floor on |xh| is retained. *)
-Definition dw_div_fp_strong_precond_check_spec :=
-  DECLARE _dw_div_fp_strong_precond_check
+Definition dw_div_fp_strong_check_spec :=
+  DECLARE _dw_div_fp_strong_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -207,8 +207,8 @@ Definition dw_div_fp_strong_precond_check_spec :=
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP( data_at Tsh dword (f2val xh) x ).
 
-Definition dw_div_fp_weak_precond_check_spec :=
-  DECLARE _dw_div_fp_weak_precond_check
+Definition dw_div_fp_weak_check_spec :=
+  DECLARE _dw_div_fp_weak_check
   WITH x : val,
        xh : ftype Tdouble * ftype Tdouble,
        y  : ftype Tdouble
@@ -217,7 +217,11 @@ Definition dw_div_fp_weak_precond_check_spec :=
     SEP(data_at Tsh dword (f2val xh) x)
   POST [ tint ]
     EX b : bool,
-    PROP(b = true -> DWDivFP_weak_precond (fst xh) (snd xh) y)
+    PROP(b = true ->
+         is_finite (fst xh) = true /\
+         is_finite (snd xh) = true /\
+         is_finite y = true /\
+         DWDivFP_weak_precond (fst xh) (snd xh) y)
     RETURN (Vint (if b then Int.one else Int.zero))
     SEP(data_at Tsh dword (f2val xh) x).
 

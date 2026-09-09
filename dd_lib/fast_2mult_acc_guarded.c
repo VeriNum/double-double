@@ -2,8 +2,9 @@
 #include "dw_arith.h"
 #include "fp_utils.h"
 
-/* This Tier B Fast2Mult wrapper exposes only a bound on the returned error
-   component.  It guards fast_2mult with the cheaper fast2_mult_product_finite_check, which
+/* This internal Tier B Fast2Mult wrapper proves only a bound on the returned
+   error component; it is not part of the advertised public API.  It guards
+   fast_2mult with the cheaper fast2_mult_product_finite_check, which
    tests that the rounded product is finite but does not perform the underflow
    zero/threshold test.  Its verified postcondition carries only
    |st->t| <= 1/2 ulp(a*b); it does NOT assert exact reconstruction or that the

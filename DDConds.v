@@ -297,7 +297,7 @@ Notation Omega := (bpow Zaux.radix2 (femax t)).
    forces [xl] to zero, so the residual vanishes.  There is no lower bound on
    the quotient, so the condition admits subnormal results.  The pure relative
    bound additionally requires [DWDivFP_relative_precond].
-   [dw_div_fp_strong_precond_check] establishes this condition. *)
+   [dw_div_fp_strong_check] establishes this condition. *)
 Definition DWDivFP_strong_precond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\

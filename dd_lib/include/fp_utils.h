@@ -24,9 +24,9 @@ int dw_plus_fp_strong_precond_check(const struct dword *x, double y);
 
 int dw_plus_fp_weak_precond_check(const struct dword *x, double y);
 
-int dw_div_fp_strong_precond_check(const struct dword *x, double y);
+int dw_div_fp_strong_check(const struct dword *x, double y);
 
-int dw_div_fp_weak_precond_check(const struct dword *x, double y);
+int dw_div_fp_weak_check(const struct dword *x, double y);
 
 int dw_times_fp_strong_precond_check(const struct dword *x, double y);
 

@@ -575,7 +575,7 @@ Proof.
 Qed.
 
 (* ==================================================================== *)
-(*  Division guard helpers (dw_div_fp_strong_precond_check / DWDivFP_strong_precond)  *)
+(*  Division guard helpers (dw_div_fp_strong_check / DWDivFP_strong_precond)  *)
 (* ==================================================================== *)
 
 (* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
@@ -584,7 +584,7 @@ Qed.
      - a strict rounded bound above bpow k forces the exact value > bpow k.
    These are the division check analogs of no_overflow/underflow_real_from_round_mul,
    stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
-   BDIV_round_correct in body_dw_div_fp_strong_precond_check). *)
+   BDIV_round_correct in body_dw_div_fp_strong_check). *)
 Lemma round_abs_le_bpow (r : R) (k : Z) :
   generic_format radix2 fexp (bpow Zaux.radix2 k) ->
   Rabs (round radix2 fexp ZnearestE r) < bpow Zaux.radix2 k ->

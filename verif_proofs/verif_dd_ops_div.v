@@ -123,7 +123,8 @@ forward_if Post_if.
   unfold Post_if. entailer!.
 - forward.
   unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
+  specialize (H ltac:(destruct vret_fin; auto)).
+  tauto.
 - unfold Post_if.
   assert_PROP (DWDivFP_weak_precond (fst xh) (snd xh) y) as Hin
     by entailer!.

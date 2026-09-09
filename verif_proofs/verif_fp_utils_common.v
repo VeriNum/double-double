@@ -95,7 +95,7 @@ Definition Checks_Internal : funspecs :=
     dw_times_fp_strong_precond_check_spec; dw_times_fp_weak_precond_check_spec;
     dw_times_dw_strong_precond_check_spec; dw_times_dw_weak_precond_check_spec; dw_plus_fp_strong_precond_check_spec;
     dw_plus_fp_weak_precond_check_spec; isfinite_dword_spec;
-    dw_div_fp_strong_precond_check_spec; dw_div_fp_weak_precond_check_spec;
+    dw_div_fp_strong_check_spec; dw_div_fp_weak_check_spec;
     dw_div_dw_strong_precond_check_spec; dw_div_dw_weak_precond_check_spec ].
 
 (* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
@@ -106,7 +106,7 @@ Definition Checks_Exports : funspecs :=
     dw_plus_fp_strong_precond_check_spec; dw_plus_dw_weak_precond_check_spec; dw_plus_dw_strong_precond_check_spec;
     dw_times_fp_weak_precond_check_spec; dw_times_fp_strong_precond_check_spec;
     dw_times_dw_weak_precond_check_spec; dw_times_dw_strong_precond_check_spec;
-    dw_div_fp_weak_precond_check_spec; dw_div_fp_strong_precond_check_spec;
+    dw_div_fp_weak_check_spec; dw_div_fp_strong_check_spec;
     dw_div_dw_weak_precond_check_spec; dw_div_dw_strong_precond_check_spec ].
 
 (* Collect the function API specs together into Gprog: list funspec.
