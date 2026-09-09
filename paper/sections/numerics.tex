@@ -513,7 +513,7 @@ The conclusions of \Cref{thm:dw-div-fp-numerical} hold if
 holds, or if $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{corollary}
 
-\subsection{Conditions for the Remaining Numerical Guarantees}
+\subsection{Numerical Guarantees for the Remaining Operations}
 \label{sec:remaining-numerical-conditions}
 
 \Cref{tab:remaining-numerical-conditions} gives the conditions extending the
@@ -526,9 +526,9 @@ error bounds.
 \Cref{thm:remaining-numerical-guarantees}.  The pairs $(x_h,x_\ell)$ and
 $(y_h,y_\ell)$ denote the first and second double-word operands, and $a$
 denotes a floating-point operand.  Every row assumes double-word
-operands.  The middle column lists the additional hypotheses of the
+operands.  The middle column lists the additional conditions of the
 corresponding numerical theorem.  The final column lists sufficient
-hypotheses from which finiteness of the returned components can be proved.}
+conditions from which finiteness of the returned components can be proved.}
 \Description{For each remaining double-word addition, multiplication, and
 division operation, the table separates additional numerical conditions from
 sufficient conditions for establishing result finiteness.}
@@ -536,8 +536,8 @@ sufficient conditions for establishing result finiteness.}
 \setlength{\tabcolsep}{5pt}
 \begin{tabular}{@{}p{0.17\textwidth}p{0.28\textwidth}p{0.48\textwidth}@{}}
 \toprule
-Model & Additional hypotheses
-      & Sufficient hypotheses for a finite result \\
+Model & Additional conditions
+      & Sufficient conditions for a finite result \\
 \midrule
 \texttt{DWPlusFP}
   & None
@@ -576,9 +576,9 @@ by a floating-point value,
 $p\geq5$ for multiplication of two double words, and $p\geq14$ for division
 of two double words.
 
-Suppose the additional hypotheses in
+Suppose the additional conditions in
 the middle column of \Cref{tab:remaining-numerical-conditions} hold.  Suppose
-also that the returned components are finite or that the hypotheses in the
+also that the returned components are finite or that the conditions in the
 final column hold.  Then the returned pair is a double word and
 satisfies the corresponding error bound in \Cref{tab:operation-preview},
 interpreted using $u$ and $\eta$ for the underlying format.
