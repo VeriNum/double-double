@@ -6,12 +6,15 @@ numerical guarantees summarized in \Cref{tab:operation-preview}. We state the
 results for double-word arithmetic over a generic radix-two floating-point
 format; \FenceDD{} uses their binary64 instances.
 
-Each algorithm is represented by a pure functional model that defines its
-returned pair. We write these models mathematically; their Rocq definitions
-use the floating-point types and IEEE~754 operations from VCFloat2 together
-with Flocq's binary floating-point representation. For each model, we bound
-the error in the value represented by the returned pair and prove that the
-pair forms a double word.
+For each algorithm, we define a Rocq function that evaluates its sequence of
+rounded operations and returns the resulting pair. We call this function the
+algorithm's \emph{functional model}. A functional model describes the
+numerical computation without the pointers, memory operations, or control flow
+of its C implementation. We present these models mathematically; their Rocq
+definitions use the floating-point types and IEEE~754 operations from VCFloat2
+together with Flocq's binary floating-point representation. For each model, we
+bound the error in the value represented by the returned pair and prove that
+the pair forms a double word.
 
 All results in this section are mechanized in Rocq. We continue the division
 example from \Cref{sec:overview-division} with a proof sketch of its numerical
@@ -72,7 +75,7 @@ values agree when the exact value lies in the normal range:
 Below $\nu$, the required rounding property must instead be established
 directly in FLT.
 
-We use FLT to model the lower exponent bound; neither FLT nor FLX has an upper
+FLT supplies the lower exponent bound; neither FLT nor FLX has an upper
 exponent bound.  Relating an IEEE~754 operation to FLT rounding therefore also
 requires
 the relevant operands and rounded result to be finite.  Once their finiteness
@@ -302,8 +305,8 @@ $y$, the exact quotient is
   \label{eq:dw-div-exact-quotient}
 \end{equation}
 \endgroup
-We formalize this method over a generic underlying format as the Rocq function
-\DWDivFP{}.  \Cref{alg:dw-div-fp} gives its mathematical definition; each
+The functional model \DWDivFP{} formalizes this algorithm over a generic
+underlying format. \Cref{alg:dw-div-fp} gives its mathematical definition; each
 $\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
 
 \begin{figure}[t]
@@ -336,8 +339,8 @@ $\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
       \]
     \end{minipage}}
   \endgroup
-  \caption{The Rocq model \DWDivFP{} for a generic underlying
-    format, following Algorithm~15 of \citet{Joldes2017}.}
+  \caption{The functional model \DWDivFP{} for division of a double word by a
+    floating-point value, following Algorithm~15 of \citet{Joldes2017}.}
   \Description{The eight steps of the DWDivFP algorithm.  The algorithm
     computes a leading quotient, reconstructs and divides the residual, and
     combines the leading quotient with its correction.}
@@ -516,88 +519,114 @@ holds, or if $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \subsection{Numerical Guarantees for the Remaining Operations}
 \label{sec:remaining-numerical-conditions}
 
-\Cref{tab:remaining-numerical-conditions} gives the conditions extending the
-five remaining analyses to IEEE~754; \cref{tab:operation-preview} gives their
-error bounds.
+The preceding division result states result finiteness separately from the
+other conditions required by the numerical analysis. The same distinction
+applies to the five remaining operations. Write $x=(x_h,x_\ell)$ and, where
+present, $y=(y_h,y_\ell)$ for the double-word operands, and let $a$ denote a
+floating-point operand.
 
-\begin{table*}[t]
+For addition and multiplication, no additional condition on the operands is
+required beyond the double-word assumptions; the returned components must be
+finite. Division of two double words additionally requires the high word of
+the divisor to satisfy
+\begin{equation}
+  2^{e_{\min}+2p}
+  \leq |y_h|
+  \leq \frac{\Omega}{2^{p+5}}.
+  \label{eq:dw-div-dw-divisor-condition}
+\end{equation}
+In every case, finiteness may either be assumed directly for the returned
+components or established from the sufficient conditions in
+\Cref{tab:remaining-numerical-conditions}.
+
+\begin{table}[H]
 \centering
-\caption{Sufficient conditions for the numerical guarantees in
-\Cref{thm:remaining-numerical-guarantees}.  The pairs $(x_h,x_\ell)$ and
-$(y_h,y_\ell)$ denote the first and second double-word operands, and $a$
-denotes a floating-point operand.  Every row assumes double-word
-operands.  The middle column lists the additional conditions of the
-corresponding numerical theorem.  The final column lists sufficient
-conditions from which finiteness of the returned components can be proved.}
-\Description{For each remaining double-word addition, multiplication, and
-division operation, the table separates additional numerical conditions from
-sufficient conditions for establishing result finiteness.}
+\caption{Conditions sufficient for the components returned by the functional
+model for each remaining operation to be finite. Here $x=(x_h,x_\ell)$ and
+$y=(y_h,y_\ell)$ are double-word operands, $a$ is a floating-point operand,
+$\operatorname{Fin}$ means that all listed values are finite, and $\Omega$ is
+the least power of two greater than every finite magnitude in the format.
+Each row provides an alternative to assuming directly that the returned
+components are finite; the other conditions of
+\Cref{thm:remaining-numerical-guarantees} still apply.}
+\Description{For each remaining double-word operation, the table gives
+conditions sufficient for its functional model to return finite components.}
 \label{tab:remaining-numerical-conditions}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}p{0.17\textwidth}p{0.28\textwidth}p{0.48\textwidth}@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{0.31\columnwidth}p{0.64\columnwidth}@{}}
 \toprule
-Model & Additional conditions
-      & Sufficient conditions for a finite result \\
+Operation & Conditions establishing a finite result \\
 \midrule
-\texttt{DWPlusFP}
-  & None
+Addition $(x,a)$
   & $\operatorname{Fin}(x_h,x_\ell,a)$;
     $|x_h|,|a|\leq\Omega/4$ \\
 \addlinespace
-\texttt{DWPlusDW}
-  & None
+Addition $(x,y)$
   & $\operatorname{Fin}(x_h,x_\ell,y_h,y_\ell)$;
     $|x_h|,|y_h|\leq\Omega/4$ \\
 \addlinespace
-\texttt{DWTimesFP}
-  & None
-  & $\operatorname{Fin}(x_\ell,\operatorname{RN}(x_ha))$;
-    $|x_ha|\leq\Omega/2$ \\
+Multiplication $(x,a)$
+  & $\operatorname{Fin}(x_\ell,\operatorname{RN}(x_h a))$;
+    $|x_h a|\leq\Omega/2$ \\
 \addlinespace
-\texttt{DWTimesDW}
-  & None
-  & $\operatorname{Fin}(x_\ell,y_\ell,\operatorname{RN}(x_hy_h))$;
-    $|x_hy_h|\leq\Omega/2$ \\
+Multiplication $(x,y)$
+  & $\operatorname{Fin}(x_\ell,y_\ell,\operatorname{RN}(x_h y_h))$;
+    $|x_h y_h|\leq\Omega/2$ \\
 \addlinespace
-\texttt{DWDivDW}
-  & $2^{e_{\min}+2p}\leq |y_h|\leq \Omega/2^{p+5}$
+Division $(x,y)$
   & $\operatorname{Fin}(x_h,x_\ell,y_h,y_\ell)$;
     $|x_h/y_h|\leq\Omega/4$ \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
+
+The following theorem connects these conditions to the numerical guarantees
+summarized in \Cref{tab:operation-preview}.
 
 \begin{theorem}[Numerical guarantees for the remaining operations]
 \label{thm:remaining-numerical-guarantees}
-Consider a model in \Cref{tab:remaining-numerical-conditions} over a radix-two
-format with precision $p$, unit roundoff $u=2^{-p}$, and smallest positive
-value $\eta=2^{e_{\min}}$.  Assume $p\geq3$ for addition and multiplication
-by a floating-point value,
-$p\geq5$ for multiplication of two double words, and $p\geq14$ for division
-of two double words.
+For one of the five operations in
+\Cref{tab:remaining-numerical-conditions}, let $(z_h,z_\ell)$ be the pair
+returned by its functional model, and let $r$ be the corresponding exact
+result in \Cref{tab:operation-preview}. Let the underlying format be radix two
+with precision $p$, unit roundoff $u=2^{-p}$, and smallest positive
+representable value $\eta=2^{e_{\min}}$.
 
-Suppose the additional conditions in
-the middle column of \Cref{tab:remaining-numerical-conditions} hold.  Suppose
-also that the returned components are finite or that the conditions in the
-final column hold.  Then the returned pair is a double word and
-satisfies the corresponding error bound in \Cref{tab:operation-preview},
-interpreted using $u$ and $\eta$ for the underlying format.
+Assume $p\geq3$ for the addition operations and for multiplication by a
+floating-point value, $p\geq5$ for multiplication of two double words, and
+$p\geq14$ for division of two double words. Suppose every double-word operand
+satisfies \Cref{def:double-word}. For division of two double words, also
+suppose \Cref{eq:dw-div-dw-divisor-condition} holds. Finally, suppose either
+that $\operatorname{Fin}(z_h,z_\ell)$ holds or that the corresponding condition
+in \Cref{tab:remaining-numerical-conditions} holds.
+
+Then the returned pair is a double word:
+\[
+  z_h=\operatorname{RN}(z_h+z_\ell).
+\]
+Its represented value $\widehat r=z_h+z_\ell$ satisfies the corresponding
+error bound on $|\widehat r-r|$ in \Cref{tab:operation-preview}, interpreted
+using $u$ and $\eta$ for the underlying format.
 \end{theorem}
 
 \paragraph{Proof overview.}
-The addition results require no lower-magnitude condition: by
-\Cref{thm:addition-transformations}, the error-free transformations for
-addition remain exact
-when subnormal values occur, so the relative bounds are unchanged.  For
-multiplication, \Cref{thm:fast-two-mult} bounds a product correction that
-is too small to be represented exactly.  Propagating this error through the
-remaining computation produces the absolute terms in the mixed bounds of
-\Cref{tab:operation-preview}.  Division of two double words additionally
-requires the divisor bounds in
-\Cref{tab:remaining-numerical-conditions}.  This algorithm first approximates
-the reciprocal of the divisor.  The lower bound prevents that approximation
-from overflowing, while the upper bound controls the effect of an absolute
-reconstruction error: it implies $\eta|y_h|\leq u^2/4$, allowing that error to
-be absorbed into the relative term.  These bounds are unnecessary for
-division by a floating-point value, which does not construct a reciprocal
-approximation.
+\emph{Addition.}
+The addition transformations remain exact when subnormal values occur by
+\Cref{thm:addition-transformations}. Consequently, the existing relative
+error bounds require no lower bound on the operand magnitudes.
+
+\emph{Multiplication.}
+When a product correction is too small to be represented exactly,
+\Cref{thm:fast-two-mult} bounds the lost correction. Propagating that error
+through the remaining computation produces the absolute terms in the mixed
+bounds of \Cref{tab:operation-preview}.
+
+\emph{Division of two double words.}
+This algorithm begins by approximating the reciprocal of $y_h$. The lower
+bound in \Cref{eq:dw-div-dw-divisor-condition} prevents that approximation
+from overflowing. The upper bound implies $\eta|y_h|\leq u^2/4$, allowing an
+absolute reconstruction error to be absorbed into the relative term. The
+quotient bound in \Cref{tab:remaining-numerical-conditions} provides
+sufficient headroom for the returned components to remain finite. These
+divisor bounds are unnecessary for division by a floating-point value, which
+does not construct a reciprocal approximation.

@@ -1,8 +1,9 @@
 \section{Verification of \FenceDD}
 \label{sec:mechanization}
 
-The numerical theorems in \Cref{sec:numerics} concern functional models,
-whereas users call the public C wrappers in \Cref{sec:overview}.  Following
+The numerical theorems in \Cref{sec:numerics} concern the functional models
+defined there, whereas users call the public C wrappers in
+\Cref{sec:overview}. Following
 earlier layered verifications of numerical C programs
 \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}, we prove three
 obligations: kernel refinement, soundness of the runtime checks, and their
@@ -13,8 +14,8 @@ follow the same structure.
 \subsection{C Kernels Implement Their Functional Models}
 \label{sec:kernel-refinement}
 
-The numerical theorem in \Cref{thm:dw-div-fp-numerical} concerns
-\DWDivFP{}, while the wrappers call the C kernel in
+The numerical theorem in \Cref{thm:dw-div-fp-numerical} concerns the
+functional model \DWDivFP{}, while the wrappers call the C kernel in
 \Cref{fig:dw-div-fp-kernel}.  Suppose that \texttt{x} initially stores
 $(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
 \texttt{z} storing $(z_h,z_\ell)$.  Using VST, we prove
@@ -22,9 +23,9 @@ $(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
   (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y),
   \label{eq:dw-div-fp-kernel-refinement}
 \end{equation}
-where \DWDivFP{} is instantiated with binary64.  The functional models use the
-IEEE~754 types and operations provided by VCFloat2
-\citep{AppelKellison2024}.  In the VST proof, \texttt{FPCompCert} bridge
+where \DWDivFP{} is instantiated with binary64. The Rocq definition of
+\DWDivFP{} uses the IEEE~754 types and operations provided by VCFloat2
+\citep{AppelKellison2024}. In the VST proof, \texttt{FPCompCert} bridge
 lemmas relate these operations to CompCert, while the specifications of the
 transformation kernels account for the internal C calls.  This refinement identifies
 the computed pair but requires no numerical condition and proves no error
