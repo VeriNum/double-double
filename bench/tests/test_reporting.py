@@ -10,10 +10,19 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import re
 import sys
 import tempfile
 import unittest
-from decimal import Decimal, localcontext
+from decimal import (
+    Decimal,
+    Inexact,
+    ROUND_DOWN,
+    ROUND_HALF_UP,
+    ROUND_UP,
+    Rounded,
+    localcontext,
+)
 from pathlib import Path
 from unittest import mock
 
@@ -36,6 +45,64 @@ FINITE_LO = "0x0000000000000000"
 INVALID_LO = "0x3ff0000000000000"
 INFINITE_HI = "0x7ff0000000000000"
 
+EXPECTED_MARKDOWN_PLACEHOLDERS = (
+    "CONFIG_RUN_ID",
+    "CONFIG_PROFILE_NAME",
+    "CONFIG_PROFILE_KIND",
+    "CONFIG_STARTED_UTC",
+    "CONFIG_CPU_MODEL",
+    "CONFIG_ARCHITECTURE",
+    "CONFIG_OS",
+    "CONFIG_COMPCERT",
+    "CONFIG_DD_CFLAGS",
+    "CONFIG_CLANG",
+    "CONFIG_CLANG_FLAGS",
+    "CONFIG_CXX",
+    "CONFIG_CXX_FLAGS",
+    "CONFIG_QD",
+    "CONFIG_MPFR",
+    "CONFIG_GMP",
+    "PROVENANCE_ROWS",
+    "GENERATED_TEST_INPUT_ROWS",
+    "RQ1_SAMPLES_PER_EXPONENT",
+    "RQ1_DW_FP_TEST_CASES",
+    "RQ1_DW_DW_TEST_CASES",
+    "RQ1_MPFR_REFERENCE_BITS",
+    "RQ1_MPFR_DIVISION_RECHECK_BITS",
+    "RQ1_INPUT_FINGERPRINT",
+    "RQ1_RETURN_RATE_ROWS",
+    "RQ1_RELATIVE_RANGE_ROWS",
+    "RQ1_ABSOLUTE_RANGE_ROWS",
+    "RQ1_ABOVE_BOUND_COUNT",
+    "RQ1_ABOVE_BOUND_ITEMS",
+    "RQ1_ZERO_BOUND_CASES",
+    "RQ1_DDLIB_ZERO_BOUND_ERRORS",
+    "RQ1_QD_ZERO_BOUND_ERRORS",
+    "RQ1_QD_ZERO_BOUND_NONFINITE",
+    "RQ2_SAMPLES_PER_EXPONENT",
+    "RQ2_EFT_TEST_CASES",
+    "RQ2_DW_FP_TEST_CASES",
+    "RQ2_DW_DW_TEST_CASES",
+    "RQ2_BOUNDARY_TEST_CASES",
+    "RQ2_MPFR_REFERENCE_BITS",
+    "RQ2_MPFR_DIVISION_BITS",
+    "RQ2_INPUT_FINGERPRINT",
+    "RQ2_DEFAULT_DW_ROWS",
+    "RQ2_STRONG_DW_ROWS",
+    "RQ2_ABOVE_BOUND_COUNT",
+    "RQ2_ABOVE_BOUND_ITEMS",
+    "RQ2_EFT_ROWS",
+    "RQ2_BOUNDARY_PASSED",
+    "RQ2_BOUNDARY_FAILED",
+    "RQ2_CHECKED_EXPONENT_ROWS",
+    "RQ3_TEST_CASES_PER_TRIAL",
+    "RQ3_TRIALS_PER_CELL",
+    "RQ3_TIMED_CALLS_PER_CELL",
+    "RQ3_COMPILER_BLOCKS",
+    "RQ3_INPUT_FINGERPRINT",
+    "RQ3_PERFORMANCE_ROWS",
+)
+
 
 def _line(*fields: object) -> str:
     return "\t".join(str(field) for field in fields)
@@ -43,6 +110,12 @@ def _line(*fields: object) -> str:
 
 def _decimal(value: Decimal) -> str:
     return format(value, ".40e")
+
+
+def _single_line(text: str) -> str:
+    """Collapse Markdown source wrapping when checking fixed prose."""
+
+    return " ".join(text.split())
 
 
 def _rq1_text() -> tuple[str, dict[str, str]]:
@@ -456,6 +529,115 @@ def _artifact(
     return record
 
 
+def _manifest_base() -> dict[str, object]:
+    build_values = {
+        "dd_cc": "ccomp",
+        "dd_cflags": "-O3",
+        "clang_cc": "clang",
+        "clang_cflags": "-O3",
+        "cxx": "c++",
+        "cxxflags": "-O3 -std=c++14",
+        "strict_fp_flags": "-fno-fast-math -ffp-contract=off",
+        "qd_prefix": "/test/qd",
+    }
+    qd_headers = [
+        _artifact(f"/test/qd/include/qd/{name}", name.encode("ascii"))
+        for name in ("dd_real.h", "dd_inline.h", "inline.h", "qd_config.h")
+    ]
+    qd_policy = _artifact("/test/bench/qd_evaluation.hpp", b"policy")
+    qd_identity = {"headers": qd_headers, "policy": qd_policy}
+    binaries = {
+        key: {
+            **_artifact(f"/test/bench/{executable}", key.encode("ascii")),
+            "dynamic_dependencies": [],
+        }
+        for key, executable in (
+            ("rq1", "rq1_accuracy"),
+            ("rq2", "rq2_guard_acceptance"),
+            ("rq3_compcert", "rq3_performance_compcert"),
+            ("rq3_clang", "rq3_performance_clang"),
+        )
+    }
+    commands = [
+        {
+            "evaluation": evaluation,
+            "argv": argv,
+            "exit_code": 0,
+        }
+        for evaluation, argv in (
+            ("rq1", ["./rq1_accuracy", "40", "raw/rq1.tsv"]),
+            ("rq2", ["./rq2_guard_acceptance", "40", "raw/rq2.tsv"]),
+            (
+                "rq3_compcert",
+                ["./rq3_performance_compcert", "64", "24", "raw/rq3-compcert.tsv"],
+            ),
+            (
+                "rq3_clang",
+                ["./rq3_performance_clang", "64", "24", "raw/rq3-clang.tsv"],
+            ),
+        )
+    ]
+    return {
+        "manifest_schema_version": 6,
+        "status": "complete",
+        "run_id": "synthetic-report-test",
+        "profile": {
+            "name": "unit test",
+            "kind": "smoke",
+            "source": _artifact("/test/evaluation_profiles.json", b"profile"),
+        },
+        "started_utc": "2026-08-31T12:00:00Z",
+        "completed_utc": "2026-08-31T12:01:00Z",
+        "build": {
+            **build_values,
+            "configuration": {
+                **_artifact("/test/bench/.build/config.json", b"configuration"),
+                "values": {
+                    "config_schema_version": 3,
+                    **build_values,
+                    "tool_identities": {
+                        "clang_cc": {},
+                        "cxx": {},
+                        "dd_cc": {},
+                        "qd": qd_identity,
+                    },
+                },
+            },
+            "binaries": binaries,
+            "qd_headers": qd_headers,
+            "qd_policy": qd_policy,
+        },
+        "environment": {
+            "os": "Test OS",
+            "architecture": "test64",
+            "cpu_model": "Synthetic CPU",
+            "cpu_count": 1,
+            "hostname": "test-host",
+            "python": "Python 3",
+            "compcert": "CompCert test",
+            "clang": "Clang test",
+            "cxx": "C++ test",
+            "qd": "QD test with FMA",
+            "mpfr": "MPFR test",
+            "gmp": "GMP test",
+            "compcert_executable": "/test/bin/ccomp",
+            "clang_executable": "/test/bin/clang",
+            "cxx_executable": "/test/bin/c++",
+            "qd_config_executable": "/test/qd/bin/qd-config",
+            "pkg_config_executable": "/test/bin/pkg-config",
+        },
+        "commands": commands,
+        "parameters": {
+            "rq1_samples": 40,
+            "rq2_samples": 40,
+            "rq3_inputs": 64,
+            "rq3_trials": 24,
+        },
+        "artifacts": {},
+        "tsv_metadata": {},
+    }
+
+
 def _write_checksums(root: Path) -> None:
     checksum_path = root / "checksums.sha256"
     paths = sorted(
@@ -485,9 +667,7 @@ def _set_profile_kind(root: Path, kind: str) -> None:
 
 
 def _make_run(root: Path) -> None:
-    manifest = json.loads(
-        (FIXTURES / "manifest_base.json").read_text(encoding="utf-8")
-    )
+    manifest = _manifest_base()
     rq1_text, rq1_metadata = _rq1_text()
     rq2_text, rq2_metadata = _rq2_text()
     rq3_compcert_text, rq3_compcert_metadata = _rq3_text("compcert")
@@ -560,6 +740,229 @@ class ReportingTests(unittest.TestCase):
     def load(self) -> reporting.EvaluationRun:
         return reporting.load_evaluation_run(self.run_dir, SHAPE)
 
+    def template(self) -> str:
+        return (BENCH / "results_template.md").read_text(encoding="utf-8")
+
+    def render_markdown(
+        self,
+        run: reporting.EvaluationRun | None = None,
+        template: str | None = None,
+    ) -> str:
+        return reporting.render_markdown(
+            self.load() if run is None else run,
+            self.template() if template is None else template,
+        )
+
+    def test_markdown_placeholder_inventory_is_exact(self) -> None:
+        self.assertEqual(
+            tuple(reporting.MARKDOWN_PLACEHOLDERS),
+            EXPECTED_MARKDOWN_PLACEHOLDERS,
+        )
+        markers = re.findall(r"\{\{([A-Z0-9_]+)\}\}", self.template())
+        self.assertEqual(tuple(markers), EXPECTED_MARKDOWN_PLACEHOLDERS)
+
+    def test_markdown_template_rejects_missing_and_duplicate_placeholders(
+        self,
+    ) -> None:
+        template = self.template()
+        marker = "{{RQ1_RETURN_RATE_ROWS}}"
+        self.assertEqual(template.count(marker), 1)
+        for name, changed in (
+            ("missing", template.replace(marker, "")),
+            ("duplicate", template + "\n" + marker + "\n"),
+        ):
+            with self.subTest(name=name):
+                with self.assertRaises(reporting.ReportError):
+                    reporting.render_markdown(self.load(), changed)
+
+    def test_markdown_template_rejects_unknown_and_malformed_placeholders(
+        self,
+    ) -> None:
+        template = self.template()
+        invalid_markers = (
+            "{{UNKNOWN_PLACEHOLDER}}",
+            "{{unknown_placeholder}}",
+            "{{ RQ1_RETURN_RATE_ROWS }}",
+            "{{RQ1_RETURN_RATE_ROWS}",
+            "{RQ1_RETURN_RATE_ROWS}}",
+        )
+        for marker in invalid_markers:
+            with self.subTest(marker=marker):
+                with self.assertRaises(reporting.ReportError):
+                    reporting.render_markdown(
+                        self.load(), template + "\n" + marker + "\n"
+                    )
+
+    def test_markdown_replacements_have_only_the_declared_content_shapes(
+        self,
+    ) -> None:
+        replacements = reporting._markdown_replacements(self.load())
+        self.assertEqual(
+            set(replacements), set(EXPECTED_MARKDOWN_PLACEHOLDERS)
+        )
+
+        row_widths = {
+            "PROVENANCE_ROWS": 4,
+            "GENERATED_TEST_INPUT_ROWS": 8,
+            "RQ1_RETURN_RATE_ROWS": 4,
+            "RQ1_RELATIVE_RANGE_ROWS": 9,
+            "RQ1_ABSOLUTE_RANGE_ROWS": 9,
+            "RQ2_DEFAULT_DW_ROWS": 6,
+            "RQ2_STRONG_DW_ROWS": 6,
+            "RQ2_EFT_ROWS": 6,
+            "RQ2_CHECKED_EXPONENT_ROWS": 5,
+            "RQ3_PERFORMANCE_ROWS": 10,
+        }
+        row_counts = {
+            "PROVENANCE_ROWS": 4,
+            "GENERATED_TEST_INPUT_ROWS": 3,
+            "RQ1_RETURN_RATE_ROWS": 6,
+            "RQ1_RELATIVE_RANGE_ROWS": 12,
+            "RQ1_ABSOLUTE_RANGE_ROWS": 12,
+            "RQ2_DEFAULT_DW_ROWS": 6,
+            "RQ2_STRONG_DW_ROWS": 6,
+            "RQ2_EFT_ROWS": 3,
+            "RQ2_CHECKED_EXPONENT_ROWS": 9,
+            "RQ3_PERFORMANCE_ROWS": 18,
+        }
+        for name, expected_width in row_widths.items():
+            lines = replacements[name].splitlines()
+            self.assertTrue(lines, name)
+            self.assertEqual(len(lines), row_counts[name], name)
+            for line in lines:
+                with self.subTest(placeholder=name, line=line):
+                    self.assertTrue(line.startswith("| "))
+                    self.assertTrue(line.endswith(" |"))
+                    self.assertEqual(
+                        len(line.removeprefix("|").removesuffix("|").split("|")),
+                        expected_width,
+                    )
+                    self.assertIsNone(
+                        re.fullmatch(r"\|(?:\s*:?-+:?\s*\|)+", line)
+                    )
+
+        for name in ("RQ1_ABOVE_BOUND_ITEMS", "RQ2_ABOVE_BOUND_ITEMS"):
+            lines = replacements[name].splitlines()
+            self.assertTrue(lines, name)
+            self.assertTrue(lines[0].startswith("- "), name)
+            self.assertTrue(
+                all(
+                    not line or line.startswith(("- ", "  "))
+                    for line in lines
+                ),
+                name,
+            )
+
+        structured = set(row_widths) | {
+            "RQ1_ABOVE_BOUND_ITEMS",
+            "RQ2_ABOVE_BOUND_ITEMS",
+        }
+        for name in set(EXPECTED_MARKDOWN_PLACEHOLDERS) - structured:
+            with self.subTest(placeholder=name):
+                self.assertNotIn("\n", replacements[name])
+                self.assertFalse(replacements[name].startswith(("#", "|", "- ")))
+
+    def test_rendered_markdown_tables_have_consistent_widths(self) -> None:
+        lines = self.render_markdown().splitlines()
+        separators = re.compile(r"^\|(?:\s*:?-+:?\s*\|)+$")
+        table_count = 0
+        for index, line in enumerate(lines):
+            if not separators.fullmatch(line):
+                continue
+            table_count += 1
+            self.assertGreater(index, 0)
+            header_width = len(lines[index - 1].strip("|").split("|"))
+            separator_width = len(line.strip("|").split("|"))
+            self.assertEqual(separator_width, header_width)
+            row_index = index + 1
+            while row_index < len(lines) and lines[row_index].startswith("|"):
+                self.assertEqual(
+                    len(lines[row_index].strip("|").split("|")),
+                    header_width,
+                    lines[row_index],
+                )
+                row_index += 1
+        self.assertEqual(table_count, reporting.MARKDOWN_TABLE_COUNT)
+
+    def test_markdown_rejects_a_table_header_width_mismatch(self) -> None:
+        template = self.template()
+        header = "| Artifact | Path | SHA-256 | Bytes |"
+        self.assertEqual(template.count(header), 1)
+        malformed = template.replace(
+            header,
+            "| Artifact | Path | SHA-256 | Bytes | Unexpected |",
+        )
+        with self.assertRaises(reporting.ReportError):
+            reporting.render_markdown(self.load(), malformed)
+
+    def test_markdown_table_rows_escape_backslashes_and_pipes(self) -> None:
+        row = reporting._md_rows(((r"left\|right", "value"),), 2, "test")
+        self.assertEqual(
+            len(reporting._split_markdown_table_row(row)),
+            2,
+        )
+
+    def test_markdown_rejects_a_missing_table_separator(self) -> None:
+        template = self.template()
+        separator = "|---|---|---|---:|"
+        self.assertEqual(template.count(separator), 1)
+        malformed = template.replace(separator, "| Artifact data |", 1)
+        with self.assertRaises(reporting.ReportError):
+            reporting.render_markdown(self.load(), malformed)
+
+    def test_markdown_rejects_a_misplaced_structured_placeholder(self) -> None:
+        template = self.template()
+        for marker in (
+            "{{RQ1_RETURN_RATE_ROWS}}",
+            "{{RQ1_ABOVE_BOUND_ITEMS}}",
+        ):
+            with self.subTest(marker=marker):
+                malformed = template.replace(marker, "prefix " + marker)
+                with self.assertRaises(reporting.ReportError):
+                    reporting.render_markdown(self.load(), malformed)
+
+    def test_rendered_markdown_heading_order_is_stable(self) -> None:
+        headings = tuple(
+            line
+            for line in self.render_markdown().splitlines()
+            if re.fullmatch(r"#{1,6} .+", line)
+        )
+        self.assertEqual(
+            headings,
+            (
+                "# Evaluation results",
+                "## Configuration",
+                "## Input artifacts",
+                "## Numerical test inputs used by RQ1 and RQ2",
+                "## RQ1: Bound satisfaction and tightness",
+                "### Test basis",
+                "### Default-wrapper return rates",
+                "### Relative-term-dominant range",
+                "### Absolute-term-dominant range",
+                "### Results above bound",
+                "## RQ2: Usefulness of the wrappers",
+                "### Test basis",
+                "### Double-word operations",
+                "#### Default wrapper",
+                "#### Strong wrapper",
+                "#### Results above bound",
+                "### Error-free transformations",
+                "### Checked exponents for log-stratified test cases returned by default and rejected by strong",
+                "## RQ3: Runtime performance",
+                "### Test basis",
+            ),
+        )
+
+    def test_multiline_scalar_replacement_is_rejected(self) -> None:
+        run = self.load()
+        build = run.manifest.raw["build"]
+        self.assertIsInstance(build, dict)
+        build["dd_cflags"] = "-O3\nunexpected"
+        with self.assertRaisesRegex(
+            reporting.ReportError, "scalar Markdown replacement"
+        ):
+            reporting._markdown_replacements(run)
+
     def test_complete_run_renders_only_current_report_outputs(self) -> None:
         run = self.load()
         self.assertEqual(run.rq1.metadata["rq1_schema_version"], "6")
@@ -622,8 +1025,8 @@ class ReportingTests(unittest.TestCase):
         self.assertIn("Maximum absolute error / η", markdown)
         self.assertIn("### Results above bound", markdown)
         self.assertIn("### Double-word operations", markdown)
-        self.assertIn("#### Default weak-precondition wrapper", markdown)
-        self.assertIn("#### Strong-precondition wrapper", markdown)
+        self.assertIn("#### Default wrapper", markdown)
+        self.assertIn("#### Strong wrapper", markdown)
         self.assertNotIn("Rejected by wrapper", markdown)
         self.assertIn("#### Results above bound", markdown)
         self.assertIn("QD finite, valid, above bound", markdown)
@@ -634,13 +1037,22 @@ class ReportingTests(unittest.TestCase):
             "default and rejected by strong",
             markdown,
         )
-        self.assertIn("default- and strong-rejected populations overlap", markdown)
-        self.assertIn("Boundary-case assertions: 48 passed; 0 failed", markdown)
+        prose = _single_line(markdown)
+        self.assertIn("default- and strong-rejected populations overlap", prose)
+        self.assertIn("Boundary-case assertions: 48 passed; 0 failed", prose)
+        self.assertIn(
+            "Each percentage is rounded independently to the nearest 0.01 "
+            "percentage point; exact halfway cases use ties-to-even. "
+            "Displayed categories may therefore not sum to exactly 100.00%; "
+            "the integer counts are authoritative.",
+            prose,
+        )
         self.assertNotIn("Comparison with QD against MPFR", markdown)
         self.assertNotIn("Validity and nonzero-error diagnostics", markdown)
 
     def test_rq1_rates_use_the_documented_denominators(self) -> None:
-        text = reporting._render_rq1(self.load())
+        text = self.render_markdown()
+        prose = _single_line(text)
         self.assertIn(
             "| Generated test cases per DW x FP operation | 80 |",
             text,
@@ -659,7 +1071,7 @@ class ReportingTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "| `dw_plus_fp` | 98% | 99% | 96% |",
+            "| `dw_plus_fp` | 97.50% | 98.72% | 96.25% |",
             text,
         )
         self.assertLess(
@@ -669,25 +1081,29 @@ class ReportingTests(unittest.TestCase):
         self.assertIn(
             "output-finiteness-check pass rate is conditional on passing "
             "the input check",
-            text,
+            prose,
         )
         self.assertIn(
-            r"For \(B = B_{\mathrm{relative}} + B_{\mathrm{absolute}}\), "
-            "zero-bound test cases among default-wrapper normal returns: 0.",
-            text,
+            r"For \(B = B_{\rm relative} + B_{\rm absolute}\), there were "
+            "0 zero-bound test cases among default-wrapper normal returns.",
+            prose,
         )
 
     def test_each_rq_reports_its_test_basis(self) -> None:
         run = self.load()
+        markdown = self.render_markdown(run)
+        prose = _single_line(markdown)
 
-        rq1 = reporting._render_rq1(run)
+        rq1 = markdown
         self.assertIn("| Samples per exponent | 40 |", rq1)
         self.assertIn("| MPFR reference precision (bits) | 2,112 |", rq1)
-        self.assertIn("| MPFR division recheck precision (bits) | 4,224 |", rq1)
+        self.assertIn("| MPFR division precision (bits) | 4,224 |", rq1)
         self.assertIn(f"| Numerical-input fingerprint | `{FINGERPRINT}` |", rq1)
-        self.assertIn("RQ1 and RQ2 use the same deterministic numerical inputs", rq1)
+        self.assertIn(
+            "RQ1 and RQ2 use the same deterministic numerical inputs", prose
+        )
 
-        rq2 = reporting._render_rq2_acceptance(run)
+        rq2 = markdown
         self.assertIn("| Generated test cases per EFT operation | 80 |", rq2)
         self.assertIn(
             "| Generated test cases per DW x FP operation | 80 |", rq2
@@ -701,7 +1117,7 @@ class ReportingTests(unittest.TestCase):
             rq2,
         )
 
-        rq3 = reporting._render_rq3_performance(run)
+        rq3 = markdown
         self.assertIn("| Test cases per trial | 64 |", rq3)
         self.assertIn("| Trials per table cell | 24 |", rq3)
         self.assertIn("| Timed calls per table cell | 1,536 |", rq3)
@@ -709,34 +1125,36 @@ class ReportingTests(unittest.TestCase):
         self.assertIn(
             "| Timing-input fingerprint | `0xfedcba9876543210` |", rq3
         )
-        self.assertIn("RQ3 uses a separate timing-input set from RQ1 and RQ2", rq3)
+        self.assertIn(
+            "RQ3 uses a separate timing-input set from RQ1 and RQ2", prose
+        )
         self.assertIn(
             "Untimed preflight and warm-up calls are excluded from the "
             "timed-call count",
-            rq3,
+            prose,
         )
 
     def test_rq1_range_tables_report_percent_of_normal_returns(self) -> None:
-        text = reporting._render_rq1(self.load())
+        text = self.render_markdown()
         self.assertIn(
             "test-cases-in-range column reports the percentage of those "
             "cases for each operation",
+            _single_line(text),
+        )
+        self.assertIn(
+            "| `dw_plus_fp` | dd_lib | 100.00% |",
             text,
         )
         self.assertIn(
-            "| `dw_plus_fp` | dd_lib | 100% |",
+            "| `dw_times_fp` | dd_lib | 61.04% |",
             text,
         )
         self.assertIn(
-            "| `dw_times_fp` | dd_lib | 61% |",
+            "| `dw_times_fp` | QD | 61.04% |",
             text,
         )
         self.assertIn(
-            "| `dw_times_fp` | QD | 61% |",
-            text,
-        )
-        self.assertIn(
-            "| `dw_times_fp` | dd_lib | 39% |",
+            "| `dw_times_fp` | dd_lib | 38.96% |",
             text,
         )
         self.assertNotIn(
@@ -783,7 +1201,7 @@ class ReportingTests(unittest.TestCase):
             source,
         )
 
-        markdown = reporting._render_rq1(run)
+        markdown = self.render_markdown(run)
         self.assertIn("0.51", markdown)
         self.assertNotIn(source, markdown)
         latex = reporting.render_latex_files(run)
@@ -871,7 +1289,7 @@ class ReportingTests(unittest.TestCase):
             "rq1_default_interface_rates_rows.tex"
         ]
         self.assertIn(
-            r"\textsc{DWPlusFP} & 98\% & 99\% & 96\%",
+            r"\textsc{DWPlusFP} & 97.50\% & 98.72\% & 96.25\%",
             rows,
         )
         self.assertNotIn("80", rows)
@@ -882,19 +1300,19 @@ class ReportingTests(unittest.TestCase):
         relative = latex["rq1_relative_bound_rows.tex"]
         absolute = latex["rq1_absolute_bound_rows.tex"]
         self.assertIn(
-            r"\textsc{DWPlusFP} & dd\_lib & 100\% &",
+            r"\textsc{DWPlusFP} & FenceDD & 100.00\% &",
             relative,
         )
         self.assertIn(
-            r"\textsc{DWTimesFP} & dd\_lib & 61\% &",
+            r"\textsc{DWTimesFP} & FenceDD & 61.04\% &",
             relative,
         )
         self.assertIn(
-            r"\textsc{DWTimesFP} & QD & 61\% &",
+            r"\textsc{DWTimesFP} & QD & 61.04\% &",
             relative,
         )
         self.assertIn(
-            r"\textsc{DWTimesFP} & dd\_lib & 39\% &",
+            r"\textsc{DWTimesFP} & FenceDD & 38.96\% &",
             absolute,
         )
 
@@ -941,51 +1359,129 @@ class ReportingTests(unittest.TestCase):
             )
 
     def test_rq2_markdown_percentages_use_each_rejected_population(self) -> None:
-        text = reporting._render_rq2_acceptance(self.load())
+        text = self.render_markdown()
         self.assertIn(
-            "#### Default weak-precondition wrapper\n\n"
+            "#### Default wrapper\n\n"
             "| Operation | Rejected test cases |",
             text,
         )
         self.assertIn(
-            "| `dw_plus_fp` | 3 | 1 (33%) | 1 (33%) "
-            "| 1 (33%) | 0 (0%) |",
+            "| `dw_plus_fp` | 3 | 1 (33.33%) | 1 (33.33%) "
+            "| 1 (33.33%) | 0 (0.00%) |",
             text,
         )
         self.assertIn(
-            "#### Strong-precondition wrapper\n\n"
+            "#### Strong wrapper\n\n"
             "| Operation | Rejected test cases |",
             text,
         )
         self.assertIn(
-            "| `dw_plus_fp` | 4 | 1 (25%) | 1 (25%) "
-            "| 1 (25%) | 1 (25%) |",
+            "| `dw_plus_fp` | 4 | 1 (25.00%) | 1 (25.00%) "
+            "| 1 (25.00%) | 1 (25.00%) |",
             text,
         )
         self.assertIn(
-            "| `two_sum` | 4 | 1 (25%) | 1 (25%) | 1 (25%) "
-            "| 1 (25%) |",
+            "| `two_sum` | 4 | 1 (25.00%) | 1 (25.00%) | 1 (25.00%) "
+            "| 1 (25.00%) |",
             text,
         )
 
-    def test_proper_subset_percentage_does_not_round_to_one_hundred(self) -> None:
+    def test_percentages_use_two_decimal_places(self) -> None:
         rejected = 41_945
         valid_not_exact = 41_830
         self.assertEqual(
             reporting._markdown_percent(valid_not_exact, rejected),
-            "99.7%",
+            "99.73%",
         )
         self.assertEqual(
             reporting._latex_count_percent(valid_not_exact, rejected),
-            r"41{,}830 (99.7\%)",
+            r"41{,}830 (99.73\%)",
         )
         self.assertEqual(
             reporting._markdown_percent(rejected, rejected),
-            "100%",
+            "100.00%",
         )
         self.assertEqual(
             reporting._markdown_percent(9_999, 10_000),
             "99.99%",
+        )
+        self.assertEqual(
+            reporting._markdown_percent(999_999, 1_000_000),
+            "100.00%",
+        )
+
+    def test_percentage_rounding_uses_explicit_ties_to_even(self) -> None:
+        cases = (
+            (1, 32, "3.12"),
+            (3, 32, "9.38"),
+            (19_997, 20_000, "99.98"),
+            (19_999, 20_000, "100.00"),
+            (9_898, 9_913, "99.85"),
+        )
+        for rounding in (ROUND_DOWN, ROUND_UP, ROUND_HALF_UP):
+            with self.subTest(ambient_rounding=rounding):
+                with localcontext() as context:
+                    context.prec = 2
+                    context.rounding = rounding
+                    context.traps[Inexact] = True
+                    context.traps[Rounded] = True
+                    for numerator, denominator, expected in cases:
+                        self.assertEqual(
+                            reporting._paper_percent_text(
+                                numerator, denominator
+                            ),
+                            expected,
+                        )
+                    self.assertEqual(
+                        reporting._paper_percentage_value_text(
+                            Decimal("12.341")
+                        ),
+                        "12.34",
+                    )
+
+    def test_rejection_percentages_round_to_two_decimal_places(self) -> None:
+        run = self.load()
+        value = run.rq2.dw_rejected[("dw_times_fp", "strong")]
+        value.rejected = 9_913
+        value.qd_nonfinite = 9_898
+        value.qd_finite_invalid_dw = 0
+        value.qd_finite_valid_above_bound = 0
+        value.qd_finite_valid_within_bound = 15
+
+        markdown = self.render_markdown(run)
+        self.assertIn(
+            "| `dw_times_fp` | 9,913 | 9,898 (99.85%) | 0 (0.00%) "
+            "| 0 (0.00%) | 15 (0.15%) |",
+            markdown,
+        )
+
+        latex = reporting.render_latex_files(run)[
+            "rq2_strong_double_word_rejected_rows.tex"
+        ]
+        self.assertIn(
+            r"\textsc{DWTimesFP} & 9{,}913 & 9{,}898 (99.85\%) "
+            r"& 0 (0.00\%) & 0 (0.00\%) & 15 (0.15\%)",
+            latex,
+        )
+
+    def test_all_rendered_percentages_have_two_decimal_places(self) -> None:
+        markdown_percentages = re.findall(
+            r"\d+(?:\.\d+)?%", self.render_markdown()
+        )
+        self.assertTrue(markdown_percentages)
+        for percentage in markdown_percentages:
+            with self.subTest(format="Markdown", percentage=percentage):
+                self.assertRegex(percentage, r"^\d+\.\d{2}%$")
+
+        latex = "\n".join(reporting.render_latex_files(self.load()).values())
+        latex_percentages = re.findall(r"\d+(?:\.\d+)?\\?%", latex)
+        self.assertTrue(latex_percentages)
+        for percentage in latex_percentages:
+            with self.subTest(format="LaTeX", percentage=percentage):
+                self.assertRegex(percentage, r"^\d+\.\d{2}\\%$")
+        self.assertIn(
+            r"\newcommand{\RQOneQDExcessPercent}{50.00\%}",
+            latex,
         )
 
     def test_latex_compact_rq2_rows_use_safe_percentages(self) -> None:
@@ -998,13 +1494,19 @@ class ReportingTests(unittest.TestCase):
         fast_sum.qd_finite_valid_exact_reconstruction = 103
         rows = reporting.render_latex_files(run)["rq2_eft_compact_rows.tex"]
         self.assertIn(
-            r"\textsc{Fast2Sum} & 41{,}945 & 0\% & 0.029\% & 99.7\% & 0.25\%",
+            r"\textsc{Fast2Sum} & 41{,}945 & 0.00\% & 0.03\% & 99.73\% & 0.25\%",
             rows,
         )
 
     def test_markdown_lists_every_rq1_above_bound_result(self) -> None:
         run = self.load()
-        text = reporting._render_rq1(run)
+        replacements = reporting._markdown_replacements(run)
+        self.assertEqual(replacements["RQ1_ABOVE_BOUND_COUNT"], "6")
+        self.assertEqual(
+            replacements["RQ1_ABOVE_BOUND_ITEMS"].count("\n- ") + 1,
+            6,
+        )
+        text = self.render_markdown(run)
         self.assertEqual(len(run.rq1.above_bound_results), 6)
         self.assertEqual(
             text.count("relative-term-dominant range, case `1`"), 6
@@ -1015,7 +1517,13 @@ class ReportingTests(unittest.TestCase):
 
     def test_markdown_lists_each_rq2_above_bound_input_once(self) -> None:
         run = self.load()
-        text = reporting._render_rq2_acceptance(run)
+        replacements = reporting._markdown_replacements(run)
+        self.assertEqual(replacements["RQ2_ABOVE_BOUND_COUNT"], "6")
+        self.assertEqual(
+            replacements["RQ2_ABOVE_BOUND_ITEMS"].count("\n- ") + 1,
+            6,
+        )
+        text = self.render_markdown(run)
         self.assertEqual(len(run.rq2.above_bound_results), 6)
         self.assertEqual(
             text.count("case `2`; rejected by default and strong"), 6
@@ -1025,17 +1533,35 @@ class ReportingTests(unittest.TestCase):
         self.assertIn("QD result bits: `(0x3ff0000000000000,", text)
         self.assertIn("error / bound: 2.00000000000", text)
 
-    def test_above_bound_sections_state_when_there_are_no_results(self) -> None:
+    def test_zero_above_bound_results_use_counts_and_empty_item_lists(
+        self,
+    ) -> None:
         run = self.load()
         run.rq1.above_bound_results.clear()
         run.rq2.above_bound_results.clear()
-        self.assertIn(
-            "No finite result exceeded the bound.",
-            reporting._render_rq1_above_bound_results(run.rq1),
+        replacements = reporting._markdown_replacements(run)
+        self.assertEqual(replacements["RQ1_ABOVE_BOUND_COUNT"], "0")
+        self.assertEqual(replacements["RQ1_ABOVE_BOUND_ITEMS"], "")
+        self.assertEqual(replacements["RQ2_ABOVE_BOUND_COUNT"], "0")
+        self.assertEqual(replacements["RQ2_ABOVE_BOUND_ITEMS"], "")
+
+        markdown = self.render_markdown(run)
+        self.assertNotIn("No finite result exceeded the bound", markdown)
+        self.assertNotIn(
+            "No finite, valid QD result exceeded the bound", markdown
         )
-        self.assertIn(
-            "No finite, valid QD result exceeded the bound",
-            reporting._render_rq2_above_bound_results(run.rq2),
+
+    def test_zero_bound_ratio_is_a_value_not_conditional_prose(self) -> None:
+        self.assertEqual(
+            reporting._error_bound_ratio_text("1", Decimal(0)), "∞"
+        )
+        prose = _single_line(self.template())
+        self.assertEqual(
+            prose.count(
+                "An error / bound value of ∞ denotes a positive error "
+                "with a zero bound."
+            ),
+            2,
         )
 
     def test_rq2_latex_separates_default_and_strong_rows(self) -> None:
@@ -1044,11 +1570,11 @@ class ReportingTests(unittest.TestCase):
         strong = latex["rq2_strong_double_word_rejected_rows.tex"]
         combined = latex["rq2_double_word_rejected_rows.tex"]
         self.assertIn(
-            r"\textsc{DWPlusFP} & 3 & 1 (33\%)",
+            r"\textsc{DWPlusFP} & 3 & 1 (33.33\%)",
             default,
         )
         self.assertIn(
-            r"\textsc{DWPlusFP} & 4 & 1 (25\%)",
+            r"\textsc{DWPlusFP} & 4 & 1 (25.00\%)",
             strong,
         )
         self.assertNotIn("Default", default)
@@ -1056,16 +1582,16 @@ class ReportingTests(unittest.TestCase):
         self.assertEqual(default.count(r"\textsc{"), 6)
         self.assertEqual(strong.count(r"\textsc{"), 6)
         self.assertIn(
-            r"\textsc{DWPlusFP} & Default & 3 & 1 (33\%)",
+            r"\textsc{DWPlusFP} & Default & 3 & 1 (33.33\%)",
             combined,
         )
         self.assertIn(
-            r"\textsc{DWPlusFP} & Strong & 4 & 1 (25\%)",
+            r"\textsc{DWPlusFP} & Strong & 4 & 1 (25.00\%)",
             combined,
         )
 
     def test_rq2_checked_exponents_are_presented_as_data(self) -> None:
-        text = reporting._render_rq2_acceptance(self.load())
+        text = self.render_markdown()
         self.assertIn(
             "| Operation | Test cases | Checked quantity | "
             "Integer exponent range | Other recorded values |",
@@ -1093,7 +1619,7 @@ class ReportingTests(unittest.TestCase):
         observed.saw_nonfinite = True
         observed.saw_not_evaluated = True
 
-        text = reporting._render_rq2_acceptance(run)
+        text = self.render_markdown(run)
         self.assertIn(
             "| `dw_div_fp` | 5 | `leading_quotient` | -12 to 1023 | "
             "`zero`, `nonfinite`, `not_evaluated` |",
@@ -1221,7 +1747,7 @@ class ReportingTests(unittest.TestCase):
             and result.implementation == "QD"
         ]
         self.assertEqual([result.case_id for result in results], [1, 2])
-        text = reporting._render_rq1(run)
+        text = self.render_markdown(run)
         self.assertIn("case `1`; error / bound: 1.50000000000", text)
         self.assertIn("case `2`; error / bound: 1.25000000000", text)
 
@@ -1439,7 +1965,7 @@ class ReportingTests(unittest.TestCase):
         )
 
     def test_rq3_markdown_reports_paired_qd_ratios(self) -> None:
-        text = reporting._render_rq3_performance(self.load())
+        text = self.render_markdown()
         self.assertIn(
             "| Operation | `dd_lib` C compiler | Kernel time (ns/call) | "
             "Default time (ns/call) | Default/kernel ratio | "
@@ -1509,13 +2035,13 @@ class ReportingTests(unittest.TestCase):
         self.assertEqual(summary.third_quartile, fixture["third_quartile"])
         self.assertEqual(summary.iqr, fixture["iqr"])
 
-    def test_manifest_requires_v5_and_exact_tsv_metadata(self) -> None:
+    def test_manifest_requires_v6_and_exact_tsv_metadata(self) -> None:
         manifest_path = self.run_dir / "manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        manifest["manifest_schema_version"] = 4
+        manifest["manifest_schema_version"] = 5
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
         _write_checksums(self.run_dir)
-        with self.assertRaisesRegex(reporting.ReportError, "manifest_schema_version must be 5"):
+        with self.assertRaisesRegex(reporting.ReportError, "manifest_schema_version must be 6"):
             self.load()
 
         second = Path(self.temporary.name) / "metadata-run"
@@ -1528,6 +2054,21 @@ class ReportingTests(unittest.TestCase):
         _write_checksums(second)
         with self.assertRaisesRegex(reporting.ReportError, "does not exactly match"):
             reporting.load_evaluation_run(second, SHAPE)
+
+    def test_manifest_rejects_git_metadata(self) -> None:
+        manifest_path = self.run_dir / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["git"] = {
+            "revision": "0123456789abcdef",
+            "dirty": False,
+            "status": "clean",
+        }
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        _write_checksums(self.run_dir)
+        with self.assertRaisesRegex(
+            reporting.ReportError, r"manifest fields mismatch.*extra=\['git'\]"
+        ):
+            self.load()
 
     def test_artifact_hash_mismatch_is_rejected(self) -> None:
         path = self.run_dir / "raw" / "rq1.tsv"
