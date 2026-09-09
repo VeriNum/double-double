@@ -34,14 +34,15 @@ library.
 \subsection{Runtime Checks Establish the Mathematical Conditions}
 \label{sec:check-soundness}
 
-To apply the numerical theorem to either division wrapper, we must show that
-successful runtime checks establish its mathematical hypotheses.  The
+To apply the numerical theorem to either wrapper for dividing a double-double
+by a binary64 value, we must show that successful runtime checks establish its
+mathematical hypotheses. The
 following theorem connects the weak and strong checks in
 \Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check} and the finiteness check
 in \Cref{fig:finite-checks} to the conditions in
 \Cref{sec:division-conditions}.
 
-\begin{theorem}[Soundness of the division checks]
+\begin{theorem}[Soundness of the Checks for Division by a Binary64 Value]
 \label{thm:division-checks}
 Suppose that \texttt{x} stores the binary64 pair $(x_h,x_\ell)$.
 
@@ -65,7 +66,8 @@ monotonicity of rounding.  These results prove soundness, not completeness: a
 failed runtime check need not imply that the corresponding mathematical
 condition is false.
 
-\subsection{Verified Contracts for the Division Wrappers}
+\subsection{Verified Contracts for Dividing a Double-Double by a Binary64
+Value}
 \label{sec:division-wrapper-contracts}
 
 The wrapper proofs combine kernel refinement, check soundness, and the

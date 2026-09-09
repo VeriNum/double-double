@@ -58,11 +58,11 @@
 
 \lstdefinelanguage{Coq}{
   keywords={Theorem,Lemma,Proof,Qed,Definition,Fixpoint,Inductive,
-            forall,exists,fun,let,in,match,with,end,if,then,else,
-            Variable,Hypothesis,Require,Import,Module,Section,
-            apply,exact,intro,intros,rewrite,simpl,reflexivity,
-            unfold,destruct,induction,case,split,left,right,
-            specialize,assert,have,enough,lra,nra,ring,field},
+   forall,exists,fun,let,in,match,with,end,if,then,else,
+   Variable,Hypothesis,Require,Import,Module,Section,
+   apply,exact,intro,intros,rewrite,simpl,reflexivity,
+   unfold,destruct,induction,case,split,left,right,
+   specialize,assert,have,enough,lra,nra,ring,field},
   sensitive=true,
   morecomment=[l]{(*},
   morecomment=[s]{(*}{*)},
@@ -97,27 +97,27 @@
 
 \begin{abstract}
 Double-double arithmetic represents a real number as the unevaluated sum of two
-binary64 values, providing roughly twice the precision of binary64.  Existing
-analyses give error bounds and prove that returned components form double
-words, but these guarantees do not transfer directly to IEEE~754 arithmetic,
-where overflow and gradual underflow can invalidate assumptions used in the
-proofs.
+binary64 values and can provide roughly twice the precision of binary64.  Each
+operation combines several rounded binary64 calculations.  Earlier mechanized
+analyses establish numerical guarantees for these algorithms using arithmetic
+with unbounded exponents and therefore do not account for overflow or gradual
+underflow in IEEE~754 execution.
 
-We present \FenceDD, a verified C library containing three error-free
-transformations and six double-word operations.  Our Rocq development proves
-numerical guarantees for these algorithms, extending earlier analyses based on
-an unbounded exponent range to IEEE~754 arithmetic with overflow and gradual
-underflow.  Using the Verified Software Toolchain (VST), we prove that the C
-kernels implement the analyzed algorithms and that runtime checks in the
-\FenceDD functions establish the conditions required by the numerical theorems.
-Consequently, every normally returned result from a double-word operation in 
-\FenceDD is a double-double satisfying its proved error bound, while every 
-normally returned transformation result reconstructs the exact value.
+We present \FenceDD{}, a verified C library with six double-double operations
+and three error-free transformations.  Its public functions use runtime checks
+to establish sufficient conditions for their numerical guarantees.  When a
+call returns a result, each double-double operation produces a double-double
+satisfying its proved error bound, while each error-free transformation reconstructs the
+exact sum or product. Using the Rocq proof assistant, we extend the earlier 
+mechanized numerical analyses to IEEE~754 arithmetic.  Using the Verified Software Toolchain (VST), we verify
+these guarantees for the C implementations in \FenceDD{}.
 
-Our evaluation shows that the proved bounds can be approached in practice.
-Among generated inputs rejected by the runtime checks, QD, an established
-library for double-double arithmetic, rarely produces results satisfying the
-expected numerical properties.  The runtime checks add little absolute cost.
+Across tests spanning the binary64 exponent range, observed errors reached
+$0.87$ of their proved bounds.  For calls stopped by a runtime check, QD, an
+established double-double library, rarely returned a result satisfying the
+corresponding error bound or exact-reconstruction property.  
+The runtime checks added
+$2.5$--$11$ nanoseconds per call relative to the unchecked kernels.
 \end{abstract}
 
 \begin{CCSXML}

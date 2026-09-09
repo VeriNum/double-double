@@ -92,6 +92,13 @@ $(r_h,r_\ell)$ is an error-free result when
 $r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
 \end{definition}
 
+Every error-free result also forms a double word because
+$r_h=\operatorname{RN}(r_h+r_\ell)$ follows from
+\Cref{def:error-free-result}.
+
+\Cref{fig:error-free-transformations} shows the three transformations used
+by the double-word algorithms.
+
 \begin{figure*}[t]
   \centering
   \begingroup
@@ -186,10 +193,6 @@ to Dekker \citep{Knuth1997,Dekker1971}.  These error-free transformations are
 standard tools in
 accurate floating-point computation \citep{Ogita2005}.
 
-Every error-free result also forms a double word, since
-$r_h=\operatorname{RN}(r_h+r_\ell)$ follows from
-\Cref{def:error-free-result}.
-
 \paragraph{Error-free transformations for addition.}
 
 \citet{Boldo2017} prove that \TwoSum{} and \FastTwoSum{} retain exact
@@ -276,8 +279,7 @@ The preceding identity gives
 which proves both conclusions.
 \end{proof}
 
-\subsection{Numerical Guarantee for Division of a Double Word by a
-Floating-Point Value under Gradual Underflow}
+\subsection{Division of a Double Word by a Floating-Point Value}
 \label{sec:division-numerics}
 
 To show how the preceding error-free transformation results combine within a
@@ -352,152 +354,155 @@ residual $x-t_hy$ using \FastTwoMult{} for the product and including the low
 word $x_\ell$.  Line~6 divides the residual by $y$ for the correction $t_\ell$;
 Line~7 combines them.
 
-The following theorem bounds the error in the value represented by the
-returned pair and proves that the pair forms a double word.  The next
-subsection collects its hypotheses into mathematical conditions.
-
-\begin{theorem}[Numerical guarantee for \DWDivFP{}]
-\label{thm:dw-div-fp-numerical}
-Let the underlying format be radix two with precision $p\geq4$, lower
-exponent $e_{\min}$, unit roundoff $u=2^{-p}$, and
-$\eta=2^{e_{\min}}$.  Let $\nu=2^{e_{\min}+p-1}$ be its smallest positive
-normal value, and let
-$(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$.
-Suppose that the following requirements hold:
-\begin{enumerate}
-  \item[(H1)] $(x_h,x_\ell)$ is a double word;
-  \item[(H2)] the high word satisfies
-    \begin{equation}
-      x_h=0
-      \qquad\text{or}\qquad
-      2^{e_{\min}+2p}\leq |x_h|;
-      \label{eq:dw-div-high-word-condition}
-    \end{equation}
-  \item[(H3)] the computed pair $(z_h,z_\ell)$ is finite.
-\end{enumerate}
-These requirements imply $y\neq0$.  Let $q$ be the exact quotient defined in
-\Cref{eq:dw-div-exact-quotient}, and let $q_0=x_h/y$ be the exact leading
-quotient.  Then
-\begin{equation}
-  \left|(z_h+z_\ell)-q\right|
-    \leq 3u^2|q|+\eta
-  \label{eq:dw-div-fp-mixed}
-\end{equation}
-and $(z_h,z_\ell)$ is a double word:
-\[
-  z_h=\operatorname{RN}(z_h+z_\ell).
-\]
-Let $\delta$ denote the residual computed on Line~5 of
-\Cref{alg:dw-div-fp}.  If $|q_0|\geq\nu$ and either $\delta=0$ or
-$|\delta/y|\geq\nu$, the sharper bound holds:
-\[
-  \left|(z_h+z_\ell)-q\right|
-    \leq 3u^2|q|
-\]
-\end{theorem}
-
-\begin{proof}[Proof sketch]
-Hypothesis~(H3) makes the operands and intermediate results finite and implies
-$y\neq0$.  If $x_h=0$, Hypothesis~(H1) gives $x_\ell=0$, and the result follows
-directly.  Otherwise, Hypothesis~(H2) gives
-$|x_h|\geq2^{e_{\min}+2p}$.
-
-\noindent\emph{Normal leading quotient.}
-Suppose first that $|q_0|\geq\nu$.  Rounding on Line~1 then agrees in FLT and
-FLX.  The lower bound on $|x_h|$ gives
-\[
-  |t_hy|\geq2^{e_{\min}+2p-1}.
-\]
-Thus, \Cref{thm:fast-two-mult} makes the product reconstruction on Line~2
-exact.  Sterbenz's lemma makes the subtraction on Line~3 exact
-\citep{Sterbenz1974}; representability and the fixed spacing of subnormal
-values then transfer the existing FLX residual argument through Lines~4--5.
-
-If $\delta=0$ or $|\delta/y|\geq\nu$, rounding on Line~6 also agrees in the
-two formats and gives the sharper relative bound.  Otherwise, their rounded
-corrections differ by at most $\eta$, giving the mixed bound.  The residual
-analysis also gives $|t_\ell|\leq|t_h|$, so
-\Cref{thm:addition-transformations} shows that \FastTwoSum{} on Line~7
-preserves their sum and returns a double word.
-
-\noindent\emph{Subnormal leading quotient.}
-Now suppose that $|q_0|<\nu$.  The fixed FLT spacing gives
-$|t_h-q_0|\leq\eta/2$.  Because the input is a double word,
-$|x_\ell|\leq u|x_h|$, so
-\[
-  \left|\frac{x_\ell}{y}\right|<\frac{\eta}{2},
-  \qquad |t_h-q|\leq\eta.
-\]
-Moreover, Hypothesis~(H2) implies $|y|>2^{p+1}$.  Applying the FLT rounding
-bounds and \Cref{thm:fast-two-mult} to Lines~2--5 gives the essential aggregate
-residual bound
-\[
-  |\delta-(x_h+x_\ell-t_hy)|
-    \leq\frac{\eta|y|}{2},
-  \qquad
-  \left|\frac{\delta}{y}-(q-t_h)\right|\leq\frac{\eta}{2}.
-\]
-Rounding on Line~6 adds at most another $\eta/2$, while the same bounds give
-$|t_h+t_\ell|\leq2\nu$.  Hence \Cref{thm:fast-two-sum-small} shows that
-Line~7 preserves the sum and returns a double word, with
-\[
-  |(z_h+z_\ell)-q|
-    \leq\eta
-    \leq3u^2|q|+\eta.
-\]
-This proves both stated error bounds and the double-word property.
-\end{proof}
-
-\subsection{Conditions for the Division Guarantee}
+\subsection{Conditions and Numerical Guarantee for Division}
 \label{sec:division-conditions}
 
-\Cref{thm:dw-div-fp-numerical} requires a condition on the dividend and
-finiteness of the returned pair.  A stronger input condition implies both.
+The division theorem requires the dividend to be a double word, a lower bound
+on its high word, and a finite result. We write
+$\mathcal{I}_{\mathrm{div}}$ for the two input conditions and
+$\mathcal{F}_{\mathrm{div}}$ for result finiteness. A stronger condition
+$\mathcal{S}_{\mathrm{div}}$ establishes result finiteness from the inputs.
 
-Write $\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite.
-For operands $x_h,x_\ell,y$, write $(z_h,z_\ell)$ for the result of
-\DWDivFP{}.  Let $t_h$ be the rounded leading quotient computed on Line~1 of
-\Cref{alg:dw-div-fp}, and let $q_0=x_h/y$ be the exact leading quotient.  Let
-$\Omega$ denote the power of two immediately above the largest finite magnitude
-of the target format.
+For operands $x_h,x_\ell,y$, let
+$(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$. Let $t_h$ be the rounded leading
+quotient computed on Line~1 of \Cref{alg:dw-div-fp}, and let $q_0=x_h/y$ be
+the exact leading quotient when $y\neq0$. We write
+$\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite, and
+let $\Omega$ be the least power of two greater than every finite magnitude in
+the format. For binary64, $\Omega=2^{1024}$.
 
 \begin{definition}[Conditions for \DWDivFP{}]
 \label[definition]{def:dw-div-conditions}
-Suppressing the common arguments $(x_h,x_\ell,y)$, define
-\[
+Define
+\begin{equation}
 \begin{aligned}
-\mathcal{I}_{\mathrm{div}}
+\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)
   \quad\triangleq\quad&
   (x_h,x_\ell)\text{ is a double word}\\
   &{}\land
   \left(x_h=0
     \;\lor\;
     2^{e_{\min}+2p}\leq |x_h|\right),\\[2pt]
-\mathcal{F}_{\mathrm{div}}
+\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)
   \quad\triangleq\quad&
   \operatorname{Fin}(z_h,z_\ell),\\[2pt]
-\mathcal{S}_{\mathrm{div}}
+\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)
   \quad\triangleq\quad&
-  \mathcal{I}_{\mathrm{div}}
+  \mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)
   \land \operatorname{Fin}(x_h,x_\ell,y,t_h)\\
   &{}\land |x_h|\leq\Omega/4
   \land |q_0|\leq\Omega/4.
 \end{aligned}
-\]
+\label{eq:dw-div-conditions}
+\end{equation}
 \end{definition}
 
-The condition $\mathcal{I}_{\mathrm{div}}$ permits subnormal $q_0$.  Explicit
-finiteness requirements remain necessary because, in the real interpretation
-we define using Rocq, we map infinities and NaNs to zero.  Real inequalities
-alone therefore do not establish finiteness.
+The input condition permits the exact leading quotient $q_0$ to be subnormal.
+The result-finiteness condition is stated separately because the real-valued
+error bound and the double-word relation apply only when the returned words
+are finite. The stronger condition adds upper bounds sufficient to prove
+result finiteness.
 
-\begin{lemma}[Finiteness from the stronger input condition]
+\begin{theorem}[Numerical guarantee for \DWDivFP{}]
+\label{thm:dw-div-fp-numerical}
+Let the underlying format be radix two with precision $p\geq4$, lower
+exponent $e_{\min}$, unit roundoff $u=2^{-p}$, and
+$\eta=2^{e_{\min}}$. Let $\nu=2^{e_{\min}+p-1}$ be its smallest positive
+normal value, and let
+$(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$.
+Suppose
+$\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ and
+$\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)$ hold. These conditions imply
+$y\neq0$. Let $q$ be the exact quotient defined in
+\Cref{eq:dw-div-exact-quotient}, and let $q_0=x_h/y$ be the exact leading
+quotient. Then $(z_h,z_\ell)$ is a double word:
+\[
+  z_h=\operatorname{RN}(z_h+z_\ell).
+\]
+Its represented value satisfies
+\begin{equation}
+  \left|(z_h+z_\ell)-q\right|
+    \leq 3u^2|q|+\eta.
+  \label{eq:dw-div-fp-mixed}
+\end{equation}
+Let $\delta$ denote the residual computed on Line~5 of
+\Cref{alg:dw-div-fp}. If $|q_0|\geq\nu$ and either $\delta=0$ or
+$|\delta/y|\geq\nu$, the sharper bound holds:
+\begin{equation}
+  \left|(z_h+z_\ell)-q\right|
+    \leq 3u^2|q|.
+  \label{eq:dw-div-fp-relative}
+\end{equation}
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+The two conditions make the operands and intermediate results finite and imply
+$y\neq0$. If $x_h=0$, the double-word condition gives
+$x_\ell=0$, and the result follows directly. Otherwise, the lower bound in
+$\mathcal{I}_{\mathrm{div}}$ gives
+$|x_h|\geq2^{e_{\min}+2p}$.
+
+\noindent\emph{Normal leading quotient.}
+Suppose first that $|q_0|\geq\nu$. Rounding on Line~1 then agrees in FLT and
+FLX. The lower bound on $|x_h|$ gives
+\[
+  |t_hy|\geq2^{e_{\min}+2p-1}.
+\]
+Thus, \Cref{thm:fast-two-mult} makes the product reconstruction on Line~2
+exact. Sterbenz's lemma makes the subtraction on Line~3 exact
+\citep{Sterbenz1974}; representability and the fixed spacing of subnormal
+values then transfer the existing FLX residual argument through Lines~4--5.
+
+If $\delta=0$ or $|\delta/y|\geq\nu$, rounding on Line~6 also agrees in the
+two formats and gives the sharper relative bound in
+\Cref{eq:dw-div-fp-relative}. Otherwise, their rounded corrections differ by
+at most $\eta$, giving the mixed bound. The residual
+analysis also gives $|t_\ell|\leq|t_h|$, so
+\Cref{thm:addition-transformations} shows that \FastTwoSum{} on Line~7
+preserves their sum and returns a double word.
+
+\noindent\emph{Subnormal leading quotient.}
+Now suppose that $|q_0|<\nu$. The fixed FLT spacing gives
+$|t_h-q_0|\leq\eta/2$. Because the input is a double word,
+$|x_\ell|\leq u|x_h|$, so
+\[
+  \left|\frac{x_\ell}{y}\right|<\frac{\eta}{2},
+  \qquad |t_h-q|\leq\eta.
+\]
+Moreover, the lower bound in $\mathcal{I}_{\mathrm{div}}$ implies
+$|y|>2^{p+1}$. Applying the FLT rounding
+bounds and \Cref{thm:fast-two-mult} to Lines~2--5 gives the essential aggregate
+residual bound
+\begin{equation}
+  |\delta-(x_h+x_\ell-t_hy)|
+    \leq\frac{\eta|y|}{2},
+  \qquad
+  \left|\frac{\delta}{y}-(q-t_h)\right|\leq\frac{\eta}{2}.
+  \label{eq:dw-div-subnormal-residual}
+\end{equation}
+By \Cref{eq:dw-div-subnormal-residual}, rounding on Line~6 adds at most another
+$\eta/2$, while the same bounds give
+$|t_h+t_\ell|\leq2\nu$. Hence \Cref{thm:fast-two-sum-small} shows that
+Line~7 preserves the sum and returns a double word, with
+\[
+  |(z_h+z_\ell)-q|
+    \leq\eta
+    \leq3u^2|q|+\eta.
+\]
+This proves the mixed bound, the conditional sharper bound, and the
+double-word property.
+\end{proof}
+
+\begin{lemma}[Finiteness from the Stronger Condition]
 \label[lemma]{lem:dw-div-safe-implies-finite}
 If $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds, then
 $\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{lemma}
 
-\begin{corollary}[Conditions for the division guarantee]
+Combining this lemma with \Cref{thm:dw-div-fp-numerical} gives the two
+sufficient alternatives used by the C wrappers.
+
+\begin{corollary}[Conditions for the Division Guarantee]
 \label[corollary]{cor:dw-div-conditions}
 The conclusions of \Cref{thm:dw-div-fp-numerical} hold if
 \[

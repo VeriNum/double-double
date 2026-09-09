@@ -302,7 +302,8 @@ algorithm proves that the resulting words satisfy
 error bound. Thus, a caller need not establish these numerical conditions
 before invoking either wrapper.
 
-\begin{theorem}[Normal-Return Guarantee for the Division Wrappers]
+\begin{theorem}[Normal-Return Guarantee for Dividing a Double-Double by a
+Binary64 Value]
 \label{thm:division-wrapper-contract}
 Suppose that a call through either wrapper receives the binary64 divisor $y$,
 begins with \texttt{x} storing $(x_h,x_\ell)$, and returns normally with
