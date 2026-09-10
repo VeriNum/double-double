@@ -74,7 +74,8 @@ For RQ2, we classify results obtained using QD as nonfinite; finite with
 components that do not form a double word; or finite with components that form
 a double word, subdivided by whether the error exceeds the
 corresponding \FenceDD{} bound.  For an error-free transformation, the relevant
-numerical property instead requires exact reconstruction.  In separate
+numerical property instead requires exact reconstruction: the returned
+components must sum to the exact result.  In separate
 boundary tests, we exercise values immediately below, at, and above each
 runtime threshold, together with zeros, exact cancellation, and calls that
 reach a result finiteness check.  We observe the expected outcome in all
@@ -97,7 +98,7 @@ is identified in \Cref{sec:evaluation}.
 
 The 24 trials for each double-word operation use every ordering of the kernel,
 default wrapper, alternative wrapper, and QD once.  For each error-free
-error-free transformation, the six orderings of the kernel, wrapper, and QD each occur
+transformation, the six orderings of the kernel, wrapper, and QD each occur
 four times.  We give every implementation an untimed warm-up and compute
 differences and ratios from paired trials.
 

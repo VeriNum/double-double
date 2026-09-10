@@ -20,8 +20,8 @@ wrappers.  We investigate the following research questions:
     For generated inputs on which a runtime check stops a call to \FenceDD{},
     how often do we obtain a result using QD that satisfies the corresponding
     numerical requirements: the error bound and a returned pair that forms a double word
-    for a double-word operation, or exact reconstruction for an error-free
-    transformation?
+    for a double-word operation, or returned components that sum to the exact
+    result for an error-free transformation?
 
   \item[(RQ3) Cost of the wrappers.]
     On a common set of inputs for which every evaluated call is accepted, what
@@ -144,8 +144,9 @@ result obtained using QD as satisfying the relevant properties when it is
 finite, its components form a double word, and the error we measure using MPFR
 is no greater than $B(r)$ from \Cref{eq:rq1-error-bound}.  For an error-free
 transformation, we classify the
-result obtained using QD as satisfying the relevant property when its returned
-pair reconstructs the MPFR reference exactly.
+result obtained using QD as satisfying the relevant property when exact
+reconstruction holds, meaning that its returned components sum to the MPFR
+reference exactly.
 
 For the six double-word operations, we examine failed checks in the default
 and alternative wrappers separately.  These populations overlap: every call
@@ -159,8 +160,8 @@ rates in application workloads.
   \FenceDD{} call.  The Calls stopped column gives the denominator for the two percentage
   columns.  For double-word operations, a result obtained using QD satisfies
   the properties when it is finite, forms a double word, and has error at most
-  $B(r)$; for error-free transformations, it reconstructs the result
-  exactly.}
+  $B(r)$; for error-free transformations, exact reconstruction means that its
+  returned components sum to the exact result.}
   \label{tab:rq2-results}
   \centering
   \setlength{\tabcolsep}{2pt}
@@ -191,7 +192,7 @@ QD.
 
 No runtime check stops a generated call to the \TwoSum{} wrapper.  For
 inputs associated with rejected calls to the \FastTwoSum{} and
-\FastTwoMult{} wrappers, we obtain exact reconstructions using QD in only
+\FastTwoMult{} wrappers, exact reconstruction holds for the QD results in only
 $0.25\%$ and $0.48\%$ of cases, respectively.
 
 We record where the two wrappers differ and the results of the targeted
