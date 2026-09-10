@@ -214,10 +214,13 @@ to Dekker
       \end{minipage}}
   \end{subfigure}
   \endgroup
-  \caption{The error-free transformations used by the double-word
-    algorithms. \TwoSum{} and \FastTwoSum{} decompose a sum, while
-    \FastTwoMult{} decomposes a product using a fused multiply-add.}
-\label{fig:error-free-transformations}
+  \caption{The three error-free transformations used by the double-word
+  algorithms. \TwoSum{} and \FastTwoSum{} return a rounded sum and a correction;
+  \FastTwoMult{} returns a rounded product and a correction computed using a
+  fused multiply-add. 
+  \Cref{thm:addition-transformations,thm:fast-two-sum-small,thm:fast-two-mult}
+  state when each correction equals the exact rounding error.}
+  \label{fig:error-free-transformations}
 \end{figure}
 
 \paragraph{Error-free transformations for addition.}
@@ -238,8 +241,9 @@ returned components are finite.
 \end{enumerate}
 \end{theorem}
 
-When the ordering condition for \FastTwoSum{} cannot be
-established, the following theorem instead uses a bound on the exact sum.
+The condition $|b|\leq|a|$ is sufficient but not necessary. When it cannot be
+established, \FastTwoSum{} still returns the rounded sum and its exact rounding
+error if the exact sum is sufficiently small:
 
 \begin{theorem}[\FastTwoSum{} for small exact sums]
 \label{thm:fast-two-sum-small}
@@ -266,9 +270,12 @@ threshold. For a radix-two format of precision $p$, define
 \[
   \tau=2^{e_{\min}+2p-1}.
 \]
-The representability result of \citet{BoldoDaumas2003} establishes this
-guarantee when $|ab|\geq\tau$. The following theorem also bounds
+Theorem~2 of \citet[Section~3]{BoldoDaumas2003} characterizes when the exact
+product correction is representable. In our notation, this result implies
+representability when $|ab|\geq\tau$.
+The following theorem also bounds
 $|(\pi_h+\pi_\ell)-ab|$ in the remaining finite cases.
+
 \begin{theorem}[\FastTwoMult{} over IEEE~754]
 \label{thm:fast-two-mult}
 Let the underlying radix-two format have precision $p\geq3$, with $\eta$ as
