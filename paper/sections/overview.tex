@@ -323,7 +323,7 @@ by the numerical theorem. The caller therefore need not establish these
 numerical preconditions. In \Cref{sec:mechanization}, we prove using VST that
 both wrappers satisfy this contract.
 
-\subsection{Numerical Guarantees for All Operations and Transformations}
+\subsection{Numerical Guarantees for All Operations and Error-Free Transformations}
 \label{sec:overview-library-guarantees}
 
 The division example illustrates how runtime checks connect a public C wrapper
@@ -369,4 +369,5 @@ guarantee shown in \Cref{tab:operation-preview}.
 Each error-free transformation has a single
 public wrapper whose runtime checks establish sufficient conditions
 for exact reconstruction. These conditions depend on the computations in each
-algorithm, so the runtime checks differ among operations and transformations.
+algorithm, so the runtime checks differ among double-double operations and
+error-free transformations.

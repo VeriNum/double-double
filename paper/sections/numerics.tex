@@ -97,22 +97,39 @@ correspondence.
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
 
-The double-word algorithms use error-free transformations that return a
-rounded sum or product together with a correction.
+Double-word algorithms obtain additional accuracy by retaining information
+lost when intermediate sums and products are rounded. Error-free
+transformations support this accounting by pairing a rounded result with a
+correction. Under appropriate conditions, adding the correction to the rounded
+result recovers the exact real sum or product. The error-free transformations
+for addition retain this behavior when gradual underflow occurs. For
+multiplication, exact reconstruction requires an additional condition;
+otherwise, we bound the reconstruction error.
 
 \begin{definition}[Error-free result]
 \label[definition]{def:error-free-result}
-For an arithmetic operation whose exact real result is $r$, a pair
+For an arithmetic operation with exact real result $r$, a pair
 $(r_h,r_\ell)$ is an error-free result when
-$r_h=\operatorname{RN}(r)$ and $r=r_h+r_\ell$.
+\[
+  r_h=\operatorname{RN}(r)
+  \qquad\text{and}\qquad
+  r=r_h+r_\ell.
+\]
 \end{definition}
 
-Every error-free result also forms a double word because
+Thus, $r_\ell=r-r_h$ is the exact rounding error. Every error-free result also
+forms a double word because
 $r_h=\operatorname{RN}(r_h+r_\ell)$ follows from
 \Cref{def:error-free-result}.
 
-\Cref{fig:error-free-transformations} shows the three transformations used
-by the double-word algorithms.
+\Cref{fig:error-free-transformations} gives the three error-free
+transformations used by the double-word algorithms in \FenceDD{}. We use the
+forms and names given by
+\citet[Algorithms~1--3]{Joldes2017}. \TwoSum{} is due to Knuth, while
+\FastTwoSum{} and the original error-free transformation for products are due
+to Dekker
+\citep{Knuth1997,Dekker1971}. \citet{Ogita2005} gives a broader treatment of
+error-free transformations.
 
 \begin{figure*}[t]
   \centering
@@ -195,24 +212,14 @@ by the double-word algorithms.
   \caption{The error-free transformations used by the double-word
     algorithms.  \TwoSum{} and \FastTwoSum{} decompose a sum, while
     \FastTwoMult{} decomposes a product using a fused multiply-add.}
-  \Description{Three framed panels present the steps of TwoSum, FastTwoSum,
-    and FastTwoMult.  TwoSum appears on the left; FastTwoSum and FastTwoMult
-    are stacked on the right.}
 \label{fig:error-free-transformations}
 \end{figure*}
 
-We use the forms and names given by
-\citet[Algorithms~1--3]{Joldes2017}.  \TwoSum{} is due to Knuth;
-\FastTwoSum{} and the original error-free transformation for products are due
-to Dekker \citep{Knuth1997,Dekker1971}.  These error-free transformations are
-standard tools in
-accurate floating-point computation \citep{Ogita2005}.
-
 \paragraph{Error-free transformations for addition.}
 
-\citet{Boldo2017} prove that \TwoSum{} and \FastTwoSum{} retain exact
-reconstruction when subnormal values occur.  \FastTwoSum{} additionally
-requires its usual ordering condition.
+\citet{Boldo2017} prove that \TwoSum{} and \FastTwoSum{} remain error-free
+when subnormal values occur. \FastTwoSum{} additionally requires the usual
+ordering condition.
 
 \begin{theorem}[Error-free transformations for addition over IEEE~754]
 \label{thm:addition-transformations}
@@ -251,7 +258,8 @@ $s=\operatorname{RN}(a+b)$, so $(s,t)$ is an error-free result.
 
 \paragraph{Error-free transformation for products.}
 
-For a radix-two format of precision $p$, define
+Exact reconstruction by \FastTwoMult{} depends on the magnitude of the exact
+product. For a radix-two format of precision $p$, define
 \[
   \tau=2^{e_{\min}+2p-1}.
 \]
@@ -624,7 +632,8 @@ using $u$ and $\eta$ for the underlying format.
 
 \paragraph{Proof overview.}
 \emph{Addition.}
-The addition transformations remain exact when subnormal values occur by
+The error-free transformations for addition remain exact when subnormal values
+occur by
 \Cref{thm:addition-transformations}. Consequently, the existing relative
 error bounds require no lower bound on the operand magnitudes.
 
