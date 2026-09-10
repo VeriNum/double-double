@@ -320,18 +320,16 @@ positive subnormal binary64 value.
 For either wrapper, normal return means that its runtime checks succeeded.
 These checks establish the operand conditions and quotient finiteness required
 by the numerical theorem. The caller therefore need not establish these
-numerical preconditions.
-
-In \Cref{sec:mechanization}, we prove using VST that both wrappers satisfy this
-contract.
+numerical preconditions. In \Cref{sec:mechanization}, we prove using VST that
+both wrappers satisfy this contract.
 
 \subsection{Numerical Guarantees for All Operations and Transformations}
 \label{sec:overview-library-guarantees}
 
-The division considered above is one of six double-double operations provided
-by \FenceDD{}. \Cref{tab:operation-preview} summarizes the numerical
-guarantees for these operations and the three error-free transformations used
-by their kernels.
+The division example illustrates how runtime checks connect a public C wrapper
+to the numerical guarantee of an arithmetic kernel.
+\Cref{tab:operation-preview} summarizes the guarantees provided across the
+library.
 
 \begin{table}[b]
 \centering
@@ -364,12 +362,11 @@ Division $(x,y)$ & $x/y$ & $9.8u^2|r|+2.5\eta$ \\
 \end{tabular}
 \end{table}
 
-Each of the six double-double operations is exposed through a default and an
-alternative wrapper around the same arithmetic kernel. For a given operation,
-both wrappers provide the guarantee shown in
-\Cref{tab:operation-preview}, although their runtime checks may succeed for
-different operands. In contrast, each error-free transformation has one public
-wrapper whose runtime checks establish sufficient conditions for exact
-reconstruction. The conditions needed for these guarantees depend on the
-intermediate computations in each algorithm, so the runtime checks differ
-accordingly.
+For each of the six double-double operations, \FenceDD{} provides one
+arithmetic kernel and two public wrappers. The default and alternative
+wrappers for an operation invoke the kernel for that operation and provide the
+guarantee shown in \Cref{tab:operation-preview}. 
+Each error-free transformation has a single
+public wrapper whose runtime checks establish sufficient conditions
+for exact reconstruction. These conditions depend on the computations in each
+algorithm, so the runtime checks differ among operations and transformations.

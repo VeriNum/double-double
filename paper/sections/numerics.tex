@@ -1,36 +1,42 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-This section derives the operation-specific conditions and proves the
-numerical guarantees summarized in \Cref{tab:operation-preview}. We state the
-results for double-word arithmetic over a generic radix-two floating-point
-format; \FenceDD{} uses their binary64 instances.
+The numerical theorems underlying the guarantees in
+\Cref{tab:operation-preview} concern the algorithms implemented by the
+arithmetic kernels. We state these theorems for double-word arithmetic over a
+generic radix-two floating-point format and identify the conditions
+under which they hold for each operation. \FenceDD{} uses the binary64 instances
+of these theorems.
 
-For each algorithm, we define a Rocq function that evaluates its sequence of
-rounded operations and returns the resulting pair. We call this function the
-algorithm's \emph{functional model}. A functional model describes the
-numerical computation without the pointers, memory operations, or control flow
-of its C implementation. We present these models mathematically; their Rocq
-definitions use the floating-point types and IEEE~754 operations from VCFloat2
-together with Flocq's binary floating-point representation. For each model, we
-bound the error in the value represented by the returned pair and prove that
-the pair forms a double word.
 
-The proofs of all results in this section are checked in Rocq. 
-We continue the division
-example from \Cref{sec:overview-division} with a proof sketch of its numerical
-guarantee. For the remaining operations, we present only the arguments that
-differ from this case and identify the results inherited from earlier
+For each algorithm, we define a Rocq function that models the sequence of
+rounded operations and defines the resulting pair. We call this function the
+\emph{functional model} of the algorithm.
+A functional model describes the floating-point computation independently of
+the C implementation.
+We present these models mathematically; they are defined in Rocq
+using the floating-point types and IEEE~754 operations from VCFloat2
+together with the binary floating-point representation from Flocq. 
+For each model, we bound the error in the value represented by the 
+returned pair and prove that the pair forms a double word.
+
+The proofs of all results in this section are checked in Rocq. To illustrate
+the proof method, we continue the division example from
+\Cref{sec:overview-division} with a proof sketch of the numerical guarantee for
+division. For the remaining operations, we present only the arguments that
+differ from the division case and identify results inherited from earlier
 analyses.
 
 \subsection{FLX, FLT, and IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
-To account for gradual underflow, we compare two Flocq formats with the same
-precision.  FLX has an unbounded exponent range, whereas FLT imposes a lower
-exponent bound.  The analysis of \citet{Joldes2017}, mechanized by
-\citet{Rideau2022}, uses FLX; our analysis uses FLT to cover the lower end of
-the IEEE~754 range \citep[Sections~III-C and III-D]{Boldo2011}.
+To account for gradual underflow, we compare two formats defined in Flocq:
+FLX and FLT \citep[Sections~III-C and III-D]{Boldo2011}. Both have the same
+precision. FLX has an unbounded exponent range, whereas FLT imposes a lower
+exponent bound. The analysis of \citet{Joldes2017}, mechanized by
+\citet{Rideau2022}, uses FLX and therefore excludes underflow. We use FLT 
+because the lower exponent bound models gradual underflow in
+IEEE~754 arithmetic \citep{IEEE754-2019}.
 
 For a radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
 formats represent
@@ -58,14 +64,18 @@ smallest positive normal value $\nu$:
   \nu=\beta^{e_{\min}+p-1}.
   \label{eq:flt-thresholds}
 \end{equation}
-Values below $\nu$ are multiples of the fixed spacing $\eta$ and therefore
-have fewer significant bits.  For binary64, $\eta=2^{-1074}$ and
+Values below $\nu$ are multiples of $\eta$ and
+have fewer significant bits. For binary64, $\eta=2^{-1074}$ and
 $\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
-$\operatorname{RN}_{\mathrm{FLT}}$ denote round-to-nearest, ties-to-even in
-the two formats.  Using a theorem from Flocq, we establish that the rounded
-values agree when the exact value lies in the normal range:
+$\operatorname{RN}_{\mathrm{FLT}}$ denote functions that round a real value to
+the nearest representable value in $\mathbb{F}_{\mathrm{FLX}}$ and
+$\mathbb{F}_{\mathrm{FLT}}$, respectively, with ties to even. When the exact
+value lies in the normal range, both functions produce the same rounded
+value\footnote{This fact is established by the Flocq theorem
+\texttt{FLT.round\_FLT\_FLX}.}:
+
 \begin{equation}
   |x|\geq\nu
   \quad\Longrightarrow\quad
@@ -73,15 +83,16 @@ values agree when the exact value lies in the normal range:
     =\operatorname{RN}_{\mathrm{FLX}}(x).
   \label{eq:round-flt-flx}
 \end{equation}
-Below $\nu$, the required rounding property must instead be established
-directly in FLT.
+For $|x|<\nu$, the two rounded values may differ. In this region, we analyze
+the FLT rounding directly rather than assume the corresponding FLX result.
 
-FLT supplies the lower exponent bound; neither FLT nor FLX has an upper
-exponent bound.  Relating an IEEE~754 operation to FLT rounding therefore also
-requires
-the relevant operands and rounded result to be finite.  Once their finiteness
-is established, the real value of the IEEE~754 result agrees with the
-corresponding FLT rounding.
+Unlike IEEE~754 formats, FLT and FLX allow arbitrarily large finite values and
+therefore do not model overflow. We use FLT to describe an IEEE~754 operation
+only when the operands and rounded result are finite. Under these conditions,
+the IEEE~754 result and the corresponding FLT rounding represent the same real
+value. Our numerical analysis of double-word operations and error-free
+transformations includes the finiteness conditions required for this
+correspondence.
 
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
