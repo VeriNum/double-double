@@ -3,10 +3,12 @@
 
 (** Relative and mixed error analysis for [DWDivFP].  The FLT to FLX bridge
     connects [DDModels.DWDivFP] with [DWDivFP.DWDivFP3].  In the normal regime,
-    [DWDivFP_relative_accuracy] transfers the paper's [3u^2] relative bound.
-    [DWDivFP_error_mixed_acc] adds one [eta] term when the correction quotient
-    underflows.  [DWDivFP_mixed_acc] combines that result with the subnormal
-    leading quotient proof and exports the mixed guarantee. *)
+    [DWDivFP_relative_accuracy_from_weak_pre_and_finite_post_cond] transfers the
+    paper's [3u^2] relative bound; [DWDivFP_relative_accuracy] is its strong
+    precondition wrapper.  [DWDivFP_error_mixed_acc] adds one [eta] term when
+    the correction quotient underflows.  [DWDivFP_mixed_acc] combines that
+    result with the subnormal leading quotient proof and exports the mixed
+    guarantee. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -1806,11 +1808,14 @@ Qed.
 
 End CondAccuracyDWDivFP_mixed.
 
-(* Public pure relative theorem.  [DWDivFP_relative_regime_cond] requires a normal leading
-   quotient and either a zero correction or a normal correction quotient.
-   [DWDivFP_relative_precond] adds the safe input requirements.  In
-   this regime the FLT and FLX models agree, giving the paper's [3u^2] bound
-   without an absolute floor term. *)
+(* Public pure relative theorems.  [DWDivFP_relative_regime_cond] requires a
+   normal leading quotient and either a zero correction or a normal correction
+   quotient.  The paper-facing interface combines this regime with the weak
+   input condition and a posteriori result finiteness.  The original
+   [DWDivFP_relative_accuracy] theorem remains as a convenience wrapper using
+   [DWDivFP_relative_precond], which adds the stronger safe input requirements.
+   In either interface the FLT and FLX models agree, giving the paper's [3u^2]
+   bound without an absolute floor term. *)
 Section RelativeAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1820,37 +1825,29 @@ Notation u := (bpow radix2 (- fprec t)).
 Variables (xh xl y : ftype t).
 
 Hypothesis Hp4 : (4 <= fprec t)%Z.
-Hypothesis COND : DWDivFP_relative_precond xh xl y.
 
-Theorem DWDivFP_relative_accuracy :
+Theorem DWDivFP_relative_accuracy_from_weak_pre_and_finite_post_cond :
+  DWDivFP_weak_pre_and_finite_post_cond xh xl y ->
+  DWDivFP_relative_regime_cond xh xl y ->
   relative_error_DWDivFP xh xl y <= 3 * u ^ 2.
 Proof.
-move: (COND) => [SAFE [Hquot Hcorr]].
+move => CHECKED [Hquot Hcorr].
 have Hxhne : FT2R xh <> 0.
 { intro Hxh0. move: Hquot. rewrite Hxh0 /Rdiv Rmult_0_l Rabs_R0.
   intros Hbad. exact (Rlt_not_le _ _
     (bpow_gt_0 radix2 (emin + fprec t - 1)) Hbad). }
 have INTERNAL :=
-  DWDivFP_internal_precond_of_strong_precond xh xl y SAFE Hxhne.
-have CONDn : DWDivFP_relative_normal_quotient_precond xh xl y.
-{ move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [_ [Hxhb [Hqub Hxhlb]]]]]]].
-  destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
-  repeat split; assumption. }
-have FIN : is_finite_p (DWDivFP xh xl y).
-{ split;
-    [ exact (DWDivFP_fst_finite_acc xh xl y Hp4 CONDn)
-    | exact (DWDivFP_snd_finite_acc xh xl y Hp4 CONDn) ]. }
+  DWDivFP_internal_precond_of_weak_pre_and_finite_post_cond
+    xh xl y CHECKED Hxhne.
+have FIN : is_finite_p (DWDivFP xh xl y) := proj2 CHECKED.
+specialize (FIN STD).
 destruct Hcorr as [Hd0 | Hdyn]; last first.
 - exact (DWDivFP_relative_accuracy_normal_quotient
     xh xl y Hp4 INTERNAL FIN Hquot Hdyn).
 - (* exact division: the tl node is unperturbed, so the FLX bound transfers
      verbatim.  Convert the absolute form back to the relative one. *)
-  move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth [Hxhb [Hqub Hxhlb]]]]]]].
-  destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
-  have Hyne : FT2R y <> 0.
-  { intro H0.
-    have Hp := bpow_gt_0 radix2 (SpecFloat.emin (fprec t) (femax t) + fprec t - 1).
-    move: Hquot; rewrite H0 /Rdiv Rinv_0 Rmult_0_r Rabs_R0 => Hc. lra. }
+  move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hxhlb]]]]].
+  have Hyne := DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth.
   have Hsne : FT2R xh + FT2R xl <> 0.
   { intro Hs0. apply Hxhne. move: Hdwp; rewrite /double_word_prop Hs0.
     rewrite /rounded round_0 //. }
@@ -1869,6 +1866,34 @@ destruct Hcorr as [Hd0 | Hdyn]; last first.
   apply (Rmult_le_reg_r (Rabs D)); [ exact HQpos |].
   rewrite Rmult_assoc Rinv_l; [ rewrite Rmult_1_r; exact Habs |].
   apply Rgt_not_eq; exact HQpos.
+Qed.
+
+Hypothesis COND : DWDivFP_relative_precond xh xl y.
+
+Theorem DWDivFP_relative_accuracy :
+  relative_error_DWDivFP xh xl y <= 3 * u ^ 2.
+Proof.
+move: (COND) => [SAFE REGIME].
+move: (REGIME) => [Hquot Hcorr].
+have Hxhne : FT2R xh <> 0.
+{ intro Hxh0. move: Hquot. rewrite Hxh0 /Rdiv Rmult_0_l Rabs_R0.
+  intros Hbad. exact (Rlt_not_le _ _
+    (bpow_gt_0 radix2 (emin + fprec t - 1)) Hbad). }
+have CONDn : DWDivFP_relative_normal_quotient_precond xh xl y.
+{ move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [_ [Hxhb [Hqub Hxhlb]]]]]]].
+  destruct Hxhlb as [Hxh0 | Hxhlb]; [contradiction |].
+  repeat split; assumption. }
+have FIN : is_finite_p (DWDivFP xh xl y).
+{ split;
+    [ exact (DWDivFP_fst_finite_acc xh xl y Hp4 CONDn)
+    | exact (DWDivFP_snd_finite_acc xh xl y Hp4 CONDn) ]. }
+have CHECKED : DWDivFP_weak_pre_and_finite_post_cond xh xl y.
+{ move: (SAFE) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth [Hxhb [Hqub Hxhlb]]]]]]].
+  unfold DWDivFP_weak_pre_and_finite_post_cond, DWDivFP_weak_precond,
+         DWDivFP_finite_post_cond.
+  exact (conj (conj Hdwp Hxhlb) FIN). }
+exact (DWDivFP_relative_accuracy_from_weak_pre_and_finite_post_cond
+  CHECKED (conj Hquot Hcorr)).
 Qed.
 
 End RelativeAccuracyDWDivFP.

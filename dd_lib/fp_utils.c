@@ -50,14 +50,6 @@ int fast2_sum_magnitude_order_check(double a, double b) {
     return isfinite_double(a + b) && (fabs(b) <= fabs(a));
 }
 
-int two_sum_exact_check(double a, double b) {
-    /* short-circuit: fabs called only when both fin checks pass */
-    /* pred(2^1024) = DBL_MAX; strict inequality excludes ±DBL_MAX */
-    return isfinite_double(a + b)
-        && isfinite_double(a - b)
-        && (fabs(b) < DBL_MAX);
-}
-
 int dw_plus_dw_strong_precond_check(const struct dword *x, const struct dword *y) {
     /* Verifies DWPlusDW_strong_precond: each component is finite, both pairs satisfy the
        double-word relation (high part is the IEEE-754 RN sum of the components),

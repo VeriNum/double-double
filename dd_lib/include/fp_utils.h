@@ -10,8 +10,6 @@ int isfinite_dword(const struct dword *x);
 
 int fast2_sum_magnitude_order_check(double a, double b);
 
-int two_sum_exact_check(double a, double b);
-
 int fast2_mult_exact_check(double x, double y);
 
 int fast2_mult_product_finite_check(double x, double y);

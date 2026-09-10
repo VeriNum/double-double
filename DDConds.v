@@ -18,22 +18,6 @@ Require Import float_acc_lems op_defs common.
 Require Export DDModels.
 
 
-Section TwoSumCond.
-Context {NANS: Nans} {t : type} {STD: is_standard t}.
-
-Notation fexp  := (SpecFloat.fexp (fprec t) (femax t)).
-Notation Omega := (bpow Zaux.radix2 (femax t)).
-
-(* Sufficient conditions for the two returned components to reconstruct a+b
-   exactly and form a valid double-word. *)
-Definition TwoSum_exact_cond (a b : ftype t) : Prop :=
-  is_finite (BPLUS a b) = true /\
-  is_finite (BMINUS a b) = true /\
-  Rabs (FT2R b) < Ulp.pred Zaux.radix2 fexp Omega.
-
-End TwoSumCond.
-
-
 Section Fast2SumCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 

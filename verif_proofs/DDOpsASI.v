@@ -205,16 +205,6 @@ Definition dw_div_fp_kernel_spec :=
 (*  Guarded wrappers (exported public API)                                   *)
 (* ======================================================================== *)
 
-Definition two_sum_guarded_spec :=
-  DECLARE _two_sum_guarded
-  WITH p: val, a : ftype Tdouble, b : ftype Tdouble
-  PRE [ tptr dword, tdouble, tdouble ]
-    PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
-  POST [ tvoid ]
-    PROP(TwoSum_exact_guarantee a b)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (TwoSumF a b)) p).
-
 Definition fast_2sum_guarded_spec :=
   DECLARE _fast_2sum_guarded
   WITH p: val, a : ftype Tdouble, b : ftype Tdouble
@@ -454,7 +444,6 @@ Definition exit_spec :=
    checks provided by the checks VSU at link time. *)
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
-    fp_utils_specs.two_sum_exact_check_spec;
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
     fp_utils_specs.fast2_mult_exact_check_spec;
     fp_utils_specs.fast2_mult_product_finite_check_spec;
@@ -478,7 +467,7 @@ Definition Ops_Internal : funspecs :=
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_kernel_spec;
-    two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+    fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     fast_2mult_acc_guarded_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;
     dw_times_dw_kernel_spec; dw_times_dw_spec; dw_times_dw_strong_spec;
@@ -488,7 +477,7 @@ Definition Ops_Internal : funspecs :=
 (* Updated double-word operations expose default and strong interfaces with
    the same guarantee. *)
 Definition Ops_Exports : funspecs :=
-  [ two_sum_guarded_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+  [ two_sum_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;

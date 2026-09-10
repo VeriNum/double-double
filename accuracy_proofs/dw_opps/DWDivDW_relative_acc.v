@@ -1123,7 +1123,6 @@ have Hthpred : Rabs (FT2R th) <
     Ulp.pred radix2 (SpecFloat.fexp (fprec t) (femax t)) (bpow radix2 (femax t)).
 { eapply Rle_lt_trans; [exact Hthq |].
   exact (@FLT_lemmas.Omega4_lt_predOmega t). }
-have Tcond : TwoSum_exact_cond dh th := conj Fsh (conj Fminus Hthpred).
 have Fts : is_finite_p ts.
 { fold ts. split; [exact Fsh |].
   apply TwoSum_acc_helpers.is_finite_TwoSum;

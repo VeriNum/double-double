@@ -40,28 +40,6 @@ forward. forward. forward_call. forward.
 entailer!.
 Qed.
 
-Lemma body_two_sum_guarded: semax_body Vprog Gprog f_two_sum_guarded two_sum_guarded_spec.
-Proof.
-start_function.
-forward_call (a, b).
-Intros vret_fin.
-set (Post_if :=
-  PROP (TwoSum_exact_cond a b)
-  LOCAL (temp _st p; temp _a (Vfloat a); temp _b (Vfloat b))
-  SEP (data_at_ Tsh dword p)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (TwoSum_exact_cond a b) as HFC by entailer!.
-  forward_call (p, a, b).
-  entailer!!.
-  apply TwoSum_exact_guarantee_from_cond, HFC.
-Qed.
-
 Lemma body_fast_2sum_guarded: semax_body Vprog Gprog f_fast_2sum_guarded fast_2sum_guarded_spec.
 Proof.
 start_function.

@@ -1,6 +1,6 @@
 # Evaluation targets are handled by bench/Makefile rather than CoqMakefile.
 BENCHTARGETS := prepare-evaluation smoke results run-evaluation report-evaluation \
-                check-report \
+                check-report raw-results \
                 multiplication_underflow_example
 
 # KNOWNTARGETS will not be passed along to CoqMakefile
@@ -30,11 +30,15 @@ endif
 ####################################################################
 
 .PHONY: $(BENCHTARGETS)
-$(BENCHTARGETS):
+raw-results:
+	@test -n "$(RUN_DIR)" || { echo "usage: make raw-results RUN_DIR=results/" >&2; exit 1; }
+	+$(MAKE) --no-print-directory -C bench $@ RUN_DIR="$(abspath $(RUN_DIR))"
+
+$(filter-out raw-results,$(BENCHTARGETS)):
 	+$(MAKE) --no-print-directory -C bench $@
 
 OBJDIR = verif_proofs/verif_objs
-OBJ = two_sum.v two_sum_guarded.v fast_2mult.v fast_2mult_guarded.v fast_2mult_acc_guarded.v fast_2sum.v fast_2sum_guarded.v
+OBJ = two_sum.v fast_2mult.v fast_2mult_guarded.v fast_2mult_acc_guarded.v fast_2sum.v fast_2sum_guarded.v
 OBJ += dw_plus_fp_kernel.v dw_plus_fp.v dw_plus_dw_kernel.v dw_plus_dw.v
 OBJ += dw_times_fp_kernel.v dw_times_fp.v dw_times_dw_kernel.v dw_times_dw.v
 OBJ += dw_div_fp_kernel.v dw_div_fp.v dw_div_dw_kernel.v dw_div_dw.v

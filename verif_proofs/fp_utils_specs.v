@@ -63,19 +63,6 @@ Definition fast2_mult_product_finite_check_spec :=
     SEP().
 
 
-Definition two_sum_exact_check_spec :=
-  DECLARE _two_sum_exact_check
-  WITH x : ftype Tdouble, y : ftype Tdouble
-  PRE [ tdouble, tdouble ]
-    PROP()
-    PARAMS ( Vfloat x; Vfloat y )
-    SEP()
-  POST [ tint ]
-    EX b : bool,
-    PROP(b = true -> TwoSum_exact_cond x y)
-    RETURN (Vint (if b then Int.one else Int.zero))
-    SEP().
-
 (* The C check fast2_sum_magnitude_order_check verifies fin && |b| <= |a|.  We expose the
    magnitude form directly (rather than weakening to the ulp/zero disjunction
    of Fast2Sum_exact_cond) so callers can derive both Fast2Sum_exact_cond (via ulp_le_abs)

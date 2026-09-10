@@ -8,7 +8,7 @@ Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
    each component is finite, both (xh, xl) and (yh, yl) are double-words,
    and |xh|, |yh| <= Omega/4 = 2^1022.
 
-   Proof structure mirrors body_two_sum_exact_check; each &&-short-circuit becomes
+   Each &&-short-circuit becomes
    a forward_if cascade with an EX b_i, PROP(b_i = true -> P_i) invariant.
    Discharge of the propositional conjuncts at each join is delegated to the
    short_circuit_*_concl lemmas in verif_fp_utils_short_circuit.v. *)

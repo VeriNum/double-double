@@ -90,7 +90,7 @@ Definition Checks_Imports : funspecs := [ fabs_spec; ldexp_spec ].
 Definition Checks_Internal : funspecs :=
   [ isfinite_double_spec; fast2_mult_exact_check_spec; fast2_mult_product_finite_check_spec;
     fast2_sum_magnitude_order_check_spec;
-    two_sum_exact_check_spec; dw_plus_dw_strong_precond_check_spec;
+    dw_plus_dw_strong_precond_check_spec;
     dw_plus_dw_weak_precond_check_spec;
     dw_times_fp_strong_precond_check_spec; dw_times_fp_weak_precond_check_spec;
     dw_times_dw_strong_precond_check_spec; dw_times_dw_weak_precond_check_spec; dw_plus_fp_strong_precond_check_spec;
@@ -100,7 +100,7 @@ Definition Checks_Internal : funspecs :=
 
 (* Public API exported by the checks VSU: every check consumed by the ops VSU. *)
 Definition Checks_Exports : funspecs :=
-  [ two_sum_exact_check_spec; fast2_sum_magnitude_order_check_spec; fast2_mult_exact_check_spec;
+  [ fast2_sum_magnitude_order_check_spec; fast2_mult_exact_check_spec;
     fast2_mult_product_finite_check_spec;
     isfinite_dword_spec; dw_plus_fp_weak_precond_check_spec;
     dw_plus_fp_strong_precond_check_spec; dw_plus_dw_weak_precond_check_spec; dw_plus_dw_strong_precond_check_spec;

@@ -38,7 +38,6 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_dw. }
   1:{ solve_SF_dd body_dw_plus_dw_strong. }
   1:{ solve_SF_dd body_dw_times_fp_kernel. }
-  1:{ solve_SF_dd body_two_sum_guarded. }
   1:{ solve_SF_dd body_fast_2sum_guarded. }
   1:{ solve_SF_dd body_fast_2mult_guarded. }
   1:{ solve_SF_dd body_fast_2mult_acc_guarded. }
