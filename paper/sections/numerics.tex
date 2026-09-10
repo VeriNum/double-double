@@ -97,15 +97,15 @@ correspondence.
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
 
-Double-word algorithms obtain additional accuracy by retaining information
-lost when intermediate sums and products are rounded. Error-free
-transformations support this accounting by pairing a rounded result with a
-correction. Under appropriate conditions, adding the correction to the rounded
-result recovers the exact real sum or product. The error-free transformations
-for addition retain this behavior when gradual underflow occurs. For
-multiplication, we prove that the returned components sum to the exact product
-under an additional condition; otherwise, we bound the difference between
-their sum and the exact product.
+Existing analyses of double-word algorithms rely on error-free transformations
+to retain information lost when intermediate sums and products are rounded.
+To extend those analyses to IEEE~754 arithmetic, we must determine whether the
+returned correction still equals the exact rounding error when gradual
+underflow occurs. For addition, the equality remains valid under suitable 
+conditions. For multiplication, the exact rounding error may be too small to
+represent. We identify a sufficient condition under which the correction
+remains exact and otherwise bound the error in the sum of the returned
+components.
 
 \begin{definition}[Error-free transformation]
 \label[definition]{def:error-free-transformation}
@@ -223,11 +223,16 @@ to Dekker
   \label{fig:error-free-transformations}
 \end{figure}
 
-\paragraph{Error-free transformations for addition.}
+\subsubsection{Exact corrections for addition.}
 
-\citet{Boldo2017} prove that \TwoSum{} and, under a usual ordering
-condition, \FastTwoSum{} remain error-free when subnormal values arise during
-the computation.
+Gradual underflow does not introduce an additional error into the corrections
+returned by \TwoSum{} and \FastTwoSum{}. When the returned components are
+finite, \TwoSum{} returns the rounded sum and its exact rounding error.
+\FastTwoSum{} also returns the rounded sum and its exact rounding error
+under the usual ordering condition on the operands. 
+These results, proved by \citet{Boldo2017}, allow the later
+double-word proofs to use the addition transformations without imposing a
+lower bound on the magnitude of the operands.
 
 \begin{theorem}[Error-free transformations for addition over IEEE~754]
 \label{thm:addition-transformations}
@@ -241,9 +246,11 @@ returned components are finite.
 \end{enumerate}
 \end{theorem}
 
-The condition $|b|\leq|a|$ is sufficient but not necessary. When it cannot be
-established, \FastTwoSum{} still returns the rounded sum and its exact rounding
-error if the exact sum is sufficiently small:
+The ordering condition $|b|\leq|a|$ cannot be established for every use of
+\FastTwoSum{} in the double-word algorithms. We prove another sufficient
+condition needed by the later analysis: the correction remains exact when the
+magnitude of the exact sum is at most twice the smallest positive normal
+value.
 
 \begin{theorem}[\FastTwoSum{} for small exact sums]
 \label{thm:fast-two-sum-small}
@@ -262,81 +269,118 @@ $t=\operatorname{RN}(b-z)=0$. Thus, $s+t=a+b$ and
 $s=\operatorname{RN}(a+b)$.
 \end{proof}
 
-\paragraph{Error-free transformation for products.}
+\subsubsection{Corrections for multiplication near underflow.}
 
-The rounded product and correction returned by \FastTwoMult{} are guaranteed
-to sum to the exact product when that product is zero or meets a magnitude
-threshold. For a radix-two format of precision $p$, define
+The correction returned by \FastTwoMult{} requires separate treatment.
+For finite inputs $a$ and $b$, the transformation first computes
 \[
-  \tau=2^{e_{\min}+2p-1}.
+  \pi_h=\operatorname{RN}(ab)
 \]
-Theorem~2 of \citet[Section~3]{BoldoDaumas2003} characterizes when the exact
-product correction is representable. In our notation, this result implies
-representability when $|ab|\geq\tau$.
-The following theorem also bounds
-$|(\pi_h+\pi_\ell)-ab|$ in the remaining finite cases.
+and then rounds the exact error $d=ab-\pi_h$ to obtain $\pi_\ell$. If $d$ is
+representable, then $\pi_\ell=d$ and the returned components sum to the exact
+product. Near underflow, however, $d$ may be too small to represent.
+
+Theorem~2 of \citet[Section~3]{BoldoDaumas2003} proves that $d$ is
+representable when $a$ and $b$ have representations
+\[
+  a=n_a2^{e_a}
+  \qquad\text{and}\qquad
+  b=n_b2^{e_b}
+\]
+satisfying $e_a+e_b\geq e_{\min}$. We derive a sufficient condition stated
+directly in terms of the magnitude of the product. We also prove that, whenever
+both returned components are finite, their sum differs from the exact product
+by at most half the spacing between subnormal values.
 
 \begin{theorem}[\FastTwoMult{} over IEEE~754]
 \label{thm:fast-two-mult}
-Let the underlying radix-two format have precision $p\geq3$, with $\eta$ as
-defined in \Cref{eq:flt-thresholds}, and suppose
-$(\pi_h,\pi_\ell)=\FastTwoMult{}(a,b)$ has finite components.  Then
-\begin{equation}
-  \left|(\pi_h+\pi_\ell)-ab\right|
-    \leq \frac{\eta}{2}.
-  \label{eq:fast-two-mult-floor}
-\end{equation}
+Let $a$ and $b$ be finite values in a radix-two format with precision
+$p\geq3$ and lower exponent $e_{\min}$. Define
+\[
+  \eta\triangleq2^{e_{\min}}
+  \qquad\text{and}\qquad
+  \tau\triangleq2^{e_{\min}+2p-1}.
+\]
+Suppose $(\pi_h,\pi_\ell)=\FastTwoMult{}(a,b)$ returns two finite components.
+Then
+\[
+  \pi_h=\operatorname{RN}(ab)
+  \qquad\text{and}\qquad
+  \left|(\pi_h+\pi_\ell)-ab\right|\leq\frac{\eta}{2}.
+\]
 If $ab=0$ or $|ab|\geq\tau$, then
-$\pi_h=\operatorname{RN}(ab)$ and $\pi_h+\pi_\ell=ab$.
+\[
+  \pi_\ell=ab-\pi_h
+  \qquad\text{and}\qquad
+  \pi_h+\pi_\ell=ab.
+\]
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-Let $x=ab$ and $d=x-\pi_h$.  Finiteness of the returned components allows
-Lines~1 and~2 of \Cref{alg:fast-two-mult} to be interpreted as
-$\pi_h=\operatorname{RN}(x)$ and $\pi_\ell=\operatorname{RN}(d)$. Hence
-$(\pi_h+\pi_\ell)-x=\pi_\ell-d$.
+Let $d=ab-\pi_h$ be the exact rounding error. Lines~1 and~2 of
+\Cref{alg:fast-two-mult} give
+\[
+  \pi_h=\operatorname{RN}(ab)
+  \qquad\text{and}\qquad
+  \pi_\ell=\operatorname{RN}(d).
+\]
+Consequently,
+\[
+  (\pi_h+\pi_\ell)-ab=\pi_\ell-d.
+\]
 
-If $x=0$, then $d=\pi_\ell=0$.  If $|x|\geq\tau$, the representability result
-of \citet{BoldoDaumas2003} shows that $d$ is representable, so
-$\pi_\ell=d$ and $\pi_h+\pi_\ell=x$.  In the remaining case,
-$0<|x|<\tau$, the FLT rounding bound and $p\geq3$ give $|d|<2\nu$.
-The spacing at this magnitude is $\eta$, and therefore
+If $ab=0$, then $d=\pi_\ell=0$. Now suppose $|ab|\geq\tau$. Choose
+representations
+\[
+  a=n_a2^{e_a}
+  \qquad\text{and}\qquad
+  b=n_b2^{e_b},
+\]
+where $|n_a|,|n_b|<2^p$, as permitted by the definition of FLT. If
+$e_a+e_b<e_{\min}$, then
+\[
+  |ab|
+  =|n_an_b|2^{e_a+e_b}
+  <2^{2p}2^{e_{\min}-1}
+  =\tau,
+\]
+contradicting $|ab|\geq\tau$. Therefore $e_a+e_b\geq e_{\min}$, and
+Theorem~2 of \citet[Section~3]{BoldoDaumas2003} shows that $d$ is
+representable. It follows that $\pi_\ell=d$ and
+$\pi_h+\pi_\ell=ab$.
+
+It remains to consider when $0<|ab|<\tau$. Let
+$\nu=2^{e_{\min}+p-1}$ be the smallest positive normal value. The FLT bound
+for rounding to nearest and $p\geq3$ give $|d|<2\nu$. Adjacent representable
+values in this range are spaced by $\eta$, so
 \[
   |\pi_\ell-d|\leq\frac{\eta}{2}.
 \]
-The preceding identity gives
-\[
-  |(\pi_h+\pi_\ell)-ab|\leq\frac{\eta}{2},
-\]
-which proves both conclusions.
+This proves the stated error bound.
 \end{proof}
 
-\subsection{Division of a Double Word by a Floating-Point Value}
+\subsection{Numerical Guarantees for Division of a Double Word by a
+Floating-Point Value}
 \label{sec:division-numerics}
 
-To show how the preceding error-free transformation results combine within a
-complete
-operation, we analyze Algorithm~15 of \citet{Joldes2017} for dividing a double
-word by a floating-point value.  This algorithm illustrates both effects of a
-finite exponent range identified in \Cref{sec:flx-to-ieee}: the relevant
-computations must remain finite, while steps in the subnormal range may
-require direct analysis in FLT.
+Division of a double word by a floating-point value shows how the preceding
+error-free transformation results combine within a complete double-word
+operation. We identify sufficient conditions under which the returned pair
+forms a double word and its represented value satisfies an error bound with
+relative and absolute terms. 
+The proof accounts for both effects of the finite exponent
+range: the relevant computations must remain finite, and operations involving
+subnormal values may require direct analysis in FLT.
 
-Given a double word $x=x_h+x_\ell$ and a nonzero floating-point divisor
-$y$, the exact quotient is
-\begingroup
-\setlength{\abovedisplayskip}{3pt plus 1pt minus 1pt}
-\setlength{\abovedisplayshortskip}{3pt plus 1pt minus 1pt}
-\setlength{\belowdisplayskip}{3pt plus 1pt minus 1pt}
-\setlength{\belowdisplayshortskip}{3pt plus 1pt minus 1pt}
+Given a double word $x=x_h+x_\ell$ and a nonzero floating-point divisor $y$,
+the exact quotient is
 \begin{equation}
   q=\frac{x_h+x_\ell}{y}.
   \label{eq:dw-div-exact-quotient}
 \end{equation}
-\endgroup
-The functional model \DWDivFP{} formalizes this algorithm over a generic
-underlying format. \Cref{alg:dw-div-fp} gives its mathematical definition; each
-$\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
+The functional model \DWDivFP{} represents the rounded operations used to
+approximate this quotient. \Cref{alg:dw-div-fp} gives its mathematical
+definition. Each $\operatorname{RN}$ denotes rounding to nearest with ties to even.
 
 \begin{figure}[t]
   \centering
@@ -368,41 +412,36 @@ $\operatorname{RN}$ denotes round-to-nearest, ties-to-even.
       \]
     \end{minipage}}
   \endgroup
-  \caption{The functional model \DWDivFP{} for division of a double word by a
-    floating-point value, following Algorithm~15 of \citet{Joldes2017}.}
-  \Description{The eight steps of the DWDivFP algorithm. The algorithm
-    computes a leading quotient, forms and divides the residual, and combines
-    the leading quotient with its correction.}
+  \caption{The functional model \DWDivFP{} for dividing a double word by a
+  floating-point value.}
   \label{alg:dw-div-fp}
 \end{figure}
 
-The structure of the algorithm follows the identity
+The model follows the identity
 \[
   q=\frac{x}{y}
     =t_h+\frac{x-t_hy}{y}.
 \]
-Line~1 computes the leading quotient $t_h$.  Lines~2--5 approximate the
-residual $x-t_hy$ using \FastTwoMult{} for the product and including the low
-word $x_\ell$.  Line~6 divides the residual by $y$ for the correction $t_\ell$;
-Line~7 combines them.
+Line~1 computes the leading quotient $t_h$.
+Lines~2--5 approximate the residual $x-t_hy$, including the contribution of
+the low word $x_\ell$. Line~6 divides this residual by $y$ to obtain the
+correction $t_\ell$. Line~7 constructs the final pair.
 
-\subsection{Conditions and Numerical Guarantee for Division by a
-Floating-Point Value}
+\subsubsection{Sufficient conditions.}
 \label{sec:division-conditions}
 
-The division theorem requires the dividend to be a double word, a lower bound
-on its high word, and a finite result. We write
-$\mathcal{I}_{\mathrm{div}}$ for the two input conditions and
-$\mathcal{F}_{\mathrm{div}}$ for result finiteness. A stronger condition
-$\mathcal{S}_{\mathrm{div}}$ establishes result finiteness from the inputs.
+The numerical analysis of the division algorithm requires conditions on the operands and finiteness of
+the returned pair. We state these requirements separately so that result
+finiteness can either be assumed directly or derived from stronger conditions
+on the operands and leading quotient.
 
 For operands $x_h,x_\ell,y$, let
-$(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$. Let $t_h$ be the rounded leading
-quotient computed on Line~1 of \Cref{alg:dw-div-fp}, and let $q_0=x_h/y$ be
-the exact leading quotient when $y\neq0$. We write
-$\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite, and
-let $\Omega$ be the least power of two greater than every finite magnitude in
-the format. For binary64, $\Omega=2^{1024}$.
+$(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$, and let $t_h$ be the rounded leading
+quotient computed on Line~1 of \Cref{alg:dw-div-fp}. When $y\neq0$, write
+$q_0=x_h/y$ for the exact leading quotient. We write
+$\operatorname{Fin}(v_1,\ldots,v_n)$ when all its arguments are finite. Let
+$\Omega$ be the least power of two greater than every finite magnitude in the
+format; for binary64, $\Omega=2^{1024}$.
 
 \begin{definition}[Conditions for \DWDivFP{}]
 \label[definition]{def:dw-div-conditions}
@@ -430,13 +469,31 @@ Define
 \end{equation}
 \end{definition}
 
-The input condition permits the exact leading quotient $q_0$ to be subnormal.
-The result-finiteness condition is stated separately because the real-valued
-error bound and the double-word relation apply only when the returned words
-are finite. The stronger condition adds upper bounds sufficient to prove
-result finiteness.
+The condition $\mathcal{I}_{\mathrm{div}}$ requires the dividend to be a
+double word and imposes a lower bound on its high word unless the dividend is
+zero. It places no lower bound on $q_0$, so the leading quotient may be
+subnormal. The condition $\mathcal{F}_{\mathrm{div}}$ states that both
+returned words are finite, as required for the error bound and double-word
+relation. The stronger condition $\mathcal{S}_{\mathrm{div}}$ adds finiteness
+and upper bounds sufficient to derive
+$\mathcal{F}_{\mathrm{div}}$ without assuming it separately.
 
-\begin{theorem}[Numerical guarantee for \DWDivFP{}]
+\begin{lemma}[Finiteness from the Stronger Condition]
+\label[lemma]{lem:dw-div-safe-implies-finite}
+If $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds, then
+$\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
+\end{lemma}
+
+\subsubsection{Error Bounds and Double-Word Result}
+
+The main theorem assumes
+$\mathcal{I}_{\mathrm{div}}$ and $\mathcal{F}_{\mathrm{div}}$. Under these
+conditions, the functional model returns a double word and satisfies an error
+bound with relative and absolute terms. Under additional magnitude conditions,
+the absolute term is unnecessary. By the preceding finiteness lemma, the same
+conclusions also follow from $\mathcal{S}_{\mathrm{div}}$.
+
+\begin{theorem}[Numerical guarantees for \DWDivFP{}]
 \label{thm:dw-div-fp-numerical}
 Let the underlying format be radix two with precision $p\geq4$, lower
 exponent $e_{\min}$, unit roundoff $u=2^{-p}$, and
@@ -469,8 +526,9 @@ $|\delta/y|\geq\nu$, the sharper bound holds:
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-The two conditions make the operands and intermediate results finite and imply
-$y\neq0$. If $x_h=0$, the double-word condition gives
+Together, the two conditions imply that $y\neq0$ and that the intermediate
+results used below are finite.
+If $x_h=0$, the double-word condition gives
 $x_\ell=0$, and the result follows directly. Otherwise, the lower bound in
 $\mathcal{I}_{\mathrm{div}}$ gives
 $|x_h|\geq2^{e_{\min}+2p}$.
@@ -489,8 +547,10 @@ values then transfer the existing FLX residual argument through Lines~4--5.
 
 If $\delta=0$ or $|\delta/y|\geq\nu$, rounding on Line~6 also agrees in the
 two formats and gives the sharper relative bound in
-\Cref{eq:dw-div-fp-relative}. Otherwise, their rounded corrections differ by
-at most $\eta$, giving the mixed bound. The residual
+\Cref{eq:dw-div-fp-relative}. 
+Otherwise, the values of $t_\ell$ obtained by FLT and FLX rounding differ by
+at most $\eta$, giving the mixed bound.
+The residual
 analysis also gives $|t_\ell|\leq|t_h|$, so
 \Cref{thm:addition-transformations} shows that \FastTwoSum{} on Line~7
 preserves their sum and returns a double word.
@@ -527,14 +587,10 @@ This proves the mixed bound, the conditional sharper bound, and the
 double-word property.
 \end{proof}
 
-\begin{lemma}[Finiteness from the Stronger Condition]
-\label[lemma]{lem:dw-div-safe-implies-finite}
-If $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds, then
-$\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
-\end{lemma}
-
-Combining this lemma with \Cref{thm:dw-div-fp-numerical} gives the two
-sufficient alternatives used by the C wrappers.
+By \Cref{lem:dw-div-safe-implies-finite},
+$\mathcal{S}_{\mathrm{div}}$ implies $\mathcal{F}_{\mathrm{div}}$ and already
+includes $\mathcal{I}_{\mathrm{div}}$. Consequently,
+\Cref{thm:dw-div-fp-numerical} gives the following two alternatives.
 
 \begin{corollary}[Conditions for the Division Guarantee]
 \label[corollary]{cor:dw-div-conditions}
@@ -546,6 +602,10 @@ The conclusions of \Cref{thm:dw-div-fp-numerical} hold if
 \]
 holds, or if $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{corollary}
+
+\Cref{thm:division-checks} proves that the weak and result finiteness checks in
+the default wrapper establish the first alternative, while the strong check in
+the alternative wrapper establishes the second.
 
 \subsection{Numerical Guarantees for the Remaining Operations}
 \label{sec:remaining-numerical-conditions}
