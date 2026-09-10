@@ -109,8 +109,9 @@ to establish sufficient conditions for their numerical guarantees.  When a
 call returns a result, each double-double operation produces a double-double
 satisfying its proved error bound, while each error-free transformation reconstructs the
 exact sum or product. Using the Rocq proof assistant, we extend the earlier 
-mechanized numerical analyses to IEEE~754 arithmetic.  Using the Verified Software Toolchain (VST), we verify
-these guarantees for the C implementations in \FenceDD{}.
+mechanized numerical analyses to IEEE~754 arithmetic.  Using the Verified 
+Software Toolchain (VST), we prove these guarantees for the C implementations 
+in \FenceDD{}.
 
 Across tests spanning the binary64 exponent range, observed errors reached
 $0.87$ of their proved bounds.  For calls stopped by a runtime check, QD, an

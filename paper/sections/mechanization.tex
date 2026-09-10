@@ -1,78 +1,97 @@
 \section{Verification of \FenceDD}
 \label{sec:mechanization}
 
-The numerical theorems in \Cref{sec:numerics} concern the functional models
-defined there, whereas users call the public C wrappers in
-\Cref{sec:overview}. Following
-earlier layered verifications of numerical C programs
-\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}, we prove three
-obligations: kernel refinement, soundness of the runtime checks, and their
-composition into each wrapper's public contract.  We illustrate these proofs
-using division of a double word by a binary64 value; the other operations
-follow the same structure.
+Section~3 proves numerical properties of the functional models, whereas
+clients call the C wrappers presented in Section~2. We connect the functional
+models to C wrappers in three steps. First, we prove that each arithmetic
+kernel implements its functional model. Second, we prove that successful
+runtime checks establish the conditions required by the corresponding
+numerical theorem. Finally, we compose these results into the public contract
+of each wrapper. This follows the layered organization used in earlier
+verifications of numerical C programs
+\citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
+Continuing the example from \Cref{sec:overview,sec:numerics}, we illustrate
+these steps for division of a double word by a binary64 value.
 
-\subsection{C Kernels Implement Their Functional Models}
+\subsection{Kernel Refinement}
 \label{sec:kernel-refinement}
 
-The numerical theorem in \Cref{thm:dw-div-fp-numerical} concerns the
-functional model \DWDivFP{}, while the wrappers call the C kernel in
-\Cref{fig:dw-div-fp-kernel}.  Suppose that \texttt{x} initially stores
-$(x_h,x_\ell)$ and that \texttt{dw\_div\_fp\_kernel} returns with
-\texttt{z} storing $(z_h,z_\ell)$.  Using VST, we prove
+Kernel refinement connects the execution of an arithmetic kernel to the
+functional model analyzed in Section~3. For division of a double word by a
+binary64 value, the numerical theorem in
+\Cref{thm:dw-div-fp-numerical} concerns the functional model \DWDivFP{},
+whereas both wrappers call the C kernel in
+\Cref{fig:dw-div-fp-kernel}. Suppose that \texttt{x} initially stores
+$(x_h,x_\ell)$ and that the kernel returns with \texttt{z} storing
+$(z_h,z_\ell)$. Using VST, we prove
 \begin{equation}
-  (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y),
+  (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y).
   \label{eq:dw-div-fp-kernel-refinement}
 \end{equation}
-where \DWDivFP{} is instantiated with binary64. The Rocq definition of
-\DWDivFP{} uses the IEEE~754 types and operations provided by VCFloat2
-\citep{AppelKellison2024}. In the VST proof, \texttt{FPCompCert} bridge
-lemmas relate these operations to CompCert, while the specifications of the
-transformation kernels account for the internal C calls.  This refinement identifies
-the computed pair but requires no numerical condition and proves no error
-bound.  We prove an analogous result for every arithmetic kernel in the
+
+This result identifies the pair computed by the C kernel with the pair
+returned by the functional model. It requires no numerical condition and does
+not itself establish either the error bound or the double-word relation.
+
+To prove \Cref{eq:dw-div-fp-kernel-refinement}, the VST proof matches each
+computation in the C kernel with the corresponding operation in
+\DWDivFP{}. VST interprets the C operations using CompCert, whereas
+\DWDivFP{} is defined using VCFloat2 \citep{AppelKellison2024}. We prove
+binary64 equalities showing that the corresponding operations compute the same
+result.
+
+The division kernel also calls the kernels implementing \FastTwoMult{} and
+\FastTwoSum{}. Their VST specifications identify the pair returned by each C
+call with the pair returned by its functional model. Together, these results
+show that the complete C kernel returns the pair produced by \DWDivFP{}. We
+prove the corresponding refinement result for every other kernel in the
 library.
 
-\subsection{Runtime Checks Establish the Mathematical Conditions}
+\subsection{Soundness of the Runtime Checks}
 \label{sec:check-soundness}
 
-To apply the numerical theorem to either wrapper for dividing a double-double
-by a binary64 value, we must show that successful runtime checks establish its
-mathematical hypotheses. The
-following theorem connects the weak and strong checks in
-\Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check} and the finiteness check
-in \Cref{fig:finite-checks} to the conditions in
-\Cref{sec:division-conditions}.
+Kernel refinement identifies the pair computed by the C kernel, but it does
+not establish the conditions assumed by the numerical theorem. The next proof
+obligation is therefore to show that successful runtime checks establish
+these conditions. For division of a double word by a binary64 value, the weak
+and strong checks appear in
+\Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check}, and the result finiteness
+check appears in \Cref{fig:finite-checks}. The following theorem connects
+these checks to the conditions defined in \Cref{sec:division-conditions}.
 
-\begin{theorem}[Soundness of the Checks for Division by a Binary64 Value]
+\begin{theorem}[Soundness of the Runtime Checks for Division by a Binary64
+Value]
 \label{thm:division-checks}
-Suppose that \texttt{x} stores the binary64 pair $(x_h,x_\ell)$.
+Suppose that \texttt{x} stores $(x_h,x_\ell)$ and that \texttt{z} stores
+$(z_h,z_\ell)$.
 
 \begin{enumerate}
   \item If the weak check returns $1$, then
     $\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
-
   \item If the strong check returns $1$, then
     $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
+  \item If the result finiteness check applied to \texttt{z} returns $1$, then
+    $\operatorname{Fin}(z_h,z_\ell)$ holds.
 \end{enumerate}
-
-If \texttt{z} stores $(z_h,z_\ell)$ and the finiteness check returns $1$,
-then both components are finite.
 \end{theorem}
 
-The proofs account for short-circuit control flow using the specifications of
-the finiteness functions, \texttt{fabs}, and \texttt{ldexp}.  The main
-arithmetic argument derives the required bound on the exact quotient from the
-rounded quotient comparison, using exact threshold representability and
-monotonicity of rounding.  These results prove soundness, not completeness: a
-failed runtime check need not imply that the corresponding mathematical
-condition is false.
+The VST proofs follow the short-circuit evaluation of the C checks and use
+specifications for the finiteness functions, \texttt{fabs}, and
+\texttt{ldexp}. The main arithmetic step concerns the rounded quotient
+comparison in the strong check. We prove that passing this comparison implies
+the required bound on the exact quotient, using exact representability of the
+comparison thresholds and monotonicity of rounding.
 
-\subsection{Verified Contracts for Dividing a Double-Double by a Binary64
-Value}
+Each implication establishes that check success is sufficient for the
+corresponding mathematical condition. The converse does not hold in general:
+a check returning $0$ need not imply that the condition is false.
+
+\subsection{Public Wrapper Contracts}
 \label{sec:division-wrapper-contracts}
 
-The wrapper proofs combine kernel refinement, check soundness, and the
-numerical theorem.  \Cref{fig:dw-div-fp-vst-spec} shows the clauses of the VST
+The VST proofs of the wrappers combine kernel refinement, soundness of the runtime 
+checks, and the numerical theorem.  
+\Cref{fig:dw-div-fp-vst-spec} shows the clauses of the VST
 specification for the default wrapper in
 \Cref{fig:default-division-wrapper} that state its numerical contract; routine
 memory assertions are omitted.
@@ -106,12 +125,12 @@ Floating-point exceptions are nontrapping, which allows the default wrapper to
 reach the result check on Line~9 of \Cref{fig:default-division-wrapper} when
 the kernel produces an infinity or NaN \citep{IEEE754-2019}.
 The verified functions call \texttt{fma}, \texttt{fabs}, \texttt{ldexp}, and
-\texttt{exit}.  In the proofs, we use the behavior described by their VST
-specifications, but the platform implementations of these functions and the
+\texttt{exit}. In the VST proofs, we use the behavior described by the specifications of
+these functions, but the platform implementations of these functions and the
 floating-point hardware are outside the verification boundary
 \citep{Appel2023VSTlib}.
 
-We prove the C-level contracts using VST.  For a CompCert build, we apply
+We prove the C-level contracts using VST. For a CompCert build, we apply
 semantic preservation to carry these results to assembly
 \citep{Leroy2009,Boldo2013CompCert}.  Compilation with another
 compiler is not covered by this result and must independently preserve the

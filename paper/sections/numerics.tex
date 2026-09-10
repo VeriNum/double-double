@@ -16,13 +16,14 @@ together with Flocq's binary floating-point representation. For each model, we
 bound the error in the value represented by the returned pair and prove that
 the pair forms a double word.
 
-All results in this section are mechanized in Rocq. We continue the division
+The proofs of all results in this section are checked in Rocq. 
+We continue the division
 example from \Cref{sec:overview-division} with a proof sketch of its numerical
 guarantee. For the remaining operations, we present only the arguments that
 differ from this case and identify the results inherited from earlier
 analyses.
 
-\subsection{From FLX Analysis to IEEE~754 Arithmetic}
+\subsection{FLX, FLT, and IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
 To account for gradual underflow, we compare two Flocq formats with the same
@@ -357,7 +358,8 @@ residual $x-t_hy$ using \FastTwoMult{} for the product and including the low
 word $x_\ell$.  Line~6 divides the residual by $y$ for the correction $t_\ell$;
 Line~7 combines them.
 
-\subsection{Conditions and Numerical Guarantee for Division}
+\subsection{Conditions and Numerical Guarantee for Division by a
+Floating-Point Value}
 \label{sec:division-conditions}
 
 The division theorem requires the dividend to be a double word, a lower bound

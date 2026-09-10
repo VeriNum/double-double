@@ -73,7 +73,7 @@ Division of a double-double value by a binary64 value illustrates how
 public wrappers for this operation. Both call the same arithmetic kernel but
 place their runtime checks at different points.
 
-\subsubsection{Arithmetic Kernel}
+\subsubsection{Division Kernel}
 \label{sec:overview-division-kernel}
 
 The arithmetic kernel computes a double-double approximation to the quotient
@@ -157,12 +157,13 @@ void dw_div_fp(
   \label{fig:default-division-wrapper}
 \end{figure}
 
-\paragraph{Before kernel execution.}
+\paragraph{Weak check before kernel execution.}
 The default wrapper first calls the weak check shown in
-\Cref{fig:dw-div-fp-input-check}. The check tests three properties of the
-operands: they must be finite, the two words of the dividend must satisfy
-\Cref{eq:dw-representation}, and its high word must satisfy the lower bound
-required by the division analysis.
+\Cref{fig:dw-div-fp-input-check}. 
+The check tests three properties of the operands: they must be finite, the two
+words of the dividend must satisfy \Cref{eq:dw-representation}, and the high
+word of the dividend must satisfy the lower bound derived in
+\Cref{sec:division-conditions}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -231,22 +232,23 @@ together with the finiteness tests, establishes \Cref{eq:dw-representation}.
 The final operand condition is the lower bound tested on Lines~11--13.  The
 check permits either $x_h=0$ or $|x_h|\geq2^{-968}$. If $x_h=0$,
 \Cref{eq:dw-representation} implies $x_\ell=0$. Otherwise, this lower bound is 
-needed to bound the error in \texttt{tl}, which accounts for the dividend's low 
-word and the information lost when Line~11 rounds $x_h/y$. 
+needed to bound the error in \texttt{tl}, which accounts for the low 
+word of the dividend and the information lost when Line~11 rounds $x_h/y$. 
 \Cref{sec:division-numerics} derives this threshold.
 
-\paragraph{After kernel execution.}
+\paragraph{Result finiteness check after kernel execution.}
 The weak check establishes the conditions required before the computation,
 but it does not establish that the quotient will be finite. After the kernel
 returns, Line~9 of \Cref{fig:default-division-wrapper} calls
 \texttt{isfinite\_dword} to test both words of the computed quotient.  The
 wrapper returns the quotient only when both words are finite.
 
-\subsubsection{Alternative Wrapper}
+\subsubsection{Alternative Wrapper and Strong Check}
 \label{sec:overview-strong-check}
 
-A user may prefer that a call proceed only when the operands are sufficient to
-guarantee a finite quotient.  For this use case, \FenceDD{} provides an
+Some users may want a wrapper that ensures the result will be finite before 
+invoking the kernel.
+For this use case, \FenceDD{} provides an
 \emph{alternative wrapper} that tests stronger operand conditions before
 invoking the kernel.  We call this runtime test the \emph{strong check}.
 \Cref{fig:dw-div-fp-check} shows its implementation.
@@ -278,37 +280,31 @@ int dw_div_fp_strong_check(
 
 The strong check first calls the weak check, so the operands must satisfy the
 conditions required by the default wrapper.  It then excludes a zero divisor
-and bounds both the dividend's high word and the rounded leading quotient.
-These additional tests are sufficient to establish before kernel execution
-that the quotient will contain two finite words.
+and bounds both the high word of the dividend and the rounded leading quotient.
+These additional tests are sufficient to establish, before the kernel is
+executed, that both words of its result will be finite.
 
 If the strong check succeeds, the alternative wrapper invokes the same
-arithmetic kernel and requires no result check afterward.  The stronger
+arithmetic kernel and requires no result check afterward. The stronger
 conditions are conservative: the check can fail even when the kernel would
-produce a finite quotient.  The default wrapper can return a result in such
+produce a finite quotient. The default wrapper can return a result in such
 cases because it checks the computed quotient instead.
 \Cref{sec:division-conditions} proves that these additional bounds are
-sufficient to establish quotient finiteness.
+sufficient to establish finiteness of the quotient.
 
-\subsubsection{Shared Contract}
+\subsubsection{Normal-Return Guarantee of the Division Wrappers}
 \label{sec:overview-division-guarantee}
 
-The default and alternative wrappers place their runtime checks at different
-points but provide the same numerical guarantee on normal return. In both
-cases, normal return means that the runtime checks have established the operand
-conditions and quotient finiteness under which the numerical analysis of the
-algorithm proves that the resulting words satisfy
-\Cref{eq:dw-representation} and that their represented value satisfies an
-error bound. Thus, a caller need not establish these numerical conditions
-before invoking either wrapper.
+The default and alternative wrappers perform runtime checks at different
+points but provide the same contract on normal return.
 
 \begin{theorem}[Normal-Return Guarantee for Dividing a Double-Double by a
 Binary64 Value]
 \label{thm:division-wrapper-contract}
-Suppose that a call through either wrapper receives the binary64 divisor $y$,
-begins with \texttt{x} storing $(x_h,x_\ell)$, and returns normally with
-\texttt{z} storing $(z_h,z_\ell)$. Writing
-$q=(x_h+x_\ell)/y$ for the exact real quotient, the returned words satisfy
+Suppose either wrapper is called with \texttt{x} storing
+$(x_h,x_\ell)$ and with binary64 divisor $y$. If the call returns normally
+with \texttt{z} storing $(z_h,z_\ell)$, let
+$q=(x_h+x_\ell)/y$ be the exact real quotient. The returned words satisfy
 \[
   z_h=\operatorname{RN}(z_h+z_\ell),
 \]
@@ -321,9 +317,15 @@ where $u=2^{-53}$ is the unit roundoff and $\eta=2^{-1074}$ is the smallest
 positive subnormal binary64 value.
 \end{theorem}
 
-\Cref{sec:mechanization} proves this contract in VST.
+For either wrapper, normal return means that its runtime checks succeeded.
+These checks establish the operand conditions and quotient finiteness required
+by the numerical theorem. The caller therefore need not establish these
+numerical preconditions.
 
-\subsection{Library Operations and Numerical Guarantees}
+In \Cref{sec:mechanization}, we prove using VST that both wrappers satisfy this
+contract.
+
+\subsection{Numerical Guarantees for All Operations and Transformations}
 \label{sec:overview-library-guarantees}
 
 The division considered above is one of six double-double operations provided
@@ -362,10 +364,12 @@ Division $(x,y)$ & $x/y$ & $9.8u^2|r|+2.5\eta$ \\
 \end{tabular}
 \end{table}
 
-Each of the six double-double operations has a default and an alternative
-wrapper around the same arithmetic kernel. The two wrappers provide the same
-guarantee shown in the table, although their runtime checks can succeed on
-different inputs. Each error-free transformation has a single public wrapper.
-
-The runtime checks differ among operations because the conditions required for
-these guarantees depend on the intermediate computations in each algorithm.
+Each of the six double-double operations is exposed through a default and an
+alternative wrapper around the same arithmetic kernel. For a given operation,
+both wrappers provide the guarantee shown in
+\Cref{tab:operation-preview}, although their runtime checks may succeed for
+different operands. In contrast, each error-free transformation has one public
+wrapper whose runtime checks establish sufficient conditions for exact
+reconstruction. The conditions needed for these guarantees depend on the
+intermediate computations in each algorithm, so the runtime checks differ
+accordingly.

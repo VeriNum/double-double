@@ -112,10 +112,11 @@ implement the analyzed algorithms and that successful runtime checks imply
 the corresponding numerical conditions. The public C contracts therefore
 supply the proved guarantees on normal return.
 
-The Rocq proofs are checked during development and are not executed
-when a client calls the library. At run time, each public function executes
-an arithmetic kernel together with its runtime checks. If a check fails, the
-function stops without returning a numerical result.
+The numerical and VST proofs are checked in Rocq during library development;
+they are not executed when a client calls the library. 
+At run time, each public function executes an arithmetic kernel together with 
+its runtime checks. 
+If a check fails, the function stops without returning a numerical result.
 \Cref{fig:proof-runtime-roles} summarizes what is verified during library 
 development and what runs on each library call.
 
@@ -143,7 +144,7 @@ In summary, this paper makes the following contributions:
 
  \item \textbf{Verification of \FenceDD{}
   (\Cref{sec:mechanization}).}
-  We connect the Rocq numerical results to the binary64 C kernels and verify
+  We connect the Rocq numerical results to the binary64 C kernels and prove
   their public contracts using VST.
 
  \item \textbf{Evaluation of usefulness and cost
