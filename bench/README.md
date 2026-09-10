@@ -1,187 +1,168 @@
-# Evaluation harness
+# Benchmark tools
 
-The evaluation has one driver for each research question:
+The benchmark has one measurement path and one analysis path.
 
-- `rq1_accuracy.cpp` measures the bounds for the six double-word operations.
-- `rq2_guard_acceptance.cpp` evaluates QD on inputs rejected by the checked
-  double-word and error-free-transformation interfaces.
-- `rq3_performance.cpp` times the guarded interfaces, unchecked kernels, and
-  QD. It is built once with CompCert library objects and once with Clang
-  library objects.
+- `generate_numerical_data.cpp` records the numerical inputs, wrapper outcomes,
+  FenceDD results, and QD results.
+- `generate_performance_data.cpp` records every timing trial. It is linked once with
+  CompCert objects and once with Clang objects.
+- `analyze_rq1.cpp`, `analyze_rq2.cpp`, and `analyze_rq3.cpp` analyze one
+  research question each.
 
-Input generation, MPFR measurements, boundary cases, and timing support are
-kept in separate source files.
+The analyzer does not link FenceDD or QD. It cannot execute the measured
+implementations. It reads the raw files and writes derived files elsewhere.
 
 ## Requirements
 
-The harness requires CompCert, Clang, a GCC- or Clang-compatible C++14
-compiler, MPFR, GMP, QD headers, and Python 3. It supports macOS
-and Linux. CompCert and Clang build separate copies of the unchanged library
-C files; the C++ compiler builds the drivers.
+The measurement programs require CompCert, Clang, a C++14 compiler, MPFR,
+GMP, and QD headers. The analyzer requires only a C++14 compiler, MPFR, and
+GMP.
 
 The build obtains MPFR and GMP flags from `pkg-config`. Set `MPFR_CFLAGS` and
-`MPFR_LIBS` explicitly if they are not available there.
+`MPFR_LIBS` if they cannot be found that way.
 
-The repository layout keeps `dd_lib` next to this directory. An artifact may
-instead place `dd_lib` inside this directory; the build detects both layouts.
-Set `DD_LIB_DIR` only for a different source layout.
+`QD_PREFIX` is required when measurement programs are built. For example:
 
-## Build and test
+```sh
+make QD_PREFIX=/absolute/path/to/qd all-results RUN_DIR=results/
+```
+
+`DD_LIB_DIR` may be used when `dd_lib` is not next to this directory.
+
+## Full run
 
 From this directory, run:
 
 ```sh
-make prepare-evaluation
+make QD_PREFIX=/absolute/path/to/qd all-results RUN_DIR=results/
 ```
 
-The build looks first for QD headers at `third_party/qd`, then uses
-`qd-config` from `PATH`, and finally checks conventional system prefixes.
-There are no user-specific paths. To make the submitted artifact
-self-contained, its setup step should install the pinned QD headers under
-`third_party/qd`; discovery itself does not download dependencies.
-
-To select a particular installation, use either:
-
-```sh
-make QD_PREFIX=/absolute/path/to/qd prepare-evaluation
-make QD_CONFIG=/absolute/path/to/qd-config prepare-evaluation
-```
-
-An explicit setting is checked as given and is never replaced by another
-installation. Without a bundled or installed QD, `make` reports the missing
-dependency and stops.
-
-This builds the RQ1 and RQ2 drivers and both RQ3 binaries, then runs the C++
-tests, the asserted RQ2 boundary suite, and the Python pipeline tests. The
-build records the compiler,
-flags, and QD files in `.build/config.json`; the runner refuses to use binaries
-built with different settings. A routine `make clean` is unnecessary and does
-not remove evaluation runs.
-
-## Generate results
-
-A smoke run checks the complete pipeline with 4,096 RQ3 timing cases and
-without enforcing the frozen artifact build settings:
-
-```sh
-make smoke
-```
-
-To run the full artifact evaluation and generate its report:
-
-```sh
-make results
-```
-
-Both commands build the drivers and run all tests before executing the
-evaluation. `make results` uses the frozen artifact workload and compiler
-flags, but it does not require Git. The artifact timing workload uses 65,536
-test cases and 24 trials per table cell. It prints the path to the generated
-`RESULTS.md`. Make assigns a timestamped run identifier unless `RUN_ID` is
-provided. Run directories are immutable, including failed runs.
-
-Each run is stored under `runs/RUN_ID`:
+This runs the full measurement first and the analysis second. It produces:
 
 ```text
-manifest.json
-checksums.sha256
-raw/
-generated/
+results/
+  numerical.tsv
+  timing-compcert.tsv
+  timing-clang.tsv
+  analysis/
+    rq1.tsv
+    rq2.tsv
+    rq3.tsv
 ```
 
-The manifest records the profile, available Git metadata, toolchain, binaries,
-commands, input parameters, TSV metadata, and artifact hashes. Raw driver
-output is kept separate from derived reports.
+The command does not create a manifest, checksum file, or Git record. The
+`results/` directory is ignored by Git.
 
-## Evaluation scope
+The raw step refuses to replace an existing raw file. The analysis files are
+derived and may be regenerated.
 
-| Question | Library interfaces | Reference or comparison |
-|---|---|---|
-| RQ1 bound tightness | default, six double-word operations | MPFR oracle; QD as a secondary comparison |
-| RQ2 wrapper usefulness | checked interfaces for all nine operations; strong interface for double-word operations | QD on rejected test cases |
-| RQ3 performance | default and kernel for all nine operations; strong interface for double-word operations | QD and Clang compiler ablation |
+## Separate steps
 
-The default double-word interface uses the two-stage guard. The `dw_*_strong`
-interface checks the stronger input-only conditions. Both call the same
-unchecked kernel. Exact transformations have one guarded public interface.
-
-RQ1 and RQ2 invoke the public C functions. Each RQ3 binary invokes the default
-public function and kernel directly. For double-word operations it also invokes
-the strong public function. Before timing, both guarded results must match the
-kernel bit for bit.
-
-## Inputs and measurements
-
-The RQ1 and RQ2 numerical test inputs are deterministic and are created before
-any guard runs. Binary64 values cover magnitude exponents -1074 through 1023.
-Double-word sources cover exponents -969 through 1022. MPFR constructs odd
-106-bit values; rounding the value and its exact residual produces the high
-and low words. Five percent of double-word inputs retain an ordinary binary64
-value with a zero low word. Signs are balanced in every exponent bin, and
-operand streams are shuffled independently. RQ1 and RQ2 use the same generated
-arrays and record the same numerical-input fingerprint.
-
-RQ1 reconstructs inputs and results in MPFR. It reports the relative error
-where the relative term of the bound dominates and the absolute error where
-the absolute term dominates. Each range is reported as a percentage of the
-operation's normally returned test cases. Bound fractions are computed per
-case before their maximum and mean are taken. QD is measured on the same test
-cases. Its error
-relative to the `dd_lib` bound is contextual information, not a bound for QD;
-QD may use a different algorithm. MPFR uses 2112-bit precision, with 4224 bits
-for division cases. The report also gives the input-check, conditional
-output-finiteness-check, and overall normal-return rates. Per-operation raw
-counts are retained in `summary.json`. Every result above the bound is listed
-with its case ID, inputs, result bits, reference, error, and bound.
-
-RQ2 evaluates QD once for every generated test case rejected by an applicable
-checked interface. Double-word operations are classified by finiteness,
-double-word validity, and whether the QD error is within the `dd_lib` bound.
-The default- and strong-interface results are reported in separate tables.
-Each above-bound QD result is listed once, including every interface that
-rejected its input.
-Error-free transformations are classified by finiteness, double-word
-validity, and exact reconstruction. The default- and strong-rejected
-double-word populations overlap. The 48 named boundary cases are checked
-separately and are excluded from reported percentages.
-
-All QD drivers include `qd_evaluation.hpp`, which selects QD's inline
-algorithms and maps `QD_FMA` and `QD_FMS` to C++ `std::fma`. This fixes the QD
-arithmetic configuration independently of how a system QD library was built.
-
-RQ3 compiles the same C sources once with CompCert and once with Clang using
-`-fno-fast-math -ffp-contract=off`. The two compiler builds run as independent
-timing blocks. Within each block, all measurement orders are balanced and
-wrapper-to-kernel and wrapper-to-QD ratios use paired trials. The C compiler
-label applies to the `dd_lib` objects; the harness and QD code use `CXX`.
-Cross-compiler results are not treated as paired measurements. RQ3 uses a
-separate timing-input set over exponents -100 through 100. Every timed series
-for an operation uses the same cases, and the CompCert and Clang blocks record
-the same timing-input fingerprint. Each timing observation is one complete
-input sweep normalized to ns/call.
-
-## Manual debugging
-
-From `bench`, the drivers can be run directly while debugging:
+The same work may be run in two commands:
 
 ```sh
-cd bench
-./rq1_accuracy [samples_per_exponent] [summary.tsv]
-./rq2_guard_acceptance [samples_per_exponent] [cases.tsv]
-./rq2_guard_acceptance --boundary-only [cases.tsv]
-./rq3_performance_compcert [input_count] [trial_count] [trials.tsv]
-./rq3_performance_clang [input_count] [trial_count] [trials.tsv]
+make QD_PREFIX=/absolute/path/to/qd raw-results RUN_DIR=results/
+make analyze-results RUN_DIR=results/
 ```
 
-Direct runs do not create a manifest or a generated report.
+The main workload values are:
 
-## Multiplication-underflow example
+```make
+SAMPLES_PER_EXPONENT ?= 40
+NUM_INPUTS_FOR_PERF ?= 65536
+NUM_TRIALS_FOR_PERF ?= 24
+```
 
-The standalone example contrasts the mixed `dw_times_dw` contract with the
-exact-reconstruction `fast_2mult_guarded` contract for
-`a = (1 + 2^-52) 2^-515`:
+They may be changed on the command line for a small local run:
 
 ```sh
-make multiplication_underflow_example
-./multiplication_underflow_example
+make QD_PREFIX=/absolute/path/to/qd raw-results RUN_DIR=results/ \
+  SAMPLES_PER_EXPONENT=1 \
+  NUM_INPUTS_FOR_PERF=4096 \
+  NUM_TRIALS_FOR_PERF=24
+make analyze-results RUN_DIR=results/
 ```
+
+## Raw numerical data
+
+`numerical.tsv` contains one row for each generated case and each operation.
+The three error free transformations share one input set. The three mixed
+double word operations share another set. The three double word operations
+share a third set.
+
+Each row records:
+
+- the exact input bits;
+- the default outcome and returned bits, when it returned;
+- the strong outcome and returned bits, when it returned;
+- the QD result bits.
+
+The default and strong values are recorded independently. Generation does not
+require their outcomes or returned bits to match.
+
+## RQ1 analysis
+
+RQ1 uses the six composite operations. A case is eligible when the default
+wrapper returned normally.
+
+The analyzer reconstructs each input and result with MPFR. It computes the
+reference, actual error, proved bound, and ratio of error to bound for both
+FenceDD and QD.
+
+The relative error is reported when the relative term in the proved bound is
+at least as large as the absolute term. The absolute error is reported in the
+other regime. A zero bound has its own row.
+
+Means and maxima are explicitly labelled as finite result statistics.
+Nonfinite values, invalid double words, bound failures, and unresolved bound
+tests have separate counts. No value is trimmed or replaced.
+
+The main MPFR precision is 4,224 bits. A bound comparison at or near the bound
+is repeated at 8,448 bits. A disagreement is reported as unresolved and is
+counted as not established within the bound.
+
+## RQ2 analysis
+
+RQ2 includes all nine operations.
+
+For a composite operation, the default rejected population contains
+`weak_input_check` and `post_check`. The strong rejected population contains
+`weak_input_check` and `strong_check`. They are analyzed separately and as a
+union. Each wrapper row also records how the other wrapper acted on the same
+cases.
+
+For each rejected case, the QD result is classified as nonfinite, an invalid
+double word, above the proved bound, within the proved bound, or unresolved.
+
+For an error free transformation, the rejected population contains
+`input_check`. A finite valid QD result is classified by exact reconstruction.
+
+Unexpected outcomes are counted rather than treated as rejections.
+
+## RQ3 analysis
+
+RQ3 reads every recorded trial. No trial is removed.
+
+For each timing series it reports the median, first quartile, third quartile,
+and interquartile range. A ratio or time difference is formed for each pair
+with the same trial number before the summary is computed. CompCert and Clang
+are not paired with each other.
+
+The timing reader checks the recorded timer, order schedule, trial count,
+input count, and input fingerprint before it forms comparisons.
+
+If compiler flags, compiler commands, or `QD_PREFIX` change, run `make clean`
+before rebuilding.
+
+## Direct analyzer use
+
+The analyzer can also be invoked directly:
+
+```sh
+./analyze_rq1 results/numerical.tsv results/analysis/rq1.tsv
+./analyze_rq2 results/numerical.tsv results/analysis/rq2.tsv
+./analyze_rq3 results/timing-compcert.tsv results/timing-clang.tsv \
+  results/analysis/rq3.tsv
+```
+
+It rejects any output path that names an input file.

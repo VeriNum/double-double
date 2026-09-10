@@ -8,8 +8,7 @@
 #   CLANG_CFLAGS flags for Clang dd_lib objects          (default: -O3 -std=c11)
 #   CXXFLAGS    non-floating-point C++ flags            (default: -O3 -std=c++14 -Wall)
 #   DD_LIB_DIR  dd_lib source directory                  (default: local or ../dd_lib)
-#   QD_PREFIX   install prefix containing the qd/ headers       (default: discovered)
-#   QD_CONFIG   qd-config executable used for discovery         (default: qd-config on PATH)
+#   QD_PREFIX   install prefix containing the qd/ headers       (required)
 #
 # CompCert and Clang build separate copies of the unchanged dd_lib sources.
 # QD and the shared harness require C++ and therefore build with $(CXX).
@@ -24,6 +23,8 @@
 # contracts floating-point expressions, so the default dd_lib flags need no
 # contraction option. Native compilers need the strict flags above.
 
+.DEFAULT_GOAL := all-results
+
 DD_CC      ?= ccomp
 CLANG_CC   ?= clang
 CXX        ?= g++
@@ -32,21 +33,6 @@ CLANG_CFLAGS ?= -O3 -std=c11
 CXXFLAGS   ?= -O3 -std=c++14 -Wall
 STRICT_FP_FLAGS := -fno-fast-math -ffp-contract=off
 PKG_CONFIG ?= pkg-config
-PYTHON     ?= python3
-
-# An explicit QD_PREFIX or QD_CONFIG is authoritative. Without either, the
-# resolver searches the artifact-local prefix and installed candidates.
-ifeq ($(origin QD_PREFIX), undefined)
-  ifeq ($(origin QD_CONFIG), undefined)
-    QD_DISCOVERY_ARGS :=
-  else
-    QD_DISCOVERY_ARGS := --qd-config "$(QD_CONFIG)"
-  endif
-  QD_PREFIX := $(shell $(PYTHON) find_qd.py --prefix-only \
-                 $(QD_DISCOVERY_ARGS) 2>/dev/null)
-else
-  QD_DISCOVERY_ARGS := --prefix "$(QD_PREFIX)"
-endif
 
 ifeq ($(origin DD_LIB_DIR), undefined)
   ifneq ($(wildcard dd_lib/include/dw_arith.h),)
@@ -66,60 +52,43 @@ DD_INC     := -I$(DD_LIB_DIR)/include
 QD_INC     := -I$(QD_PREFIX)/include
 
 BUILD_DIR    := .build
-BUILD_CONFIG := $(BUILD_DIR)/config.json
 CLANG_BUILD_DIR := $(BUILD_DIR)/clang
 
-RUN_ROOT ?= runs
-ifeq ($(origin RUN_ID), undefined)
-RUN_ID := $(shell date -u +%Y%m%dT%H%M%SZ)
-endif
-PROFILE ?= artifact
-RUN_DIR ?= $(RUN_ROOT)/$(RUN_ID)
-GENERATED_DIR ?= $(RUN_DIR)/generated
+RUN_DIR ?= results
+RUN_PATH := $(patsubst %/,%,$(RUN_DIR))
+ANALYSIS_DIR ?= $(RUN_PATH)/analysis
 
-export DD_CC DD_CFLAGS CLANG_CC CLANG_CFLAGS CXX CXXFLAGS STRICT_FP_FLAGS \
-       QD_PREFIX PKG_CONFIG
+SAMPLES_PER_EXPONENT ?= 40
+NUM_INPUTS_FOR_PERF ?= 65536
+NUM_TRIALS_FOR_PERF ?= 24
 
-EVALUATIONS := rq1_accuracy rq2_guard_acceptance \
-               rq3_performance_compcert rq3_performance_clang
-EXAMPLES   := multiplication_underflow_example
-TESTS      := test_input_generation test_interface_runner test_mpfr_bounds \
-              test_accuracy_metrics
-ALL_BINS   := $(EVALUATIONS) $(EXAMPLES) $(TESTS)
+ANALYZERS := analyze_rq1 analyze_rq2 analyze_rq3
+ALL_BINS := generate_numerical_data $(ANALYZERS) \
+            generate_performance_data_compcert \
+            generate_performance_data_clang
 
 # Arithmetic-only kernel baseline.  Keep wrapper and kernel objects distinct:
 # the public dw_*.c files do not define their corresponding *_kernel symbols.
 EFT_SRCS     := two_sum fast_2sum fast_2mult
 DW_OPS       := dw_plus_fp dw_plus_dw dw_times_fp dw_times_dw dw_div_fp dw_div_dw
 KERNEL_SRCS  := $(EFT_SRCS) $(addsuffix _kernel,$(DW_OPS))
-KERNEL_OBJS  := $(addsuffix .o,$(KERNEL_SRCS))
 
 # The six dw_*.c files define both the default (two-stage) and strong
-# (input-only) interfaces. The exact transformations have one guarded entry
-# point each.
-LIBRARY_SRCS := $(KERNEL_SRCS) two_sum_guarded fast_2sum_guarded \
+# (input-only) interfaces. Fast2Sum and Fast2Mult have guarded entry points.
+LIBRARY_SRCS := $(KERNEL_SRCS) fast_2sum_guarded \
                 fast_2mult_guarded fp_utils $(DW_OPS)
 LIBRARY_OBJS := $(addsuffix .o,$(LIBRARY_SRCS))
 CLANG_LIBRARY_OBJS := $(addprefix $(CLANG_BUILD_DIR)/,\
                         $(addsuffix .o,$(LIBRARY_SRCS)))
 
 EVAL_COMMON_OBJS := input_generation.o
-RQ1_OBJS := rq1_accuracy.o mpfr_accuracy.o $(EVAL_COMMON_OBJS)
-RQ2_OBJS := rq2_guard_acceptance.o boundary_cases.o mpfr_accuracy.o \
-            $(EVAL_COMMON_OBJS)
-RQ3_COMPCERT_OBJS := $(BUILD_DIR)/rq3_performance_compcert.o $(EVAL_COMMON_OBJS)
-RQ3_CLANG_OBJS := $(BUILD_DIR)/rq3_performance_clang.o $(EVAL_COMMON_OBJS)
+NUMERICAL_DATA_OBJS := generate_numerical_data.o $(EVAL_COMMON_OBJS)
+PERFORMANCE_COMPCERT_OBJS := \
+    $(BUILD_DIR)/generate_performance_data_compcert.o $(EVAL_COMMON_OBJS)
+PERFORMANCE_CLANG_OBJS := \
+    $(BUILD_DIR)/generate_performance_data_clang.o $(EVAL_COMMON_OBJS)
 
-# Sources needed by the constructed multiplication-underflow example.
-MUL_EXAMPLE_OBJS := fast_2mult.o fast_2sum.o fast_2mult_guarded.o \
-                    fp_utils.o dw_times_dw_kernel.o dw_times_dw.o
-
-all: $(EVALUATIONS)
-
-build: all
-
-.PHONY: FORCE check-dependencies
-FORCE:
+.PHONY: all-results raw-results analyze-results clean check-dependencies
 
 check-dependencies:
 	@test -f "$(DD_LIB_DIR)/include/dw_arith.h" || { \
@@ -127,7 +96,15 @@ check-dependencies:
 	  echo "Set DD_LIB_DIR to the dd_lib source directory." >&2; \
 	  exit 1; \
 	}
-	@$(PYTHON) find_qd.py --prefix-only $(QD_DISCOVERY_ARGS) >/dev/null
+	@test -n "$(QD_PREFIX)" || { \
+	  echo "QD_PREFIX is required" >&2; \
+	  exit 1; \
+	}
+	@test -f "$(QD_PREFIX)/include/qd/dd_real.h" || { \
+	  echo "QD headers not found under $(QD_PREFIX)" >&2; \
+	  echo "Set QD_PREFIX to the QD installation prefix." >&2; \
+	  exit 1; \
+	}
 
 $(BUILD_DIR):
 	mkdir -p $@
@@ -135,147 +112,110 @@ $(BUILD_DIR):
 $(CLANG_BUILD_DIR): | $(BUILD_DIR)
 	mkdir -p $@
 
-$(BUILD_CONFIG): FORCE write_build_config.py find_qd.py qd_evaluation.hpp | $(BUILD_DIR) check-dependencies
-	$(PYTHON) write_build_config.py $@ \
-	  --dd-cc="$(DD_CC)" --dd-cflags="$(DD_CFLAGS)" \
-	  --clang-cc="$(CLANG_CC)" --clang-cflags="$(CLANG_CFLAGS)" \
-	  --cxx="$(CXX)" --cxxflags="$(CXXFLAGS)" \
-	  --strict-fp-flags="$(STRICT_FP_FLAGS)" --qd-prefix="$(QD_PREFIX)" \
-	  --mpfr-cflags="$(MPFR_CFLAGS)" --mpfr-libs="$(MPFR_LIBS)"
-
 # --- dd_lib objects: generic rule (one .o per dd_lib .c) ------------------
-%.o: $(DD_LIB_DIR)/%.c $(DD_LIB_DIR)/include/dw_arith.h $(BUILD_CONFIG)
+%.o: $(DD_LIB_DIR)/%.c $(DD_LIB_DIR)/include/dw_arith.h | check-dependencies
 	$(DD_CC) $(DD_CFLAGS) $(DD_INC) -c $< -o $@
 
-$(addsuffix .o,two_sum_guarded fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS)): \
+$(addsuffix .o,fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS)): \
   $(DD_LIB_DIR)/include/fp_utils.h
 
 $(CLANG_BUILD_DIR)/%.o: $(DD_LIB_DIR)/%.c \
-                        $(DD_LIB_DIR)/include/dw_arith.h $(BUILD_CONFIG) \
-                        | $(CLANG_BUILD_DIR)
+                        $(DD_LIB_DIR)/include/dw_arith.h \
+                        | $(CLANG_BUILD_DIR) check-dependencies
 	$(CLANG_CC) $(CLANG_CFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) -c $< -o $@
 
 $(addprefix $(CLANG_BUILD_DIR)/,\
-  $(addsuffix .o,two_sum_guarded fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS))): \
+  $(addsuffix .o,fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS))): \
   $(DD_LIB_DIR)/include/fp_utils.h
 
-# --- C++ evaluation objects -----------------------------------------------
-%.o: %.cpp $(BUILD_CONFIG) | check-dependencies
+# --- C++ analysis objects -------------------------------------------------
+analysis_support.o: analysis_support.cpp analysis_support.hpp
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
+
+analyze_rq1.o: analyze_rq1.cpp analysis_support.hpp
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+
+analyze_rq2.o: analyze_rq2.cpp analysis_support.hpp
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+
+analyze_rq3.o: analyze_rq3.cpp analysis_support.hpp
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+
+# --- C++ generation objects -----------------------------------------------
+%.o: %.cpp | check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -MMD -MP -c $< -o $@
 
-tests/%.o: tests/%.cpp $(BUILD_CONFIG) | check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
-	  -I. -MMD -MP -c $< -o $@
-
-$(BUILD_DIR)/rq3_performance_compcert.o: rq3_performance.cpp $(BUILD_CONFIG) \
-                                        | check-dependencies
+$(BUILD_DIR)/generate_performance_data_compcert.o: \
+        generate_performance_data.cpp | $(BUILD_DIR) check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DDD_BUILD_LABEL=\"compcert\" -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/rq3_performance_clang.o: rq3_performance.cpp $(BUILD_CONFIG) \
-                                     | check-dependencies
+$(BUILD_DIR)/generate_performance_data_clang.o: \
+        generate_performance_data.cpp | $(BUILD_DIR) check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DDD_BUILD_LABEL=\"clang\" -MMD -MP -c $< -o $@
 
-# --- evaluation links -----------------------------------------------------
-rq1_accuracy: $(RQ1_OBJS) $(LIBRARY_OBJS)
+# --- benchmark links ------------------------------------------------------
+generate_numerical_data: $(NUMERICAL_DATA_OBJS) $(LIBRARY_OBJS)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
-rq2_guard_acceptance: $(RQ2_OBJS) $(LIBRARY_OBJS)
+analyze_rq1: analyze_rq1.o analysis_support.o
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+
+analyze_rq2: analyze_rq2.o analysis_support.o
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+
+analyze_rq3: analyze_rq3.o analysis_support.o
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+
+generate_performance_data_compcert: $(PERFORMANCE_COMPCERT_OBJS) $(LIBRARY_OBJS)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
-rq3_performance_compcert: $(RQ3_COMPCERT_OBJS) $(LIBRARY_OBJS)
+generate_performance_data_clang: $(PERFORMANCE_CLANG_OBJS) $(CLANG_LIBRARY_OBJS)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
-rq3_performance_clang: $(RQ3_CLANG_OBJS) $(CLANG_LIBRARY_OBJS)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
-
-test_input_generation: tests/test_input_generation.o input_generation.o
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
-
-test_interface_runner: tests/test_interface_runner.o
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^
-
-test_mpfr_bounds: tests/test_mpfr_bounds.o mpfr_accuracy.o
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
-
-test_accuracy_metrics: tests/test_accuracy_metrics.o mpfr_accuracy.o
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
-
-# Constructed case showing the difference between the mixed DWTimesDW contract
-# and the exact-reconstruction Fast2Mult contract. It is not part of `all`.
-multiplication_underflow_example: multiplication_underflow_example.o $(MUL_EXAMPLE_OBJS)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
-
-# --- validation and evaluation workflow ----------------------------------
-.PHONY: all build clean check prepare-evaluation smoke results run-evaluation \
-        report-evaluation check-report \
-        run-rq1 run-rq2 run-rq3 run-multiplication-example
+# --- measurement and analysis workflow -----------------------------------
 clean:
-	rm -f *.o *.d tests/*.o tests/*.d $(ALL_BINS)
-	rm -f rq3_performance $(BUILD_CONFIG) $(BUILD_DIR)/rq3_performance_*.o \
-	      $(BUILD_DIR)/rq3_performance_*.d
-	rm -rf $(CLANG_BUILD_DIR)
-	rmdir $(BUILD_DIR) 2>/dev/null || true
+	rm -f *.o *.d $(ALL_BINS)
+	rm -rf "$(BUILD_DIR)"
 
-check: $(EVALUATIONS) $(TESTS)
-	./test_input_generation
-	./test_interface_runner
-	./test_mpfr_bounds
-	./test_accuracy_metrics
-	./rq2_guard_acceptance --boundary-only
-	$(PYTHON) tests/test_run_evaluation.py
-	$(PYTHON) tests/test_reporting.py
-	$(PYTHON) tests/test_find_qd.py
+all-results:
+	+$(MAKE) --no-print-directory raw-results RUN_DIR="$(RUN_PATH)"
+	+$(MAKE) --no-print-directory analyze-results \
+	  RUN_DIR="$(RUN_PATH)" ANALYSIS_DIR="$(ANALYSIS_DIR)"
+	@echo "Analysis files: $(ANALYSIS_DIR)"
 
-prepare-evaluation: all check
+raw-results: generate_numerical_data generate_performance_data_compcert \
+             generate_performance_data_clang
+	@test -n "$(RUN_PATH)" || { echo "RUN_DIR is required" >&2; exit 1; }
+	mkdir -p "$(RUN_PATH)"
+	@test ! -e "$(RUN_PATH)/numerical.tsv" || { echo "$(RUN_PATH)/numerical.tsv already exists" >&2; exit 1; }
+	@test ! -e "$(RUN_PATH)/timing-compcert.tsv" || { echo "$(RUN_PATH)/timing-compcert.tsv already exists" >&2; exit 1; }
+	@test ! -e "$(RUN_PATH)/timing-clang.tsv" || { echo "$(RUN_PATH)/timing-clang.tsv already exists" >&2; exit 1; }
+	@test ! -e "$(RUN_PATH)/numerical.tsv.partial" || { echo "$(RUN_PATH)/numerical.tsv.partial already exists" >&2; exit 1; }
+	@test ! -e "$(RUN_PATH)/timing-compcert.tsv.partial" || { echo "$(RUN_PATH)/timing-compcert.tsv.partial already exists" >&2; exit 1; }
+	@test ! -e "$(RUN_PATH)/timing-clang.tsv.partial" || { echo "$(RUN_PATH)/timing-clang.tsv.partial already exists" >&2; exit 1; }
+	./generate_numerical_data "$(SAMPLES_PER_EXPONENT)" "$(RUN_PATH)/numerical.tsv.partial"
+	./generate_performance_data_compcert "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-compcert.tsv.partial"
+	./generate_performance_data_clang "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-clang.tsv.partial"
+	mv "$(RUN_PATH)/numerical.tsv.partial" "$(RUN_PATH)/numerical.tsv"
+	mv "$(RUN_PATH)/timing-compcert.tsv.partial" "$(RUN_PATH)/timing-compcert.tsv"
+	mv "$(RUN_PATH)/timing-clang.tsv.partial" "$(RUN_PATH)/timing-clang.tsv"
 
-smoke: prepare-evaluation
-	$(PYTHON) run_evaluation.py --profile smoke --run-id "$(RUN_ID)" \
-	  --run-root "$(RUN_ROOT)" --bin-dir . --repo-root .. \
-	  --dd-cc="$(DD_CC)" --dd-cflags="$(DD_CFLAGS)" \
-	  --clang-cc="$(CLANG_CC)" --clang-cflags="$(CLANG_CFLAGS)" \
-	  --cxx="$(CXX)" --cxxflags="$(CXXFLAGS)" \
-	  --strict-fp-flags="$(STRICT_FP_FLAGS)" \
-	  --qd-prefix="$(QD_PREFIX)" --pkg-config="$(PKG_CONFIG)"
-	$(PYTHON) generate_reports.py "$(RUN_DIR)" \
-	  --output-dir "$(GENERATED_DIR)"
-
-results:
-	+$(MAKE) --no-print-directory run-evaluation \
-	  PROFILE=artifact RUN_ID="$(RUN_ID)"
-	+$(MAKE) --no-print-directory report-evaluation RUN_ID="$(RUN_ID)"
-	@echo "Full evaluation report: $(GENERATED_DIR)/RESULTS.md"
-
-run-evaluation: prepare-evaluation
-	$(PYTHON) run_evaluation.py --profile "$(PROFILE)" --run-id "$(RUN_ID)" \
-	  --run-root "$(RUN_ROOT)" --bin-dir . --repo-root .. \
-	  --dd-cc="$(DD_CC)" --dd-cflags="$(DD_CFLAGS)" \
-	  --clang-cc="$(CLANG_CC)" --clang-cflags="$(CLANG_CFLAGS)" \
-	  --cxx="$(CXX)" --cxxflags="$(CXXFLAGS)" \
-	  --strict-fp-flags="$(STRICT_FP_FLAGS)" \
-	  --qd-prefix="$(QD_PREFIX)" --pkg-config="$(PKG_CONFIG)"
-
-report-evaluation:
-	$(PYTHON) generate_reports.py "$(RUN_DIR)" \
-	  --output-dir "$(GENERATED_DIR)"
-
-check-report:
-	$(PYTHON) generate_reports.py "$(RUN_DIR)" \
-	  --output-dir "$(GENERATED_DIR)" --check
-
-run-rq1: rq1_accuracy
-	./rq1_accuracy
-
-run-rq2: rq2_guard_acceptance
-	./rq2_guard_acceptance
-
-run-rq3: rq3_performance_compcert rq3_performance_clang
-	./rq3_performance_compcert
-	./rq3_performance_clang
-
-run-multiplication-example: multiplication_underflow_example
-	./multiplication_underflow_example
-
--include $(wildcard *.d tests/*.d $(BUILD_DIR)/*.d)
+analyze-results: $(ANALYZERS)
+	@test -f "$(RUN_PATH)/numerical.tsv" || { echo "$(RUN_PATH)/numerical.tsv not found" >&2; exit 1; }
+	@test -f "$(RUN_PATH)/timing-compcert.tsv" || { echo "$(RUN_PATH)/timing-compcert.tsv not found" >&2; exit 1; }
+	@test -f "$(RUN_PATH)/timing-clang.tsv" || { echo "$(RUN_PATH)/timing-clang.tsv not found" >&2; exit 1; }
+	mkdir -p "$(ANALYSIS_DIR)"
+	./analyze_rq1 "$(RUN_PATH)/numerical.tsv" \
+	  "$(ANALYSIS_DIR)/rq1.tsv.partial"
+	./analyze_rq2 "$(RUN_PATH)/numerical.tsv" \
+	  "$(ANALYSIS_DIR)/rq2.tsv.partial"
+	./analyze_rq3 "$(RUN_PATH)/timing-compcert.tsv" \
+	  "$(RUN_PATH)/timing-clang.tsv" \
+	  "$(ANALYSIS_DIR)/rq3.tsv.partial"
+	mv "$(ANALYSIS_DIR)/rq1.tsv.partial" "$(ANALYSIS_DIR)/rq1.tsv"
+	mv "$(ANALYSIS_DIR)/rq2.tsv.partial" "$(ANALYSIS_DIR)/rq2.tsv"
+	mv "$(ANALYSIS_DIR)/rq3.tsv.partial" "$(ANALYSIS_DIR)/rq3.tsv"
+-include $(wildcard *.d $(BUILD_DIR)/*.d)

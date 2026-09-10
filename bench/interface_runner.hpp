@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "evaluation_types.hpp"
+#include "input_generation.hpp"
 
 namespace bench_eval {
 
@@ -104,7 +104,8 @@ template <class Precheck, class Call>
 CollectedResults collect_interface_results(
         std::size_t count, Precheck precheck, Call call,
         bool allow_post_computation_termination,
-        const char *interface_name) {
+        const char *interface_name,
+        bool replay_input_check_rejection = true) {
     using namespace interface_runner_detail;
 
     if (count == 0) return CollectedResults{};
@@ -122,10 +123,12 @@ CollectedResults collect_interface_results(
             : CallOutcome::input_check_termination;
     }
 
-    for (std::size_t i = 0; i < count; ++i) {
-        if (slots[i].outcome == CallOutcome::input_check_termination) {
-            confirm_input_check_termination(call, i, interface_name);
-            break;
+    if (replay_input_check_rejection) {
+        for (std::size_t i = 0; i < count; ++i) {
+            if (slots[i].outcome == CallOutcome::input_check_termination) {
+                confirm_input_check_termination(call, i, interface_name);
+                break;
+            }
         }
     }
 
