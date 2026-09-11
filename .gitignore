@@ -41,5 +41,4 @@ CoqMakefile.conf
 /bench/__pycache__/
 /bench/tests/__pycache__/
 /bench/test_input_generation
-/bench/test_interface_runner
 /results/
