@@ -51,8 +51,11 @@ endif
 DD_INC     := -I$(DD_LIB_DIR)/include
 QD_INC     := -I$(QD_PREFIX)/include
 
-BUILD_DIR    := .build
-CLANG_BUILD_DIR := $(BUILD_DIR)/clang
+BUILD_DIR := .build
+BIN_DIR := $(BUILD_DIR)/bin
+CXX_OBJ_DIR := $(BUILD_DIR)/obj/cxx
+COMPCERT_OBJ_DIR := $(BUILD_DIR)/obj/compcert
+CLANG_OBJ_DIR := $(BUILD_DIR)/obj/clang
 
 RUN_DIR ?= results
 RUN_PATH := $(patsubst %/,%,$(RUN_DIR))
@@ -62,31 +65,32 @@ SAMPLES_PER_EXPONENT ?= 40
 NUM_INPUTS_FOR_PERF ?= 65536
 NUM_TRIALS_FOR_PERF ?= 24
 
-ANALYZERS := analyze_rq1 analyze_rq2 analyze_rq3
-ALL_BINS := generate_numerical_data $(ANALYZERS) \
-            generate_performance_data_compcert \
-            generate_performance_data_clang
+ANALYZERS := $(BIN_DIR)/analyze_rq1 $(BIN_DIR)/analyze_rq2 \
+             $(BIN_DIR)/analyze_rq3
 
 # Arithmetic-only kernel baseline.  Keep wrapper and kernel objects distinct:
 # the public dw_*.c files do not define their corresponding *_kernel symbols.
-EFT_SRCS     := two_sum fast_2sum fast_2mult
+EFT_SRCS     := two_sum fast_2sum_kernel fast_2mult_kernel
 DW_OPS       := dw_plus_fp dw_plus_dw dw_times_fp dw_times_dw dw_div_fp dw_div_dw
 KERNEL_SRCS  := $(EFT_SRCS) $(addsuffix _kernel,$(DW_OPS))
 
 # The six dw_*.c files define both the default (two-stage) and strong
-# (input-only) interfaces. Fast2Sum and Fast2Mult have guarded entry points.
-LIBRARY_SRCS := $(KERNEL_SRCS) fast_2sum_guarded \
-                fast_2mult_guarded fp_utils $(DW_OPS)
-LIBRARY_OBJS := $(addsuffix .o,$(LIBRARY_SRCS))
-CLANG_LIBRARY_OBJS := $(addprefix $(CLANG_BUILD_DIR)/,\
+# (input-only) interfaces. Fast2Sum and Fast2Mult have public wrappers.
+LIBRARY_SRCS := $(KERNEL_SRCS) fast_2sum fast_2mult fp_utils $(DW_OPS)
+COMPCERT_LIBRARY_OBJS := $(addprefix $(COMPCERT_OBJ_DIR)/,\
+                           $(addsuffix .o,$(LIBRARY_SRCS)))
+CLANG_LIBRARY_OBJS := $(addprefix $(CLANG_OBJ_DIR)/,\
                         $(addsuffix .o,$(LIBRARY_SRCS)))
 
-EVAL_COMMON_OBJS := input_generation.o
-NUMERICAL_DATA_OBJS := generate_numerical_data.o $(EVAL_COMMON_OBJS)
+INPUT_GENERATION_OBJ := $(CXX_OBJ_DIR)/input_generation.o
+NUMERICAL_DATA_OBJS := $(CXX_OBJ_DIR)/generate_numerical_data.o \
+                       $(INPUT_GENERATION_OBJ)
 PERFORMANCE_COMPCERT_OBJS := \
-    $(BUILD_DIR)/generate_performance_data_compcert.o $(EVAL_COMMON_OBJS)
+    $(CXX_OBJ_DIR)/generate_performance_data_compcert.o \
+    $(INPUT_GENERATION_OBJ)
 PERFORMANCE_CLANG_OBJS := \
-    $(BUILD_DIR)/generate_performance_data_clang.o $(EVAL_COMMON_OBJS)
+    $(CXX_OBJ_DIR)/generate_performance_data_clang.o \
+    $(INPUT_GENERATION_OBJ)
 
 .PHONY: all-results raw-results analyze-results clean check-dependencies
 
@@ -106,78 +110,86 @@ check-dependencies:
 	  exit 1; \
 	}
 
-$(BUILD_DIR):
-	mkdir -p $@
-
-$(CLANG_BUILD_DIR): | $(BUILD_DIR)
-	mkdir -p $@
+$(BIN_DIR) $(CXX_OBJ_DIR) $(COMPCERT_OBJ_DIR) $(CLANG_OBJ_DIR):
+	mkdir -p "$@"
 
 # --- dd_lib objects: generic rule (one .o per dd_lib .c) ------------------
-%.o: $(DD_LIB_DIR)/%.c $(DD_LIB_DIR)/include/dw_arith.h | check-dependencies
+$(COMPCERT_OBJ_DIR)/%.o: $(DD_LIB_DIR)/%.c \
+                         $(DD_LIB_DIR)/include/dw_arith.h \
+                         | $(COMPCERT_OBJ_DIR) check-dependencies
 	$(DD_CC) $(DD_CFLAGS) $(DD_INC) -c $< -o $@
 
-$(addsuffix .o,fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS)): \
-  $(DD_LIB_DIR)/include/fp_utils.h
+$(addprefix $(COMPCERT_OBJ_DIR)/,\
+  $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
+    $(DD_LIB_DIR)/include/fp_utils.h
 
-$(CLANG_BUILD_DIR)/%.o: $(DD_LIB_DIR)/%.c \
-                        $(DD_LIB_DIR)/include/dw_arith.h \
-                        | $(CLANG_BUILD_DIR) check-dependencies
+$(CLANG_OBJ_DIR)/%.o: $(DD_LIB_DIR)/%.c \
+                      $(DD_LIB_DIR)/include/dw_arith.h \
+                      | $(CLANG_OBJ_DIR) check-dependencies
 	$(CLANG_CC) $(CLANG_CFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) -c $< -o $@
 
-$(addprefix $(CLANG_BUILD_DIR)/,\
-  $(addsuffix .o,fast_2sum_guarded fast_2mult_guarded fp_utils $(DW_OPS))): \
-  $(DD_LIB_DIR)/include/fp_utils.h
+$(addprefix $(CLANG_OBJ_DIR)/,\
+  $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
+    $(DD_LIB_DIR)/include/fp_utils.h
 
 # --- C++ analysis objects -------------------------------------------------
-analysis_support.o: analysis_support.cpp analysis_support.hpp
+$(CXX_OBJ_DIR)/numerical_analysis.o: numerical_analysis.cpp \
+        numerical_analysis.hpp analysis_common.hpp | $(CXX_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
-analyze_rq1.o: analyze_rq1.cpp analysis_support.hpp
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+$(CXX_OBJ_DIR)/analyze_rq1.o: analyze_rq1.cpp numerical_analysis.hpp \
+        analysis_common.hpp | $(CXX_OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
-analyze_rq2.o: analyze_rq2.cpp analysis_support.hpp
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+$(CXX_OBJ_DIR)/analyze_rq2.o: analyze_rq2.cpp numerical_analysis.hpp \
+        analysis_common.hpp | $(CXX_OBJ_DIR)
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
-analyze_rq3.o: analyze_rq3.cpp analysis_support.hpp
+$(CXX_OBJ_DIR)/analyze_rq3.o: analyze_rq3.cpp analysis_common.hpp \
+                                      | $(CXX_OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
 
 # --- C++ generation objects -----------------------------------------------
-%.o: %.cpp | check-dependencies
+$(CXX_OBJ_DIR)/%.o: %.cpp | $(CXX_OBJ_DIR) check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/generate_performance_data_compcert.o: \
-        generate_performance_data.cpp | $(BUILD_DIR) check-dependencies
+$(CXX_OBJ_DIR)/generate_performance_data_compcert.o: \
+        generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DDD_BUILD_LABEL=\"compcert\" -MMD -MP -c $< -o $@
 
-$(BUILD_DIR)/generate_performance_data_clang.o: \
-        generate_performance_data.cpp | $(BUILD_DIR) check-dependencies
+$(CXX_OBJ_DIR)/generate_performance_data_clang.o: \
+        generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DDD_BUILD_LABEL=\"clang\" -MMD -MP -c $< -o $@
 
 # --- benchmark links ------------------------------------------------------
-generate_numerical_data: $(NUMERICAL_DATA_OBJS) $(LIBRARY_OBJS)
+$(BIN_DIR)/generate_numerical_data: $(NUMERICAL_DATA_OBJS) \
+                                     $(COMPCERT_LIBRARY_OBJS) | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
-analyze_rq1: analyze_rq1.o analysis_support.o
+$(BIN_DIR)/analyze_rq1: $(CXX_OBJ_DIR)/analyze_rq1.o \
+                        $(CXX_OBJ_DIR)/numerical_analysis.o | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
 
-analyze_rq2: analyze_rq2.o analysis_support.o
+$(BIN_DIR)/analyze_rq2: $(CXX_OBJ_DIR)/analyze_rq2.o \
+                        $(CXX_OBJ_DIR)/numerical_analysis.o | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
 
-analyze_rq3: analyze_rq3.o analysis_support.o
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+$(BIN_DIR)/analyze_rq3: $(CXX_OBJ_DIR)/analyze_rq3.o | $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^
 
-generate_performance_data_compcert: $(PERFORMANCE_COMPCERT_OBJS) $(LIBRARY_OBJS)
+$(BIN_DIR)/generate_performance_data_compcert: \
+        $(PERFORMANCE_COMPCERT_OBJS) $(COMPCERT_LIBRARY_OBJS) | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
-generate_performance_data_clang: $(PERFORMANCE_CLANG_OBJS) $(CLANG_LIBRARY_OBJS)
+$(BIN_DIR)/generate_performance_data_clang: \
+        $(PERFORMANCE_CLANG_OBJS) $(CLANG_LIBRARY_OBJS) | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
 # --- measurement and analysis workflow -----------------------------------
 clean:
-	rm -f *.o *.d $(ALL_BINS)
 	rm -rf "$(BUILD_DIR)"
 
 all-results:
@@ -186,8 +198,9 @@ all-results:
 	  RUN_DIR="$(RUN_PATH)" ANALYSIS_DIR="$(ANALYSIS_DIR)"
 	@echo "Analysis files: $(ANALYSIS_DIR)"
 
-raw-results: generate_numerical_data generate_performance_data_compcert \
-             generate_performance_data_clang
+raw-results: $(BIN_DIR)/generate_numerical_data \
+             $(BIN_DIR)/generate_performance_data_compcert \
+             $(BIN_DIR)/generate_performance_data_clang
 	@test -n "$(RUN_PATH)" || { echo "RUN_DIR is required" >&2; exit 1; }
 	mkdir -p "$(RUN_PATH)"
 	@test ! -e "$(RUN_PATH)/numerical.tsv" || { echo "$(RUN_PATH)/numerical.tsv already exists" >&2; exit 1; }
@@ -196,9 +209,9 @@ raw-results: generate_numerical_data generate_performance_data_compcert \
 	@test ! -e "$(RUN_PATH)/numerical.tsv.partial" || { echo "$(RUN_PATH)/numerical.tsv.partial already exists" >&2; exit 1; }
 	@test ! -e "$(RUN_PATH)/timing-compcert.tsv.partial" || { echo "$(RUN_PATH)/timing-compcert.tsv.partial already exists" >&2; exit 1; }
 	@test ! -e "$(RUN_PATH)/timing-clang.tsv.partial" || { echo "$(RUN_PATH)/timing-clang.tsv.partial already exists" >&2; exit 1; }
-	./generate_numerical_data "$(SAMPLES_PER_EXPONENT)" "$(RUN_PATH)/numerical.tsv.partial"
-	./generate_performance_data_compcert "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-compcert.tsv.partial"
-	./generate_performance_data_clang "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-clang.tsv.partial"
+	$(BIN_DIR)/generate_numerical_data "$(SAMPLES_PER_EXPONENT)" "$(RUN_PATH)/numerical.tsv.partial"
+	$(BIN_DIR)/generate_performance_data_compcert "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-compcert.tsv.partial"
+	$(BIN_DIR)/generate_performance_data_clang "$(NUM_INPUTS_FOR_PERF)" "$(NUM_TRIALS_FOR_PERF)" "$(RUN_PATH)/timing-clang.tsv.partial"
 	mv "$(RUN_PATH)/numerical.tsv.partial" "$(RUN_PATH)/numerical.tsv"
 	mv "$(RUN_PATH)/timing-compcert.tsv.partial" "$(RUN_PATH)/timing-compcert.tsv"
 	mv "$(RUN_PATH)/timing-clang.tsv.partial" "$(RUN_PATH)/timing-clang.tsv"
@@ -208,14 +221,15 @@ analyze-results: $(ANALYZERS)
 	@test -f "$(RUN_PATH)/timing-compcert.tsv" || { echo "$(RUN_PATH)/timing-compcert.tsv not found" >&2; exit 1; }
 	@test -f "$(RUN_PATH)/timing-clang.tsv" || { echo "$(RUN_PATH)/timing-clang.tsv not found" >&2; exit 1; }
 	mkdir -p "$(ANALYSIS_DIR)"
-	./analyze_rq1 "$(RUN_PATH)/numerical.tsv" \
+	$(BIN_DIR)/analyze_rq1 "$(RUN_PATH)/numerical.tsv" \
 	  "$(ANALYSIS_DIR)/rq1.tsv.partial"
-	./analyze_rq2 "$(RUN_PATH)/numerical.tsv" \
+	$(BIN_DIR)/analyze_rq2 "$(RUN_PATH)/numerical.tsv" \
 	  "$(ANALYSIS_DIR)/rq2.tsv.partial"
-	./analyze_rq3 "$(RUN_PATH)/timing-compcert.tsv" \
+	$(BIN_DIR)/analyze_rq3 "$(RUN_PATH)/timing-compcert.tsv" \
 	  "$(RUN_PATH)/timing-clang.tsv" \
 	  "$(ANALYSIS_DIR)/rq3.tsv.partial"
 	mv "$(ANALYSIS_DIR)/rq1.tsv.partial" "$(ANALYSIS_DIR)/rq1.tsv"
 	mv "$(ANALYSIS_DIR)/rq2.tsv.partial" "$(ANALYSIS_DIR)/rq2.tsv"
 	mv "$(ANALYSIS_DIR)/rq3.tsv.partial" "$(ANALYSIS_DIR)/rq3.tsv"
--include $(wildcard *.d $(BUILD_DIR)/*.d)
+-include $(wildcard $(CXX_OBJ_DIR)/*.d $(COMPCERT_OBJ_DIR)/*.d \
+                   $(CLANG_OBJ_DIR)/*.d)

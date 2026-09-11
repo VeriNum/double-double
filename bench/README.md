@@ -8,15 +8,23 @@ The benchmark has one measurement path and one analysis path.
   CompCert objects and once with Clang objects.
 - `analyze_rq1.cpp`, `analyze_rq2.cpp`, and `analyze_rq3.cpp` analyze one
   research question each.
+- `numerical_analysis.cpp` contains the numerical parser and MPFR work shared
+  by RQ1 and RQ2.
+- `analysis_common.hpp` contains the small schema and file helpers shared by
+  all three analyzers.
 
-The analyzer does not link FenceDD or QD. It cannot execute the measured
-implementations. It reads the raw files and writes derived files elsewhere.
+The analyzers do not link FenceDD or QD. They cannot execute the measured
+implementations. They read the raw files and write derived files elsewhere.
+
+All objects, dependency files, and executables are written below `.build/`.
+Source files remain at the top of this directory, and measured data remains
+under the selected result directory.
 
 ## Requirements
 
 The measurement programs require CompCert, Clang, a C++14 compiler, MPFR,
-GMP, and QD headers. The analyzer requires only a C++14 compiler, MPFR, and
-GMP.
+GMP, and QD headers. The RQ1 and RQ2 analyzers require a C++14 compiler,
+MPFR, and GMP. The RQ3 analyzer requires only a C++14 compiler.
 
 The build obtains MPFR and GMP flags from `pkg-config`. Set `MPFR_CFLAGS` and
 `MPFR_LIBS` if they cannot be found that way.
@@ -159,9 +167,9 @@ before rebuilding.
 The analyzer can also be invoked directly:
 
 ```sh
-./analyze_rq1 results/numerical.tsv results/analysis/rq1.tsv
-./analyze_rq2 results/numerical.tsv results/analysis/rq2.tsv
-./analyze_rq3 results/timing-compcert.tsv results/timing-clang.tsv \
+.build/bin/analyze_rq1 results/numerical.tsv results/analysis/rq1.tsv
+.build/bin/analyze_rq2 results/numerical.tsv results/analysis/rq2.tsv
+.build/bin/analyze_rq3 results/timing-compcert.tsv results/timing-clang.tsv \
   results/analysis/rq3.tsv
 ```
 
