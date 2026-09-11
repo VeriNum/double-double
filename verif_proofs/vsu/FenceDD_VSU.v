@@ -11,4 +11,4 @@ Require Import VST.floyd.VSU.
 Require Import DD.verif_proofs.vsu.Ops_VSU.
 Require Import DD.verif_proofs.vsu.Checks_VSU.
 
-Definition DDLibVSU := ltac:(linkVSUs OpsVSU ChecksVSU).
+Definition FenceDDVSU := ltac:(linkVSUs OpsVSU ChecksVSU).
