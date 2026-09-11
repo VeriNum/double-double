@@ -1,8 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* This file contains the floating-point functional models in IEEE-754
-  format for the double-word operations. *)
+(** Floating-point functional models for the double-word operations. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common.
@@ -40,7 +39,7 @@ End FastTwoSumModel.
 Section Fast2MultModel.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Algorithm 3 : Fast2Mult *)
+(** Computes a rounded product and its fused residual. *)
 Definition Fast2Mult (a b : ftype t) :=
 let m := BMULT a b in
 let p := BFMA a b (BOPP m) in (m, p).
@@ -54,11 +53,11 @@ End Fast2MultModel.
 Section DWord.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Definition 1.4 *)
+(** A double-word whose high component is unchanged by adding its low component. *)
 Definition double_word : ftype t -> ftype t -> Type :=
   fun xh xl => FT2R xh = rounded t (FT2R xh + FT2R xl).
 
-(* Propositional double_word, suitable for VST PROP clauses. *)
+(** Propositional form of [double_word], suitable for VST assertions. *)
 Definition double_word_prop (xh xl : ftype t) : Prop :=
   FT2R xh = rounded t (FT2R xh + FT2R xl).
 
@@ -70,13 +69,13 @@ End DWord.
 Section DWops.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Algorithm 4 : Addition of DW number and FP number *)
+(** Adds a double-word and a floating-point number. *)
 Definition DWPlusFP (xh xl y : ftype t) := 
 let (sh, sl) := TwoSumF xh y in
 let v:= BPLUS xl sl in
 let (zh, zl) := Fast2Sum sh v in (zh, zl).
 
-(** Algorithm 6 : Addition of two DW numbers *)
+(** Adds two double-word numbers. *)
 Definition DWPlusDW (xh xl yh yl : ftype t) :=
 let (sh, sl) := TwoSumF xh yh in
 let (th, tl) := TwoSumF xl yl in
@@ -85,13 +84,13 @@ let (vh, vl) := Fast2Sum sh c in
 let w:= BPLUS tl vl in
 let (zh, zl) := Fast2Sum vh w in (zh, zl).
 
-(** Algorithm 9: multiply a double-word number by a floating-point number. *)
+(** Multiplies a double-word by a floating-point number. *)
 Definition DWTimesFP (xh xl y : ftype t) :=
 let (ch, cl1) := Fast2Mult xh y in
 let cl3 := BFMA xl y cl1 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 12: multiply two double-word numbers. *)
+(** Multiplies two double-word numbers. *)
 Definition DWTimesDW (xh xl yh yl : ftype t) :=
 let (ch, cl1) := Fast2Mult xh yh in
 let tl0 := BMULT xl yl in 
@@ -100,7 +99,7 @@ let cl2 := BFMA xl yh tl1 in
 let cl3 := BPLUS cl1 cl2 in
 let (zh, zl) := Fast2Sum ch cl3 in (zh, zl).
 
-(** Algorithm 15: divide a double-word number by a floating-point number. *)
+(** Divides a double-word by a floating-point number. *)
 Definition DWDivFP (xh xl y : ftype t) :=
 let th := BDIV xh y in
 let (pih, pil) := Fast2Mult th y in
@@ -110,7 +109,7 @@ let d  := BPLUS dt xl in
 let tl := BDIV d y in
 let (zh, zl) := Fast2Sum th tl in (zh, zl).
 
-(** Algorithm 18: divide two double-word numbers. *)
+(** Divides two double-word numbers. *)
 Definition DWDivDW (xh xl yh yl : ftype t) :=
 let th := BDIV (Zconst t 1) yh in
 let rh := BFMA (BOPP yh) th (Zconst t 1) in

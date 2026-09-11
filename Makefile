@@ -1,5 +1,5 @@
 # Benchmark targets are handled by bench/Makefile rather than CoqMakefile.
-BENCHTARGETS := all-results raw-results analyze-results
+BENCHTARGETS := all-results raw-results analyze-results tex-results
 PROOFTARGETS := accuracy verification
 
 # KNOWNTARGETS will not be passed along to CoqMakefile

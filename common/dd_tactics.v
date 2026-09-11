@@ -203,7 +203,6 @@ Ltac subexpr_finite_H0 fexpr HFIN :=
                     try subexpr_finite_H0 d H3
           end
       | BDIV ?b ?c =>
-          (* only the numerator's finiteness is implied by a finite quotient *)
           try match goal with
             | H1: is_finite b = true |- _ => try subexpr_finite_H0 b H1
             | _ => let H0 := fresh in pose proof (BDIV_finite_e _ b c HFIN) as H0;
@@ -224,4 +223,3 @@ Ltac  field_simplify_format :=
   end;  
   try apply Generic_fmt.generic_format_0;
   auto with dd_base.
-

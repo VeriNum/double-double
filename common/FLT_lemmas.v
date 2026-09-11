@@ -13,7 +13,6 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Section FLT_with_NANS.
@@ -70,7 +69,6 @@ have H3 : 0 < bpow radix2 (femax t - 2) by apply bpow_gt_0.
 nra.
 Qed.
 
-(* Lemma 2.1 *)
 Lemma roundN_plus_ulp_FLT  (a b : ftype t) : 
       ( (FT2R a + FT2R b) <> 0) ->
         Rmax (ulp (FT2R a) /2) (ulp (FT2R b)/ 2) <= Rabs (rounded t (FT2R a + FT2R b)).

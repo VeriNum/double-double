@@ -23,7 +23,6 @@ Local Instance valid_flx_exp_inst :
   Generic_fmt.Valid_exp (FLX_exp (fprec t)).
 Proof. apply FLX.FLX_exp_valid, fprec_gt_0. Qed.
 
-(** Half the overflow threshold is a representable power of two. *)
 Lemma generic_format_half_Omega :
   generic_format radix2 fexp (/2 * Omega).
 Proof.
@@ -37,7 +36,6 @@ unfold SpecFloat.fexp, SpecFloat.emin.
 apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
 Qed.
 
-(** A quarter of the overflow threshold is also representable. *)
 Lemma generic_format_quarter_Omega :
   generic_format radix2 fexp (/4 * Omega).
 Proof.
@@ -51,10 +49,6 @@ unfold SpecFloat.fexp, SpecFloat.emin.
 apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
 Qed.
 
-(** One ulp of headroom is at most a quarter of the overflow threshold.  Pair
-    this with [ulp_below_overflow] to express one ulp of slack relative to
-    [Omega].  This discharges overflow conditions in algorithms with several
-    steps. *)
 Lemma bpow_femax_fprec_le_quarter_Omega :
   bpow radix2 (femax t - fprec t) <= /4 * Omega.
 Proof.
@@ -66,7 +60,6 @@ have -> : (/4 * Omega = bpow radix2 (femax t - 2))%R.
 apply bpow_le. pose proof fprec_lb t; lia.
 Qed.
 
-(** A rounded value is bounded by the input magnitude plus half its ulp. *)
 Lemma round_abs_le_abs_plus_half_ulp (v : R) :
   Rabs (round radix2 fexp
     (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) v)
@@ -79,7 +72,6 @@ eapply Rle_trans; [apply Rabs_triang|].
 rewrite Rplus_comm. apply Rplus_le_compat_l. exact He.
 Qed.
 
-(** Below overflow, an ulp is at most [2^(femax-p)]. *)
 Lemma ulp_below_overflow (v : R) :
   Rabs v < Omega -> ulp v <= bpow radix2 (femax t - fprec t).
 Proof.
@@ -96,7 +88,6 @@ move => Hlt. destruct (Req_dec v 0) as [Hv0 | Hv0].
   apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia.
 Qed.
 
-(** A nonzero FLT value cannot lie below the smallest subnormal. *)
 Lemma generic_format_below_emin_eq_zero (x : R) :
   generic_format radix2 fexp x ->
   Rabs x < bpow radix2 (common.emin (t:=t)) -> x = 0.
@@ -171,8 +162,6 @@ have Hu0 : 0 <= bpow radix2 (- fprec t) by apply bpow_ge_0.
 have := Rabs_pos v. nra.
 Qed.
 
-(** The power equal to one quarter of the overflow threshold, used by guards
-    for operations with several steps. *)
 Lemma bpow_femax_minus_two :
   bpow radix2 (femax t - 2) = /4 * Omega.
 Proof.
@@ -181,7 +170,6 @@ have -> : Omega = (bpow radix2 (femax t - 2) * bpow radix2 2)%R
 have -> : bpow radix2 2 = 4%R by reflexivity. lra.
 Qed.
 
-(** Uniform linear upper bound on an FLT ulp. *)
 Lemma ulp_le_lin (v : R) :
   ulp v <= Rabs v * bpow radix2 (1 - fprec t) +
     bpow radix2 (common.emin (t:=t)).
@@ -194,7 +182,6 @@ have Hb : bpow radix2 (1 - fprec t) =
 rewrite Hb. nra.
 Qed.
 
-(** A nonzero FLT value is at least the smallest positive subnormal. *)
 Lemma nonzero_float_abs_ge_emin (y : ftype t) :
   FT2R y <> 0 ->
   bpow radix2 (common.emin (t:=t)) <= Rabs (FT2R y).
@@ -209,7 +196,6 @@ have Hlb : bpow radix2 (common.emin (t:=t)) <= ulp (FT2R y).
 lra.
 Qed.
 
-(** Convenient algebraic forms of the universal FLT rounding bounds. *)
 Lemma round_ub_emin (v : R) :
   Rabs (round radix2 fexp (Znearest choice) v) <=
     Rabs v + Rabs v * bpow radix2 (-fprec t) +
@@ -273,8 +259,6 @@ destruct (Rle_lt_dec
     rewrite -Hulp. eapply Rle_trans; [exact Htri |]. nra.
 Qed.
 
-(** Rounding error expressed as the maximum of the relative contribution and
-    the subnormal floor. *)
 Lemma round_FLT_error_max_emin (v c : R) :
   Rabs v <= c ->
   Rabs (round radix2 fexp (Znearest choice) v - v) <=
@@ -304,7 +288,6 @@ destruct (Rle_lt_dec
   eapply Rle_trans; [exact He |]. rewrite Heq. apply Rmax_r.
 Qed.
 
-(** Lowering the fixed-point exponent preserves a FIX representation. *)
 Lemma fix_format_lower (x : R) (e1 e2 : Z) :
   (e1 <= e2)%Z ->
   generic_format radix2 (FIX_exp e2) x ->

@@ -1,8 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* This file contains lemmas regarding the accuracy of floating-point
-  operations such as BPLUS, BFMA, and BMULT. *)
+(** Accuracy lemmas for floating-point operations. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common op_defs.
@@ -85,11 +84,10 @@ End General.
 
 Section FMA. 
   
-(* Define a commonly used hypothesis. *)
 Definition fma_no_overflow  (x y z: R) : Prop :=
   (Rabs (rounded t  (x * y + z)) < Raux.bpow Zaux.radix2 (femax t))%R.
 
-(** Standard epsilon delta error bounds for FMA from no overflow hyp *)
+(** Bounds fused multiply-add error when the rounded result does not overflow. *)
 Lemma fma_accurate {NAN : Nans } {STD: is_standard t} : 
    forall x (FINx: is_finite x = true) 
           y (FINy: is_finite y = true) 
@@ -136,7 +134,6 @@ rewrite !B2R_float_of_ftype in H0.
 lra.
 Qed.
 
-(** Relate local is_finite def and Binary.is_finite *)
 Lemma is_finite_fma_no_overflow_aux {NAN: Nans} {STD: is_standard t} : 
   forall x y z
   (HFINb : is_finite (BFMA x y z) = true),
@@ -156,7 +153,6 @@ rewrite float_of_ftype_of_float in HFINb;
 simpl in HFINb; auto.
 Qed.
 
-(** Finite def implies no overflow *)
 Lemma is_finite_fma_no_overflow {NAN: Nans} {STD: is_standard t} : 
   forall x y z
   (HFINb : is_finite (BFMA x y z) = true),
@@ -195,7 +191,6 @@ destruct
  try discriminate.
 Qed.
 
-(** No overflow and finite operands imply that the FMA result is finite. *)
 Lemma no_overflow_fma_is_finite {NAN: Nans} {STD: is_standard t} :
   forall (a b c : ftype t),
   is_finite a = true -> is_finite b = true -> is_finite c = true ->
@@ -220,7 +215,6 @@ Proof.
   exact HF.
 Qed.
 
-(** Finite FMA implies operands are finite *)
 Lemma BFMA_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a b c: ftype t)
  (Hfin : is_finite (BFMA a b c) = true),
@@ -237,7 +231,6 @@ destruct (float_of_ftype a), (float_of_ftype b),
 destruct s,s0, s1; discriminate; auto.
 Qed.
 
-(** Standard epsilon delta error bounds for FMA from finite hyp *)
 Lemma fma_accurate' {NAN: Nans} {STD: is_standard t} : 
    forall  (x y z : ftype t)
           (FIN:  is_finite  (BFMA x y z) = true), 
@@ -254,7 +247,7 @@ pose proof is_finite_fma_no_overflow_aux x y z FIN;
 apply is_finite_fma_no_overflow; auto.
 Qed.
 
-(** Relate BFMA to round NE in FLT format *)
+(** Relates [BFMA] to round-to-nearest in the FLT format. *)
 Lemma BFMA_round_correct {NAN: Nans} {STD: is_standard t} :  
   forall a b c (Hfin : is_finite (BFMA a b c) = true),
   let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -346,7 +339,6 @@ destruct ((Binary.Bmult _ _ _ _ _ _ xb yb));
 simpl;  try discriminate. 
 Qed.
 
-(** No overflow and finite operands imply that multiplication is finite. *)
 Lemma no_overflow_mult_is_finite {NAN: Nans} {STD: is_standard t} :
   forall (a b : ftype t),
   is_finite a = true -> is_finite b = true ->
@@ -396,7 +388,7 @@ destruct (float_of_ftype a), (float_of_ftype b);
   inversion Hfin; clear Hfin; subst; auto.
 Qed.  
 
-(** Relate BMULT to round NE in FLT format *)
+(** Relates [BMULT] to round-to-nearest in the FLT format. *)
 Lemma BMULT_round_correct {NAN: Nans} {STD: is_standard t} :  
   forall a b (Hfin : is_finite (BMULT a b) = true),
   let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -417,9 +409,6 @@ rewrite -Hbmult -!B2R_float_of_ftype !float_of_ftype_of_float;
 f_equal.
 Qed.
 
-(* Numerator finiteness from BDIV finiteness.  Unlike BMULT_finite_e we can
-   only conclude finiteness of the numerator a: a finite quotient a/b can arise
-   with b infinite (a/inf = 0), so is_finite b is not implied. *)
 Lemma BDIV_finite_e {NAN: Nans} {STD: is_standard t} :
  forall (a b : ftype t)
  (Hfin : is_finite (BDIV a b) = true),
@@ -432,9 +421,6 @@ destruct (float_of_ftype a), (float_of_ftype b);
   cbn [Binary.Bdiv] in Hfin; try discriminate; auto.
 Qed.
 
-(* Division analogue of Bmult_no_overflow / is_finite_BMULT_no_overflow.
-   Unlike multiplication, Bdiv_correct carries a nonzero divisor side
-   condition (B2R y <> 0), so the no overflow fact takes FT2R b <> 0. *)
 Definition Bdiv_no_overflow (x y: R) : Prop :=
   (Rabs (rounded t (x / y)) < Raux.bpow Zaux.radix2 (femax t))%R.
 
@@ -466,9 +452,6 @@ destruct ((Binary.Bdiv _ _ _ _ _ _ xb yb));
 simpl;  try discriminate.
 Qed.
 
-(* Converse: a division whose rounded quotient stays below the overflow
-   threshold (with finite numerator and nonzero divisor) yields a finite BDIV.
-   Analog of no_overflow_mult_is_finite; note is_finite (Bdiv) = is_finite x. *)
 Lemma no_overflow_div_is_finite {NAN: Nans} {STD: is_standard t} :
   forall (a b : ftype t),
   is_finite a = true -> FT2R b <> 0%R ->
@@ -492,7 +475,7 @@ Proof.
   rewrite HF. exact Ha.
 Qed.
 
-(** Relate BDIV to round NE in FLT format (divisor nonzero) *)
+(** Relates [BDIV] to round-to-nearest in the FLT format. *)
 Lemma BDIV_round_correct {NAN: Nans} {STD: is_standard t} :
   forall a b (Hb : FT2R b <> 0%R) (Hfin : is_finite (BDIV a b) = true),
   let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -782,7 +765,7 @@ destruct (float_of_ftype x); destruct (float_of_ftype y);
 apply is_finite_sum_no_overflow; auto.
 Qed.
 
-(** Relate BPLUS to round NE in FLT format *)
+(** Relates [BPLUS] to round-to-nearest in the FLT format. *)
 Lemma BPLUS_round_correct {NAN: Nans} {STD: is_standard t} :  
   forall a b (Hfin : is_finite (BPLUS a b) = true),
   let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -1033,7 +1016,7 @@ destruct (float_of_ftype x); destruct (float_of_ftype y);
 apply is_finite_minus_no_overflow; auto.
 Qed.
 
-(** Relate BMINUS to round NE in FLT format *)
+(** Relates [BMINUS] to round-to-nearest in the FLT format. *)
 Lemma BMINUS_round_correct {NAN: Nans} {STD: is_standard t} :  
   forall a b (Hfin : is_finite (BMINUS a b) = true),
   let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -1174,7 +1157,7 @@ End PowerOfTwoBounds.
 
 Section Opp.
 
-(** Relate BOPP to Binary.Bopp. *)
+(** Relates [BOPP] to [Binary.Bopp]. *)
 Lemma BOPP_binary {NAN: Nans} {STD: is_standard t} :  
 forall a (Hfin : is_finite (BOPP a) = true \/ is_finite a = true),
 let fexp := (FLT.FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t)) in
@@ -1184,7 +1167,6 @@ rewrite /BOPP; intros.
 rewrite FT2R_ftype_of_float -B2R_float_of_ftype Binary.B2R_Bopp; auto.
 Qed.
 
-(* Relate BOPP to Binary.Bopp for finite *)
 Lemma BOPP_is_finite {NAN: Nans} {STD: is_standard t} :  
 forall a,  is_finite (BOPP a) = true <-> is_finite a = true.
 Proof.

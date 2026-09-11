@@ -5,7 +5,6 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common DDModels.
 Require Import Bayleyaux DWPlus.
 
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Require Import mathcomp.ssreflect.ssreflect.
@@ -204,7 +203,6 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
 
 Theorem ulps_eq : 
-  (* assuming no underflow, ulp of val is equal in different (Flocq) formats *)
   forall x, x <>0 -> bpow Zaux.radix2 (@emin t + fprec t - 1) <= Rabs x -> 
   ulp x = Ulp.ulp Zaux.radix2 (FLX.FLX_exp (fprec t )) x.
 Proof.
