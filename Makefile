@@ -16,7 +16,7 @@ KNOWNFILES   := Makefile _CoqProject _CoqProject.accuracy
 ifneq ($(MAKECMDGOALS),run-clightgen)
 ifneq ($(MAKECMDGOALS),clean)
 .SECONDEXPANSION:
-CoqMakefile: Makefile _CoqProject $$(OBJS)
+CoqMakefile: Makefile _CoqProject $$(CLIGHT_FILES)
 	$(COQBIN)coq_makefile -f _CoqProject -o CoqMakefile
 
 AccuracyMakefile: Makefile _CoqProject.accuracy
@@ -43,42 +43,44 @@ $(BENCHTARGETS):
 	@test -n "$(RUN_DIR)" || { echo "usage: make $@ RUN_DIR=results/" >&2; exit 1; }
 	+$(MAKE) --no-print-directory -C bench $@ RUN_DIR="$(abspath $(RUN_DIR))"
 
-OBJDIR = verif_proofs/verif_objs
-OBJ = two_sum.v fast_2mult_kernel.v fast_2mult.v fast_2mult_acc.v fast_2sum_kernel.v fast_2sum.v
-OBJ += dw_plus_fp_kernel.v dw_plus_fp.v dw_plus_dw_kernel.v dw_plus_dw.v
-OBJ += dw_times_fp_kernel.v dw_times_fp.v dw_times_dw_kernel.v dw_times_dw.v
-OBJ += dw_div_fp_kernel.v dw_div_fp.v dw_div_dw_kernel.v dw_div_dw.v
-OBJ += fp_utils.v
-# dd_ops.c is an aggregation unit (#includes the kernels and public wrappers) so the
-# whole operations translation unit compiles to one Clight program / CompSpecs.
-OBJ += dd_ops.v
-OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
 SRCDIR = fenceDD
+OBJDIR = verif_proofs/verif_objs
 INCLUDES = -I $(SRCDIR)/include
 CLIGHT_HEADERS = $(SRCDIR)/include/dw_arith.h $(SRCDIR)/include/fp_utils.h
-CLIGHT_SOURCES = $(addprefix $(SRCDIR)/,$(OBJ:.v=.c))
-DD_OPS_INCLUDES = $(filter-out $(SRCDIR)/fp_utils.c $(SRCDIR)/dd_ops.c,$(CLIGHT_SOURCES))
+CLIGHT_FILES = $(OBJDIR)/fp_utils.v $(OBJDIR)/dd_ops.v
+
+# dd_ops.c includes every library source except fp_utils.c. A change to any
+# included source must therefore regenerate the single dd_ops Clight file.
+DD_OPS_SOURCES = $(filter-out $(SRCDIR)/example.c $(SRCDIR)/fp_utils.c \
+	$(SRCDIR)/two_sum_test.c,$(wildcard $(SRCDIR)/*.c))
 
 .PHONY: run-clightgen
-run-clightgen: $(OBJS)
-	
+run-clightgen: $(CLIGHT_FILES)
+
 $(OBJDIR):
 	mkdir -p $@
 
-$(OBJS): $(CLIGHT_HEADERS) | $(OBJDIR)
+$(CLIGHT_FILES): $(CLIGHT_HEADERS) | $(OBJDIR)
 
-$(OBJDIR)/dd_ops.v: $(DD_OPS_INCLUDES)
-
-$(OBJS): $(OBJDIR)/%.v: $(SRCDIR)/%.c
+$(OBJDIR)/fp_utils.v: $(SRCDIR)/fp_utils.c
 	clightgen -normalize $(INCLUDES) $< -o $@
 
+$(OBJDIR)/dd_ops.v: $(DD_OPS_SOURCES)
+	clightgen -normalize $(INCLUDES) $(SRCDIR)/dd_ops.c -o $@
+
+.PHONY: clean
 clean:
-	rm -f CoqMakefile CoqMakefile.conf AccuracyMakefile AccuracyMakefile.conf
-	rm -f *.vo *.vos *.vok *.glob
-	rm -f FLX_analysis/*.{vo,vos,vok,glob}
-	rm -f common/*.vo
-	rm -f verif_objs/*.{vo,vos,vok,glob}
+	rm -f CoqMakefile CoqMakefile.conf .CoqMakefile.d
+	rm -f AccuracyMakefile AccuracyMakefile.conf .AccuracyMakefile.d
+	rm -f $(CLIGHT_FILES)
+	find . -name .git -prune -o -type f \
+		\( -name '*.vo' -o -name '*.vos' -o -name '*.vok' -o -name '*.glob' -o -name '.*.aux' \) \
+		-exec rm -f {} +
 
 # This should be the last rule, to handle any targets not declared above
+ifneq ($(MAKECMDGOALS),run-clightgen)
+ifneq ($(MAKECMDGOALS),clean)
 %: invoke-coqmakefile
 	@true
+endif
+endif
