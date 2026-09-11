@@ -1,10 +1,12 @@
-#include <stdlib.h>
 #include "dw_arith.h"
 #include "fp_utils.h"
 
-void fast_2sum(struct dword *st, double a, double b) {
+enum dw_status fast_2sum(struct dword *st, double a, double b) {
+   struct dword result;
    if (!fast2_sum_magnitude_order_check(a,b)) {
-      exit(EXIT_FAILURE);
+      return DW_WEAK_INPUT_REJECTED;
    }
-   fast_2sum_kernel(st, a, b);
+   fast_2sum_kernel(&result, a, b);
+   *st = result;
+   return DW_OK;
 }

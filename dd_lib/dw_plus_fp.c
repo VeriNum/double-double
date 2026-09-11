@@ -1,23 +1,28 @@
-#include <stdlib.h>
 #include "dw_arith.h"
 #include "fp_utils.h"
 
 /* Default interface: check the mathematical input condition, run the kernel,
    then reject a nonfinite result. */
-void dw_plus_fp(struct dword *st, struct dword *x, double y) {
+enum dw_status dw_plus_fp(struct dword *st, struct dword *x, double y) {
+   struct dword result;
    if (!dw_plus_fp_weak_precond_check(x, y)) {
-      exit(EXIT_FAILURE);
+      return DW_WEAK_INPUT_REJECTED;
    }
-   dw_plus_fp_kernel(st, x, y);
-   if (!isfinite_dword(st)) {
-      exit(EXIT_FAILURE);
+   dw_plus_fp_kernel(&result, x, y);
+   if (!isfinite_dword(&result)) {
+      return DW_POST_CHECK_REJECTED;
    }
+   *st = result;
+   return DW_OK;
 }
 
 /* Strong interface: the input check proves output finiteness in advance. */
-void dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
+enum dw_status dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
+   struct dword result;
    if (!dw_plus_fp_strong_precond_check(x, y)) {
-      exit(EXIT_FAILURE);
+      return DW_STRONG_INPUT_REJECTED;
    }
-   dw_plus_fp_kernel(st, x, y);
+   dw_plus_fp_kernel(&result, x, y);
+   *st = result;
+   return DW_OK;
 }
