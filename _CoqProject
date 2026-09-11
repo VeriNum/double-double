@@ -1,14 +1,14 @@
 -R . DD
 
-paper_proofs/Bayleyaux.v
-paper_proofs/F2SumFLT.v
-paper_proofs/F2SumFLX.v
-paper_proofs/F2Sum.v
-paper_proofs/DWPlus.v
-paper_proofs/DWTimesFP.v
-paper_proofs/DWTimesDW.v
-paper_proofs/DWDivFP.v
-paper_proofs/DWDivDW.v
+FLX_analysis/Bayleyaux.v
+FLX_analysis/F2SumFLT.v
+FLX_analysis/F2SumFLX.v
+FLX_analysis/F2Sum.v
+FLX_analysis/DWPlus.v
+FLX_analysis/DWTimesFP.v
+FLX_analysis/DWTimesDW.v
+FLX_analysis/DWDivFP.v
+FLX_analysis/DWDivDW.v
 
 common/common.v
 common/op_defs.v

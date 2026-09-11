@@ -105,7 +105,7 @@ have Gb: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R b) by
   rewrite -B2R_float_of_ftype;
   apply (Binary.generic_format_B2R (fprec t) (femax t)).
 have Hr : (radix2 <= 3)%Z by (simpl; auto).
-(** apply lemmas from paper_proofs.F2SumFLT *)
+(** Apply lemmas from FLX_analysis.F2SumFLT. *)
 have: Fast2Sum_correct_flt radix2 emin (fprec t) choice (FT2R a) (FT2R b).
 apply F2Sum_correct_abs_flt => //. apply (fprec_gt_one t).
 rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
@@ -169,7 +169,7 @@ Qed.
 Lemma FastTwoSumEq_FLT_uf1
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
 Rabs (FT2R a + FT2R b) < bpow radix2 (emin + fprec t - 1) ->
-DD.paper_proofs.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
+DD.FLX_analysis.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
 Proof.
 intros Huf.
 move : FIN.
@@ -227,7 +227,7 @@ Qed.
 Lemma FastTwoSumEq_FLT_uf2
 (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
 Rabs (FT2R (BPLUS a b) - FT2R a) < bpow radix2 (emin + fprec t - 1) ->
-DD.paper_proofs.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
+DD.FLX_analysis.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
 Proof.
 intros Huf.
 case : (Rlt_dec (Rabs (FT2R a + FT2R b))
@@ -315,7 +315,7 @@ Qed.
 Lemma FastTwoSumEq_FLT_uf3
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
 Rabs (FT2R b - FT2R (BMINUS (BPLUS a b) a)) < bpow radix2 (emin + fprec t - 1) ->
-DD.paper_proofs.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
+DD.FLX_analysis.F2Sum.Fast2Sum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
 Proof.
 intros Huf.
 
@@ -392,7 +392,7 @@ Qed.
   equal, regardless of underflow. *)
 Lemma FastTwoSumEq_FLT
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
-  DD.paper_proofs.F2Sum.Fast2Sum
+  DD.FLX_analysis.F2Sum.Fast2Sum
       (fprec t) choice (FT2R a) (FT2R b) = F2Rp (DD.DDModels.Fast2Sum a b).
 Proof.
 move : FIN.

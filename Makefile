@@ -1,7 +1,5 @@
-# Evaluation targets are handled by bench/Makefile rather than CoqMakefile.
-BENCHTARGETS := prepare-evaluation smoke results run-evaluation report-evaluation \
-                check-report raw-results \
-                multiplication_underflow_example
+# Benchmark targets are handled by bench/Makefile rather than CoqMakefile.
+BENCHTARGETS := all-results raw-results analyze-results
 
 # KNOWNTARGETS will not be passed along to CoqMakefile
 KNOWNTARGETS := CoqMakefile extra-stuff extra-stuff2 $(BENCHTARGETS)
@@ -30,12 +28,9 @@ endif
 ####################################################################
 
 .PHONY: $(BENCHTARGETS)
-raw-results:
-	@test -n "$(RUN_DIR)" || { echo "usage: make raw-results RUN_DIR=results/" >&2; exit 1; }
+$(BENCHTARGETS):
+	@test -n "$(RUN_DIR)" || { echo "usage: make $@ RUN_DIR=results/" >&2; exit 1; }
 	+$(MAKE) --no-print-directory -C bench $@ RUN_DIR="$(abspath $(RUN_DIR))"
-
-$(filter-out raw-results,$(BENCHTARGETS)):
-	+$(MAKE) --no-print-directory -C bench $@
 
 OBJDIR = verif_proofs/verif_objs
 OBJ = two_sum.v fast_2mult_kernel.v fast_2mult.v fast_2mult_acc.v fast_2sum_kernel.v fast_2sum.v
@@ -69,7 +64,7 @@ $(OBJS): $(OBJDIR)/%.v: $(SRCDIR)/%.c
 clean:
 	rm -f CoqMakefile CoqMakefile.conf
 	rm -f *.vo *.vos *.vok *.glob
-	rm -f paper_proofs/*.{vo,vos,vok,glob}
+	rm -f FLX_analysis/*.{vo,vos,vok,glob}
 	rm -f common/*.vo
 	rm -f verif_objs/*.{vo,vos,vok,glob}
 

@@ -24,7 +24,7 @@ Notation format :=
 Notation emin := (SpecFloat.emin (fprec t) (femax t)).
 Notation radix2 := Zaux.radix2.
 
-Notation DW_paper_proofs := (DWPlus.double_word (fprec t) choice).
+Notation DW_FLX_analysis := (DWPlus.double_word (fprec t) choice).
 Notation double_word := (DD.DDModels.double_word).
 
 Lemma double_word_0 (xh xl : ftype t) : 
@@ -40,7 +40,7 @@ Qed.
 
 Theorem DWdouble_word_dw:
 forall (xh xl y : ftype t),
-DW_paper_proofs (FT2R xh) (FT2R xl) -> 
+DW_FLX_analysis (FT2R xh) (FT2R xl) -> 
 double_word xh xl.
 Proof.
 intros xh xl y.

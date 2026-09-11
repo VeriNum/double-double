@@ -13,7 +13,7 @@ Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
 Require Import DWTimesFP DWTimesDW DWDivFP DDConds DWord_defs
                Fast2Mult_acc TwoSum_acc Fast2Sum_acc Fast2Sum_acc_helpers.
-(* The tight FLX bound DWDivDW.DWDDW3_correct from paper_proofs/DWDivDW.v is
+(* The tight FLX bound DWDivDW.DWDDW3_correct from FLX_analysis/DWDivDW.v is
    instantiated below.  DWDivDW.v
    sets [Opaque DWTimesDW.DWTimesDW12] at top level; guard against that leaking
    into this file's proofs by asserting again transparency after the Require. *)

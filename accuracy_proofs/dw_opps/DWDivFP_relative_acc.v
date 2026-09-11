@@ -180,7 +180,7 @@ Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
 (* The paper's DWDFP3_correct (Algorithm 15) uses the concrete two-product
-   operator (see paper_proofs/DWDivFP.v), so it is instantiated at
+   operator (see FLX_analysis/DWDivFP.v), so it is instantiated at
    the concrete operator with only (p, choice, ZNE, Hp4, ...) — no F2Mult
    discharge lemma is needed here. *)
 
