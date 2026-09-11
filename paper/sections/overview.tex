@@ -368,7 +368,12 @@ wrappers for an operation invoke the kernel for that operation and provide the
 guarantee shown in \Cref{tab:operation-preview}. 
 Each error-free transformation has a single
 public wrapper whose runtime checks establish sufficient conditions
-under which the returned correction equals the exact rounding error. These
-conditions depend on the computations in each
-algorithm, so the runtime checks differ among double-double operations and
-error-free transformations.
+under which the returned correction equals the exact rounding error. The
+arithmetic kernels for the double-double operations do not invoke these public
+wrappers; they call the error-free transformation kernels directly. The numerical
+analysis of each double-double operation establishes the properties needed for
+these internal calls. It uses the exact rounding error when the sufficient
+conditions hold and, for \FastTwoMult{} near underflow, includes the bound on
+the lost correction in the final error bound. The conditions depend on the
+computations in each algorithm, so the runtime checks differ among
+double-double operations and error-free transformations.

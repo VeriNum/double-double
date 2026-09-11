@@ -2,13 +2,15 @@
 \label{sec:intro}
 
 Scientific and engineering applications sometimes need more precision than
-hardware floating-point arithmetic provides.  When additional precision is
+hardware floating-point arithmetic provides. When additional precision is
 required, libraries such as MPFR provide arbitrary-precision arithmetic
-\citep{Fousse2007}.  However, when roughly twice the precision of binary64 is
-sufficient, double-double arithmetic offers a faster alternative.  A
+\citep{Fousse2007}. However, when roughly twice the precision of binary64 is
+sufficient, double-double arithmetic offers a faster alternative. A
 double-double represents a real number as the unevaluated sum of two binary64
-components.  Rounding this sum recovers the first component, while the second
-component retains the information lost in the rounding.
+components. Rounding this sum recovers the first component, while the second
+component retains the information lost in the rounding. Double-double
+arithmetic uses ordinary binary64 operations and therefore does not require
+hardware support for a wider format.
 
 Double-double arithmetic and the more general technique of floating-point
 expansion arithmetic are used in numerical linear algebra
@@ -16,27 +18,27 @@ expansion arithmetic are used in numerical linear algebra
 \citep{BaileyBorwein2012}, computational geometry \citep{Shewchuk1997}, fluid
 dynamics \citep{BaileyKrasnyPelz1993,HeDing2001}, quantum calculations
 \citep{Frolov2000,FrolovBailey2003,Aoyama2015}, and correctly rounded
-elementary functions \citep{CRLibm2006,CoreMath2022}.  Implementations include
+elementary functions \citep{CRLibm2006,CoreMath2022}. Implementations include
 XBLAS and the QD library for double-double and quad-double arithmetic
-\citep{Li2002,Hida2001,QD}.  Each double-double operation is implemented as a
+\citep{Li2002,Hida2001,QD}. Each double-double operation is implemented as a
 sequence of rounded binary64 operations, so its accuracy depends on how
-rounding errors interact across that sequence.  This combination of speed and
+rounding errors interact across that sequence. This combination of speed and
 subtle numerical behavior led \citet{Li2002} to call double-double arithmetic
 ``an `attractive nuisance,' like an unfenced backyard swimming pool.''
 
 The hazard is that a double-double operation does not behave like a single
 operation performed with twice the precision. Precisely characterizing its
 error is difficult, and even expert numerical analysts can make subtle
-mistakes. \citet{Zhang2025} highlights an example from XBLAS: an algorithm for 
-adding two double-doubles was claimed to have relative error at most $2u^2$, 
+mistakes. \citet{Zhang2025} highlights an example from XBLAS: an algorithm for
+adding two double-doubles was claimed to have relative error at most $2u^2$,
 where $u=2^{-53}$ is the unit roundoff of binary64. \citet{Joldes2017} later
 found inputs producing a relative error of $2.25u^2$, exceeding the claimed
-bound. They gave a revised analysis, which \citet{Rideau2022} subsequently 
+bound. They gave a revised analysis, which \citet{Rideau2022} subsequently
 mechanized in Rocq, establishing the corrected result by a machine-checked
 proof.
 
-A mechanized proof, however, covers only the arithmetic model in which it is
-stated. The development of \citet{Rideau2022} uses a format with an unbounded
+Mechanization establishes a theorem only for the arithmetic model formalized
+in the proof. The development of \citet{Rideau2022} uses a format with an unbounded
 exponent range, where underflow and overflow do not occur. IEEE~754 binary64
 has a finite exponent range, so both can occur in an implementation.
 Consequently, the mechanized results do not cover executions in which an
@@ -48,7 +50,7 @@ consider squaring the double-double $x=(a,0)$, where
 \[
  a=2^{-515}(1+2^{-52}).
 \]
-Using the QD library to compute the double-double multiplication, 
+Using the QD library to compute the double-double multiplication,
 we obtain $(2^{-1030},0)$. However,
 \[
  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
@@ -90,6 +92,12 @@ lower end, the relative term dominates and provides roughly twice the
 relative precision of binary64. Near it, the absolute term can dominate; for
 the example above, this term covers the lost correction.
 
+Existing work provides mechanized analyses that exclude underflow and
+overflow, while existing double-double libraries do not establish the
+conditions required by those analyses. \FenceDD{} combines numerical results
+for IEEE~754 with verified C wrappers whose runtime checks establish their
+conditions.
+
 Our Rocq development identifies sufficient conditions for these numerical
 guarantees and proves, in a faithful model of IEEE~754, that the guarantees
 hold whenever those conditions are satisfied. It covers adding a binary64
@@ -100,24 +108,24 @@ Under these conditions, the addition operations satisfy relative error
 bounds, while the multiplication and division operations satisfy bounds with
 relative and absolute terms. For every double-double operation, the returned
 pair satisfies the relation between its components required by subsequent
-operations. For the three error-free transformations used by these 
+operations. For the three error-free transformations used by these
 algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}--- we identify sufficient
 conditions under which the returned correction equals the exact rounding
 error in the sum or product.
 
-We implement these algorithms in \FenceDD{}, a verified C library for double-double 
-arithmetic.  Using the
-Verified Software Toolchain (VST) \citep{Appel2014}, we prove that its kernels
+We implement these algorithms in \FenceDD{}, a verified C library for double-double
+arithmetic. Using the
+Verified Software Toolchain (VST) \citep{Appel2014}, we prove that the C kernels
 implement the analyzed algorithms and that successful runtime checks imply
 the corresponding numerical conditions. The public C contracts therefore
 supply the proved guarantees on normal return.
 
 The numerical and VST proofs are checked in Rocq during library development;
-they are not executed when a client calls the library. 
-At run time, each public function executes an arithmetic kernel together with 
-its runtime checks. 
+they are not executed when a client calls the library.
+At run time, each public function executes an arithmetic kernel together with
+the associated runtime checks.
 If a check fails, the function stops without returning a numerical result.
-\Cref{fig:proof-runtime-roles} summarizes what is verified during library 
+\Cref{fig:proof-runtime-roles} summarizes what is verified during library
 development and what runs on each library call.
 
 \input{figures/proof-runtime-roles}
@@ -145,7 +153,7 @@ In summary, this paper makes the following contributions:
  \item \textbf{Verification of \FenceDD{}
   (\Cref{sec:mechanization}).}
   We connect the Rocq numerical results to the binary64 C kernels and prove
-  their public contracts using VST.
+  the public wrapper contracts using VST.
 
  \item \textbf{Evaluation of usefulness and cost
   (\Cref{sec:evaluation}).}

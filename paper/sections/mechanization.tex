@@ -40,12 +40,11 @@ computation in the C kernel with the corresponding operation in
 binary64 equalities showing that the corresponding operations compute the same
 result.
 
-The division kernel also calls the kernels implementing \FastTwoMult{} and
-\FastTwoSum{}. Their VST specifications identify the pair returned by each C
-call with the pair returned by its functional model. Together, these results
-show that the complete C kernel returns the pair produced by \DWDivFP{}. We
-prove the corresponding refinement result for every other kernel in the
-library.
+The division kernel calls the kernels for \FastTwoMult{} and \FastTwoSum{}
+directly, not their public wrappers. In the VST proof, the specifications of
+these two kernels connect the C calls to the corresponding functional models.
+This completes the refinement proof for the division kernel. We use the same
+method for the other arithmetic kernels.
 
 \subsection{Soundness of the Runtime Checks}
 \label{sec:check-soundness}
