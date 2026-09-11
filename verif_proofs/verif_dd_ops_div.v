@@ -39,7 +39,7 @@ forward_call.       (* t'1 = fma(-t'3, th, 1.0) *)
 forward.            (* rh  = t'1 *)
 forward.            (* t'2 = y->t *)
 forward.            (* rl  = -(t'2 * th) *)
-forward_call.       (* fast_2sum(&e, rh, rl) *)
+forward_call.       (* fast_2sum_kernel(&e, rh, rl) *)
 (* dw_times_fp_kernel(&delta, &e, th): witness (s, x, xh, y) =
    (v_delta, v_e, e pair, th). *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
@@ -67,7 +67,7 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* The callees (fast_2mult, fast_2sum) require no preconditions,
+(* The callees (fast_2mult_kernel, fast_2sum_kernel) require no preconditions,
    so the forward cascade needs no cond discharge.  The C directly performs the
    subtractions/additions of Algorithm 15, so -- unlike the DW/DW kernel, whose
    arithmetic is hidden inside the multiplication and addition kernels -- the
@@ -81,7 +81,7 @@ Proof.
 start_function.
 forward.            (* t'5 = x->s *)
 forward.            (* th  = t'5 / y *)
-(* fast_2mult(&p, th, y): witness (v_p, th, y) *)
+(* fast_2mult_kernel(&p, th, y): witness (v_p, th, y) *)
 match goal with |- context [temp _th (Vfloat ?T)] =>
   forward_call (v_p, T, y) end.
 forward.            (* t'3 = x->s *)
@@ -92,7 +92,7 @@ forward.            (* dt  = dh - t'2 *)
 forward.            (* t'1 = x->t *)
 forward.            (* d   = dt + t'1 *)
 forward.            (* tl  = d / y *)
-(* fast_2sum(z, th, tl): witness (s, th, tl) *)
+(* fast_2sum_kernel(z, th, tl): witness (s, th, tl) *)
 match goal with |- context [temp _th (Vfloat ?TH)] =>
  match goal with |- context [temp _tl (Vfloat ?TL)] =>
    forward_call (s, TH, TL) end end.

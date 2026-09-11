@@ -1,9 +1,10 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
 void fast_2sum(struct dword *st, double a, double b) {
-   double z;
-   st->s  = a + b;
-   z      = st->s - a;
-   st->t  = b - z;
+   if (!fast2_sum_magnitude_order_check(a,b)) {
+      exit(EXIT_FAILURE);
+   }
+   fast_2sum_kernel(st, a, b);
 }

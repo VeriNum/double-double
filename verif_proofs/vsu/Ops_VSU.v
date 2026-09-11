@@ -29,8 +29,8 @@ Proof.
      remaining goal.  Sequential 1:{ } focusing avoids a `;`-composition
      interaction that causes solve_SF_internal's evars to elaborate incorrectly. *)
   1:{ solve_SF_dd body_two_sum. }
-  1:{ solve_SF_dd body_fast_2sum. }
-  1:{ solve_SF_dd body_fast_2mult. }
+  1:{ solve_SF_dd body_fast_2sum_kernel. }
+  1:{ solve_SF_dd body_fast_2mult_kernel. }
   1:{ solve_SF_dd body_dw_plus_fp_kernel. }
   1:{ solve_SF_dd body_dw_plus_fp. }
   1:{ solve_SF_dd body_dw_plus_fp_strong. }
@@ -38,9 +38,9 @@ Proof.
   1:{ solve_SF_dd body_dw_plus_dw. }
   1:{ solve_SF_dd body_dw_plus_dw_strong. }
   1:{ solve_SF_dd body_dw_times_fp_kernel. }
-  1:{ solve_SF_dd body_fast_2sum_guarded. }
-  1:{ solve_SF_dd body_fast_2mult_guarded. }
-  1:{ solve_SF_dd body_fast_2mult_acc_guarded. }
+  1:{ solve_SF_dd body_fast_2sum. }
+  1:{ solve_SF_dd body_fast_2mult. }
+  1:{ solve_SF_dd body_fast_2mult_acc. }
   1:{ solve_SF_dd body_dw_times_fp. }
   1:{ solve_SF_dd body_dw_times_fp_strong. }
   1:{ solve_SF_dd body_dw_times_dw_kernel. }

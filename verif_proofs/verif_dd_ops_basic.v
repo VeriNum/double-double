@@ -1,7 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for the basic blocks and their guarded wrappers in dd_ops.c. *)
+(* Body proofs for the basic-block kernels and public wrappers in dd_ops.c. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -26,21 +26,23 @@ forward. forward. forward. forward.
 entailer!.
 Qed.
 
-Lemma body_fast_2sum: semax_body Vprog Gprog f_fast_2sum fast_2sum_spec.
+Lemma body_fast_2sum_kernel:
+  semax_body Vprog Gprog f_fast_2sum_kernel fast_2sum_kernel_spec.
 Proof.
 start_function.
 forward. forward. forward. forward.
 entailer!.
 Qed.
 
-Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
+Lemma body_fast_2mult_kernel:
+  semax_body Vprog Gprog f_fast_2mult_kernel fast_2mult_kernel_spec.
 Proof.
 start_function.
 forward. forward. forward_call. forward.
 entailer!.
 Qed.
 
-Lemma body_fast_2sum_guarded: semax_body Vprog Gprog f_fast_2sum_guarded fast_2sum_guarded_spec.
+Lemma body_fast_2sum: semax_body Vprog Gprog f_fast_2sum fast_2sum_spec.
 Proof.
 start_function.
 forward_call (a, b).
@@ -71,7 +73,7 @@ forward_if Post_if.
   apply Fast2Sum_exact_guarantee_from_magnitude_order; assumption.
 Qed.
 
-Lemma body_fast_2mult_guarded: semax_body Vprog Gprog f_fast_2mult_guarded fast_2mult_guarded_spec.
+Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
 Proof.
 start_function.
 forward_call (a,b).
@@ -94,7 +96,8 @@ forward_if Post_if.
   split; [ apply Fast2Mult_accuracy_from_exact_cond, HFC | split; assumption ].
 Qed.
 
-Lemma body_fast_2mult_acc_guarded: semax_body Vprog Gprog f_fast_2mult_acc_guarded fast_2mult_acc_guarded_spec.
+Lemma body_fast_2mult_acc:
+  semax_body Vprog Gprog f_fast_2mult_acc fast_2mult_acc_spec.
 Proof.
 start_function.
 forward_call (a,b).

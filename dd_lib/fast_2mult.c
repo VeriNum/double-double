@@ -1,8 +1,10 @@
-#include <math.h>
+#include <stdlib.h>
 #include "dw_arith.h"
+#include "fp_utils.h"
 
 void fast_2mult(struct dword *st, double a, double b) {
-   st->s  = a * b;
-   st->t  = fma(a,b,-st->s);
+   if (!fast2_mult_exact_check(a,b)) {
+      exit(EXIT_FAILURE);
+   }
+   fast_2mult_kernel(st, a, b);
 }
-

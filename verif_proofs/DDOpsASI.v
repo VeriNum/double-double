@@ -48,16 +48,16 @@ Definition two_sum_spec :=
   POST [ tvoid ]
     PROP() RETURN() SEP(data_at Tsh dword (f2val (TwoSumF a b)) s).
 
-Definition fast_2sum_spec :=
-  DECLARE _fast_2sum
+Definition fast_2sum_kernel_spec :=
+  DECLARE _fast_2sum_kernel
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
   POST [ tvoid ]
     PROP() RETURN() SEP(data_at Tsh dword (f2val (Fast2Sum a b)) s).
 
-Definition fast_2mult_spec :=
-  DECLARE _fast_2mult
+Definition fast_2mult_kernel_spec :=
+  DECLARE _fast_2mult_kernel
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
@@ -202,11 +202,11 @@ Definition dw_div_fp_kernel_spec :=
 
 
 (* ======================================================================== *)
-(*  Guarded wrappers (exported public API)                                   *)
+(*  Public wrappers                                                          *)
 (* ======================================================================== *)
 
-Definition fast_2sum_guarded_spec :=
-  DECLARE _fast_2sum_guarded
+Definition fast_2sum_spec :=
+  DECLARE _fast_2sum
   WITH p: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
@@ -217,8 +217,8 @@ Definition fast_2sum_guarded_spec :=
 
 (* Tier A full Fast2Mult wrapper: error term bound, exact reconstruction, and
    output double-word property. *)
-Definition fast_2mult_guarded_spec :=
-  DECLARE _fast_2mult_guarded
+Definition fast_2mult_spec :=
+  DECLARE _fast_2mult
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
@@ -232,8 +232,8 @@ Definition fast_2mult_guarded_spec :=
 (* The Tier B wrapper exposes a bound on the returned error component.  Its
    finiteness guard does not support exact reconstruction or prove that the
    output is a valid double-word. *)
-Definition fast_2mult_acc_guarded_spec :=
-  DECLARE _fast_2mult_acc_guarded
+Definition fast_2mult_acc_spec :=
+  DECLARE _fast_2mult_acc
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
@@ -463,12 +463,12 @@ Definition Ops_Imports : funspecs :=
 
 (* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
-  [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
+  [ two_sum_spec; fast_2sum_kernel_spec; fast_2mult_kernel_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_kernel_spec;
-    fast_2sum_guarded_spec; fast_2mult_guarded_spec;
-    fast_2mult_acc_guarded_spec;
+    fast_2sum_spec; fast_2mult_spec;
+    fast_2mult_acc_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;
     dw_times_dw_kernel_spec; dw_times_dw_spec; dw_times_dw_strong_spec;
     dw_div_dw_kernel_spec; dw_div_dw_spec; dw_div_dw_strong_spec;
@@ -477,7 +477,7 @@ Definition Ops_Internal : funspecs :=
 (* Updated double-word operations expose default and strong interfaces with
    the same guarantee. *)
 Definition Ops_Exports : funspecs :=
-  [ two_sum_spec; fast_2sum_guarded_spec; fast_2mult_guarded_spec;
+  [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;
