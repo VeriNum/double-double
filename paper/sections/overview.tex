@@ -21,10 +21,11 @@
   showstringspaces=false
 }
 
-\FenceDD{} exposes ordinary C functions for double-double arithmetic. Each
-public function performs runtime checks: if any check fails, the program exits;
-otherwise, the function returns a result satisfying a proved numerical
-guarantee.
+\FenceDD{} exposes ordinary C functions for double-double arithmetic. 
+Each public function returns a status indicating success or failure. On
+successful return, the output satisfies the corresponding numerical guarantee.
+A failure status tells the caller that the required conditions were not
+established, so the guarantee does not apply to that call.
 
 \subsection{The Double-Double Data Type}
 \label{sec:overview-values}
@@ -96,12 +97,12 @@ void dw_div_fp_kernel(
     double tl;
 
     th = x->s / y;
-    fast_2mult(&p, th, y);
+    fast_2mult_kernel(&p, th, y);
     dh = x->s - p.s;
     dt = dh - p.t;
     d = dt + x->t;
     tl = d / y;
-    fast_2sum(z, th, tl);
+    fast_2sum_kernel(z, th, tl);
 }
 \end{lstlisting}
   \caption{The arithmetic kernel for dividing a
@@ -132,22 +133,26 @@ returned quotient is finite.
 
 \Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, which we call
 the \emph{default wrapper}. It performs the weak check before invoking the
-kernel and checks the computed quotient for finiteness afterward. If either
-check fails, the wrapper terminates the program with a failure status instead
-of returning to the caller.
+kernel and checks the computed quotient for finiteness afterward. The wrapper
+returns a failure status if either check fails and returns successfully
+otherwise.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
-void dw_div_fp(
+enum dw_status dw_div_fp(
     struct dword *z, struct dword *x, double y)
 {
-    if (!dw_div_fp_weak_check(x, y))
-        exit(EXIT_FAILURE);
+    if (!dw_div_fp_weak_check(x, y)) {
+        return DW_WEAK_INPUT_REJECTED;
+    }
 
     dw_div_fp_kernel(z, x, y);
 
-    if (!isfinite_dword(z))
-        exit(EXIT_FAILURE);
+    if (!isfinite_dword(z)) {
+        return DW_POST_CHECK_REJECTED;
+    }
+
+    return DW_OK;
 }
 \end{lstlisting}
   \caption{The default wrapper for dividing a
@@ -168,7 +173,7 @@ word of the dividend must satisfy the lower bound derived in
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
 int dw_div_fp_weak_check(
-    struct dword *x, double y)
+    const struct dword *x, double y)
 {
     int fin_xh = isfinite_double(x->s);
     int fin_xl = isfinite_double(x->t);
@@ -218,7 +223,7 @@ Under strict IEEE~754 semantics, the computation $x-x$ on Line~3 of
 \texttt{isfinite\_double} produces zero when $x$ is finite and NaN otherwise.
 Because the equality comparison returns false when either operand is NaN, the
 weak check returns $0$ if any operand is an infinity or NaN, and the wrapper
-exits before invoking the kernel.
+returns a failure status before invoking the kernel.
 
 Operand finiteness alone does not establish that the dividend is a
 double-double. Lines~8--9 therefore test \Cref{eq:dw-representation} by
@@ -239,9 +244,9 @@ word of the dividend and the information lost when Line~11 rounds $x_h/y$.
 \paragraph{Result finiteness check after kernel execution.}
 The weak check establishes the conditions required before the computation,
 but it does not establish that the quotient will be finite. After the kernel
-returns, Line~9 of \Cref{fig:default-division-wrapper} calls
+returns, Line~10 of \Cref{fig:default-division-wrapper} calls
 \texttt{isfinite\_dword} to test both words of the computed quotient.  The
-wrapper returns the quotient only when both words are finite.
+wrapper returns successfully only when both words are finite.
 
 \subsubsection{Alternative Wrapper and Strong Check}
 \label{sec:overview-strong-check}
@@ -256,15 +261,13 @@ invoking the kernel.  We call this runtime test the \emph{strong check}.
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
 int dw_div_fp_strong_check(
-    struct dword *x, double y)
+    const struct dword *x, double y)
 {
     if (!dw_div_fp_weak_check(x, y))
         return 0;
 
     double q_omega = ldexp(1.0, 1022);
-    int xh_hi = fabs(x->s) <= q_omega;
-
-    if (!xh_hi || y == 0.0)
+    if (!(fabs(x->s) <= q_omega) || y == 0.0)
         return 0;
 
     double q = x->s / y;
@@ -292,17 +295,18 @@ cases because it checks the computed quotient instead.
 \Cref{sec:division-conditions} proves that these additional bounds are
 sufficient to establish finiteness of the quotient.
 
-\subsubsection{Normal-Return Guarantee of the Division Wrappers}
+\subsubsection{Guarantee on Successful Return}
 \label{sec:overview-division-guarantee}
 
 The default and alternative wrappers perform runtime checks at different
-points but provide the same contract on normal return.
+points and return different failure statuses, but provide the same numerical
+guarantee on successful return.
 
-\begin{theorem}[Normal-Return Guarantee for Dividing a Double-Double by a
+\begin{theorem}[Guarantee on Successful Return for Dividing a Double-Double by a
 Binary64 Value]
 \label{thm:division-wrapper-contract}
 Suppose either wrapper is called with \texttt{x} storing
-$(x_h,x_\ell)$ and with binary64 divisor $y$. If the call returns normally
+$(x_h,x_\ell)$ and with binary64 divisor $y$. If the call returns successfully
 with \texttt{z} storing $(z_h,z_\ell)$, let
 $q=(x_h+x_\ell)/y$ be the exact real quotient. The returned words satisfy
 \[
@@ -317,7 +321,7 @@ where $u=2^{-53}$ is the unit roundoff and $\eta=2^{-1074}$ is the smallest
 positive subnormal binary64 value.
 \end{theorem}
 
-For either wrapper, normal return means that its runtime checks succeeded.
+For either wrapper, successful return means that its runtime checks succeeded.
 These checks establish the operand conditions and quotient finiteness required
 by the numerical theorem. The caller therefore need not establish these
 numerical preconditions. In \Cref{sec:mechanization}, we prove using VST that
@@ -333,7 +337,7 @@ library.
 
 \begin{table}[b]
 \centering
-\caption{Numerical guarantees provided by \FenceDD{} on normal return. Here
+\caption{Numerical guarantees provided by \FenceDD{} on successful return. Here
 $a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
 double-double operands, $r$ is the exact result, and
 $\widehat r=z_h+z_\ell$ is the value represented by the returned words. For
