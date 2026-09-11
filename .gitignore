@@ -43,3 +43,6 @@ CoqMakefile.conf
 /bench/test_input_generation
 /results/
 /fenceDD/example
+/_opam/
+/.deps/
+/dist/

@@ -1,6 +1,6 @@
 # FenceDD C Library
 
-The C layer provides error-free transformations and double-word addition,
+The C layer provides error free transformations and double word addition,
 multiplication, and division. The public declarations are in
 [`include/dw_arith.h`](include/dw_arith.h).
 
