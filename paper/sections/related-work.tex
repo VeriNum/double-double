@@ -33,12 +33,12 @@ rounding error proofs, while VCFloat2 performs error analysis inside Coq
 the semantics of an executable C program.
 
 \paragraph{Floating-point program verification.}
-Floating-point program verification provides this connection.
-\citet{Ramananandro2016} give a Coq framework for verifying C programs with
-floating-point computations. \citet{AppelBertot2020} organize layered VST and
-Flocq proofs; LAProof and the verified Jacobi solver apply the same structure
-to numerical C programs \citep{Kellison2023LAProof,Tekriwal2023Jacobi}.
-\FenceDD{} follows this structure using VCFloat2, CompCert, and VST.
+Program verification connects numerical results to executable-code semantics.
+\citet{Ramananandro2016} verify floating-point C programs in Coq.
+\citet{AppelBertot2020} combine VST and Flocq, while LAProof and the verified
+Jacobi solver apply this structure to numerical C programs
+\citep{Kellison2023LAProof,Tekriwal2023Jacobi}. \FenceDD{} similarly connects
+numerical results to C programs.
 
 \paragraph{Double-double libraries.}
 XBLAS provides extended and mixed precision BLAS routines using double-double

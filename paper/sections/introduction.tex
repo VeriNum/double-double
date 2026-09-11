@@ -63,10 +63,8 @@ precision.
 The precision loss occurs in \FastTwoMult{}, a building block used by the
 double-double multiplication algorithm. In this example, it returns a
 rounded product $p_h$ and a correction $p_\ell$ intended to satisfy
-\[
- p_h+p_\ell=a^2.
-\]
-Here $p_h=2^{-1030}$, so the correction would have to be
+$p_h+p_\ell=a^2$.
+Here, $p_h=2^{-1030}$, so the correction would have to be
 \[
  p_\ell=2^{-1081}+2^{-1134}.
 \]

@@ -2,29 +2,16 @@
 \label{sec:evaluation}
 
 Sections~3 and~4 prove the guarantees provided by the public \FenceDD{}
-wrappers. We evaluate how closely observed errors approach the bounds, what
-the runtime checks screen out, and the cost of the wrappers. A call is
+wrappers. We evaluate these wrappers through three questions. A call is
 \emph{accepted} when it returns successfully and \emph{rejected} when it
-returns a failure status.
-
-\begin{description}
-  \item[(RQ1) Usefulness of the error bounds.]
-    For accepted calls to the default wrappers, how closely do the observed
-    errors approach the proved bounds?
-    As secondary context, how do the errors we obtain using QD compare on
-    the same inputs?
-
-  \item[(RQ2) Usefulness of the wrappers.]
-    For generated inputs associated with rejected \FenceDD{} calls, how often
-    does QD produce a result satisfying the corresponding numerical
-    properties?
-
-  \item[(RQ3) Cost of the wrappers.]
-    On a common set of inputs for which every evaluated call is accepted, what
-    runtime overhead do the default wrappers and error-free transformation
-    wrappers add relative to their unchecked kernels, and how do their total
-    running times compare with QD?
-\end{description}
+returns a failure status. \textbf{(RQ1) Usefulness of the error bounds.} For
+accepted calls to default wrappers, how closely do observed errors approach
+the proved bounds, and how do QD errors compare on the same inputs?
+\textbf{(RQ2) Usefulness of the wrappers.} For rejected \FenceDD{} calls, how
+often does QD produce a result satisfying the corresponding numerical
+properties? \textbf{(RQ3) Cost of the wrappers.} For accepted timing inputs,
+what overhead do the wrappers add relative to their kernels, and how do their
+running times compare with QD?
 
 \subsection{Experimental Setup}
 \label{sec:evaluation-setup}
@@ -109,8 +96,7 @@ algorithm, $B(r)$ is not a proved bound for these results.
 \Cref{tab:rq1-tightness} shows maximum ratios of $0.87$ when the relative term
 dominates and $0.56$ when the absolute term dominates. The largest mean ratios
 are $0.082$ and $0.049$, respectively. The absolute term dominates for
-14--16\% of the relevant results, so these measurements are not confined to
-isolated boundary cases.
+14--16\% of the relevant results, so these measurements are not confined to boundary cases.
 
 The \FenceDD{} and QD ratios are identical for both addition operations and
 division by a binary64 value. QD has slightly larger multiplication ratios,
@@ -187,12 +173,12 @@ wrapper for each error-free transformation. Each test consists of
 \RQThreeTrialCount{} trials on \RQThreeInputCount{} inputs with operand
 exponents between $-100$ and $100$.
 
-We compare each wrapper compiled with its kernel. We also compare \FenceDD{}
-compiled with Homebrew Clang with QD compiled using Apple Clang; this
-comparison includes differences in algorithms and compilers.
+We compare each CompCert wrapper with its kernel. We also compare \FenceDD{}
+and QD after compiling both with Homebrew Clang; this comparison includes
+differences in their algorithms.
 Appendix~\ref{app:evaluation-timing} gives the machine, compiler versions,
 options, and timing procedure.
-
+%
 \begin{table}[tbp]
   \caption{RQ3: Performance of the default double-word wrappers and the
   error-free transformation wrappers. Wrapper/Kernel and Wrapper/QD are time
@@ -212,7 +198,7 @@ options, and timing procedure.
     \bottomrule
   \end{tabular}
 \end{table}
-
+%
 Under CompCert, default wrappers ran
 \RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} times
 as long as their kernels, adding
