@@ -6,8 +6,9 @@ clients call the C wrappers presented in Section~2. We connect the functional
 models to C wrappers in three steps. First, we prove that each arithmetic
 kernel implements its functional model. Second, we prove that successful
 runtime checks establish the conditions required by the corresponding
-numerical theorem. Finally, we compose these results into the public contract
-of each wrapper. This follows the layered organization used in earlier
+numerical theorem. Finally, we compose these results into the contract of each 
+wrapper, which specifies its return status and numerical guarantee on
+successful return. This follows the layered organization used in earlier
 verifications of numerical C programs
 \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
 Continuing the example from \Cref{sec:overview,sec:numerics}, we illustrate
@@ -98,10 +99,16 @@ memory assertions are omitted.
 \input{figures/dw-div-fp-vst-spec}
 
 The empty \texttt{PROP} clause means that the caller supplies no numerical
-hypothesis.  On normal return, the postcondition states that the output object
-stores the binary64 result of \DWDivFP{} and that
-\texttt{DWDivFP\_guarantee} holds.  In the Rocq
-development, \texttt{DWDivFP\_guarantee} names the conclusion of
+condition. The predicate
+\texttt{default\_\allowbreak wrapper\_\allowbreak status} states that the
+returned status is \texttt{DW\_OK}, \texttt{DW\_WEAK\_INPUT\_REJECTED}, or
+\texttt{DW\_POST\_CHECK\_REJECTED}. In the VST specification,
+\texttt{Int.zero} represents \texttt{DW\_OK}. On successful return, the
+postcondition states
+that the output object stores the binary64 result of \DWDivFP{} and that
+\texttt{DWDivFP\_\allowbreak guarantee} holds. On a failed return, it provides no
+numerical guarantee for the output. In the Rocq development,
+\texttt{DWDivFP\_\allowbreak guarantee} names the conclusion of
 \Cref{thm:dw-div-fp-numerical}: the represented result satisfies the stated
 error bound, and the returned pair satisfies the double-word relation.
 
@@ -109,9 +116,10 @@ For the default wrapper, the weak check establishes
 $\mathcal{I}_{\mathrm{div}}$, kernel refinement identifies the result with
 \DWDivFP{}, and the result check establishes $\mathcal{F}_{\mathrm{div}}$.
 For the alternative wrapper, the strong check establishes
-$\mathcal{S}_{\mathrm{div}}$ and hence result finiteness.  These are the two
-alternatives in \Cref{cor:dw-div-conditions}, so both wrappers provide the same
-contract.
+$\mathcal{S}_{\mathrm{div}}$ and hence result finiteness. These are the two
+alternatives in \Cref{cor:dw-div-conditions}. The two specifications permit
+different failure statuses, but both wrappers provide the same numerical
+guarantee on successful return.
 
 \subsection{Compilation and the Verification Boundary}
 \label{sec:verification-boundary}
@@ -121,12 +129,12 @@ round-to-nearest, ties-to-even, with gradual underflow.
 Compilation and execution must preserve these semantics without reassociating
 floating-point expressions or flushing subnormal values to zero.
 Floating-point exceptions are nontrapping, which allows the default wrapper to
-reach the result check on Line~9 of \Cref{fig:default-division-wrapper} when
+reach the result check on Line~10 of \Cref{fig:default-division-wrapper} when
 the kernel produces an infinity or NaN \citep{IEEE754-2019}.
-The verified functions call \texttt{fma}, \texttt{fabs}, \texttt{ldexp}, and
-\texttt{exit}. In the VST proofs, we use the behavior described by the specifications of
-these functions, but the platform implementations of these functions and the
-floating-point hardware are outside the verification boundary
+The verified functions call \texttt{fma}, \texttt{fabs}, and \texttt{ldexp}.
+In the VST proofs, we use the behavior described by the specifications of
+these functions, but their platform implementations and the floating-point
+hardware are outside the verification boundary
 \citep{Appel2023VSTlib}.
 
 We prove the C-level contracts using VST. For a CompCert build, we apply
