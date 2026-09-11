@@ -16,4 +16,4 @@ Run `make -C dd_lib` from the repository root to compile the library and its
 test executable with CompCert.
 
 For the numerical theorems and the VST proofs attached to each interface, see
-the [guide to the Rocq layer](../PAPER_ROCQ_MAP.md).
+the [guide to the Rocq layer](../FenceDD_Rocq_Guide.md).

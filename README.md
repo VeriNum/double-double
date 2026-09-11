@@ -6,7 +6,7 @@ the functional models of double-word algorithms and their building blocks, and V
 
 ## Documentation
 
-- [Guide to the Rocq layer](PAPER_ROCQ_MAP.md): definitions, functional models,
+- [Guide to the Rocq layer](FenceDD_Rocq_Guide.md): definitions, functional models,
   numerical theorems, and mappings from numbered results in the paper.
 - [C library guide](dd_lib/README.md): public C interfaces, kernels, wrappers,
   and build information.
