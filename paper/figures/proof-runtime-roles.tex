@@ -41,7 +41,7 @@ result satisfying the error bound};
 \node[proofbox,align=center,text width=7.2cm,minimum height=0.85cm,anchor=north] (contract)
   at (0,-2.87)
   {\textbf{Verified contract for each \FenceDD{} public function}\\[2pt]
-   normal return $\Rightarrow$ \mbox{double-double} result with error bound};
+   successful return $\Rightarrow$ corresponding numerical guarantee};
 
 \draw[flow] (numerical.south) -- (numerical.south |- contract.north);
 \draw[flow] (program.south) -- (program.south |- contract.north);
@@ -65,16 +65,15 @@ result satisfying the error bound};
 
 \node[runtimebox,text width=3.5cm,minimum height=1.35cm,anchor=north] (success)
   at (-1.95,-7.11)
-  {{\centering\textbf{Normal return}\par}\vspace{2pt}
-    numerical proof applies: \mbox{double-double} result satisfies\\
-   the proved error bound};
+  {{\centering\textbf{Successful return}\par}\vspace{2pt}
+   caller may use the output;\\
+   proved numerical guarantee holds};
 
 \node[rejectbox,text width=3.5cm,minimum height=1.35cm,anchor=north] (rejection)
   at (1.95,-7.11)
-  {{\centering\textbf{Failed Check}\par}\vspace{2pt}
-   sufficient condition for
-   numerical proof not established;
-   early exit};
+  {{\centering\textbf{Failure status}\par}\vspace{2pt}
+   a runtime check failed;\\
+   caller does not use the output};
 
 \draw[flow] (call.east) -- (call.east -| wrapper.west);
 \coordinate (runtimefork) at (0.65,-6.64);
@@ -84,20 +83,14 @@ result satisfying the error bound};
 \draw[thick] (successdrop) -- (rejectiondrop);
 \draw[flow] (successdrop) -- (success.north);
 \draw[flow] (rejectiondrop) -- (rejection.north);
-\node[edgelabel,above] at (-1.0,-6.59) {normal return};
-\node[edgelabel,above] at (1.25,-6.59) {check fails};
+\node[edgelabel,above] at (-1.0,-6.59) {success};
+\node[edgelabel,above] at (1.25,-6.59) {failure};
 
 \end{tikzpicture}
-\caption{Verification and execution in \FenceDD{}.  During development,
+\caption{Verification and execution in \FenceDD{}. During development,
 formal proofs establish the numerical guarantee for each public function.
-During each call, its wrapper performs runtime checks around a call to the
-arithmetic kernel; the proofs are not rerun.  If a check fails, the program
-exits.  Otherwise, the returned result satisfies the proved guarantee.}
-\Description{A two-part diagram of proof time and runtime in \FenceDD{}.  At
-proof time, a conditional numerical proof and proofs of the C checks and kernel
-establish a public normal-return contract.  At runtime, concrete operands enter
-a \FenceDD{} public wrapper.  The wrapper either returns normally with a
-double-double result satisfying the proved error bound or follows an early-exit
-path for that call while the proof remains valid.}
+During each call, the wrapper performs runtime checks around a call to the
+arithmetic kernel. On successful return, the caller may use the output and the
+proved guarantee holds. Otherwise, the function returns a failure status.}
 \label{fig:proof-runtime-roles}
 \end{figure}

@@ -113,28 +113,28 @@ algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}--- we identify suffici
 conditions under which the returned correction equals the exact rounding
 error in the sum or product.
 
-We implement these algorithms in \FenceDD{}, a verified C library for double-double
-arithmetic. Using the
-Verified Software Toolchain (VST) \citep{Appel2014}, we prove that the C kernels
-implement the analyzed algorithms and that successful runtime checks imply
-the corresponding numerical conditions. The public C contracts therefore
-supply the proved guarantees on normal return.
+We implement these algorithms in \FenceDD{}, a verified C library for
+double-double arithmetic. Each public function returns a status indicating
+success or failure. Using the Verified Software Toolchain (VST)
+\citep{Appel2014}, we prove that the C kernels implement the analyzed
+algorithms and that successful runtime checks imply the corresponding
+numerical conditions. Consequently, on successful return, the output satisfies
+the corresponding proved guarantee.
 
 The numerical and VST proofs are checked in Rocq during library development;
-they are not executed when a client calls the library.
-At run time, each public function executes an arithmetic kernel together with
-the associated runtime checks.
-If a check fails, the function stops without returning a numerical result.
-\Cref{fig:proof-runtime-roles} summarizes what is verified during library
-development and what runs on each library call.
+they are not executed when a client calls the library. At run time, each public
+function performs runtime checks around a call to an arithmetic kernel. The
+caller uses the output only on successful return.
+\Cref{fig:proof-runtime-roles} summarizes what is verified during development
+and what occurs during each library call.
 
 \input{figures/proof-runtime-roles}
 
-We evaluate the practical usefulness of the proved bounds
-and runtime checks. Across tests spanning the binary64 exponent range, errors
-approached the bounds in some cases. On inputs for which a runtime check
-failed, QD rarely produced a result satisfying the corresponding numerical
-properties. The checks added 2.5--11 nanoseconds per call.
+We evaluate the practical usefulness of the proved bounds and runtime checks.
+Across tests spanning the binary64 exponent range, errors approached the
+bounds in some cases. For calls that returned a failure status, QD rarely
+produced a result satisfying the corresponding numerical properties. The
+checks added 2.5--11 nanoseconds per call.
 
 In summary, this paper makes the following contributions:
 
