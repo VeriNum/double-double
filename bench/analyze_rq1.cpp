@@ -111,7 +111,10 @@ void add_result(Cell &cell, const ResultView &result,
 
 void accept_case(const OperationSpec &operation,
                  const NumericalCase &data, Results &results) {
-    if (operation.eft || data.default_outcome != Outcome::normal) return;
+    if (operation.eft || !data.default_status.present
+        || data.default_status.code != status_ok) {
+        return;
+    }
     OperationResults &result = results.operations[data.operation_index];
     ++result.eligible_cases;
     const std::size_t regime = static_cast<std::size_t>(data.regime);

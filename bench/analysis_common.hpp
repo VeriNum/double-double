@@ -37,6 +37,7 @@ enum class BoundKind {
 struct OperationSpec {
     const char *name;
     bool eft;
+    bool returns_status;
     bool first_has_lo;
     bool second_has_lo;
     MathKind math;
@@ -45,23 +46,23 @@ struct OperationSpec {
 };
 
 constexpr std::array<OperationSpec, 9> operations{{
-    {"two_sum", true, false, false, MathKind::add,
+    {"two_sum", true, false, false, false, MathKind::add,
      BoundKind::none, fp_exponent_count},
-    {"fast_2sum", true, false, false, MathKind::add,
+    {"fast_2sum", true, true, false, false, MathKind::add,
      BoundKind::none, fp_exponent_count},
-    {"fast_2mult", true, false, false, MathKind::multiply,
+    {"fast_2mult", true, true, false, false, MathKind::multiply,
      BoundKind::none, fp_exponent_count},
-    {"dw_plus_fp", false, true, false, MathKind::add,
+    {"dw_plus_fp", false, true, true, false, MathKind::add,
      BoundKind::plus_fp, dw_exponent_count},
-    {"dw_times_fp", false, true, false, MathKind::multiply,
+    {"dw_times_fp", false, true, true, false, MathKind::multiply,
      BoundKind::times_fp, dw_exponent_count},
-    {"dw_div_fp", false, true, false, MathKind::divide,
+    {"dw_div_fp", false, true, true, false, MathKind::divide,
      BoundKind::div_fp, dw_exponent_count},
-    {"dw_plus_dw", false, true, true, MathKind::add,
+    {"dw_plus_dw", false, true, true, true, MathKind::add,
      BoundKind::plus_dw, dw_exponent_count},
-    {"dw_times_dw", false, true, true, MathKind::multiply,
+    {"dw_times_dw", false, true, true, true, MathKind::multiply,
      BoundKind::times_dw, dw_exponent_count},
-    {"dw_div_dw", false, true, true, MathKind::divide,
+    {"dw_div_dw", false, true, true, true, MathKind::divide,
      BoundKind::div_dw, dw_exponent_count},
 }};
 

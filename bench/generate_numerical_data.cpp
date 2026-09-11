@@ -22,6 +22,7 @@ using bench_eval::GeneratedTestInputs;
 using bench_eval::ResultPair;
 
 struct InterfaceResult {
+    bool has_status;
     enum dw_status status;
     ResultPair value;
 };
@@ -43,43 +44,20 @@ std::string bits_text(std::uint64_t bits) {
 }
 
 std::string result_bits(const InterfaceResult &result, bool high) {
-    if (result.status != DW_OK) return "-";
+    if (result.has_status && result.status != DW_OK) return "-";
     const double value = high ? result.value.hi : result.value.lo;
     return bits_text(bench_eval::bits_of(value));
 }
 
-const char *eft_outcome(enum dw_status status) {
-    switch (status) {
-    case DW_OK:
-        return "normal";
-    case DW_WEAK_INPUT_REJECTED:
-        return "input_check";
-    case DW_POST_CHECK_REJECTED:
-        return "post_check";
-    case DW_STRONG_INPUT_REJECTED:
-        return "strong_check";
-    }
-    return "unknown_status";
-}
-
-const char *wrapper_outcome(enum dw_status status) {
-    switch (status) {
-    case DW_OK:
-        return "normal";
-    case DW_WEAK_INPUT_REJECTED:
-        return "weak_input_check";
-    case DW_POST_CHECK_REJECTED:
-        return "post_check";
-    case DW_STRONG_INPUT_REJECTED:
-        return "strong_check";
-    }
-    return "unknown_status";
+std::string status_text(const InterfaceResult &result) {
+    if (!result.has_status) return "-";
+    return std::to_string(static_cast<int>(result.status));
 }
 
 void write_row(std::FILE *file, const char *operation, std::size_t case_id,
-               const InputBits &inputs, const char *default_status,
+               const InputBits &inputs, const std::string &default_status,
                const std::string &default_hi,
-               const std::string &default_lo, const char *strong_status,
+               const std::string &default_lo, const std::string &strong_status,
                const std::string &strong_hi, const std::string &strong_lo,
                const ResultPair &qd_result) {
     const std::string first_hi = bits_text(inputs.first_hi);
@@ -94,8 +72,8 @@ void write_row(std::FILE *file, const char *operation, std::size_t case_id,
     std::fprintf(file,
         "%s\t%zu\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
         operation, case_id, first_hi.c_str(), first_lo.c_str(),
-        second_hi.c_str(), second_lo.c_str(), default_status,
-        default_hi.c_str(), default_lo.c_str(), strong_status,
+        second_hi.c_str(), second_lo.c_str(), default_status.c_str(),
+        default_hi.c_str(), default_lo.c_str(), strong_status.c_str(),
         strong_hi.c_str(), strong_lo.c_str(), qd_hi.c_str(), qd_lo.c_str());
 }
 
@@ -111,7 +89,7 @@ void record_eft(std::FILE *file, const char *operation,
             inputs.fp_second[i].bits, false, 0
         };
         write_row(file, operation, i, input_bits,
-                  eft_outcome(result.status),
+                  status_text(result),
                   result_bits(result, true),
                   result_bits(result, false),
                   "-", "-", "-", qd(i));
@@ -127,10 +105,10 @@ void record_composite(std::FILE *file, const char *operation,
         const InterfaceResult default_result = default_call(i);
         const InterfaceResult strong_result = strong_call(i);
         write_row(file, operation, i, input(i),
-                  wrapper_outcome(default_result.status),
+                  status_text(default_result),
                   result_bits(default_result, true),
                   result_bits(default_result, false),
-                  wrapper_outcome(strong_result.status),
+                  status_text(strong_result),
                   result_bits(strong_result, true),
                   result_bits(strong_result, false), qd(i));
     }
@@ -203,9 +181,9 @@ int main(int argc, char **argv) {
                  samples_per_exponent);
     std::fprintf(file,
         "operation\tcase_id\tfirst_hi_bits\tfirst_lo_bits"
-        "\tsecond_hi_bits\tsecond_lo_bits\tdefault_outcome"
+        "\tsecond_hi_bits\tsecond_lo_bits\tdefault_status"
         "\tdefault_result_hi_bits\tdefault_result_lo_bits"
-        "\tstrong_outcome\tstrong_result_hi_bits"
+        "\tstrong_status\tstrong_result_hi_bits"
         "\tstrong_result_lo_bits\tqd_result_hi_bits"
         "\tqd_result_lo_bits\n");
 
@@ -214,7 +192,7 @@ int main(int argc, char **argv) {
             dword result{};
             two_sum(&result, inputs.fp_first[i].value,
                     inputs.fp_second[i].value);
-            return InterfaceResult{DW_OK, {result.s, result.t}};
+            return InterfaceResult{false, DW_OK, {result.s, result.t}};
         },
         [&](std::size_t i) {
             double low;
@@ -229,7 +207,7 @@ int main(int argc, char **argv) {
             const enum dw_status status = fast_2sum(
                 &result, inputs.fp_first[i].value,
                 inputs.fp_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             double low;
@@ -244,7 +222,7 @@ int main(int argc, char **argv) {
             const enum dw_status status = fast_2mult(
                 &result, inputs.fp_first[i].value,
                 inputs.fp_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             double low;
@@ -268,14 +246,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_plus_fp(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_plus_fp_strong(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.mixed_dw[i].value.s,
@@ -290,14 +268,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_times_fp(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_times_fp_strong(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.mixed_dw[i].value.s,
@@ -312,14 +290,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_div_fp(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_div_fp_strong(
                 &result, &inputs.mixed_dw[i].value,
                 inputs.mixed_fp[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.mixed_dw[i].value.s,
@@ -342,14 +320,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_plus_dw(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_plus_dw_strong(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.dw_first[i].value.s,
@@ -366,14 +344,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_times_dw(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_times_dw_strong(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.dw_first[i].value.s,
@@ -390,14 +368,14 @@ int main(int argc, char **argv) {
             const enum dw_status status = dw_div_dw(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             dword result{};
             const enum dw_status status = dw_div_dw_strong(
                 &result, &inputs.dw_first[i].value,
                 &inputs.dw_second[i].value);
-            return InterfaceResult{status, {result.s, result.t}};
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             const dd_real first(inputs.dw_first[i].value.s,

@@ -15,10 +15,12 @@ namespace {
 
 using namespace bench_analysis;
 
-constexpr std::size_t outcome_count = 8;
+constexpr std::size_t known_status_count = 4;
 
 struct Cell {
-    std::array<std::size_t, outcome_count> outcomes{{}};
+    std::array<std::size_t, known_status_count> statuses{{}};
+    std::size_t other_status = 0;
+    std::size_t no_status = 0;
     std::size_t total_cases = 0;
     std::size_t rejected_cases = 0;
     std::size_t qd_nonfinite = 0;
@@ -28,9 +30,9 @@ struct Cell {
     std::size_t qd_passed = 0;
     std::size_t qd_bound_checks = 0;
     std::size_t qd_unresolved_bounds = 0;
-    std::size_t other_normal = 0;
+    std::size_t other_successful = 0;
     std::size_t other_rejected = 0;
-    std::size_t other_unexpected = 0;
+    std::size_t other_unexpected_status = 0;
 };
 
 struct OperationResults {
@@ -43,19 +45,35 @@ struct Results {
     std::array<OperationResults, 9> operations;
 };
 
-std::size_t outcome_index(Outcome outcome) {
-    return static_cast<std::size_t>(outcome);
+bool is_success(const WrapperStatus &status,
+                const OperationSpec &operation) {
+    if (!operation.returns_status) return !status.present;
+    return status.present && status.code == status_ok;
 }
 
-bool is_rejected(Outcome outcome, const OperationSpec &operation,
+bool is_rejected(const WrapperStatus &status,
+                 const OperationSpec &operation,
                  bool strong_path) {
-    if (operation.eft) return outcome == Outcome::input_check;
-    if (strong_path) {
-        return outcome == Outcome::weak_input_check
-            || outcome == Outcome::strong_check;
+    if (!operation.returns_status || !status.present) return false;
+    if (operation.eft) {
+        return status.code == status_weak_input_rejected;
     }
-    return outcome == Outcome::weak_input_check
-        || outcome == Outcome::post_check;
+    if (strong_path) {
+        return status.code == status_strong_input_rejected;
+    }
+    return status.code == status_weak_input_rejected
+        || status.code == status_post_check_rejected;
+}
+
+void count_status(Cell &cell, const WrapperStatus &status) {
+    if (!status.present) {
+        ++cell.no_status;
+    } else if (status.code >= status_ok
+               && status.code <= status_strong_input_rejected) {
+        ++cell.statuses[static_cast<std::size_t>(status.code)];
+    } else {
+        ++cell.other_status;
+    }
 }
 
 void classify_qd(Cell &cell, const OperationSpec &operation,
@@ -79,72 +97,72 @@ void classify_qd(Cell &cell, const OperationSpec &operation,
     }
 }
 
-void accumulate_path(Cell &cell, Outcome outcome,
+void accumulate_path(Cell &cell, const WrapperStatus &status,
                      const OperationSpec &operation, bool strong_path,
                      const ResultFacts &qd) {
     ++cell.total_cases;
-    ++cell.outcomes[outcome_index(outcome)];
-    if (!is_rejected(outcome, operation, strong_path)) return;
+    count_status(cell, status);
+    if (!is_rejected(status, operation, strong_path)) return;
     ++cell.rejected_cases;
     classify_qd(cell, operation, qd);
 }
 
-void accumulate_other_path(Cell &cell, Outcome outcome,
+void accumulate_other_path(Cell &cell, const WrapperStatus &status,
                            const OperationSpec &operation,
                            bool strong_path) {
-    if (outcome == Outcome::normal) {
-        ++cell.other_normal;
-    } else if (is_rejected(outcome, operation, strong_path)) {
+    if (is_success(status, operation)) {
+        ++cell.other_successful;
+    } else if (is_rejected(status, operation, strong_path)) {
         ++cell.other_rejected;
     } else {
-        ++cell.other_unexpected;
+        ++cell.other_unexpected_status;
     }
 }
 
 void accept_case(const OperationSpec &operation,
                  const NumericalCase &data, Results &results) {
     OperationResults &result = results.operations[data.operation_index];
-    accumulate_path(result.default_path, data.default_outcome,
+    accumulate_path(result.default_path, data.default_status,
                     operation, false, data.qd.facts);
     if (operation.eft) return;
 
-    accumulate_path(result.strong_path, data.strong_outcome,
+    accumulate_path(result.strong_path, data.strong_status,
                     operation, true, data.qd.facts);
     const bool default_rejected =
-        is_rejected(data.default_outcome, operation, false);
+        is_rejected(data.default_status, operation, false);
     const bool strong_rejected =
-        is_rejected(data.strong_outcome, operation, true);
+        is_rejected(data.strong_status, operation, true);
     ++result.either_path.total_cases;
     if (default_rejected || strong_rejected) {
         ++result.either_path.rejected_cases;
         classify_qd(result.either_path, operation, data.qd.facts);
     }
     if (default_rejected) {
-        accumulate_other_path(result.default_path, data.strong_outcome,
+        accumulate_other_path(result.default_path, data.strong_status,
                               operation, true);
     }
     if (strong_rejected) {
-        accumulate_other_path(result.strong_path, data.default_outcome,
+        accumulate_other_path(result.strong_path, data.default_status,
                               operation, false);
     }
 }
 
-std::size_t unexpected_outcomes(const Cell &cell,
-                                const OperationSpec &operation,
-                                bool strong_path) {
-    std::size_t expected = cell.outcomes[outcome_index(Outcome::normal)];
-    for (std::size_t i = 0; i < outcome_count; ++i) {
-        const Outcome outcome = static_cast<Outcome>(i);
-        if (is_rejected(outcome, operation, strong_path)) {
-            expected += cell.outcomes[i];
-        }
-    }
-    return cell.total_cases - expected;
+std::size_t successful_cases(const Cell &cell,
+                             const OperationSpec &operation) {
+    return operation.returns_status
+        ? cell.statuses[static_cast<std::size_t>(status_ok)]
+        : cell.no_status;
+}
+
+std::size_t unexpected_statuses(const Cell &cell,
+                                const OperationSpec &operation) {
+    return cell.total_cases - successful_cases(cell, operation)
+        - cell.rejected_cases;
 }
 
 void write_path(std::ostream &file, const OperationSpec &operation,
                 const char *path_name, const char *criterion,
-                const Cell &cell, bool strong_path) {
+                const Cell &cell) {
     const std::size_t classified = cell.qd_nonfinite + cell.qd_invalid
         + cell.qd_no_reference + cell.qd_failed + cell.qd_passed
         + cell.qd_unresolved_bounds;
@@ -153,30 +171,29 @@ void write_path(std::ostream &file, const OperationSpec &operation,
                     + " has a bad count for question two");
     }
     if (!operation.eft
-        && cell.other_normal + cell.other_rejected + cell.other_unexpected
-               != cell.rejected_cases) {
+        && cell.other_successful + cell.other_rejected
+               + cell.other_unexpected_status != cell.rejected_cases) {
         throw Error(std::string(operation.name)
                     + " has a bad path count for question two");
     }
     file << operation.name << '\t' << path_name << '\t' << criterion
          << '\t' << analysis_precision << '\t' << check_precision
          << '\t' << cell.total_cases
-         << '\t' << cell.outcomes[outcome_index(Outcome::normal)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::input_check)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::weak_input_check)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::post_check)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::strong_check)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::execution_exit)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::unclassified)]
-         << '\t' << cell.outcomes[outcome_index(Outcome::not_available)]
+         << '\t' << successful_cases(cell, operation)
+         << '\t' << cell.statuses[0]
+         << '\t' << cell.statuses[1]
+         << '\t' << cell.statuses[2]
+         << '\t' << cell.statuses[3]
+         << '\t' << cell.other_status
+         << '\t' << cell.no_status
          << '\t' << cell.rejected_cases
-         << '\t' << unexpected_outcomes(cell, operation, strong_path);
+         << '\t' << unexpected_statuses(cell, operation);
     if (operation.eft) {
         file << "\t-\t-\t-";
     } else {
-        file << '\t' << cell.other_normal
+        file << '\t' << cell.other_successful
              << '\t' << cell.other_rejected
-             << '\t' << cell.other_unexpected;
+             << '\t' << cell.other_unexpected_status;
     }
     file << '\t' << cell.qd_nonfinite
          << '\t' << cell.qd_invalid
@@ -199,7 +216,7 @@ void write_either(std::ostream &file, const OperationSpec &operation,
     file << operation.name << "\teither\terror_bound"
          << '\t' << analysis_precision << '\t' << check_precision
          << '\t' << cell.total_cases
-         << "\t-\t-\t-\t-\t-\t-\t-\t-"
+         << "\t-\t-\t-\t-\t-\t-\t-"
          << '\t' << cell.rejected_cases
          << "\t-\t-\t-\t-"
          << '\t' << cell.qd_nonfinite
@@ -216,11 +233,12 @@ void write_results(const std::string &path, const Results &results) {
     file.imbue(std::locale::classic());
     if (!file) throw Error("could not open " + path);
     file << "operation\twrapper\tcriterion\tprecision_bits"
-            "\tcheck_precision_bits\ttotal_cases\tnormal_returns"
-            "\tinput_check\tweak_input_check\tpost_check\tstrong_check"
-            "\texecution_exit\tunclassified\tnot_available"
-            "\trejected_cases\tunexpected_outcomes\tother_wrapper_normal"
-            "\tother_wrapper_rejected\tother_wrapper_unexpected\tqd_nonfinite"
+            "\tcheck_precision_bits\ttotal_cases\tsuccessful_cases"
+            "\tstatus_0\tstatus_1\tstatus_2\tstatus_3"
+            "\tother_status\tno_status\trejected_cases"
+            "\tunexpected_statuses\tother_wrapper_successful"
+            "\tother_wrapper_rejected\tother_wrapper_unexpected_status"
+            "\tqd_nonfinite"
             "\tqd_invalid_double_word\tqd_no_reference\tqd_failed"
             "\tqd_passed\tqd_bound_checks\tqd_unresolved_bounds\n";
 
@@ -229,10 +247,10 @@ void write_results(const std::string &path, const Results &results) {
         const OperationResults &result = results.operations[i];
         write_path(file, operation, "default",
                    operation.eft ? "exact_reconstruction" : "error_bound",
-                   result.default_path, false);
+                   result.default_path);
         if (!operation.eft) {
             write_path(file, operation, "strong", "error_bound",
-                       result.strong_path, true);
+                       result.strong_path);
             write_either(file, operation, result.either_path);
         }
     }

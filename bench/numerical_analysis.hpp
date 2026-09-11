@@ -13,15 +13,14 @@ namespace bench_analysis {
 constexpr mpfr_prec_t analysis_precision = 4224;
 constexpr mpfr_prec_t check_precision = 2 * analysis_precision;
 
-enum class Outcome {
-    not_available,
-    normal,
-    input_check,
-    weak_input_check,
-    post_check,
-    strong_check,
-    execution_exit,
-    unclassified,
+constexpr int status_ok = 0;
+constexpr int status_weak_input_rejected = 1;
+constexpr int status_post_check_rejected = 2;
+constexpr int status_strong_input_rejected = 3;
+
+struct WrapperStatus {
+    bool present = false;
+    int code = 0;
 };
 
 enum class ErrorRegime {
@@ -53,8 +52,8 @@ struct ResultView {
 struct NumericalCase {
     std::size_t operation_index;
     std::size_t case_id;
-    Outcome default_outcome;
-    Outcome strong_outcome;
+    WrapperStatus default_status;
+    WrapperStatus strong_status;
     ErrorRegime regime;
     ResultView fencedd;
     ResultView qd;

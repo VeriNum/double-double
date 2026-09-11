@@ -2,7 +2,7 @@
 
 The benchmark has one measurement path and one analysis path.
 
-- `generate_numerical_data.cpp` records the numerical inputs, wrapper outcomes,
+- `generate_numerical_data.cpp` records the numerical inputs, wrapper statuses,
   FenceDD results, and QD results.
 - `generate_performance_data.cpp` records every timing trial. It is linked once with
   CompCert objects and once with Clang objects.
@@ -101,17 +101,24 @@ share a third set.
 Each row records:
 
 - the exact input bits;
-- the default outcome and returned bits, when it returned;
-- the strong outcome and returned bits, when it returned;
+- the integer returned by the default call and its result bits on success;
+- the integer returned by the strong call and its result bits on success;
 - the QD result bits.
 
-The default and strong values are recorded independently. Generation does not
-require their outcomes or returned bits to match.
+The status codes are `0` for success, `1` for a weak input rejection, `2` for
+a post check rejection, and `3` for a strong input rejection. `two_sum` records
+`-` because it does not return a status. Error free transformations record `-`
+for the strong status because they have no strong wrapper.
+
+The default and strong calls are recorded independently. Generation does not
+require their statuses or returned bits to match.
+
+Raw files with the earlier text outcome columns must be regenerated.
 
 ## RQ1 analysis
 
 RQ1 uses the six composite operations. A case is eligible when the default
-wrapper returned normally.
+wrapper returned status `0`.
 
 The analyzer reconstructs each input and result with MPFR. It computes the
 reference, actual error, proved bound, and ratio of error to bound for both
@@ -134,18 +141,17 @@ counted as not established within the bound.
 RQ2 includes all nine operations.
 
 For a composite operation, the default rejected population contains
-`weak_input_check` and `post_check`. The strong rejected population contains
-`weak_input_check` and `strong_check`. They are analyzed separately and as a
-union. Each wrapper row also records how the other wrapper acted on the same
-cases.
+status `1` and status `2`. The strong rejected population contains status `3`.
+They are analyzed separately and as a union. Each wrapper row also records how
+the other wrapper acted on the same cases.
 
 For each rejected case, the QD result is classified as nonfinite, an invalid
 double word, above the proved bound, within the proved bound, or unresolved.
 
 For an error free transformation, the rejected population contains
-`input_check`. A finite valid QD result is classified by exact reconstruction.
+status `1`. A finite valid QD result is classified by exact reconstruction.
 
-Unexpected outcomes are counted rather than treated as rejections.
+Unexpected status codes are counted rather than treated as rejections.
 
 ## RQ3 analysis
 

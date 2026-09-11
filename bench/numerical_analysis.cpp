@@ -44,9 +44,9 @@ constexpr int text_digits = 100;
 
 const char numerical_header[] =
     "operation\tcase_id\tfirst_hi_bits\tfirst_lo_bits"
-    "\tsecond_hi_bits\tsecond_lo_bits\tdefault_outcome"
+    "\tsecond_hi_bits\tsecond_lo_bits\tdefault_status"
     "\tdefault_result_hi_bits\tdefault_result_lo_bits"
-    "\tstrong_outcome\tstrong_result_hi_bits"
+    "\tstrong_status\tstrong_result_hi_bits"
     "\tstrong_result_lo_bits\tqd_result_hi_bits"
     "\tqd_result_lo_bits";
 
@@ -78,9 +78,9 @@ struct NumericalRow {
     std::size_t case_id = 0;
     OperandBits first;
     OperandBits second;
-    Outcome default_outcome = Outcome::not_available;
+    WrapperStatus default_status;
     PairBits default_result;
-    Outcome strong_outcome = Outcome::not_available;
+    WrapperStatus strong_status;
     PairBits strong_result;
     PairBits qd_result;
 };
@@ -152,17 +152,30 @@ bool same_input(const CaseInput &left, const NumericalRow &right) {
         && same_operand(left.second, right.second);
 }
 
-Outcome parse_outcome(const std::string &text, const std::string &path,
-                      std::size_t line, const char *field) {
-    if (text == "-") return Outcome::not_available;
-    if (text == "normal") return Outcome::normal;
-    if (text == "input_check") return Outcome::input_check;
-    if (text == "weak_input_check") return Outcome::weak_input_check;
-    if (text == "post_check") return Outcome::post_check;
-    if (text == "strong_check") return Outcome::strong_check;
-    if (text == "execution_exit") return Outcome::execution_exit;
-    if (text == "unclassified") return Outcome::unclassified;
-    fail(path, line, std::string(field) + " is not known");
+WrapperStatus parse_status(const std::string &text, const std::string &path,
+                           std::size_t line, const char *field) {
+    if (text == "-") return WrapperStatus{};
+    const bool negative = !text.empty() && text[0] == '-';
+    const std::string digits = negative ? text.substr(1) : text;
+    const std::size_t magnitude = parse_size(digits, path, line, field);
+    const std::size_t positive_limit =
+        static_cast<std::size_t>(std::numeric_limits<int>::max());
+    const std::size_t negative_limit = positive_limit + 1;
+    if ((!negative && magnitude > positive_limit)
+        || (negative && magnitude > negative_limit)) {
+        fail(path, line, std::string(field) + " is outside the int range");
+    }
+
+    WrapperStatus status;
+    status.present = true;
+    if (!negative) {
+        status.code = static_cast<int>(magnitude);
+    } else if (magnitude == negative_limit) {
+        status.code = std::numeric_limits<int>::min();
+    } else {
+        status.code = -static_cast<int>(magnitude);
+    }
+    return status;
 }
 
 PairBits parse_pair(const std::string &hi, const std::string &lo,
@@ -229,28 +242,37 @@ NumericalRow parse_numerical_row(const std::string &text,
         fail(path, line, "value form does not match the operation");
     }
 
-    row.default_outcome =
-        parse_outcome(fields[6], path, line, "default_outcome");
+    row.default_status =
+        parse_status(fields[6], path, line, "default_status");
     row.default_result =
         parse_pair(fields[7], fields[8], path, line, "default_result");
-    row.strong_outcome =
-        parse_outcome(fields[9], path, line, "strong_outcome");
+    row.strong_status =
+        parse_status(fields[9], path, line, "strong_status");
     row.strong_result =
         parse_pair(fields[10], fields[11], path, line, "strong_result");
     row.qd_result =
         parse_pair(fields[12], fields[13], path, line, "qd_result");
 
-    if (row.default_outcome == Outcome::normal
-        && !row.default_result.present) {
-        fail(path, line, "normal default result is missing");
+    if (operation.returns_status != row.default_status.present) {
+        fail(path, line, "default status availability does not match the operation");
     }
-    if (row.strong_outcome == Outcome::normal && !row.strong_result.present) {
-        fail(path, line, "normal strong result is missing");
+    const bool default_has_result = !operation.returns_status
+        || row.default_status.code == status_ok;
+    if (default_has_result != row.default_result.present) {
+        fail(path, line, "default result availability does not match its status");
     }
-    if (operation.eft
-        && (row.strong_outcome != Outcome::not_available
-            || row.strong_result.present)) {
-        fail(path, line, "strong data is not valid for this operation");
+    if (operation.eft) {
+        if (row.strong_status.present || row.strong_result.present) {
+            fail(path, line, "strong data is not valid for this operation");
+        }
+    } else {
+        if (!row.strong_status.present) {
+            fail(path, line, "strong status is missing");
+        }
+        const bool strong_has_result = row.strong_status.code == status_ok;
+        if (strong_has_result != row.strong_result.present) {
+            fail(path, line, "strong result availability does not match its status");
+        }
     }
     if (!row.qd_result.present) fail(path, line, "QD result is missing");
     return row;
@@ -544,8 +566,8 @@ void read_numerical_data_impl(const std::string &path,
             const NumericalCase data{
                 row.operation,
                 row.case_id,
-                row.default_outcome,
-                row.strong_outcome,
+                row.default_status,
+                row.strong_status,
                 analysis.regime,
                 fencedd,
                 qd,
