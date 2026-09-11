@@ -133,9 +133,11 @@ returned quotient is finite.
 
 \Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, which we call
 the \emph{default wrapper}. It performs the weak check before invoking the
-kernel and checks the computed quotient for finiteness afterward. The wrapper
-returns a failure status if either check fails and returns successfully
-otherwise.
+kernel and checks the computed quotient for finiteness afterward. If the weak
+check fails, the wrapper does not invoke the kernel and returns
+\texttt{DW\_WEAK\_INPUT\_REJECTED}. If the finiteness check fails after kernel
+execution, it returns \texttt{DW\_POST\_CHECK\_REJECTED}. Otherwise, it returns
+\texttt{DW\_OK}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -287,8 +289,10 @@ and bounds both the high word of the dividend and the rounded leading quotient.
 These additional tests are sufficient to establish, before the kernel is
 executed, that both words of its result will be finite.
 
-If the strong check succeeds, the alternative wrapper invokes the same
-arithmetic kernel and requires no result check afterward. The stronger
+If the strong check fails, the alternative wrapper returns
+\texttt{DW\_STRONG\_INPUT\_REJECTED} without invoking the kernel. If the check
+succeeds, the wrapper invokes the same arithmetic kernel and returns
+\texttt{DW\_OK}; no result check is required afterward. The stronger
 conditions are conservative: the check can fail even when the kernel would
 produce a finite quotient. The default wrapper can return a result in such
 cases because it checks the computed quotient instead.
