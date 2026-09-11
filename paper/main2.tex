@@ -122,12 +122,11 @@ theorems. Consequently, on successful return, each double-double operation
 produces a double-double satisfying its proved error bound, while each
 error-free transformation produces components whose sum is the exact result.
 
-Across tests spanning the binary64 exponent range, observed errors reached
-$0.87$ of their proved bounds. Among generated inputs for which a public
-function returned a failure status, QD, an established double-double library,
-rarely produced a result satisfying the corresponding numerical properties.
-The runtime checks added $2.5$--$11$ nanoseconds per call relative to the
-unchecked kernels.
+Across generated tests, errors from successful calls reached $0.87$ of their
+proved bounds. Among inputs for which a public function returned a failure
+status, QD rarely produced a result satisfying the corresponding numerical
+properties. Under CompCert, the runtime checks added $2.9$--$9.8$ nanoseconds
+per call relative to the unchecked kernels.
 \end{abstract}
 
 \begin{CCSXML}
