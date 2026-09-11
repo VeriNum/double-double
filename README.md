@@ -9,8 +9,8 @@ VST connects those models to the C implementations.
 
 FenceDD builds on the FLX analysis developed by Jean-Michel Muller and
 Laurence Rideau in [*Formalization of Double-Word Arithmetic, and Comments on
-“Tight and Rigorous Error Bounds for Basic Building Blocks of Double-Word
-Arithmetic”*](https://doi.org/10.1145/3484514). That work formalizes and
+"Tight and Rigorous Error Bounds for Basic Building Blocks of Double-Word
+Arithmetic"*](https://doi.org/10.1145/3484514). That work mechanizes and
 refines the analyses introduced by Mioara Joldes, Jean-Michel Muller, and
 Valentina Popescu in [*Tight and Rigorous Error Bounds for Basic Building
 Blocks of Double-Word Arithmetic*](https://doi.org/10.1145/3121432).
@@ -34,7 +34,7 @@ verif_proofs ↔ fenceDD
 
 | Path | Contents |
 |---|---|
-| [`FLX_analysis/`](FLX_analysis/) | Adapted Muller–Rideau FLX analysis and its separate license |
+| [`FLX_analysis/`](FLX_analysis/) | Adapted Muller-Rideau FLX analysis and its separate license |
 | [`common/`](common/) | Shared rounding lemmas, FLX-to-FLT bridges, and tactics |
 | [`DDModels.v`](DDModels.v), [`DDConds.v`](DDConds.v), [`DWord_defs.v`](DWord_defs.v) | Functional models, theorem hypotheses, and connections between the FLX and FenceDD definitions |
 | [`accuracy_proofs/basic_blocks/`](accuracy_proofs/basic_blocks/) | Results for TwoSum, Fast2Sum, and Fast2Mult |
