@@ -1,9 +1,9 @@
 \appendix
 \begin{table*}[t]
-  \caption{Detailed RQ3 measurements.  Under CompCert, Time and Kernel are the
+  \caption{Detailed RQ3 measurements. Under CompCert, Time and Kernel are the
   wrapper and unchecked kernel times in nanoseconds per call; Ratio is
-  Time/Kernel.  Under Clang, QD is the QD time and Ratio is Time/QD.  Entries
-  are medians [interquartile ranges] over paired trials.  A dash denotes the
+  Time/Kernel. Under Clang, QD is the QD time and Ratio is Time/QD. Entries
+  are medians [interquartile ranges] over paired trials. A dash denotes the
   single public wrapper for an error-free transformation.}
   \label{tab:rq3-performance-detail}
   \centering
@@ -27,79 +27,74 @@
 
 We record supplementary details of the experimental setup in this appendix:
 the construction of the generated inputs, the numerical reference
-calculations, and the timing protocol.  We report and interpret the
+calculations, and the timing protocol. We report and interpret the
 resulting measurements in \Cref{sec:evaluation}.
 
 \subsection{Input Construction}
 
-We generate inputs without consulting the runtime checks.  At every base-two
+We generate inputs without consulting the runtime checks. At every base-two
 exponent, we include positive and negative values equally often.
 
 For 95\% of the double-word inputs, we use MPFR to construct a source value
-with 106 significant bits and a nonzero final bit.  We obtain the high
+with 106 significant bits and a nonzero final bit. We obtain the high
 component by rounding this value to binary64 and the low component by rounding
 the exact residual.
-If the leading bit is at $2^e$, the final source bit is at $2^{e-105}$.  At the
+If the leading bit is at $2^e$, the final source bit is at $2^{e-105}$. At the
 lower endpoint reported in \Cref{sec:evaluation-setup}, this final bit is
 $2^{-1074}$; at the upper endpoint, rounding the high component remains finite.
 For the remaining 5\%, a generated binary64 value becomes the high component
-and the low component is zero.  These endpoints belong to the test
+and the low component is zero. These endpoints belong to the test
 construction and are not restrictions on \FenceDD{}.
 
-We do not distinguish rejected calls according to which runtime check fails.
-In the artifact, we record the run identifier, random seed, input fingerprint,
-and component bit patterns.
+The RQ2 summaries group all failure statuses for each wrapper. The artifact
+records the exact status returned by every call, together with the run
+identifier, random seed, input fingerprint, and component bit patterns.
 
 \subsection{Numerical Reference Calculations}
 
-We use QD 2.3.24, MPFR 4.2.2, and GMP 6.3.0.  We enable QD's FMA
+We use QD 2.3.24, MPFR 4.2.2, and GMP 6.3.0. We enable QD's FMA
 implementation of \texttt{two\_prod}.
 
 For RQ1, we use MPFR to reconstruct the real values represented by the input
 and output pairs and to compute each reference operation at 2112-bit
-precision.  We recompute division cases whose reported error ratio or region
-classification could depend on this precision at 4224-bit precision.  We
+precision. We recompute division cases whose reported error ratio or region
+classification could depend on this precision at 4224-bit precision. We
 confirm ratios close to one using directed rounding or interval calculations.
 No result produced by an accepted RQ1 call has $B(r)=0$.
 
 For each double-word operation, we select the QD routine computing the same
-mathematical operation.  For addition of two double words, we use
+mathematical operation. For addition of two double words, we use
 \texttt{ieee\_add}; for division of two double words, we use
 \texttt{accurate\_div}; and for the remaining operations, we use the
-corresponding QD operators.  For the error-free transformations, we compare
+corresponding QD operators. For the error-free transformations, we compare
 with QD's
 \texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod}.
 
 For RQ2, we classify results obtained using QD as nonfinite; finite with
 components that do not form a double word; or finite with components that form
 a double word, subdivided by whether the error exceeds the
-corresponding \FenceDD{} bound.  For an error-free transformation, the relevant
+corresponding \FenceDD{} bound. For an error-free transformation, the relevant
 numerical property instead requires exact reconstruction: the returned
-components must sum to the exact result.  In separate
-boundary tests, we exercise values immediately below, at, and above each
-runtime threshold, together with zeros, exact cancellation, and calls that
-reach a result finiteness check.  We observe the expected outcome in all
-\RQTwoBoundaryCases{} tests and exclude them from the reported percentages.
+components must sum to the exact result.
 
 \subsection{Timing Protocol}
 \label{app:evaluation-timing}
 
-Every runtime check succeeds on the timing inputs, and before timing we confirm
-that each wrapper returns the same result as its unchecked kernel.  We
+Every wrapper returns successfully on the timing inputs, and before timing we
+confirm that each wrapper returns the same result as its unchecked kernel. We
 construct QD objects before measurement.
 
 For the comparison with the kernels, we compile the \FenceDD{} wrappers and
-kernels with CompCert 3.17 using \texttt{-O3}.  For the comparison with QD, we
+kernels with CompCert 3.17 using \texttt{-O3}. For the comparison with QD, we
 compile the \FenceDD{} C objects with Homebrew Clang 19.1.7 and QD and the C++
-driver with Apple Clang 17.0.0.  For both Clang builds, we use
+driver with Apple Clang 17.0.0. For both Clang builds, we use
 \texttt{-O3}, with fast mathematics and implicit floating-point contraction
-disabled.  The test machine has 16 cores and runs macOS 26.6.2; its processor
-is identified in \Cref{sec:evaluation}.
+disabled. The test machine is a 16-core Apple M4 Max running macOS 26.6.2.
 
 The 24 trials for each double-word operation use every ordering of the kernel,
-default wrapper, alternative wrapper, and QD once.  For each error-free
+default wrapper, alternative wrapper, and QD once. For each error-free
 transformation, the six orderings of the kernel, wrapper, and QD each occur
-four times.  We give every implementation an untimed warm-up and compute
+four times. We give every implementation an untimed warm-up and compute
 differences and ratios from paired trials.
 
 \subsection{Detailed Performance Results}

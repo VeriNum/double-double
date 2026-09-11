@@ -87,10 +87,10 @@ result satisfying the error bound};
 \node[edgelabel,above] at (1.25,-6.59) {failure};
 
 \end{tikzpicture}
-\caption{Verification and execution in \FenceDD{}. During development,
-formal proofs establish the numerical guarantee for each public function.
-During each call, the wrapper performs runtime checks around a call to the
-arithmetic kernel. On successful return, the caller may use the output and the
-proved guarantee holds. Otherwise, the function returns a failure status.}
+\caption{Verification and execution in \FenceDD{}. Formal proofs establish
+each numerical guarantee during development. At run time, a wrapper checks the
+required conditions around the arithmetic kernel call. On successful return,
+the output satisfies the proved guarantee; otherwise, the function returns a
+failure status.}
 \label{fig:proof-runtime-roles}
 \end{figure}

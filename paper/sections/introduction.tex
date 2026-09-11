@@ -27,23 +27,22 @@ subtle numerical behavior led \citet{Li2002} to call double-double arithmetic
 ``an `attractive nuisance,' like an unfenced backyard swimming pool.''
 
 The hazard is that a double-double operation does not behave like a single
-operation performed with twice the precision. Precisely characterizing its
+operation performed with twice the precision. Characterizing its
 error is difficult, and even expert numerical analysts can make subtle
-mistakes. \citet{Zhang2025} highlights an example from XBLAS: an algorithm for
+mistakes. \citet{Zhang2025} highlight an example from XBLAS: an algorithm for
 adding two double-doubles was claimed to have relative error at most $2u^2$,
 where $u=2^{-53}$ is the unit roundoff of binary64. \citet{Joldes2017} later
 found inputs producing a relative error of $2.25u^2$, exceeding the claimed
 bound. They gave a revised analysis, which \citet{Rideau2022} subsequently
-mechanized in Rocq, establishing the corrected result by a machine-checked
-proof.
+mechanized in Rocq.
 
-Mechanization establishes a theorem only for the arithmetic model formalized
-in the proof. The development of \citet{Rideau2022} uses a format with an unbounded
-exponent range, where underflow and overflow do not occur. IEEE~754 binary64
-has a finite exponent range, so both can occur in an implementation.
-Consequently, the mechanized results do not cover executions in which an
-intermediate operation within a double-double algorithm underflows or
-overflows.
+A mechanized theorem applies only to the arithmetic model used in its proof.
+\citet{Rideau2022} use a format with an unbounded exponent range, where
+underflow and overflow do not occur. IEEE~754 binary64 has a finite exponent
+range, so both can occur. Obtaining verified guarantees for a C library
+therefore requires two steps: extending the numerical analysis to account for
+underflow and overflow, and proving that the public functions establish the
+conditions required by that analysis.
 
 To see how an intermediate underflow affects a double-double operation,
 consider squaring the double-double $x=(a,0)$, where
@@ -56,8 +55,8 @@ we obtain $(2^{-1030},0)$. However,
  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
 \]
 The returned pair is still a double-double, but its relative error is
-approximately $2^{-51}$. For this input, double-double multiplication provides about the same relative precision as a binary64
-multiplication rather than roughly twice that precision.
+approximately $2^{-51}$, giving about the same relative precision as a
+binary64 multiplication rather than roughly twice that precision.
 
 The precision loss occurs in \FastTwoMult{}, a building block used by the
 double-double multiplication algorithm. In this example, it returns a
@@ -92,26 +91,19 @@ lower end, the relative term dominates and provides roughly twice the
 relative precision of binary64. Near it, the absolute term can dominate; for
 the example above, this term covers the lost correction.
 
-Existing work provides mechanized analyses that exclude underflow and
-overflow, while existing double-double libraries do not establish the
-conditions required by those analyses. \FenceDD{} combines numerical results
-for IEEE~754 with verified C wrappers whose runtime checks establish their
-conditions.
-
-Our Rocq development identifies sufficient conditions for these numerical
-guarantees and proves, in a faithful model of IEEE~754, that the guarantees
-hold whenever those conditions are satisfied. It covers adding a binary64
-value to a double-double, adding two double-doubles, multiplying a
-double-double by a binary64 value, multiplying two double-doubles, dividing a
-double-double by a binary64 value, and dividing one double-double by another.
-Under these conditions, the addition operations satisfy relative error
-bounds, while the multiplication and division operations satisfy bounds with
-relative and absolute terms. For every double-double operation, the returned
-pair satisfies the relation between its components required by subsequent
-operations. For the three error-free transformations used by these
-algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}--- we identify sufficient
-conditions under which the returned correction equals the exact rounding
-error in the sum or product.
+More generally, our Rocq development identifies sufficient conditions under which the
+algorithms satisfy these numerical guarantees and proves the results in a
+faithful model of IEEE\~754. It covers adding a binary64 value to a double-double,
+adding two double-doubles, multiplying a double-double by a binary64 value, multiplying
+two double-doubles, dividing a double-double by a binary64 value, and dividing
+one double-double by another. Under these conditions, the addition operations
+satisfy relative error bounds, while multiplication and division satisfy
+bounds with relative and absolute terms. For every double-double operation,
+the returned pair satisfies the relation between its components required by
+subsequent operations. For the three error-free transformations used by these
+algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---the development
+identifies sufficient conditions under which the returned correction equals
+the exact rounding error in the sum or product.
 
 We implement these algorithms in \FenceDD{}, a verified C library for
 double-double arithmetic. Each public function returns a status indicating
@@ -122,11 +114,11 @@ numerical conditions. Consequently, on successful return, the output satisfies
 the corresponding proved guarantee.
 
 The numerical and VST proofs are checked in Rocq during library development;
-they are not executed when a client calls the library. At run time, each public
-function performs runtime checks around a call to an arithmetic kernel. The
-caller uses the output only on successful return.
-\Cref{fig:proof-runtime-roles} summarizes what is verified during development
-and what occurs during each library call.
+they are not executed during a library call. Instead, each public function
+performs runtime checks around an arithmetic kernel and returns a status
+indicating whether the proved numerical guarantee applies.
+\Cref{fig:proof-runtime-roles} illustrates the roles of the proofs and runtime
+checks.
 
 \input{figures/proof-runtime-roles}
 

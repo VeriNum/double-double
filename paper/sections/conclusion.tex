@@ -1,29 +1,17 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We present \FenceDD, a verified C library for double-double arithmetic.
-Through its ordinary C interface, every normally returned double-word result
-is a double-double satisfying its proved error bound. On normal return from an
-error-free transformation, the two components sum to the exact result.
+We presented \FenceDD{}, a verified C library that provides proved numerical
+guarantees for double-double arithmetic on successful return. Our Rocq
+analysis extends prior results from unbounded exponents to IEEE\~754,
+preserving relative bounds for addition and deriving mixed relative and
+absolute bounds for multiplication and division. Using VST, we prove that the
+C kernels implement the analyzed algorithms and that successful runtime checks
+establish the conditions required by the numerical theorems.
 
-Our numerical analysis extends the results of \citet{Joldes2017}, mechanized
-by \citet{Rideau2022}, from an unbounded exponent range to IEEE~754
-arithmetic.  Building on results for individual error-free transformations near
-underflow \citep{BoldoDaumas2003,Boldo2017}, we carry underflow errors through
-the complete double-word operations and identify conditions that ensure finite
-results.  Addition retains a relative
-error bound proportional to the square of the unit roundoff under gradual
-underflow.  Multiplication and division instead require mixed bounds whose
-absolute terms account for errors near the smallest representable values.
-
-In our evaluation, the largest observed errors reached $0.87$ of their proved
-bound when the relative term dominated and $0.56$ when the absolute term
-dominated.  For inputs on which runtime checks stopped calls to double-word
-operations, QD produced a result satisfying the corresponding numerical
-properties in at most $6.1\%$ of cases. For error-free transformation calls
-stopped by runtime checks, the components returned by QD similarly rarely
-summed to the exact result.  Relative to the
-unchecked kernels, the wrappers added $2.5$--$11$ nanoseconds per call.
-Together, these results show that proved numerical guarantees for double-word
-arithmetic can be provided through an ordinary C interface at modest absolute
-cost.
+In generated tests, observed errors approached the proved bounds, QD rarely
+returned results satisfying the corresponding numerical properties for inputs
+that caused \FenceDD{} to return a failure status, and the runtime checks added
+$2.5$--$11$ nanoseconds per call. These results show that proved guarantees for
+double-double arithmetic can be provided through ordinary C functions at
+modest absolute cost.

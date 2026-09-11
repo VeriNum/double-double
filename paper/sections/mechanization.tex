@@ -35,17 +35,13 @@ returned by the functional model. It requires no numerical condition and does
 not itself establish either the error bound or the double-word relation.
 
 To prove \Cref{eq:dw-div-fp-kernel-refinement}, the VST proof matches each
-computation in the C kernel with the corresponding operation in
-\DWDivFP{}. VST interprets the C operations using CompCert, whereas
-\DWDivFP{} is defined using VCFloat2 \citep{AppelKellison2024}. We prove
-binary64 equalities showing that the corresponding operations compute the same
-result.
-
-The division kernel calls the kernels for \FastTwoMult{} and \FastTwoSum{}
-directly, not their public wrappers. In the VST proof, the specifications of
-these two kernels connect the C calls to the corresponding functional models.
-This completes the refinement proof for the division kernel. We use the same
-method for the other arithmetic kernels.
+computation in the C kernel with the corresponding operation in \DWDivFP{}.
+VST gives the C operations CompCert semantics, while \DWDivFP{} uses VCFloat2
+\citep{AppelKellison2024}; binary64 equalities identify the corresponding
+operations. The division kernel also calls the \FastTwoMult{} and
+\FastTwoSum{} kernels directly. Their VST specifications connect these calls
+to the corresponding functional models. We use the same method for the other
+arithmetic kernels.
 
 \subsection{Soundness of the Runtime Checks}
 \label{sec:check-soundness}
@@ -101,8 +97,9 @@ memory assertions are omitted.
 The empty \texttt{PROP} clause means that the caller supplies no numerical
 condition. The predicate
 \texttt{default\_\allowbreak wrapper\_\allowbreak status} states that the
-returned status is \texttt{DW\_OK}, \texttt{DW\_WEAK\_INPUT\_REJECTED}, or
-\texttt{DW\_POST\_CHECK\_REJECTED}. In the VST specification,
+returned status is \texttt{DW\_OK},
+\texttt{DW\_\allowbreak WEAK\_\allowbreak INPUT\_\allowbreak REJECTED}, or
+\texttt{DW\_\allowbreak POST\_\allowbreak CHECK\_\allowbreak REJECTED}. In the VST specification,
 \texttt{Int.zero} represents \texttt{DW\_OK}. On successful return, the
 postcondition states
 that the output object stores the binary64 result of \DWDivFP{} and that
