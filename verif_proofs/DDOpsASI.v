@@ -520,8 +520,8 @@ Definition exit_spec :=
 (*  Spec groupings for the ops VSU (and its body proof Gprog)                *)
 (* ======================================================================== *)
 
-(* Externals the ops TU calls but does not define: fma, exit, and the runtime
-   checks provided by the checks VSU at link time. *)
+(* Externals the ops TU calls but does not define: fma, exit for the internal
+   accuracy wrapper, and the runtime checks provided by the checks VSU. *)
 Definition Ops_Imports : funspecs :=
   [ fma_spec; exit_spec;
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
