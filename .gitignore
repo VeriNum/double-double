@@ -42,3 +42,4 @@ CoqMakefile.conf
 /bench/tests/__pycache__/
 /bench/test_input_generation
 /results/
+/fenceDD/example
