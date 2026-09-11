@@ -329,9 +329,10 @@ void preflight(TimingInputs &inputs) {
         dword default_result;
         dword kernel_result;
 
-        two_sum(
-            &default_result, inputs.first_fp[i], inputs.second_fp[i]);
-        two_sum(&kernel_result, inputs.first_fp[i], inputs.second_fp[i]);
+        require_ok("two_sum", i,
+            two_sum(&default_result, inputs.first_fp[i], inputs.second_fp[i]));
+        two_sum_kernel(
+            &kernel_result, inputs.first_fp[i], inputs.second_fp[i]);
         require_same_pair("two_sum", i, default_result, kernel_result);
 
         require_ok("fast_2sum", i,
@@ -496,8 +497,8 @@ void run_measurements(TimingInputs &inputs, const QdInputs &qd_inputs,
             },
             [&] {
                 for (std::size_t i = 0; i < count; ++i) {
-                    two_sum(&kernel_result,
-                            inputs.first_fp[i], inputs.second_fp[i]);
+                    two_sum_kernel(&kernel_result,
+                                   inputs.first_fp[i], inputs.second_fp[i]);
                     bench_timing::sink(kernel_result.s);
                     bench_timing::sink(kernel_result.t);
                 }

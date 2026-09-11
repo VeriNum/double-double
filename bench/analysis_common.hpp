@@ -46,7 +46,7 @@ struct OperationSpec {
 };
 
 constexpr std::array<OperationSpec, 9> operations{{
-    {"two_sum", true, false, false, false, MathKind::add,
+    {"two_sum", true, true, false, false, MathKind::add,
      BoundKind::none, fp_exponent_count},
     {"fast_2sum", true, true, false, false, MathKind::add,
      BoundKind::none, fp_exponent_count},

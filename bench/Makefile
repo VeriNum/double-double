@@ -72,13 +72,13 @@ ANALYZERS := $(BIN_DIR)/analyze_rq1 $(BIN_DIR)/analyze_rq2 \
 
 # Arithmetic-only kernel baseline.  Keep wrapper and kernel objects distinct:
 # the public dw_*.c files do not define their corresponding *_kernel symbols.
-EFT_SRCS     := two_sum fast_2sum_kernel fast_2mult_kernel
+EFT_SRCS     := two_sum_kernel fast_2sum_kernel fast_2mult_kernel
 DW_OPS       := dw_plus_fp dw_plus_dw dw_times_fp dw_times_dw dw_div_fp dw_div_dw
 KERNEL_SRCS  := $(EFT_SRCS) $(addsuffix _kernel,$(DW_OPS))
 
 # The six dw_*.c files define both the default (two-stage) and strong
 # (input-only) interfaces. Fast2Sum and Fast2Mult have public wrappers.
-LIBRARY_SRCS := $(KERNEL_SRCS) fast_2sum fast_2mult fp_utils $(DW_OPS)
+LIBRARY_SRCS := $(KERNEL_SRCS) two_sum fast_2sum fast_2mult fp_utils $(DW_OPS)
 COMPCERT_LIBRARY_OBJS := $(addprefix $(COMPCERT_OBJ_DIR)/,\
                            $(addsuffix .o,$(LIBRARY_SRCS)))
 CLANG_LIBRARY_OBJS := $(addprefix $(CLANG_OBJ_DIR)/,\
@@ -123,7 +123,7 @@ $(COMPCERT_OBJ_DIR)/%.o: $(FENCEDD_DIR)/%.c \
 	$(FENCEDD_CC) $(FENCEDD_CFLAGS) $(FENCEDD_INC) -c $< -o $@
 
 $(addprefix $(COMPCERT_OBJ_DIR)/,\
-  $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
+  $(addsuffix .o,two_sum fast_2sum fast_2mult fp_utils $(DW_OPS))): \
     $(FENCEDD_DIR)/include/fp_utils.h
 
 $(CLANG_OBJ_DIR)/%.o: $(FENCEDD_DIR)/%.c \
@@ -132,7 +132,7 @@ $(CLANG_OBJ_DIR)/%.o: $(FENCEDD_DIR)/%.c \
 	$(CLANG_CC) $(CLANG_CFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) -c $< -o $@
 
 $(addprefix $(CLANG_OBJ_DIR)/,\
-  $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
+  $(addsuffix .o,two_sum fast_2sum fast_2mult fp_utils $(DW_OPS))): \
     $(FENCEDD_DIR)/include/fp_utils.h
 
 # --- C++ analysis objects -------------------------------------------------

@@ -190,9 +190,10 @@ int main(int argc, char **argv) {
     record_eft(file, "two_sum", inputs,
         [&](std::size_t i) {
             dword result{};
-            two_sum(&result, inputs.fp_first[i].value,
-                    inputs.fp_second[i].value);
-            return InterfaceResult{false, DW_OK, {result.s, result.t}};
+            const enum dw_status status = two_sum(
+                &result, inputs.fp_first[i].value,
+                inputs.fp_second[i].value);
+            return InterfaceResult{true, status, {result.s, result.t}};
         },
         [&](std::size_t i) {
             double low;

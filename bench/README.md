@@ -135,9 +135,8 @@ The status codes are:
 | `2` | The post check rejected the computed result. |
 | `3` | The strong input check rejected the input. |
 
-`two_sum` records `-` for `default_status` because it does not return a
-status. All error free transformations record `-` for the strong fields
-because they have no strong wrapper.
+All error free transformations record a default status. They record `-` for
+the strong fields because they have no strong wrapper.
 
 The default and strong calls are recorded independently. Generation does not
 require their statuses or returned bits to match.
@@ -263,13 +262,13 @@ are:
 | `precision_bits` | MPFR precision used for reference values and ordinary comparisons. |
 | `check_precision_bits` | MPFR precision used to repeat close bound comparisons. |
 | `total_cases` | All generated cases considered by this row. |
-| `successful_cases` | Cases with status `0`, or cases with no status for `two_sum`. Not reported for an `either` row. |
+| `successful_cases` | Cases with status `0`. Not reported for an `either` row. |
 | `status_0` | Cases where this wrapper returned status `0`. |
 | `status_1` | Cases where this wrapper returned status `1`. |
 | `status_2` | Cases where this wrapper returned status `2`. |
 | `status_3` | Cases where this wrapper returned status `3`. |
 | `other_status` | Cases where this wrapper returned an integer outside status codes 0 through 3. |
-| `no_status` | Cases with no status value. This is expected for `two_sum`. |
+| `no_status` | Cases with no status value. This should be zero for current operations. |
 | `rejected_cases` | Population whose QD results are classified in this row. This is status 1 for an error free transformation, status 1 or 2 for a default composite wrapper, status 3 for a strong wrapper, or their union for `either`. |
 | `unexpected_statuses` | Cases that are neither successful nor a rejection expected for this row. |
 | `other_wrapper_successful` | Among cases rejected by this wrapper, cases where the other wrapper succeeded. |
