@@ -2,8 +2,8 @@
 #
 # Variables you can override on the command line:
 #   FENCEDD_CC  compiler for fenceDD .c files            (default: ccomp)
-#   CLANG_CC    Clang compiler for comparison objects    (default: clang)
-#   CXX         compiler for harness + linking          (default: g++)
+#   CLANG_CC    Clang C compiler for comparison objects  (default: clang)
+#   CLANG_CXX   matching Clang C++ compiler              (default: beside CLANG_CC)
 #   FENCEDD_CFLAGS flags for fenceDD .c files             (default: -O3)
 #   CLANG_CFLAGS flags for Clang fenceDD objects          (default: -O3 -std=c11)
 #   CXXFLAGS    non-floating-point C++ flags            (default: -O3 -std=c++14 -Wall)
@@ -11,7 +11,9 @@
 #   QD_PREFIX   install prefix containing the qd/ headers       (required)
 #
 # CompCert and Clang build separate copies of the unchanged fenceDD sources.
-# QD and the shared harness require C++ and therefore build with $(CXX).
+# QD and the shared harness require C++ and therefore build with
+# $(CLANG_CXX). The dependency check requires the C and C++ compilers to
+# report the same Clang distribution and version.
 #
 # STRICT FLOAT: -fno-fast-math is NOT enough. clang/gcc default to FP contraction
 # (-ffp-contract=on/fast), which fuses `a*b + c` into a single FMA and drops the
@@ -27,7 +29,8 @@
 
 FENCEDD_CC ?= ccomp
 CLANG_CC   ?= clang
-CXX        ?= g++
+CLANG_CC_PATH := $(shell command -v $(CLANG_CC) 2>/dev/null)
+CLANG_CXX  ?= $(if $(CLANG_CC_PATH),$(dir $(CLANG_CC_PATH))clang++,clang++)
 FENCEDD_CFLAGS ?= -O3
 CLANG_CFLAGS ?= -O3 -std=c11
 CXXFLAGS   ?= -O3 -std=c++14 -Wall
@@ -98,6 +101,22 @@ PERFORMANCE_CLANG_OBJS := \
         check-dependencies
 
 check-dependencies:
+	@test -n "$(CLANG_CC_PATH)" || { \
+	  echo "Clang C compiler not found: $(CLANG_CC)" >&2; \
+	  exit 1; \
+	}
+	@command -v "$(CLANG_CXX)" >/dev/null 2>&1 || { \
+	  echo "Clang C++ compiler not found: $(CLANG_CXX)" >&2; \
+	  exit 1; \
+	}
+	@c_version="$$( $(CLANG_CC) --version | sed -n '1p' )"; \
+	 cxx_version="$$( $(CLANG_CXX) --version | sed -n '1p' )"; \
+	 test "$$c_version" = "$$cxx_version" || { \
+	   echo "CLANG_CC and CLANG_CXX must use the same Clang distribution and version." >&2; \
+	   echo "CLANG_CC:  $$c_version" >&2; \
+	   echo "CLANG_CXX: $$cxx_version" >&2; \
+	   exit 1; \
+	 }
 	@test -f "$(FENCEDD_DIR)/include/dw_arith.h" || { \
 	  echo "fenceDD headers not found under $(FENCEDD_DIR)" >&2; \
 	  echo "Set FENCEDD_DIR to the fenceDD source directory." >&2; \
@@ -138,58 +157,58 @@ $(addprefix $(CLANG_OBJ_DIR)/,\
 # --- C++ analysis objects -------------------------------------------------
 $(CXX_OBJ_DIR)/numerical_analysis.o: numerical_analysis.cpp \
         numerical_analysis.hpp analysis_common.hpp | $(CXX_OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/analyze_rq1.o: analyze_rq1.cpp numerical_analysis.hpp \
         analysis_common.hpp | $(CXX_OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/analyze_rq2.o: analyze_rq2.cpp numerical_analysis.hpp \
         analysis_common.hpp | $(CXX_OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(MPFR_CFLAGS) -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/analyze_rq3.o: analyze_rq3.cpp analysis_common.hpp \
                                       | $(CXX_OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -MMD -MP -c $< -o $@
 
 # --- C++ generation objects -----------------------------------------------
 $(CXX_OBJ_DIR)/%.o: %.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/generate_performance_data_compcert.o: \
         generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DFENCEDD_BUILD_LABEL=\"compcert\" -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/generate_performance_data_clang.o: \
         generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -DFENCEDD_BUILD_LABEL=\"clang\" -MMD -MP -c $< -o $@
 
 # --- benchmark links ------------------------------------------------------
 $(BIN_DIR)/generate_numerical_data: $(NUMERICAL_DATA_OBJS) \
                                      $(COMPCERT_LIBRARY_OBJS) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
 $(BIN_DIR)/analyze_rq1: $(CXX_OBJ_DIR)/analyze_rq1.o \
                         $(CXX_OBJ_DIR)/numerical_analysis.o | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
 
 $(BIN_DIR)/analyze_rq2: $(CXX_OBJ_DIR)/analyze_rq2.o \
                         $(CXX_OBJ_DIR)/numerical_analysis.o | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS)
 
 $(BIN_DIR)/analyze_rq3: $(CXX_OBJ_DIR)/analyze_rq3.o | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^
 
 $(BIN_DIR)/generate_performance_data_compcert: \
         $(PERFORMANCE_COMPCERT_OBJS) $(COMPCERT_LIBRARY_OBJS) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
 $(BIN_DIR)/generate_performance_data_clang: \
         $(PERFORMANCE_CLANG_OBJS) $(CLANG_LIBRARY_OBJS) | $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
+	$(CLANG_CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) -o $@ $^ $(MPFR_LIBS) -lm
 
 # --- measurement and analysis workflow -----------------------------------
 clean:

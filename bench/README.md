@@ -24,9 +24,21 @@ under the selected result directory.
 
 ## Requirements
 
-The measurement programs require CompCert, Clang, a C++14 compiler, MPFR,
-GMP, and QD headers. The RQ1 and RQ2 analyzers require a C++14 compiler,
-MPFR, and GMP. The RQ3 analyzer requires only a C++14 compiler.
+The measurement programs require CompCert, matching Clang C and C++
+compilers, MPFR, GMP, and QD headers. The C and C++ compilers must report the
+same Clang distribution and version. This keeps the Clang FenceDD objects,
+the harness, and QD under one compiler toolchain. The RQ1 and RQ2 analyzers
+also require MPFR and GMP.
+
+`CLANG_CC` selects the Clang C compiler. By default, `CLANG_CXX` is the
+`clang++` executable beside the resolved `CLANG_CC`. The build stops if their
+first version lines differ. Both may be set explicitly when needed:
+
+```sh
+make all-results RUN_DIR=results/ QD_PREFIX=/absolute/path/to/qd \
+  CLANG_CC=/absolute/path/to/clang \
+  CLANG_CXX=/absolute/path/to/clang++
+```
 
 The build obtains MPFR and GMP flags from `pkg-config`. Set `MPFR_CFLAGS` and
 `MPFR_LIBS` if they cannot be found that way.
