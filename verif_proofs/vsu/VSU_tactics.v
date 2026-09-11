@@ -1,12 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* VSU tactic for this library.  [solve_SF_dd] rewrites the [CompSpecs]
-   equation before proving [complete_type] and [var_sizes], allowing local
-   [struct dword] lookups to reduce.  Invoke it on one focused goal at a time;
-   semicolon composition after [mkVSU] does not instantiate the generated
-   existential variables correctly. *)
-
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
 

@@ -1,15 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Helper lemmas for the accuracy and correctness proofs of the
-   TwoSum and Fast2Sum algorithms in the FLT format.
-
-   Layout:
-     1. No overflow lemmas
-     2. Finiteness propagation
-     3. Real arithmetic helper
-     4. Correctness & equivalence *)
-
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
 Require Import float_acc_lems op_defs dd_tactics FLT_helpers.
@@ -33,15 +24,6 @@ Notation BPLUS  := (@FPCore.BPLUS  NANS t STD).
 
 Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
-(* ===================================================================== *)
-(* 1. No overflow lemmas                                                   *)
-(* ===================================================================== *)
-
-(* Generic ulp ceiling: a finite float's ulp cannot exceed 2^(femax - p), since
-   its magnitude is below the overflow threshold.  This is just
-   FLT_helpers.ulp_below_overflow composed with is_finite_no_overflow; it is
-   stated here to avoid duplicating the same argument in no_overflow_2Sum_a_ulp
-   and is_finite_TwoSum. *)
 Lemma ulp_le_top (x : ftype t) :
   is_finite x = true -> ulp (FT2R x) <= bpow radix2 (femax t - fprec t).
 Proof.
@@ -121,13 +103,6 @@ Proof.
   rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
 Qed.
 
-(* No overflow of the first Fast2Sum step under the Fast2Sum_exact_cond disjunction
-   (ulp ordering, or a = 0).  The magnitude version (no_overflow_2Sum_a) bounds
-   |rnd(s-a)| <= |a|, which fails under mere ulp ordering.  Instead we use that
-   under ulp b <= ulp a the step is exact (z = s - a), then bound
-   |s - a| <= |b| + (1/2) ulp(s)
-   <= (Omega - bpow(femax-fprec)) + (1/2) bpow(femax-fprec) < Omega.
-   The a = 0 disjunct is handled directly (rnd(s - 0) = s). *)
 Lemma no_overflow_2Sum_a_ulp (a b : ftype t):
   ulp (FT2R b) <= ulp (FT2R a) \/ FT2R a = 0 ->
   is_finite (BPLUS a b) = true ->
@@ -135,19 +110,19 @@ Lemma no_overflow_2Sum_a_ulp (a b : ftype t):
 Proof.
   move => Hor Hfin.
   destruct (BPLUS_finite_e t a b Hfin) as [Hfina Hfinb].
-  (* a = 0 : rnd(s - 0) = rnd s = s, |s| < Omega *)
+
   destruct (Req_dec (FT2R a) 0) as [Ha0 | Ha0].
   { rewrite Ha0 Rminus_0_r round_generic; FLT_basics.
     by apply is_finite_no_overflow. }
-  (* b = 0 : s = rnd(a + 0) = a, rnd(s - a) = rnd 0 = 0 *)
+
   destruct (Req_dec (FT2R b) 0) as [Hb0 | Hb0].
   { have HrA : rnd (FT2R a) = FT2R a by rewrite round_generic; FLT_basics.
     rewrite -BPLUS_round_correct // Hb0 Rplus_0_r HrA Rminus_diag round_0 Rabs_R0.
     apply bpow_gt_0. }
-  (* both nonzero: the a = 0 disjunct is excluded, so the ulp ordering holds *)
+
   have Hulp : ulp (FT2R b) <= ulp (FT2R a)
     by case: Hor => [//| Ha00]; case: (Ha0 Ha00).
-  (* ulp ordering -> cexp ordering -> exactness *)
+
   have Hce : (cexp radix2 fexp (FT2R b) <= cexp radix2 fexp (FT2R a))%Z.
   { apply (le_bpow radix2).
     rewrite -(Ulp.ulp_neq_0 radix2 fexp (FT2R a) Ha0).
@@ -157,14 +132,14 @@ Proof.
   { rewrite -BPLUS_round_correct //.
     apply F2Sum_sma_exact_cexp_flt; first [ exact Hce | FLT_basics => // ]. }
   rewrite Hex.
-  (* error bound: |s - (a + b)| <= /2 ulp(s) *)
+
   have Herr : Rabs (FT2R (BPLUS a b) - (FT2R a + FT2R b))
               <= /2 * ulp (FT2R (BPLUS a b)).
   { rewrite -!BPLUS_round_correct //. apply Ulp.error_le_half_ulp_round; FLT_basics. }
-  (* Bound the ulp. *)
+
   have Hulps : ulp (FT2R (BPLUS a b)) <= bpow radix2 (femax t - fprec t)
     by apply ulp_le_top.
-  (* |b| <= pred Omega = Omega - bpow(femax - fprec) *)
+
   have Hbmax : Rabs (FT2R b)
                <= bpow radix2 (femax t) - bpow radix2 (femax t - fprec t).
   { have He : (SpecFloat.fexp (fprec t) (femax t) (femax t) = femax t - fprec t)%Z.
@@ -183,13 +158,13 @@ Proof.
                 unfold SpecFloat.fexp, SpecFloat.emin;
                 apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia
             | apply is_finite_no_overflow => // ]. }
-  (* triangle: |s - a| <= |b| + /2 ulp(s) *)
+
   eapply Rle_lt_trans.
   { replace (FT2R (BPLUS a b) - FT2R a)%R
       with (FT2R b + (FT2R (BPLUS a b) - (FT2R a + FT2R b)))%R by ring.
     eapply Rle_trans; [apply Rabs_triang|].
     apply Rplus_le_compat_l. exact Herr. }
-  (* Complete the arithmetic. *)
+
   have Hpos : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
   eapply Rle_lt_trans.
   { apply Rplus_le_compat; [exact Hbmax|].
@@ -197,10 +172,6 @@ Proof.
   lra.
 Qed.
 
-(* Overflow bound for the first [Fast2Sum] step without an ordering assumption.
-   From [s-a = b + (s-(a+b))], its magnitude is bounded by [|b|] and the
-   rounding error of [s].  Thus [|b| <= Omega/4] gives the [Omega/2] bound
-   needed by [is_finite_FastSum_small], even in the [Fast2Mult] underflow gap. *)
 Lemma round_2Sum_a_bnd_small (a b : ftype t):
   Rabs (FT2R b) <= /4 * Omega ->
   is_finite (BPLUS a b) = true ->
@@ -210,19 +181,19 @@ Proof.
   have HO  : 0 < Omega by apply bpow_gt_0.
   have HB0 : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
   have HB4 := @bpow_femax_fprec_le_quarter_Omega t.
-  (* rounding error of the sum, and the generic ulp ceiling *)
+
   have Herr : Rabs (FT2R (BPLUS a b) - (FT2R a + FT2R b))
               <= /2 * ulp (FT2R (BPLUS a b)).
   { rewrite -!BPLUS_round_correct //. apply Ulp.error_le_half_ulp_round; FLT_basics. }
   have Hulps : ulp (FT2R (BPLUS a b)) <= bpow radix2 (femax t - fprec t)
     by (apply ulp_below_overflow; apply is_finite_no_overflow => //).
-  (* |s - a| <= |b| + /2 ulp(s) *)
+
   have Hsa : Rabs (FT2R (BPLUS a b) - FT2R a)
              <= /4 * Omega + /2 * bpow radix2 (femax t - fprec t).
   { replace (FT2R (BPLUS a b) - FT2R a)%R
       with (FT2R b + (FT2R (BPLUS a b) - (FT2R a + FT2R b)))%R by ring.
     eapply Rle_trans; [apply Rabs_triang|]. lra. }
-  (* rounding the step costs at most another /2 ulp *)
+
   eapply Rle_trans; [apply round_abs_le_abs_plus_half_ulp|].
   have Hu2 : ulp (FT2R (BPLUS a b) - FT2R a) <= bpow radix2 (femax t - fprec t)
     by (apply ulp_below_overflow; lra).
@@ -247,21 +218,21 @@ Lemma no_overflow_2Sum_b_2 (a b : ftype t):
   Rabs (rnd (FT2R (BPLUS a b) - FT2R b)) < Omega.
 Proof.
   move => Hfin_minus Hfin_plus Hba.
-  (* No overflow of +/- *)
+
   have Habov_plus : Rabs (FT2R (BPLUS a b)) < Omega by
   rewrite -BPLUS_round_correct //;
   apply (@is_finite_sum_no_overflow t NANS STD a b Hfin_plus).
   have Habov_minus : Rabs (FT2R (BMINUS a b)) < Omega by
   rewrite -BMINUS_round_correct //;
   apply (@is_finite_minus_no_overflow t NANS STD a b Hfin_minus).
-  (* Extract finiteness of a,b from finiteness of a+b *)
+
   destruct (BPLUS_finite_e t a b Hfin_plus) as [Hfina  Hfinb].
   have Hfinlta : Rabs (FT2R a) < Omega by (apply is_finite_no_overflow).
   have Hfinltb : Rabs (FT2R b) < Omega by (apply is_finite_no_overflow).
-  (* Cases on sign a *) destruct (Rle_dec 0 (FT2R a)) as [Hapos | Haneg].
-  - (* 0 <= a *)
-  (* Cases on sign b *) destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
-  + (* 0 <= b *)
+    destruct (Rle_dec 0 (FT2R a)) as [Hapos | Haneg].
+  -
+    destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
+  +
   suff: FT2R (BPLUS a b) - FT2R a <= FT2R (BPLUS a b) - FT2R b <= FT2R (BPLUS a b).
   move => Hs; destruct Hs as [Hs1 Hs2].
   apply (round_le radix2 fexp
@@ -278,7 +249,7 @@ Proof.
   apply Rabs_pos_eq in Hapos.
   rewrite Hapos in Hba;
   apply Rabs_le_inv in Hba; nra.
-  + (* b <= 0 *)
+  +
   move/Rnot_le_lt: Hbneg => Hbneg.
   suff: - FT2R b <= FT2R (BPLUS a b) - FT2R b <= FT2R a - FT2R b.
   move => Hs; destruct Hs as [Hs1 Hs2].
@@ -302,10 +273,10 @@ Proof.
   apply Rabs_pos_eq in Hapos.
   rewrite Hapos in Hba.
   rewrite Rabs_left in Hba => //; nra.
-  - (* a <= 0 *)
+  -
   move/Rnot_le_lt: Haneg => Haneg.
-  (* Cases on sign b *) destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
-  + (* 0 <= b *)
+    destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
+  +
   suff: FT2R a - FT2R b <= FT2R (BPLUS a b) - FT2R b <= - FT2R b.
   move => Hs; destruct Hs as [Hs1 Hs2].
   apply (round_le radix2 fexp
@@ -354,15 +325,11 @@ Lemma no_overflow_2Sum_b (a b : ftype t):
 Proof.
   move=> Hfin1 Hfin2.
   destruct (Rle_dec  (Rabs (FT2R b)) (Rabs (FT2R a))).
-  + (* |b| <= |a| *)
+  +
   apply no_overflow_2Sum_b_2 => //.
-  + (* |a| <= |b| *)
+  +
   apply no_overflow_2Sum_b_1 => //; nra.
 Qed.
-
-(* ===================================================================== *)
-(* 2. Finiteness propagation                                               *)
-(* ===================================================================== *)
 
 Lemma is_finite_2Sum_a (a b : ftype t) :
   Rabs (FT2R b) <= Rabs (FT2R a) ->
@@ -414,12 +381,6 @@ Proof.
   - apply is_finite_2Sum_a => //.
 Qed.
 
-(* Same finiteness result as is_finite_FastSum, but under the Fast2Sum_exact_cond
-   disjunction (ulp ordering ulp b <= ulp a, or a = 0) instead of the magnitude
-   ordering |b| <= |a|.  This is exactly the shape DWPlusDW_vh_w_disjunction (and
-   Fast2Sum_exact_cond) produce, so it can be forwarded directly.  The chain mirrors
-   is_finite_FastSum: no_overflow_2Sum_a_ulp for the no overflow steps and
-   F2Sum_correct_ulp_flt for the error term correctness. *)
 Lemma is_finite_FastSum_ulp (a b : ftype t):
   ulp (FT2R b) <= ulp (FT2R a) \/ FT2R a = 0 ->
   is_finite (BPLUS a b) = true -> is_finite (snd (DDModels.Fast2Sum a b)) = true .
@@ -472,11 +433,6 @@ Proof.
   apply no_overflow_2Sum_a_ulp => //.
 Qed.
 
-(* Finiteness of both [Fast2Sum] steps from [|b| <= Omega/4], without an
-   ordering assumption.  The first step is at most [Omega/2]; the second is
-   therefore below [Omega].  This lemma proves only finiteness.  In the
-   [Fast2Mult] underflow gap, sum preservation follows separately from
-   [Fast2Sum_sum_exact_of_sum_small]. *)
 Lemma is_finite_FastSum_small (a b : ftype t):
   Rabs (FT2R b) <= /4 * Omega ->
   is_finite (BPLUS a b) = true ->
@@ -488,13 +444,13 @@ Proof.
   have HO  : 0 < Omega by apply bpow_gt_0.
   have HB0 : 0 < bpow radix2 (femax t - fprec t) by apply bpow_gt_0.
   have HB4 := @bpow_femax_fprec_le_quarter_Omega t.
-  (* first step: z = BMINUS s a is finite, with |z| <= Omega/2 *)
+
   have Hstep1 := round_2Sum_a_bnd_small a b Hb Hfin.
   have Hfinz : is_finite (BMINUS (BPLUS a b) a) = true.
   { apply no_overflow_minus_is_finite => //. unfold Bminus_no_overflow. lra. }
   have Hzb : Rabs (FT2R (BMINUS (BPLUS a b) a)) <= /2 * Omega
     by (rewrite -BMINUS_round_correct //; exact Hstep1).
-  (* second step: |b - z| <= 3/4 Omega, so its rounding stays below Omega *)
+
   have Hd : Rabs (FT2R b - FT2R (BMINUS (BPLUS a b) a)) <= /4 * Omega + /2 * Omega.
   { replace (FT2R b - FT2R (BMINUS (BPLUS a b) a))%R
       with (FT2R b + - FT2R (BMINUS (BPLUS a b) a))%R by ring.
@@ -537,7 +493,7 @@ Proof.
   destruct (BPLUS_finite_e t a b Hfin_plus) as [Hfina Hfinb].
   have Hfinlta : Rabs (FT2R a) < Omega by apply is_finite_no_overflow.
   have Hfinltb : Rabs (FT2R b) < Omega by apply is_finite_no_overflow.
-  (* pred(Omega) setup — Valid_exp fexp must be discharged explicitly *)
+
   have HOmega_ne0 : Omega <> 0 by apply Rgt_not_eq, bpow_gt_0.
   have HpredO_lt : pred radix2 fexp Omega < Omega.
   { apply Ulp.pred_lt_id;
@@ -560,10 +516,10 @@ Proof.
                   Rabs (FT2R b) + ulp (Rabs (FT2R b)).
   { apply Ulp.succ_eq_pos;
     try (apply FLT.FLT_exp_valid; apply fprec_gt_0); apply Rabs_pos. }
-  (* Case split on sign of a, then sign of b *)
+
   destruct (Rle_dec 0 (FT2R a)) as [Hapos | Haneg].
   - destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
-    + (* Case a >= 0, b >= 0: sandwich 0 <= v <= s *)
+    +
       suff: 0 <= FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b) <=
             FT2R (BPLUS a b).
       { move => [Hlo Hhi].
@@ -595,32 +551,32 @@ Proof.
           - rewrite round_0; lra.
           - apply round_le; FLT_basics; lra. }
         lra.
-    + (* Case a >= 0, b < 0 *)
+    +
       move/Rnot_le_lt: Hbneg => Hbneg.
       destruct (Rle_dec (Rabs (FT2R b)) (Rabs (FT2R a))) as [Hba | Hba].
-      * (* |b| <= |a|: sandwich -fl(a-b) <= v <= 0 *)
+      *
         have HbA : Rabs (FT2R b) = -FT2R b by (apply Rabs_left; lra).
         have HaA : Rabs (FT2R a) = FT2R a by (apply Rabs_pos_eq; lra).
-        (* s >= 0: a >= |b|, a+b >= 0 *)
+
         have Hs_ge_0 : 0 <= FT2R (BPLUS a b).
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - rewrite round_0; lra.
           - apply round_le; FLT_basics; lra. }
-        (* s <= a: b <= 0 *)
+
         have Hs_le_a : FT2R (BPLUS a b) <= FT2R a.
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) (FT2R a)).
           - apply round_le; FLT_basics; lra.
           - rewrite round_generic; [lra | FLT_basics]. }
-        (* a' >= s: sb = s-b >= s since b < 0 *)
+
         have Ha'_ge_s : FT2R (BPLUS a b) <= FT2R (BMINUS (BPLUS a b) b).
         { rewrite -BMINUS_round_correct => //.
           eapply Rle_trans with
             (round radix2 fexp (Znearest choice) (FT2R (BPLUS a b))).
           - rewrite round_generic; [lra | FLT_basics].
           - apply round_le; FLT_basics; lra. }
-        (* a' <= fl(a-b): s <= a so s-b <= a-b *)
+
         have Ha'_le : FT2R (BMINUS (BPLUS a b) b) <= FT2R (BMINUS a b).
         { rewrite -BMINUS_round_correct => //.
           rewrite -(BMINUS_round_correct _ _ _ Hfin_minus).
@@ -642,26 +598,26 @@ Proof.
           - rewrite round_0 in Hhi.
             exact (Rle_lt_trans _ 0 _ Hhi (bpow_gt_0 radix2 (femax t))). }
         split; lra.
-      * (* |a| < |b|: epsilon bound *)
+      *
         apply Rnot_le_lt in Hba.
         have HbA : Rabs (FT2R b) = -FT2R b by (apply Rabs_left; lra).
         have HaA : Rabs (FT2R a) = FT2R a by (apply Rabs_pos_eq; lra).
-        (* s <= 0: |a| < |b|, a+b < 0 *)
+
         have Hs_le_0 : FT2R (BPLUS a b) <= 0.
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - apply round_le; FLT_basics; lra.
           - rewrite round_0; lra. }
-        (* s >= b: a >= 0 *)
+
         have Hs_ge_b : FT2R b <= FT2R (BPLUS a b).
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) (FT2R b)).
           - rewrite round_generic; [lra | FLT_basics].
           - apply round_le; FLT_basics; lra. }
-        (* sb = s - b in [0, Rabs(FT2R b)] *)
+
         have Hsb_pos : 0 <= FT2R (BPLUS a b) - FT2R b by lra.
         have Hsb_le : FT2R (BPLUS a b) - FT2R b <= Rabs (FT2R b) by lra.
-        (* a' = round(sb); rounding error bound *)
+
         have Ha'_eq : FT2R (BMINUS (BPLUS a b) b) =
                       round radix2 fexp (Znearest choice)
                         (FT2R (BPLUS a b) - FT2R b)
@@ -675,15 +631,14 @@ Proof.
           apply Generic_fmt.valid_rnd_N. }
         have Hulp_le1 : ulp (FT2R (BPLUS a b) - FT2R b) <= ulp (Rabs (FT2R b)).
         { apply Ulp.ulp_le_pos; FLT_basics; [exact Hsb_pos | exact Hsb_le]. }
-        (* a' >= 0: sb >= 0 so round(sb) >= 0 *)
+
         have Ha'_ge_0 : 0 <= FT2R (BMINUS (BPLUS a b) b).
         { rewrite Ha'_eq.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - rewrite round_0; lra.
           - apply round_le; FLT_basics; lra. }
         have Hv_le_0 : FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b) <= 0 by lra.
-        (* |v| = -v = round(sb) - FT2R(BPLUS a b)
-               = (sb + err) - (sb + FT2R b) = -FT2R b + err <= Rabs(FT2R b) + ulp(|b|) *)
+
         have Habs_v1 : Rabs (FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b)) <=
                        pred radix2 fexp Omega.
         { have Hulp_nn : 0 <= ulp (Rabs (FT2R b)) by apply Ulp.ulp_ge_0.
@@ -710,31 +665,31 @@ Proof.
         exact HpredO_lt.
   - move/Rnot_le_lt: Haneg => Haneg.
     destruct (Rle_dec 0 (FT2R b)) as [Hbpos | Hbneg].
-    + (* Case a < 0, b >= 0: symmetric to a >= 0, b < 0 *)
+    +
       destruct (Rle_dec (Rabs (FT2R b)) (Rabs (FT2R a))) as [Hba | Hba].
-      * (* |b| <= |a|: sandwich 0 <= v <= -fl(a-b) *)
+      *
         have HbA : Rabs (FT2R b) = FT2R b by (apply Rabs_pos_eq; lra).
         have HaA : Rabs (FT2R a) = -FT2R a by (apply Rabs_left; lra).
-        (* s <= 0: |b| <= |a|, a+b <= 0 *)
+
         have Hs_le_0 : FT2R (BPLUS a b) <= 0.
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - apply round_le; FLT_basics; lra.
           - rewrite round_0; lra. }
-        (* s >= a: b >= 0 *)
+
         have Hs_ge_a : FT2R a <= FT2R (BPLUS a b).
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) (FT2R a)).
           - rewrite round_generic; [lra | FLT_basics].
           - apply round_le; FLT_basics; lra. }
-        (* a' <= s: sb = s-b <= s since b >= 0 *)
+
         have Ha'_le_s : FT2R (BMINUS (BPLUS a b) b) <= FT2R (BPLUS a b).
         { rewrite -BMINUS_round_correct => //.
           eapply Rle_trans with
             (round radix2 fexp (Znearest choice) (FT2R (BPLUS a b))).
           - apply round_le; FLT_basics; lra.
           - rewrite round_generic; [lra | FLT_basics]. }
-        (* a' >= fl(a-b): s >= a so s-b >= a-b *)
+
         have Ha'_ge : FT2R (BMINUS a b) <= FT2R (BMINUS (BPLUS a b) b).
         { rewrite -(BMINUS_round_correct _ _ _ Hfin_minus).
           rewrite -BMINUS_round_correct => //.
@@ -757,23 +712,23 @@ Proof.
                 -- exact Habov_minus.
               * apply generic_format_opp; FLT_basics. }
         split; lra.
-      * (* |a| < |b|: epsilon bound *)
+      *
         apply Rnot_le_lt in Hba.
         have HbA : Rabs (FT2R b) = FT2R b by (apply Rabs_pos_eq; lra).
         have HaA : Rabs (FT2R a) = -FT2R a by (apply Rabs_left; lra).
-        (* s >= 0: |a| < |b|, a+b > 0 *)
+
         have Hs_ge_0 : 0 <= FT2R (BPLUS a b).
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - rewrite round_0; lra.
           - apply round_le; FLT_basics; lra. }
-        (* s <= b: a <= 0 *)
+
         have Hs_le_b : FT2R (BPLUS a b) <= FT2R b.
         { rewrite -BPLUS_round_correct => //.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) (FT2R b)).
           - apply round_le; FLT_basics; lra.
           - rewrite round_generic; [lra | FLT_basics]. }
-        (* sb = s - b in [-Rabs(FT2R b), 0] *)
+
         have Hsb_neg : FT2R (BPLUS a b) - FT2R b <= 0 by lra.
         have Hsb_abs : Rabs (FT2R (BPLUS a b) - FT2R b) <= Rabs (FT2R b).
         { rewrite (Rabs_left1 _ Hsb_neg) Rabs_pos_eq; lra. }
@@ -807,14 +762,14 @@ Proof.
             lra.
           - apply Ropp_le_cancel; rewrite Ropp_involutive;
             rewrite <- Rabs_Ropp; apply Rle_abs. }
-        (* a' <= 0: sb <= 0 so round(sb) <= 0 *)
+
         have Ha'_le_0 : FT2R (BMINUS (BPLUS a b) b) <= 0.
         { rewrite Ha'_eq2.
           eapply Rle_trans with (round radix2 fexp (Znearest choice) 0).
           - apply round_le; FLT_basics; lra.
           - rewrite round_0; lra. }
         have Hv_ge_0 : 0 <= FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b) by lra.
-        (* |v| <= pred(Omega) via epsilon bound *)
+
         have Habs_v2 : Rabs (FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b)) <=
                        pred radix2 fexp Omega.
         { rewrite (Rabs_pos_eq _ Hv_ge_0) Ha'_eq2.
@@ -829,7 +784,7 @@ Proof.
           try exact HFpredO;
           exact Habs_v2. }
         exact HpredO_lt.
-    + (* Case a < 0, b < 0: sandwich s <= v <= 0 *)
+    +
       move/Rnot_le_lt: Hbneg => Hbneg.
       suff: FT2R (BPLUS a b) <=
             FT2R (BPLUS a b) - FT2R (BMINUS (BPLUS a b) b) <= 0.
@@ -887,11 +842,11 @@ set a' := BMINUS s b.
 set b' := BMINUS s a'.
 set da := BMINUS a a'.
 set db := BMINUS b b'.
-(* a' is finite *)
+
 have Ha'_fin : is_finite a' = true.
 { change a' with (BMINUS (BPLUS a b) b).
   apply is_finite_2Sum_b; [exact Hfin_minus | exact Hfin_plus]. }
-(* b' is finite via is_finite_2Sum_right_aux *)
+
 have Hb'_ov : Rabs (rnd (FT2R s - FT2R a')) < Omega.
 { change s with (BPLUS a b). change a' with (BMINUS (BPLUS a b) b).
   apply is_finite_2Sum_right_aux; [exact Hfin_minus | exact Hfin_plus | exact HbFmax]. }
@@ -900,29 +855,29 @@ have Hb'_fin : is_finite b' = true.
   - change s with (BPLUS a b). exact Hfin_plus.
   - exact Ha'_fin.
   - exact Hb'_ov. }
-(* ulp bound helper *)
+
 have Hulp_le := ulp_le_top.
-(* generic_format for bpow(femax t - fprec t) *)
+
 have HFbp : generic_format radix2 fexp (bpow radix2 (femax t - fprec t)).
 { apply Generic_fmt.generic_format_bpow.
   unfold fexp, SpecFloat.fexp, SpecFloat.emin.
   apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia. }
-(* generic_format for bpow(femax t - fprec t + 1) *)
+
 have HFbp1 : generic_format radix2 fexp (bpow radix2 (femax t - fprec t + 1)).
 { apply Generic_fmt.generic_format_bpow.
   unfold fexp, SpecFloat.fexp, SpecFloat.emin.
   apply Z.max_lub; pose proof femax_lb t; pose proof fprec_lb t; lia. }
-(* bpow(femax t - fprec t + 1) < Omega *)
+
 have Hbp1_lt : bpow radix2 (femax t - fprec t + 1) < Omega.
 { apply bpow_lt; pose proof fprec_lb t; lia. }
-(* ulp bounds for specific floats *)
+
 have Hulp_s  : ulp (FT2R s)  <= bpow radix2 (femax t - fprec t).
 { change s with (BPLUS a b). apply Hulp_le; exact Hfin_plus. }
 have Hulp_a' : ulp (FT2R a') <= bpow radix2 (femax t - fprec t).
 { apply Hulp_le; exact Ha'_fin. }
 have Hulp_b' : ulp (FT2R b') <= bpow radix2 (femax t - fprec t).
 { apply Hulp_le; exact Hb'_fin. }
-(* error bounds via error_le_half_ulp_round *)
+
 have Heps1 : Rabs (FT2R s - (FT2R a + FT2R b)) <= /2 * ulp (FT2R s).
 { change s with (BPLUS a b). rewrite -BPLUS_round_correct => //.
   apply Ulp.error_le_half_ulp_round; FLT_basics. }
@@ -934,7 +889,7 @@ have Heps3 : Rabs (FT2R b' - (FT2R s - FT2R a')) <= /2 * ulp (FT2R b').
 { change b' with (BMINUS s a').
   rewrite -BMINUS_round_correct => //.
   apply Ulp.error_le_half_ulp_round; FLT_basics. }
-(* |a - a'| <= bpow(femax t - fprec t) *)
+
 have Ha_a'_bnd : Rabs (FT2R a - FT2R a') <= bpow radix2 (femax t - fprec t).
 { have Halg : FT2R a - FT2R a' =
       -((FT2R s - (FT2R a + FT2R b)) + (FT2R a' - (FT2R s - FT2R b))) by ring.
@@ -942,7 +897,7 @@ have Ha_a'_bnd : Rabs (FT2R a - FT2R a') <= bpow radix2 (femax t - fprec t).
   apply (Rle_trans _ (Rabs (FT2R s - (FT2R a + FT2R b)) + Rabs (FT2R a' - (FT2R s - FT2R b)))).
   - apply Rabs_triang.
   - lra. }
-(* Finiteness of da. *)
+
 have Hda_ov_lt : Rabs (rnd (FT2R a - FT2R a')) < Omega.
 { apply (Rle_lt_trans _ (bpow radix2 (femax t - fprec t))).
   - apply Generic_fmt.abs_round_le_generic;
@@ -951,12 +906,12 @@ have Hda_ov_lt : Rabs (rnd (FT2R a - FT2R a')) < Omega.
 have Hda_fin : is_finite da = true.
 { apply no_overflow_minus_is_finite;
   [exact Hfina | exact Ha'_fin | exact Hda_ov_lt]. }
-(* |FT2R da| <= bpow(femax t - fprec t) *)
+
 have Hda_bnd : Rabs (FT2R da) <= bpow radix2 (femax t - fprec t).
 { change da with (BMINUS a a'). rewrite -BMINUS_round_correct => //.
   apply Generic_fmt.abs_round_le_generic;
   [FLT_basics | apply valid_rnd_N | exact HFbp | exact Ha_a'_bnd]. }
-(* |b - b'| <= bpow(femax t - fprec t) *)
+
 have Hb_b'_bnd : Rabs (FT2R b - FT2R b') <= bpow radix2 (femax t - fprec t).
 { have Halg : FT2R b - FT2R b' =
       (FT2R a' - (FT2R s - FT2R b)) + (-(FT2R b' - (FT2R s - FT2R a'))) by ring.
@@ -964,7 +919,7 @@ have Hb_b'_bnd : Rabs (FT2R b - FT2R b') <= bpow radix2 (femax t - fprec t).
   apply (Rle_trans _ (Rabs (FT2R a' - (FT2R s - FT2R b)) + Rabs (-(FT2R b' - (FT2R s - FT2R a'))))).
   - apply Rabs_triang.
   - rewrite Rabs_Ropp. lra. }
-(* Finiteness of db. *)
+
 have Hdb_ov_lt : Rabs (rnd (FT2R b - FT2R b')) < Omega.
 { apply (Rle_lt_trans _ (bpow radix2 (femax t - fprec t))).
   - apply Generic_fmt.abs_round_le_generic;
@@ -973,12 +928,12 @@ have Hdb_ov_lt : Rabs (rnd (FT2R b - FT2R b')) < Omega.
 have Hdb_fin : is_finite db = true.
 { apply no_overflow_minus_is_finite;
   [exact Hfinb | exact Hb'_fin | exact Hdb_ov_lt]. }
-(* |FT2R db| <= bpow(femax t - fprec t) *)
+
 have Hdb_bnd : Rabs (FT2R db) <= bpow radix2 (femax t - fprec t).
 { change db with (BMINUS b b'). rewrite -BMINUS_round_correct => //.
   apply Generic_fmt.abs_round_le_generic;
   [FLT_basics | apply valid_rnd_N | exact HFbp | exact Hb_b'_bnd]. }
-(* BPLUS da db is finite *)
+
 apply no_overflow_sum_is_finite; [exact Hda_fin | exact Hdb_fin |].
 rewrite /Bplus_no_overflow.
 apply (Rle_lt_trans _ (bpow radix2 (femax t - fprec t + 1))); [| exact Hbp1_lt].
@@ -991,10 +946,6 @@ have Hbp1 : bpow radix2 (femax t - fprec t + 1) =
 { rewrite bpow_plus_1. simpl. lra. }
 lra.
 Qed.
-
-(* ===================================================================== *)
-(* 3. Real arithmetic helper                                               *)
-(* ===================================================================== *)
 
 Theorem round_plus_ge_ulp :
   forall (x y : ftype t),
@@ -1050,10 +1001,6 @@ apply Rmult_integral_contrapositive_currified with (1 := Zx).
 apply Rinv_neq_0_compat.
 apply Rgt_not_eq, radix_pos.
 Qed.
-
-(* ===================================================================== *)
-(* 4. Correctness and equivalence                                          *)
-(* ===================================================================== *)
 
 Lemma TwoSumF_eq (xh y: ftype t):
 FT2R xh + FT2R y = 0 ->
@@ -1115,14 +1062,14 @@ set (a' := BMINUS s b).
 set (b' := BMINUS s a').
 set (da := BMINUS a a').
 set (db := BMINUS b b').
-(* use TwoSum correct from Flocq, not double-double paper *)
+
 have Hc := @Flocq.Pff.Pff2Flocq.TwoSum_correct emin (fprec t) choice
     (fprec_gt_one t) emin_le_0 choiceP (FT2R b) (FT2R a).
 rewrite Rplus_comm; rewrite <- Hc; clear Hc; rewrite_format.
-(* Algebraic identity. *)
+
 rewrite <- Rplus_opp, Rplus_comm, <- Rplus_assoc.
 replace (FT2R b + FT2R a) with (FT2R a + FT2R b) by nra.
-(* rewrites from correctness theorems *)
+
 unfold TwoSumF_err, TwoSumF_sum, TwoSumF, fst, snd in *.
 BPLUS_correct t a b; rewrite !B2R_float_of_ftype; field_simplify.
 fold s a' b' da db in FINd; fold s a' b' da db.
@@ -1200,7 +1147,6 @@ rewrite -B2R_float_of_ftype;
 apply Binary.generic_format_B2R).
 Qed.
 
-(* results of FLT and FLX algorithms are equal regardless of underflow *)
 Lemma TwoSumEq_FLT :
 TwoSum (fprec t) choice (FT2R a) (FT2R b) = F2Rp (TwoSumF a b).
 Proof.

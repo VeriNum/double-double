@@ -1,9 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Final accuracy results for the Fast2Sum algorithm in the FLT format.
-   Helper lemmas live in Fast2Sum_acc_helpers.v. *)
-
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
 Require Import float_acc_lems op_defs dd_tactics.
@@ -53,11 +50,6 @@ Definition Fast2Sum_exact_guarantee : Prop :=
     FT2R a + FT2R b /\
   double_word_prop (Fast2Sum_sum a b) (Fast2Sum_err a b).
 
-(* Accuracy of the Fast2Sum error term, from the Dekker condition |b| <= |a|.
-   (Fast2Sum_exact_cond was generalized to an ulp/a=0 disjunction; this accuracy
-   bound is stated directly from |b| <= |a|, which is the case the bound is
-   used for.  The disjunction's other legs give correctness via the paper's
-   cexp / Fast2Sum0f lemmas, handled at the DWPlusDW use sites.) *)
 Corollary FastTwoSum_accuracy_from_magnitude_order :
   is_finite (BPLUS a b) = true ->
   Rabs (FT2R b) <= Rabs (FT2R a) ->

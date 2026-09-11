@@ -4,12 +4,6 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* Collect the facts the cascade threads forward.  entailer! substitutes the
-   `remember` equations back, so a stage's premise can arrive either as
-   `HbN : bN = true -> ...` alongside `bN = true`, or with bN already replaced by
-   `true` (making the antecedent provable by eq_refl).  Both are instantiated
-   here, and the resulting conjunctions are flattened so every conjunct the goal
-   needs is literally a hypothesis. *)
 Local Ltac cascade_gather :=
   repeat match goal with
          | H : ?A = true -> _, H2 : ?A = true |- _ => specialize (H H2)
@@ -19,17 +13,6 @@ Local Ltac cascade_gather :=
          end;
   repeat match goal with H : _ /\ _ |- _ => destruct H end.
 
-(* Closes every side goal entailer! produces in the six return stages.
-   Two shapes occur, and which one appears varies by stage (entailer! sometimes
-   discharges the LOCAL parts on its own), so this handles both uniformly:
-
-   - LOCAL matching: `Vint (Int.repr (Z.b2z b)) = Vint (if b then _ else _)`,
-     closed by Vint_b2z_if / destructing the (opaque) boolean.
-   - The threaded PROP implication, closed from cascade_gather's facts.
-
-   cascade_gather runs up front so that bare `b6 = true`-style conjuncts close by
-   assumption, and again after the intro so an implication goal exposed only by
-   `repeat split` is handled too. *)
 Local Ltac cascade_close :=
   cascade_gather;
   repeat split;
@@ -43,23 +26,16 @@ Local Ltac cascade_close :=
     | (intro; cascade_gather; repeat split; assumption)
     | (intro; cascade_gather; tauto) ].
 
-(* [dw_div_dw_strong_precond_check] establishes [DWDivDW_strong_precond]: finite
-   double-word operands, the divisor window, and the quotient ceiling.  The
-   upper divisor test is exactly [2^(femax-p-5)] and also implies the weaker
-   overflow bound.  The strict test on the rounded quotient proves finiteness;
-   [BDIV_abs_le_bpow] then transfers the ceiling to the exact quotient.  The
-   check imposes no lower bound on the quotient. *)
 Lemma body_dw_div_dw_strong_precond_check :
   semax_body Vprog Gprog f_dw_div_dw_strong_precond_check dw_div_dw_strong_precond_check_spec.
 Proof.
   start_function.
-  (* fin_xh, fin_xl, fin_yh, fin_yl *)
+
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
   forward. forward_call. Intros vret_fxl. rename H into Hspec_fxl. forward.
   forward. forward_call. Intros vret_fyh. rename H into Hspec_fyh. forward.
   forward. forward_call. Intros vret_fyl. rename H into Hspec_fyl. forward.
 
-  (* --- dwx: (fin_xh && fin_xl) && (x->s + x->t == x->s) --- *)
   set (Post_t5 :=
     EX b5 : bool,
     PROP (b5 = true -> is_finite (fst xh) = true /\ is_finite (snd xh) = true)
@@ -117,9 +93,8 @@ Proof.
       unfold Post_t6; Exists false; entailer!.
     + unfold Post_t6; clear Post_t6.
       Intros b6; rename H into Hb6.
-      forward.                            (* store _dwx *)
+      forward.
 
-      (* --- dwy: (fin_yh && fin_yl) && (y->s + y->t == y->s) --- *)
       set (Post_t7 :=
         EX b7 : bool,
         PROP (b7 = true -> is_finite (fst yh) = true /\ is_finite (snd yh) = true)
@@ -173,29 +148,23 @@ Proof.
         ** forward. unfold Post_t8; Exists false; entailer!.
         ** unfold Post_t8; clear Post_t8.
            Intros b8; rename H into Hb8.
-           forward.                       (* store _dwy *)
+           forward.
 
-           (* thresholds: q_omega = 2^1022, q_yhi = 2^966,
-              q_ylo = 2^(-968)  (stores absorbed) *)
            forward_call.
            forward_call.
            forward_call.
            replace (- Int.unsigned (Int.repr 968))%Z with (-968)%Z by reflexivity.
            fold q_omega_val q_hi966_val q_lo968_val.
-           forward. forward_call (fst yh). forward.  (* yh_hi := fabs(y->s) <= q_yhi *)
-           forward. forward_call (fst yh). forward.  (* yh_lo := q_ylo <= fabs(y->s) *)
+           forward. forward_call (fst yh). forward.
+           forward. forward_call (fst yh). forward.
 
-           (* Name the divisor-window comparisons to keep their definitions out
-              of the readiness cascade. *)
            remember (Float.cmp Cle
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh))
                        q_hi966_val) as byh_hi eqn:Ebyh_hi.
            remember (Float.cmp Cle q_lo968_val
                        (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst yh)))
                      as byh_lo eqn:Ebyh_lo.
-           (* Readiness cascade.
-              t'14 = dwx && dwy; t'15 = t'14 && yh_hi;
-              t'16 = t'15 && yh_lo. *)
+
            set (Post_t15 :=
              EX b15 : bool,
              PROP (b15 = true -> b6 = true /\ b8 = true)
@@ -252,50 +221,45 @@ Proof.
                   ---- forward. unfold Post_t17; Exists false; entailer!; cascade_close.
                   ---- unfold Post_t17; clear Post_t17.
                        Intros b17; rename H into Hb17.
-                       forward.                    (* ready := t'16 *)
+                       forward.
                        forward_if.
                        { forward. Exists false. entailer!. }
                        assert (b17 = true) as Hb17t
                          by (destruct b17; auto; simpl in H; rep_lia).
-                       forward. forward. forward.  (* q := x->s / y->s *)
+                       forward. forward. forward.
                        forward_call (Float.div (fst xh) (fst yh)).
-                       forward.                    (* qt_hi := fabs(q) < q_omega *)
+                       forward.
                        set (bqt_hi := Float.cmp Clt
                          (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble))
                            (Float.div (fst xh) (fst yh))) q_omega_val).
-                       forward.                    (* return qt_hi *)
+                       forward.
                        Exists bqt_hi; entailer!.
                        split.
                        { intros Hqtht.
 
-                             (* ===== discharge DWDivDW_strong_precond ===== *)
                              destruct (Hb17 eq_refl)
                                as [Hb6t [Hb8t [Hyhht Hyhlt]]].
                              destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                              destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].
-                             (* entailer! has already substituted the remembered
-                                divisor-window equations, so Hyhht and Hyhlt are
-                                the concrete Float.cmp facts expected below. *)
 
-                             (* |yh| <= 2^966 = 2^(femax-p-5), conjunct 7 *)
                              assert (Hyh_hi : Rabs (FT2R (fst yh)) <=
                                        bpow Zaux.radix2 966)
                                by (apply (Float_cmp_Cle_hi q_hi966_val (fst yh)
                                             (bpow Zaux.radix2 966) Hfin_yh
                                             q_hi966_val_finite q_hi966_val_FT2R);
                                    exact Hyhht).
-                             (* 2^(-968) <= |yh| *)
+
                              assert (Hyh_lo : bpow Zaux.radix2 (-968) <=
                                        Rabs (FT2R (fst yh)))
                                by (apply (Float_cmp_Cle_lo q_lo968_val (fst yh)
                                             (bpow Zaux.radix2 (-968)) Hfin_yh
                                             q_lo968_val_finite q_lo968_val_FT2R);
                                    exact Hyhlt).
-                             (* yh <> 0, from the lower bound alone *)
+
                              assert (Hyhne : FT2R (fst yh) <> 0%R).
                              { intro Hz. rewrite Hz, Rabs_R0 in Hyh_lo.
                                pose proof (bpow_gt_0 Zaux.radix2 (-968)). lra. }
-                             (* quotient ceiling on the rounded quotient *)
+
                              destruct (Float_cmp_Clt_bpow1022
                                          (Float.div (fst xh) (fst yh)))
                                as [Hfin_q Hq_hi]; [exact Hqtht |].
@@ -308,7 +272,7 @@ Proof.
                                    try change (fprec Tdouble) with 53%Z;
                                    try change (femax Tdouble) with 1024%Z;
                                    apply Z.max_lub; lia).
-                             (* rounded -> exact transfer *)
+
                              assert (Hquot_hi : Rabs (FT2R (fst xh) / FT2R (fst yh)) <=
                                        bpow Zaux.radix2 1022)
                                by (apply (BDIV_abs_le_bpow (fst xh) (fst yh) 1022
@@ -321,9 +285,6 @@ Proof.
                        { destruct bqt_hi; reflexivity. }
 Qed.
 
-(* The default interface checks the two double-word relations and the divisor
-   window.  The quotient ceiling is replaced by the finite-output check after
-   the kernel call. *)
 Lemma body_dw_div_dw_weak_precond_check :
   semax_body Vprog Gprog f_dw_div_dw_weak_precond_check dw_div_dw_weak_precond_check_spec.
 Proof.

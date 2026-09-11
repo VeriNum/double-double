@@ -17,7 +17,6 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 Set Bullet Behavior "Strict Subproofs".
 
 Section FiniteAccuracyDWPlusFP.
@@ -31,11 +30,9 @@ Let yr := (FT2R y).
 Let sl := snd (TwoSumF xh y).
 Let v  := BPLUS xl sl.
 
-(* start section hyps *)
 Hypothesis DWx : double_word xh xl.
-Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
+Hypothesis FIN : is_finite_p (DWPlusFP xh xl y).
 Hypothesis Hp3 : (3 <= fprec t)%Z.
-(* end section hyps *)
 
 Notation u   := (bpow Zaux.radix2 (- fprec t)).
 Definition relative_error_DWPlusFP := Rabs (((zh + zl) - (xr  + yr)) / (xr  + yr)).
@@ -45,14 +42,14 @@ Theorem DWPlusFP_relative_accuracy_core :
 Proof.
 have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
 { apply ( @generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)).
-  rewrite -!B2R_float_of_ftype. 
-  apply (Binary.generic_format_B2R). }  
-destruct ( @DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
+  rewrite -!B2R_float_of_ftype.
+  apply (Binary.generic_format_B2R). }
+destruct ( @DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl
   Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
 apply dw_word_DWdouble => //.
 apply Rle_trans with (relative_errorDWFP (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)) => //.
 apply Req_le.
-rewrite /relative_error_DWPlusFP/relative_errorDWFP. 
+rewrite /relative_error_DWPlusFP/relative_errorDWFP.
 pose proof DWPlusFP_eq xh  xl y FIN.
  rewrite /F2Rp/DWPlus.DWPlusFP in H1.
 repeat f_equal.
@@ -65,20 +62,20 @@ Theorem DWPlusFP_multiplicative_accuracy_core :
 Proof.
 have Hf : generic_format radix2 (FLX_exp (fprec t)) (FT2R y).
 -
-apply ( @generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)). 
-rewrite -!B2R_float_of_ftype. 
-eapply Binary.generic_format_B2R. 
--  
-destruct ( @DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl 
+apply ( @generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)).
+rewrite -!B2R_float_of_ftype.
+eapply Binary.generic_format_B2R.
+-
+destruct ( @DWPlusFP_correct (fprec t) (fprec_gt_one t) choice eq_refl
   Hp3 (FT2R xh) (FT2R xl) (FT2R y) Hf) => // .
 apply dw_word_DWdouble => //.
 destruct (Req_dec (xr + yr) 0) as [Hx0|Hx0].
-+ 
-exists 0; rewrite Hx0; split; [field_simplify; 
-now rewrite DWPlusFP_0 | now rewrite Rabs_R0; nra]. 
 +
-exists (((zh + zl) - (xr  + yr)) / (xr  + yr)); split. 
-* 
+exists 0; rewrite Hx0; split; [field_simplify;
+now rewrite DWPlusFP_0 | now rewrite Rabs_R0; nra].
++
+exists (((zh + zl) - (xr  + yr)) / (xr  + yr)); split.
+*
 now field_simplify.
 *
 apply DWPlusFP_relative_accuracy_core.
@@ -86,7 +83,6 @@ Qed.
 
 End FiniteAccuracyDWPlusFP.
 
-(** Absolute form of the sharp paper multiplicative theorem. *)
 Lemma DWPlusFP_error_paper_tight {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->

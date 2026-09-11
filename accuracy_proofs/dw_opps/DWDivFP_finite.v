@@ -467,7 +467,6 @@ have Fdh : is_finite (BMINUS xh (BMULT (BDIV xh y) y)) = true.
     by (eapply Rle_lt_trans; [exact Hdharg |]; nra).
   have Hulp := half_ulp_below_quarter _ Hlt. nra. }
 
-(* The normal quotient and product nodes agree with their FLX roundings. *)
 have INTERNAL : DWDivFP_internal_precond xh xl y.
 { repeat split; assumption. }
 have UFprod := cond_UF_prod_internal xh xl y INTERNAL Hnorm.
@@ -503,7 +502,6 @@ have Hprod : FT2R (BMULT (BDIV xh y) y) +
   rewrite (round_generic radix2 (FLX_exp (fprec t)) (Znearest choice) _ Hg).
   ring. }
 
-(* A sharp nearest-rounding estimate gives the Sterbenz factor even at p=2. *)
 set e := (u / (1 + u))%R.
 have Huro : Relative.u_ro radix2 (fprec t) = u.
 { unfold Relative.u_ro.

@@ -1,13 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Helper lemmas for the accuracy and correctness proofs of the
-   Fast2Sum algorithm in the FLT format.
-
-   Layout:
-     1. Zero case helpers
-     2. Correctness & double-word property
-     3. FLT/FLX equivalence *)
+(** Supporting lemmas for [Fast2Sum]. *)
 
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
@@ -25,10 +19,6 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation FE := (FLT_exp (@emin t) (fprec t)).
 Notation emin := (@common.emin t).
-
-(* ===================================================================== *)
-(* 1. Zero case helpers                                                    *)
-(* ===================================================================== *)
 
 Lemma Fast2Sum_2sum0' (xl a b: ftype t):
 FT2R a = 0 -> FT2R b = 0 ->
@@ -75,10 +65,6 @@ try apply Binary.generic_format_B2R.
 rewrite Rminus_diag; apply generic_format_0.
 Qed.
 
-(* ===================================================================== *)
-(* 2. Correctness and double-word property                                 *)
-(* ===================================================================== *)
-
 Variables (a b : ftype t).
 
 Theorem FastTwoSum_correct
@@ -105,7 +91,7 @@ have Gb: generic_format radix2 (FLT_exp emin (fprec t)) (FT2R b) by
   rewrite -B2R_float_of_ftype;
   apply (Binary.generic_format_B2R (fprec t) (femax t)).
 have Hr : (radix2 <= 3)%Z by (simpl; auto).
-(** Apply lemmas from FLX_analysis.F2SumFLT. *)
+
 have: Fast2Sum_correct_flt radix2 emin (fprec t) choice (FT2R a) (FT2R b).
 apply F2Sum_correct_abs_flt => //. apply (fprec_gt_one t).
 rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
@@ -115,10 +101,6 @@ rewrite /Fast2Sum_correct_flt/Fast2Sum_flt/fst/snd;
   rewrite /BPLUS/BINOP float_of_ftype_of_float => //.
 Qed.
 
-(* Same exactness as FastTwoSum_correct, but under the weaker Fast2Sum_exact_cond
-   disjunction (ulp b <= ulp a, or a = 0) instead of the magnitude ordering
-   |b| <= |a|.  Needed at the (sh, c) Fast2Sum site of DWPlusDW, where the
-   magnitude ordering is false in the cancellation regime. *)
 Theorem FastTwoSum_correct_from_exact_cond (Hcond : Fast2Sum_exact_cond a b) :
   FT2R (Fast2Sum_err a b) = FT2R a + FT2R b - FT2R (Fast2Sum_sum a b).
 Proof.
@@ -161,10 +143,6 @@ unfold Fast2Sum_err, Fast2Sum_sum, DDModels.Fast2Sum, fst, snd in *.
   BPLUS_correct t a b.
 by rewrite -!B2R_float_of_ftype.
 Qed.
-
-(* ===================================================================== *)
-(* 3. FLT/FLX equivalence                                                  *)
-(* ===================================================================== *)
 
 Lemma FastTwoSumEq_FLT_uf1
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
@@ -256,7 +234,6 @@ eapply Rle_trans. apply Rlt_le.
 apply Huf. rewrite /emin.
 apply bpow_le; lia. }
 
-
 have Heq1 :
 round radix2 (SpecFloat.fexp (fprec t) (femax t)) ZnearestE
 (round radix2 (SpecFloat.fexp (fprec t) (femax t)) ZnearestE
@@ -264,7 +241,6 @@ round radix2 (SpecFloat.fexp (fprec t) (femax t)) ZnearestE
 round radix2 (SpecFloat.fexp (fprec t) (femax t)) ZnearestE
   (FT2R a + FT2R b) - FT2R a.
 { by rewrite round_generic . }
-
 
 have Heq2 :
 round radix2 (FLX_exp (fprec t)) ZnearestE
@@ -387,9 +363,6 @@ symmetry; rewrite round_generic => //.
 apply (@generic_format_FLX_FLT radix2 emin) => //.
 Qed.
 
-
-(* the result of the FLT format algorithm and the FLX format algorithm are
-  equal, regardless of underflow. *)
 Lemma FastTwoSumEq_FLT
   (FIN : is_finite_p (DD.DDModels.Fast2Sum a b)):
   DD.FLX_analysis.F2Sum.Fast2Sum
@@ -437,7 +410,6 @@ End FastTwoSumCorrect.
 Section FastTwoSumFLXExact.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** FLX Fast2Sum preserves the sum under the usual magnitude ordering. *)
 Lemma flx_f2s_sum (a b : R) :
   generic_format radix2 (FLX_exp (fprec t)) a ->
   generic_format radix2 (FLX_exp (fprec t)) b ->
@@ -456,8 +428,6 @@ have H := F2Sum.F2Sum_correct_abs
 unfold F2Sum.Fast2Sum_correct in H. lra.
 Qed.
 
-(** A fixed-point representation of the leading operand is sufficient for
-    exact FLX Fast2Sum even when magnitude ordering is unavailable. *)
 Lemma flx_f2s_sum_of_fix_left (a b : R) (e : Z) :
   generic_format radix2 (FLX_exp (fprec t)) a ->
   generic_format radix2 (FLX_exp (fprec t)) b ->
@@ -492,8 +462,6 @@ End FastTwoSumFLXExact.
 Section FastTwoSumSmallExact.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(** Runtime Fast2Sum is exact when its exact sum remains on the shared
-    FLT/FIX lattice at exponent [emin]. *)
 Lemma Fast2Sum_sum_exact_of_sum_small (a b : ftype t) :
   is_finite_p (DDModels.Fast2Sum a b) ->
   Rabs (FT2R a + FT2R b) <=
@@ -559,7 +527,6 @@ have Hl := f_equal snd Heq.
 simpl in Hh, Hl. rewrite -Hh -Hl. ring.
 Qed.
 
-(** If Fast2Sum preserves the exact sum, its returned pair is a double-word. *)
 Lemma Fast2Sum_double_word_of_sum (a b : ftype t) :
   is_finite_p (DDModels.Fast2Sum a b) ->
   FT2R (fst (DDModels.Fast2Sum a b)) +

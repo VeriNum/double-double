@@ -1,8 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for double-word multiplication kernels and public wrappers. *)
-
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.

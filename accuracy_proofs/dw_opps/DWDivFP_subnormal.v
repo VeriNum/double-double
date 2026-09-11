@@ -1,13 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Mixed error and output validity when the leading quotient of [DWDivFP] is
-    subnormal.  The normal FLT to FLX bridge does not apply here.  Instead, the
-    quotient, correction, and final sum lie on the [2^emin] lattice.  This
-    gives [|th-xh/y| <= eta/2], keeps the low input contribution below
-    [eta/2], and makes the final [Fast2Sum] exact.  The result has the same
-    [3u^2|Q| + eta] bound as the normal leading quotient case.
-    [DWDivFP_mixed_acc] combines both cases. *)
+(** Accuracy results for [DWDivFP] with a subnormal leading quotient. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -40,8 +34,6 @@ Hypothesis Hdwp : double_word_prop xh xl.
 Hypothesis Hxhlb : bpow radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
 Hypothesis Hsub : Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1).
 
-(* ---------- setup facts ---------- *)
-
 Local Lemma sub_ulp_q : ulp (FT2R xh / FT2R y) = eta.
 Proof.
 apply ulp_FLT_small; [ apply fprec_gt_0 |].
@@ -58,13 +50,11 @@ rewrite sub_th_eq -sub_ulp_q.
 exact (@error_le_half_ulp radix2 fexp valid_fexp_inst_sub choice (FT2R xh / FT2R y)).
 Qed.
 
-(* |xh| = |q| * |y| *)
 Local Lemma sub_xh_split : Rabs (FT2R xh) = Rabs (FT2R xh / FT2R y) * Rabs (FT2R y).
 Proof.
 rewrite -Rabs_mult. f_equal. field; exact Hyne.
 Qed.
 
-(* u * |xh| < eta * |y| / 2 : the key smallness fact *)
 Local Lemma sub_u_xh : u * Rabs (FT2R xh) < /2 * (eta * Rabs (FT2R y)).
 Proof.
 have HY : 0 < Rabs (FT2R y) by (apply Rabs_pos_lt; exact Hyne).
@@ -81,7 +71,6 @@ have Hkey : u * Rabs (FT2R xh / FT2R y) < /2 * eta.
 nra.
 Qed.
 
-(* |y| > 2^(p+1) : forced by clause 8 together with the subnormal quotient *)
 Local Lemma sub_y_big : bpow radix2 (fprec t + 1) < Rabs (FT2R y).
 Proof.
 have HY : 0 < Rabs (FT2R y) by (apply Rabs_pos_lt; exact Hyne).
@@ -107,8 +96,6 @@ have -> : (/16:R) = bpow radix2 (-4) by (simpl; lra).
 apply bpow_le. lia.
 Qed.
 
-
-(* ---------- eta is negligible: eta <= u*M/2, with M = eta*|y| ---------- *)
 Local Lemma sub_eta_uM : eta <= /2 * (u * (eta * Rabs (FT2R y))).
 Proof.
 have He : 0 < eta by apply bpow_gt_0.
@@ -124,7 +111,6 @@ have Hprod : 2 <= u * Rabs (FT2R y).
 nra.
 Qed.
 
-(* ---------- node finiteness ---------- *)
 Local Lemma sub_fin_pih : is_finite (BMULT (BDIV xh y) y) = true.
 Proof. exact (proj2 (BMINUS_finite_e t xh (BMULT (BDIV xh y) y) (FIN_dh xh xl y FIN))). Qed.
 
@@ -134,7 +120,6 @@ exact (proj2 (BMINUS_finite_e t (BMINUS xh (BMULT (BDIV xh y) y))
                 (Fast2Mult_err (BDIV xh y) y) (FIN_dt xh xl y FIN))).
 Qed.
 
-(* ---------- Computation over the reals ---------- *)
 Notation X   := (FT2R xh).
 Notation L   := (FT2R xl).
 Notation Y   := (FT2R y).
@@ -155,11 +140,9 @@ Proof. apply Rmult_le_pos; [ apply bpow_ge_0 | apply Rabs_pos ]. Qed.
 Local Lemma sub_uM_pos : 0 <= u * M.
 Proof. apply Rmult_le_pos; [ apply bpow_ge_0 | apply sub_M_pos ]. Qed.
 
-(* the single nonlinear fact everything downstream needs *)
 Local Lemma sub_uM : u * M <= /16 * M.
 Proof. have Hu := sub_u_small. have HM := sub_M_pos. nra. Qed.
 
-(* |A - X| <= M/2 *)
 Local Lemma sub_A_X : Rabs (A - X) <= /2 * M.
 Proof.
 have HT := sub_th_close.
@@ -172,7 +155,6 @@ have Hstep : Rabs (T - FT2R xh / FT2R y) * Rabs Y <= (/2 * eta) * Rabs Y
 nra.
 Qed.
 
-(* u*|A| <= M/2 + u*M/2 *)
 Local Lemma sub_uA : u * Rabs A <= /2 * M + /2 * (u * M).
 Proof.
 have H1 := sub_A_X. have H2 := sub_u_xh.
@@ -186,7 +168,6 @@ have Hexp : u * (Rabs X + /2 * M) = u * Rabs X + /2 * (u * M) by ring.
 rewrite Hexp in Hstep. lra.
 Qed.
 
-(* |Pih - A| <= 5/8 * M *)
 Local Lemma sub_pih_err : Rabs (Pih - A) <= 5/8 * M.
 Proof.
 have He : Rabs (Pih - A) <= u * Rabs A + /2 * eta.
@@ -200,7 +181,6 @@ have HuM := sub_uM. have HM := sub_M_pos.
 lra.
 Qed.
 
-(* |X - Pih| <= 9/8 * M *)
 Local Lemma sub_X_pih : Rabs (X - Pih) <= 9/8 * M.
 Proof.
 have H1 := sub_A_X. have H2 := sub_pih_err.
@@ -211,7 +191,6 @@ rewrite (Rabs_minus_sym X A) (Rabs_minus_sym A Pih) in Ht.
 lra.
 Qed.
 
-(* |Pil| <= 5/8 * M  (Fast2Mult accuracy + universal ulp bound) *)
 Local Lemma sub_Pil : Rabs Pil <= 5/8 * M.
 Proof.
 have Hacc : Rabs Pil <= /2 * ulp A
@@ -223,7 +202,6 @@ have HuM := sub_uM. have HM := sub_M_pos.
 lra.
 Qed.
 
-(* Fast2Mult defect: |Pih + Pil - A| <= u * M *)
 Local Lemma sub_defect : Rabs (Pih + Pil - A) <= u * M.
 Proof.
 have Hmid : Rabs (A - Pih) <= /2 * ulp A.
@@ -251,7 +229,7 @@ have Hpos : 0 <= u * Rabs A
 have He0 : 0 <= eta by apply bpow_ge_0.
 have HuMpos : 0 <= u * M
   by (apply Rmult_le_pos; [ apply bpow_ge_0 | exact HM ]).
-(* Bound involving only M on the product node rounding error. *)
+
 have HAP : Rabs (A - Pih) <= 9/16 * M by lra.
 have Hb2 : u * Rabs (A - Pih) <= u * (9/16 * M)
   by (apply Rmult_le_compat_l; [ apply bpow_ge_0 | exact HAP ]).
@@ -261,9 +239,6 @@ have Heq : Rabs (Pih + Pil - A) = Rabs (Pil - (A - Pih))
   by (f_equal; ring).
 rewrite Heq. lra.
 Qed.
-
-
-(* ---------- the residual chain ---------- *)
 
 Local Lemma sub_L : Rabs L <= /2 * M.
 Proof.
@@ -371,7 +346,6 @@ have Hexp : u * (21/8 * M) = 21/8 * (u * M) by ring.
 rewrite Hexp in Hstep. lra.
 Qed.
 
-(* The computed d tracks the true residual to within M/2. *)
 Local Lemma sub_resid : Rabs (Dd - (X + L - A)) <= /2 * M.
 Proof.
 have E1 := sub_e1. have E2 := sub_e2. have E3 := sub_e3. have DF := sub_defect.
@@ -393,9 +367,6 @@ have Ht : Rabs (Dd - (X + L - A))
 lra.
 Qed.
 
-
-(* ---------- from the residual to the corrected quotient ---------- *)
-
 Notation Tl := (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                           (Fast2Mult_err (BDIV xh y) y)) xl) y)).
 Notation Q  := ((FT2R xh + FT2R xl) / FT2R y).
@@ -411,7 +382,6 @@ have Heq : u * bpow radix2 (emin + fprec t - 1) = /2 * eta.
 lra.
 Qed.
 
-(* |Q - T| <= eta : the target is already within one eta of the leading node *)
 Local Lemma sub_Q_T : Rabs (Q - T) <= eta.
 Proof.
 have HY : 0 < Rabs Y by (apply Rabs_pos_lt; exact Hyne).
@@ -431,7 +401,6 @@ have Ht : Rabs (Q - T) <= Rabs (Q - X / Y) + Rabs (X / Y - T).
 rewrite (Rabs_minus_sym (X / Y) T) in Ht. lra.
 Qed.
 
-(* the computed correction tracks Q - T to within eta/2 *)
 Local Lemma sub_dy_close : Rabs (Dd / Y - (Q - T)) <= /2 * eta.
 Proof.
 have HY : 0 < Rabs Y by (apply Rabs_pos_lt; exact Hyne).
@@ -477,7 +446,6 @@ rewrite HTl -sub_ulp_dy.
 exact (@error_le_half_ulp radix2 fexp valid_fexp_inst_sub choice (Dd / Y)).
 Qed.
 
-(* the correction lands within eta of the exact one: this IS the theorem *)
 Local Lemma sub_Tl_Q_T : Rabs (Tl - (Q - T)) <= eta.
 Proof.
 have H1 := sub_Tl_close. have H2 := sub_dy_close.
@@ -504,9 +472,6 @@ have Ht : Rabs T <= Rabs (T - X / Y) + Rabs (X / Y).
   rewrite {1}Hsplit. apply Rabs_triang. }
 lra.
 Qed.
-
-
-(* ---------- Fast2Sum is exact here: T + Tl lands on the eta lattice ---------- *)
 
 Local Lemma sub_sum_bnd : Rabs (T + Tl) <= bpow radix2 (fprec t + emin).
 Proof.
@@ -544,13 +509,13 @@ have Heqr : DWDivFP xh xl y
 destruct FIN as [Ffst Fsnd].
 rewrite Heqr in Ffst, Fsnd |- *.
 rewrite /DDModels.Fast2Sum /fst /snd in Ffst, Fsnd |- *.
-(* s = BPLUS T Tl is exact *)
+
 have Hs : FT2R (BPLUS (BDIV xh y)
             (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                  (Fast2Mult_err (BDIV xh y) y)) xl) y)) = T + Tl.
 { rewrite -(BPLUS_round_correct t _ _ Ffst).
   apply: round_generic. exact sub_sum_fmt. }
-(* z = BMINUS s T computes Tl exactly *)
+
 have Fz : is_finite (BMINUS (BPLUS (BDIV xh y)
             (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                  (Fast2Mult_err (BDIV xh y) y)) xl) y))
@@ -563,7 +528,7 @@ have Hz : FT2R (BMINUS (BPLUS (BDIV xh y)
 { rewrite -(BMINUS_round_correct t _ _ Fz) Hs.
   have -> : T + Tl - T = Tl by ring.
   apply: round_generic. apply generic_format_FLT_FT2R. }
-(* e = BMINUS Tl z = 0 *)
+
 have He : FT2R (BMINUS (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                             (Fast2Mult_err (BDIV xh y) y)) xl) y)
             (BMINUS (BPLUS (BDIV xh y)
@@ -576,7 +541,6 @@ have He : FT2R (BMINUS (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Hs He. ring.
 Qed.
 
-(* ================= the subnormal quotient leg ================= *)
 Local Theorem sub_main :
   Rabs (FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)) - Q)
     <= 3 * u ^ 2 * Rabs Q + eta.
@@ -591,8 +555,6 @@ have Hpos : 0 <= 3 * u ^ 2 * Rabs Q.
 lra.
 Qed.
 
-
-(* ---------- Output validity follows from preservation of the sum ---------- *)
 Local Theorem sub_double_word :
   double_word_prop (fst (DWDivFP xh xl y)) (snd (DWDivFP xh xl y)).
 Proof.
@@ -608,11 +570,6 @@ rewrite -Heqr. exact FIN.
 Qed.
 
 End Sub.
-
-
-
-
-
 
 Section SubFin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -639,8 +596,6 @@ Hypothesis Hxhb  : Rabs (FT2R xh) <= bpow radix2 (femax t - 2).
 Hypothesis Hqub  : Rabs (FT2R xh / FT2R y) <= bpow radix2 (femax t - 2).
 Hypothesis Hsub  : Rabs (FT2R xh / FT2R y) < bpow radix2 (emin + fprec t - 1).
 Hypothesis Hxhlb : bpow radix2 (emin + 2 * fprec t) <= Rabs (FT2R xh).
-
-(* ---------- ambient constants ---------- *)
 
 Local Lemma fin_Om32 : 32 <= Om.
 Proof.
@@ -669,7 +624,6 @@ destruct (float_of_ftype y) eqn:E; simpl in Hb; try discriminate.
 - revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-(* eta*|y| <= 1/2 : the subnormal case slack is an absolute constant *)
 Local Lemma fin_etaY : eta * Rabs (FT2R y) <= /2.
 Proof.
 have HY := fin_Y_lt. have He : 0 < eta by apply bpow_gt_0.
@@ -683,8 +637,6 @@ have Hb : bpow radix2 (3 - fprec t) <= /2.
 have Hstep : eta * Rabs (FT2R y) <= eta * Om by nra.
 lra.
 Qed.
-
-(* ---------- the two workhorses ---------- *)
 
 Local Lemma fin_half_ulp (v : R) : Rabs v < Om -> /2 * ulp v <= /16 * Om.
 Proof. move => Hv. exact (@half_ulp_le t v Hp4 Hv). Qed.
@@ -706,8 +658,6 @@ move => Hv. have Hu := fin_half_ulp v Hv.
 eapply Rle_trans; [ apply round_abs_le_abs_plus_half_ulp |]. lra.
 Qed.
 
-(* ---------- node 1: the product th*y stays within 1/4 of xh ---------- *)
-
 Local Lemma fin_ulp_q : ulp (FT2R xh / FT2R y) = eta.
 Proof.
 apply ulp_FLT_small; [ apply fprec_gt_0 |].
@@ -723,7 +673,6 @@ exact (@error_le_half_ulp radix2 fexp valid_fexp_inst_fin choice
          (FT2R xh / FT2R y)).
 Qed.
 
-(* |th*y - xh| <= 1/4 *)
 Local Lemma fin_A_X : Rabs (FT2R (BDIV xh y) * FT2R y - FT2R xh) <= /4.
 Proof.
 have HT := fin_th_close. have HeY := fin_etaY.
@@ -763,8 +712,6 @@ have H := Fast2Mult_finite_unconditional (BDIV xh y) y fin_pih.
 unfold Fast2Mult_err. exact (proj2 H).
 Qed.
 
-
-(* ---------- |y| is large: clause 8 against the subnormal quotient ---------- *)
 Local Lemma fin_y_big : bpow radix2 (fprec t + 1) < Rabs (FT2R y).
 Proof.
 have HY : 0 < Rabs (FT2R y) by (apply Rabs_pos_lt; exact fin_yne).
@@ -791,8 +738,6 @@ have H32 : (32:R) <= bpow radix2 (fprec t + 1).
 { have -> : (32:R) = bpow radix2 5 by (simpl; lra). apply bpow_le; lia. }
 lra.
 Qed.
-
-(* ---------- node 2: dh = xh - pih ---------- *)
 
 Local Lemma fin_pih_err :
   Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R y) <= /16 * Om.
@@ -844,8 +789,6 @@ have Hdh : FT2R (BMINUS xh (BMULT (BDIV xh y) y))
   by rewrite (BMINUS_round_correct t xh (BMULT (BDIV xh y) y) fin_dh).
 rewrite Hdh. lra.
 Qed.
-
-(* ---------- node 3: dt = dh - pil ---------- *)
 
 Local Lemma fin_Pil_bnd :
   Rabs (FT2R (Fast2Mult_err (BDIV xh y) y)) <= /16 * Om.
@@ -906,9 +849,6 @@ have Hdt : FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Hdt. lra.
 Qed.
 
-
-(* ---------- node 4: d = dt + xl ---------- *)
-
 Local Lemma fin_L_bnd : Rabs (FT2R xl) <= /64 * Om.
 Proof.
 have Hrel : Rabs (FT2R xl) <= u * Rabs (FT2R xh)
@@ -953,8 +893,6 @@ have Hd : FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                 (Fast2Mult_err (BDIV xh y) y)) xl fin_d).
 rewrite Hd. lra.
 Qed.
-
-(* ---------- node 5: tl = d / y ---------- *)
 
 Local Lemma fin_div_bnd (v : R) :
   32 <= Rabs (FT2R y) -> Rabs (v / FT2R y) <= /32 * Rabs v.
@@ -1005,8 +943,6 @@ have Htl : FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Htl. lra.
 Qed.
 
-(* ---------- node 6: the leading node is tiny ---------- *)
-
 Local Lemma fin_eta_small : eta <= /64.
 Proof.
 have H := fin_etaY. have HY := fin_Y32. have He : 0 < eta by apply bpow_gt_0.
@@ -1030,8 +966,6 @@ have Ht : Rabs (FT2R (BDIV xh y))
   rewrite {1}He2. apply Rabs_triang. }
 lra.
 Qed.
-
-(* ---------- nodes 7,8: the closing Fast2Sum ---------- *)
 
 Local Lemma fin_fst_aux :
   is_finite (BPLUS (BDIV xh y)
@@ -1129,7 +1063,6 @@ eapply Rle_trans; [unfold Rminus; apply Rabs_triang |].
 rewrite Rabs_Ropp. lra.
 Qed.
 
-(* ================= finiteness in the subnormal branch ================= *)
 Local Theorem fin_main : is_finite_p (DWDivFP xh xl y).
 Proof.
 have Heqr : DWDivFP xh xl y
@@ -1144,8 +1077,7 @@ Qed.
 
 End SubFin.
 
-(** The subnormal proof leg exposed to the public mixed interface file.  Its
-    internal error and validity proofs remain private to this file. *)
+(** Bounds the error and establishes output validity in the subnormal case. *)
 Theorem DWDivFP_subnormal_accuracy_and_double_word
     {NANS : Nans} {t : type} {STD : is_standard t}
     (xh xl y : ftype t) :
@@ -1169,20 +1101,12 @@ intros Hp4 FIN Hyne Hdwp Hxhlb Hsub. split.
 - exact (sub_double_word xh xl y Hp4 FIN Hyne Hdwp Hxhlb Hsub).
 Qed.
 
-
-
-(* Safe input subnormal bridge.  The whole range public ladder is in
-   DWDivFP_mixed_acc.v. *)
 Section CondMin.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Notation emin := (@common.emin t).
 Notation u    := (bpow radix2 (- fprec t)).
 
-(* ============ the subnormal quotient leg, discharged from the cond ============
-   All three deliverables at once: the mixed bound, output validity, and
-   finiteness of the computed pair.  Section SubFin supplies the finiteness,
-   Section Sub proves accuracy and output validity. *)
 Theorem DWDivFP_subnormal_leg (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_strong_precond xh xl y ->

@@ -4,17 +4,6 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* Discharge the residual local goals
-   `Vint (if b then Int.one else Int.zero) = Vint (Int.repr (Z.b2z c))`
-   that entailer! produces
-   whenever a forward_if invariant carries the xh_bnd / y_bnd comparison temps.
-   Each such temp equals a `Float.cmp Cle ...` value; analyzing the comparison
-   closes both sides by reflexivity. *)
-(* Int.repr (Z.b2z b) is exactly the if expression used in the invariants. *)
-(* The stored xh_bnd / y_bnd temp is `Vint (Int.repr (Z.b2z c))` where c is the
-   raw Float.cmp Cle comparison; the invariant carries `Vint (if bxh ..)` with
-   bxh := that same comparison (up to convertibility of q_sqrt_val / femax).
-   Rewriting both to the b2z form lets `reflexivity` close them by conversion. *)
 Local Ltac cmp_val_eq :=
   rewrite Vint_b2z_if; reflexivity.
 
@@ -22,24 +11,17 @@ Local Ltac fix_cmp_locals :=
   solve [ repeat (first [ reflexivity | cmp_val_eq
                         | (intro; discriminate) | split ]) ].
 
-(* [dw_times_fp_strong_precond_check] establishes [DWTimesFP_strong_precond]: finite
-   inputs, a double-word operand, and a strict bound on the rounded leading
-   product.  [prod_bnd_facts] converts that test into product finiteness and the
-   [Omega/2] real bound.  The check does not exclude the [Fast2Mult] underflow
-   gap because the exported mixed guarantee covers it. *)
 Lemma body_dw_times_fp_strong_precond_check :
   semax_body Vprog Gprog f_dw_times_fp_strong_precond_check dw_times_fp_strong_precond_check_spec.
 Proof.
   start_function.
-  (* fin_xh = isfinite_double(x->s) *)
+
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
-  (* fin_xl = isfinite_double(x->t) *)
+
   forward. forward_call. Intros vret_fxl. rename H into Hspec_fxl. forward.
-  (* fin_y = isfinite_double(y). forward_call folds the following Sset _fin_y. *)
+
   forward_call. Intros vret_fy. rename H into Hspec_fy. abbreviate_semax.
 
-  (* --- dwx: (fin_xh && fin_xl) && (x->s + x->t == x->s) ---
-     if A sets _t'4 = fin_xh && fin_xl; if B (guard _t'4) sets _t'5. *)
   set (Post_t4 :=
     EX b4 : bool,
     PROP (b4 = true -> is_finite (fst xh) = true /\ is_finite (snd xh) = true)
@@ -97,14 +79,12 @@ Proof.
       unfold Post_t5; Exists false; entailer!.
     + unfold Post_t5; clear Post_t5.
       Intros b6; rename H into Hb6.
-      forward.  (* store dwx *)
+      forward.
 
-      (* z = x->s * y *)
       forward. forward.
-      (* q_prod = ldexp(1.0, 1023) = q_prod_val
-         (forward_call folds the following plain Sset _q_prod). *)
+
       forward_call.
-      (* prod_bnd = (fabs(z) < q_prod) *)
+
       forward_call. forward.
 
       set (bpb := Float.cmp Clt
@@ -112,9 +92,6 @@ Proof.
                        (Float.mul (float_of_ftype (fst xh)) y))
                     q_prod_val).
 
-      (* Return cascade: dwx && fin_y && prod_bnd.
-         A pure conjunction, as in body_dw_plus_fp_strong_precond_check: two nested
-         short-circuit levels, each carrying one more raw fact forward. *)
       set (Post_t8 :=
         EX b8 : bool,
         PROP (b8 = true -> b6 = true /\ vret_fy = true)
@@ -125,7 +102,7 @@ Proof.
                temp _x x; temp _y (Vfloat y))
         SEP (data_at Tsh dword (f2val xh) x)).
       forward_if Post_t8.
-      * (* dwx != 0 : t'8 = (bool)fin_y *)
+      *
         assert (b6 = true) as Hb6_eq
           by (destruct b6; auto; simpl in H; rep_lia).
         forward.
@@ -145,7 +122,7 @@ Proof.
                  temp _x x; temp _y (Vfloat y))
           SEP (data_at Tsh dword (f2val xh) x)).
         forward_if Post_t9.
-        ** (* t'8 != 0 : t'9 = (bool)prod_bnd *)
+        **
            assert (b8 = true) as Hb8_eq
              by (destruct b8; auto; simpl in H; rep_lia).
            forward.
@@ -161,13 +138,9 @@ Proof.
            unfold Post_t9; Exists false; entailer!.
         ** unfold Post_t9; clear Post_t9.
            Intros b9; rename H into Hb9.
-           forward.  (* return t'9 *)
+           forward.
            Exists b9; entailer!.
-           (* Final discharge: the three conjuncts of DWTimesFP_strong_precond.
-              No underflow disjunct to prove -- that is the whole point of the
-              weakening -- so prod_bnd_facts closes both remaining goals
-              (Fast2Mult finiteness and the product magnitude bound) in one
-              shot and nothing else is needed. *)
+
            destruct (Hb9 eq_refl) as [Hb6t [Hfyt Hbpbt]].
            destruct (Hb6 Hb6t) as [Hfxh [Hfxl Hdwp]].
            assert (Hfy : is_finite y = true)

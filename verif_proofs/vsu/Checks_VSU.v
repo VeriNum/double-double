@@ -1,9 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* The checks VSU packages the runtime checks in [fp_utils.c].  It imports
-   fabs and ldexp and exports the checks consumed by the operations VSU. *)
-
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
 Require Import vcfloat.VCFloat.

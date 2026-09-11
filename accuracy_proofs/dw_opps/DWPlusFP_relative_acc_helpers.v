@@ -12,7 +12,6 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Section FiniteFactsDWPlusFP.
@@ -20,9 +19,9 @@ Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
 Variables (xh xl y : ftype t).
 
-Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
+Hypothesis FIN : is_finite_p (DWPlusFP xh xl y).
 
-Ltac prove_finite := 
+Ltac prove_finite :=
   move: FIN;
   rewrite /DWPlusFP/is_finite_p //=;
   move => [];
@@ -52,13 +51,13 @@ End FiniteFactsDWPlusFP.
 Section  CorrectDWPlusFP'.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))). 
+Let ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 Let emin :=  (@common.emin t).
 
 Variables (xh xl y : ftype t).
 
 Hypothesis  xE : double_word xh xl.
-Hypothesis FIN : is_finite_p (DWPlusFP xh xl y). 
+Hypothesis FIN : is_finite_p (DWPlusFP xh xl y).
 Hypothesis Hp3 : (3 <= fprec t)%Z.
 
 Theorem DWPlusFP_eq :
@@ -74,35 +73,35 @@ replace  (TwoSumF xh y ) with
   (fst (TwoSumF xh y), snd (TwoSumF xh y )) => //.
 replace
 (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y))))
-with 
+with
 (fst (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y)))),
 snd (Fast2Sum (fst (TwoSumF xh y)) (BPLUS xl (snd (TwoSumF xh y))))) => //.
-move => FIN1 FIN2. 
+move => FIN1 FIN2.
 have Heq: (TwoSum (fprec t) choice (FT2R xh) (FT2R y)) =
   (TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) ,
     TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) ) => //.
 have Herr : TwoSum_err (fprec t) choice (FT2R xh) (FT2R y) = FT2R (snd (TwoSumF xh y)).
-{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
-inversion H. rewrite H2 /TwoSumF => //. } 
+{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H.
+inversion H. rewrite H2 /TwoSumF => //. }
 have Hsum : TwoSum_sum (fprec t) choice (FT2R xh) (FT2R y) = FT2R (fst (TwoSumF xh y)).
-{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H. 
-inversion H. rewrite H1 /TwoSumF => //. } 
+{ pose proof TwoSumEq_FLT xh y FIN3. rewrite Heq in H.
+inversion H. rewrite H1 /TwoSumF => //. }
 
 rewrite Herr Hsum.
 destruct (Req_dec (FT2R xh + FT2R y) 0).
 { apply TwoSumF_eq in H => //.
 inversion H.
-rewrite Fast2Sum_2sum0' => //; 
+rewrite Fast2Sum_2sum0' => //;
 rewrite /TwoSumF/fst/snd.
 rewrite H2 H1 Rplus_0_r.
-rewrite F2Sum.Fast2Sum0f round_generic => //. 
+rewrite F2Sum.Fast2Sum0f round_generic => //.
 1,2,3: rewrite -!B2R_float_of_ftype.
 all: try apply (generic_format_FLX_FLT radix2 emin);
 try apply Binary.generic_format_B2R.
-now rewrite H2 H1. } 
+now rewrite H2 H1. }
 
-destruct (Rle_or_lt 
-(bpow radix2 (emin + fprec t - 1))  
+destruct (Rle_or_lt
+(bpow radix2 (emin + fprec t - 1))
 (Rabs
   (FT2R xl +
    FT2R (snd (TwoSumF xh y))))) as [HUF|HUF].
@@ -119,12 +118,12 @@ apply: (generic_format_FLX_FLT _ emin).
 apply: Plus_error.FLT_format_plus_small.
 1,2 : rewrite -!B2R_float_of_ftype;
   apply: Binary.generic_format_B2R.
- 
+
 refine (Rle_trans _ _ _ (Rlt_le _ _ _) _ ). apply HUF.
 apply bpow_le; lia.
 Qed.
 
-Lemma DWPlusFP_double_word : 
+Lemma DWPlusFP_double_word :
 double_word (fst (DWPlusFP xh xl y)) (snd (DWPlusFP xh xl y)).
 Proof.
 apply DWdouble_word_dw => [//=|].
@@ -153,14 +152,6 @@ Variables (xh xl y : ftype t).
 
 Hypothesis DWx : double_word xh xl.
 
-(* Overflow bound for the TwoSum sum [round (xh + y)], expressed via the
-   relative error model [round (xh + y) = (xh + y) * (1 + d1)].  The relative
-   error [d1] returned by [FLT_plus_error_N_ex] is bounded by
-   [u_ro / (1 + u_ro)] with [u_ro = /2 * 2^(1 - fprec t)]; since [fprec t >= 2]
-   we have [|d1| <= /4], and with [|xh| <= Omega/2], [|y| <= Omega/4] the product
-   is at most [(3/4) * (5/4) * Omega = (15/16) * Omega < Omega].  This is the
-   replaces the overflow check based on [interval] and works for any type; the
-   former check relied on [femax t = 1024]. *)
 Lemma sum_round_no_overflow (d1 : R)
   (Hd1 : Rabs d1 <= /2 * bpow radix2 (Z.pos_sub 1 (fprecp t))
                      / (1 + /2 * bpow radix2 (Z.pos_sub 1 (fprecp t))))
@@ -169,7 +160,7 @@ Lemma sum_round_no_overflow (d1 : R)
   Rabs ((FT2R xh + FT2R y) * (1 + d1)) < bpow radix2 (femax t).
 Proof.
 have HM : (0 < bpow radix2 (femax t))%R by apply bpow_gt_0.
-(* The relative error d1 is at most 1/4, since u_ro = /2*2^(1-fprec) <= /4. *)
+
 have Hupos : (0 < /2 * bpow radix2 (Z.pos_sub 1 (fprecp t)))%R.
 { have := bpow_gt_0 radix2 (Z.pos_sub 1 (fprecp t)). lra. }
 have Hu4 : (/2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) <= /4)%R.
@@ -181,7 +172,7 @@ have Hu4 : (/2 * bpow radix2 (Z.pos_sub 1 (fprecp t)) <= /4)%R.
 have Hd1' : (Rabs d1 <= /4)%R.
 { refine (Rle_trans _ _ _ Hd1 _).
   apply Rcomplements.Rle_div_l; lra. }
-(* |xh + y| <= (3/4)*Omega, |1 + d1| <= 5/4, so the product is < Omega *)
+
 rewrite Rabs_mult.
 apply (Rle_lt_trans _ ((3/4 * bpow radix2 (femax t)) * (5/4))).
 - apply Rmult_le_compat; try apply Rabs_pos.
@@ -201,7 +192,7 @@ Proof.
 rewrite /TwoSumF_sum/TwoSumF_err/TwoSumF/fst/snd => //.
 set xh' := float_of_ftype xh.
 set y' := float_of_ftype y.
-have Hov1: 
+have Hov1:
         (Rabs
            (round radix2 (SpecFloat.fexp (fprec t) (femax t))
               (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
@@ -211,15 +202,15 @@ pose proof
 (Plus_error.FLT_plus_error_N_ex   Zaux.radix2 (SpecFloat.emin (fprec t) (femax t))
  (fprec t) (fun x0 : Z => negb (Z.even x0)) (FT2R xh)
   (FT2R y) ).
-destruct H as (d1 & Hd & B).  
+destruct H as (d1 & Hd & B).
 1,2:rewrite -B2R_float_of_ftype; try
   apply Generic_fmt.generic_format_opp; apply Binary.generic_format_B2R.
 rewrite !B2R_float_of_ftype.
-rewrite B. clear B.  
+rewrite B. clear B.
 move: Hd . unfold default_rel, Relative.u_ro. simpl.
 intros. simpl in Hxh, Hy.
 apply sum_round_no_overflow => //.
-pose proof 
+pose proof
   (@Binary.Bplus_correct (fprec t) (femax t)
     (fprec_gt_0 t) (fprec_lt_femax t) (plus_nan (fprec t) (femax t) (fprec_gt_one t))
   BinarySingleNaN.mode_NE xh' y'
@@ -239,22 +230,6 @@ have Hpos : (0 < bpow radix2 (femax t)) by apply bpow_gt_0.
 refine (Rle_trans _ _ _ Hxh _); nra.
 Qed.
 
-(** ** No overflow toolkit without interval tactics.
-
-   To check that the rounded subexpressions of [TwoSumF_err] stay below the
-   overflow threshold [Omega = bpow radix2 (femax t)] for an arbitrary type [t]
-   (where [Omega] is not a literal, so [interval] does not apply), we expand
-   each rounding via its relative error model and bound the result
-   compositionally.  Each [b_*] lemma states [Rabs z <= c]; [mag] chains them
-   over an arithmetic tree, never forming the triple products that defeat [nra],
-   and [nob_close] finishes with [lra] on an inequality involving only [Omega]. *)
-
-(* u_ro = /2 * 2^(1-fprec) <= /8 (as fprec t >= 3); the FLT bound u_ro/(1+u_ro)
-   is also <= /8.  The bound /8 (rather than /4, which only needs fprec >= 2) is
-   what makes the deepest subexpression of the error term ([err], with three
-   nested roundings) provably below the overflow threshold by the compositional
-   bound below: the three [(1 + d)] factors compound to [(9/8)^3], and the input
-   magnitudes [Omega/4] then keep the product strictly under [Omega]. *)
 Lemma rel_le_eighth (Hp3 : (3 <= fprec t)%Z) : (default_rel t <= /8)%R.
 Proof.
 rewrite /default_rel.
@@ -275,7 +250,6 @@ have hden : (0 < 1 + Relative.u_ro radix2 (fprec t))%R by lra.
 apply Rcomplements.Rle_div_l; nra.
 Qed.
 
-(* Compositional magnitude bounds. *)
 Lemma b_plus (a b ca cb : R) :
   Rabs a <= ca -> Rabs b <= cb -> Rabs (a + b) <= ca + cb.
 Proof. move => Ha Hb. eapply Rle_trans; [apply Rabs_triang|]. lra. Qed.
@@ -312,14 +286,10 @@ Ltac mag :=
   | |- Rabs ?x <= _ => eassumption
   end.
 
-(* [lra] runs after the [mag] bracket closes so the [Rle_lt_trans] evar is
-   instantiated. *)
 Ltac nob_close :=
   generalize (bpow_gt_0 radix2 (femax t)); intro;
   eapply Rle_lt_trans; [ mag | ]; lra.
 
-(* Normalise relative error hypotheses to the uniform bound [Rabs d <= /8].
-   Requires a hypothesis [Hp3 : 3 <= fprec t] in context. *)
 Ltac eighth_bounds :=
   match goal with HP : (3 <= fprec t)%Z |- _ =>
   repeat match goal with
@@ -330,9 +300,6 @@ Ltac eighth_bounds :=
       apply (fun h => Rle_trans _ _ _ h (reldiv_le_eighth HP)) in H
   end end.
 
-(* Reduce a no overflow obligation to its structured real expression:
-   introduce the relative error of the pending round, then expand the FT2R of
-   every finite subterm. *)
 Ltac gf_side :=
   try apply Generic_fmt.generic_format_opp;
   rewrite -B2R_float_of_ftype; apply Binary.generic_format_B2R.
@@ -362,10 +329,6 @@ Ltac expand_ft2r :=
       destruct (BMINUS_accurate' _ _ _ H) as (?d & ?Hd & E); rewrite E; clear E
   end.
 
-(* No overflow lemmas for the five shapes of rounded subexpressions in
-   [TwoSumF_err xh y].  Each exposes the relevant TwoSum cancellation with
-   [ring], then bounds the residual with [mag]/[nob_close].  Inputs satisfy
-   [|xh|,|y| <= Omega/4]; relative errors satisfy [|d| <= /8]. *)
 Lemma nofl_a' (d1 d0 : R)
   (Hd1 : Rabs d1 <= /8) (Hd0 : Rabs d0 <= /8)
   (Hxh : Rabs (FT2R xh) <= /4 * bpow radix2 (femax t))
@@ -446,8 +409,6 @@ replace (((FT2R xh - ((FT2R xh + FT2R y) * (1 + d2) - FT2R y) * (1 + d1)) * (1 +
 nob_close.
 Qed.
 
-
-
 Lemma TwoSumF_err_finite
 (HFINxh: Binary.is_finite (fprec t) (femax t) (float_of_ftype xh) = true)
 (HFINy : Binary.is_finite (fprec t) (femax t) (float_of_ftype y) = true)
@@ -461,9 +422,7 @@ rewrite /TwoSumF_err/TwoSumF/fst/snd => //.
 rewrite -is_finite_Binary.
 rewrite -is_finite_Binary in HFINxh.
 rewrite -is_finite_Binary in HFINy.
-(* Establish finiteness of every rounded subexpression from the leaves upward via the
-   no overflow lemmas at the FT2R level, discharging each obligation with
-   the corresponding shape bound. *)
+
 have FINs : is_finite (BPLUS xh y) = true.
 { apply no_overflow_sum_is_finite; [exact HFINxh|exact HFINy|].
   show_nob. expand_ft2r. eighth_bounds. nob_close. }
@@ -493,7 +452,7 @@ Proof.
 rewrite /is_finite_p; split.
 { rewrite is_finite_Binary.
   apply TwoSumF_sum_finite; try assumption.
-  (* the sum needs the [/2] high part bound, supplied from [/4] by the bnd lemma *)
+
   apply TwoSumF_err_finite_bnd; assumption. }
 rewrite is_finite_Binary.
 apply TwoSumF_err_finite; assumption.
@@ -502,14 +461,14 @@ Qed.
 Let sh := TwoSumF_sum xh y.
 Let sl := TwoSumF_err xh y.
 
-Lemma xl_bnd 
+Lemma xl_bnd
 (Hxh : Rabs (FT2R xh) <= /2 * (bpow radix2 (femax t))) :
 Rabs (FT2R xl) <= / 2 * bpow radix2 (femax t - fprec t).
 Proof.
 apply dw_ulp in DWx.
 refine (Rle_trans _ _ _  DWx _).
 apply Rmult_le_compat_l; try nra.
-(* ulp (FT2R xh) <= 2^(femax - fprec), since |xh| <= 2^(femax-1) = (1/2)*Omega *)
+
 have Hxhb : Rabs (FT2R xh) <= bpow radix2 (femax t - 1).
 { refine (Rle_trans _ _ _ Hxh _).
   have -> : (femax t - 1 = -1 + femax t)%Z by ring.
@@ -538,19 +497,18 @@ Theorem DWPlusFP_zh_finite
 let zh := Fast2Sum_sum sh (BPLUS xl sl) in
  Binary.is_finite (fprec t) (femax t) (float_of_ftype zh) = true.
 Proof.
-(* zh = Fast2Sum_sum sh (BPLUS xl sl) = BPLUS sh (BPLUS xl sl). *)
+
 rewrite /Fast2Sum_sum/fst/Fast2Sum.
-(* [is_finite] copies of the hypotheses on operand finiteness for the no overflow
-   lemmas at the FT2R level (the [TwoSum*] lemmas keep the [Binary] form). *)
+
 have Fxl : is_finite xl = true by (rewrite is_finite_Binary; exact HFINxl).
 have Hxh2 : Rabs (FT2R xh) <= /2 * bpow radix2 (femax t)
   by (apply TwoSumF_err_finite_bnd; assumption).
-(* sh and sl are finite *)
+
 have FINsh : is_finite sh = true.
 { rewrite is_finite_Binary. apply TwoSumF_sum_finite; assumption. }
 have FINsl : is_finite sl = true.
 { rewrite is_finite_Binary. apply TwoSumF_err_finite; assumption. }
-(* magnitude bounds: |xl|, |sl| <= Omega/16 (uses fprec t >= 3) *)
+
 have Hxl16 : Rabs (FT2R xl) <= /16 * bpow radix2 (femax t).
 { refine (Rle_trans _ _ _ (xl_bnd Hxh2) _).
   have -> : (/16 * bpow radix2 (femax t) = /2 * bpow radix2 (femax t - 3))%R.
@@ -567,14 +525,14 @@ have Hsl16 : Rabs (FT2R sl) <= /16 * bpow radix2 (femax t).
   apply (fun h => Rle_trans _ _ _ h (rel_le_eighth Hp3)) in Hdel.
   apply (Rle_trans _ (/2 * bpow radix2 (femax t) * /8)); [|lra].
   apply Rmult_le_compat; try apply Rabs_pos; assumption. }
-(* Finiteness. *)
+
 rewrite -is_finite_Binary.
 have FINxlsl : is_finite (BPLUS xl sl) = true.
 { apply no_overflow_sum_is_finite; [exact Fxl|exact FINsl|].
   show_nob. eighth_bounds. nob_close. }
 have Esh : sh = BPLUS xh y by reflexivity.
 have FBxy : is_finite (BPLUS xh y) = true by (rewrite -Esh; exact FINsh).
-(* drop the loose [/2] bound so [mag] uses the tight [/4] input bound on xh *)
+
 clear Hxh2.
 apply no_overflow_sum_is_finite; [exact FINsh|exact FINxlsl|].
 rewrite Esh.
@@ -591,7 +549,7 @@ Theorem DWPlusFP_zl_finite
 let zl := Fast2Sum_err sh (BPLUS xl sl) in
 Binary.is_finite (fprec t) (femax t) (float_of_ftype zl) = true.
 Proof.
-(* zl = Fast2Sum_err sh (xl+sl) = BMINUS (xl+sl) (BMINUS (BPLUS sh (xl+sl)) sh). *)
+
 rewrite /Fast2Sum_err/snd/Fast2Sum.
 have Hxh2 : Rabs (FT2R xh) <= /2 * bpow radix2 (femax t)
   by (apply TwoSumF_err_finite_bnd; assumption).
@@ -600,7 +558,7 @@ have FINsh : is_finite sh = true.
 { rewrite is_finite_Binary. apply TwoSumF_sum_finite; assumption. }
 have FINsl : is_finite sl = true.
 { rewrite is_finite_Binary. apply TwoSumF_err_finite; assumption. }
-(* |xl|, |sl| <= Omega/16 *)
+
 have Hxl16 : Rabs (FT2R xl) <= /16 * bpow radix2 (femax t).
 { refine (Rle_trans _ _ _ (xl_bnd Hxh2) _).
   have -> : (/16 * bpow radix2 (femax t) = /2 * bpow radix2 (femax t - 3))%R.
@@ -617,7 +575,7 @@ have Hsl16 : Rabs (FT2R sl) <= /16 * bpow radix2 (femax t).
   apply (fun h => Rle_trans _ _ _ h (rel_le_eighth Hp3)) in Hdel.
   apply (Rle_trans _ (/2 * bpow radix2 (femax t) * /8)); [|lra].
   apply Rmult_le_compat; try apply Rabs_pos; assumption. }
-(* finiteness of v := xl+sl and zh := sh+v *)
+
 have FINv : is_finite (BPLUS xl sl) = true.
 { apply no_overflow_sum_is_finite; [exact Fxl|exact FINsl|].
   show_nob. eighth_bounds. nob_close. }
@@ -625,7 +583,7 @@ have FINzh : is_finite (BPLUS sh (BPLUS xl sl)) = true.
 { rewrite is_finite_Binary.
   pose proof (DWPlusFP_zh_finite HFINxh HFINxl HFINy Hp3 Hxhl Hy) as Hz.
   revert Hz. rewrite /Fast2Sum_sum/fst/Fast2Sum //. }
-(* magnitude bounds for sh and v=xl+sl *)
+
 have Hsh : Rabs (FT2R sh) <= 9/16 * bpow radix2 (femax t).
 { have FBxy : is_finite (BPLUS xh y) = true.
   { rewrite is_finite_Binary. apply TwoSumF_sum_finite; assumption. }
@@ -645,7 +603,7 @@ have Hv : Rabs (FT2R (BPLUS xl sl)) <= 9/64 * bpow radix2 (femax t).
   apply Rmult_le_compat; try apply Rabs_pos.
   - eapply Rle_trans; [apply Rabs_triang|]; lra.
   - eapply Rle_trans; [apply Rabs_triang|]; rewrite Rabs_R1; lra. }
-(* r = BMINUS (BPLUS sh (xl+sl)) sh is finite (r ~ xl+sl, via cancellation) *)
+
 have FINr : is_finite (BMINUS (BPLUS sh (BPLUS xl sl)) sh) = true.
 { apply no_overflow_minus_is_finite; [exact FINzh|exact FINsh|].
   rewrite /Bminus_no_overflow.
@@ -661,7 +619,7 @@ have FINr : is_finite (BMINUS (BPLUS sh (BPLUS xl sl)) sh) = true.
   replace (((FT2R sh + FT2R (BPLUS xl sl)) * (1 + dz) + - FT2R sh) * (1 + dr))
     with ((FT2R (BPLUS xl sl) + (FT2R sh + FT2R (BPLUS xl sl)) * dz) * (1 + dr)) by ring.
   nob_close. }
-(* zl = BMINUS (xl+sl) r is finite (zl ~ 0, via cancellation) *)
+
 rewrite -is_finite_Binary.
 apply no_overflow_minus_is_finite; [exact FINv|exact FINr|].
 rewrite /Bminus_no_overflow.
@@ -721,22 +679,22 @@ Hypothesis Hp3 : (3 <= fprec t)%Z.
 
 Lemma DWPlusFP_0 : xr + yr = 0 -> zh + zl = 0.
 Proof.
-move => H0. 
+move => H0.
 pose proof DWPlusFP_eq xh xl y FIN.
-rewrite /F2Rp in H. 
+rewrite /F2Rp in H.
 destruct (Req_dec xr 0).
 { have xh0: FT2R xh = 0.
-move: DWx; rewrite /double_word. 
+move: DWx; rewrite /double_word.
 fold xr; by rewrite H1 /rounded round_0.
-(* Cases based on underflow. *)
+
 destruct (Rle_or_lt (bpow radix2 (@emin t + fprec t - 1)) (Rabs xr)).
-{  have Hv2: 
+{  have Hv2:
 Valid_rnd (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE)
   by apply BinarySingleNaN.valid_rnd_round_mode.
 have Hxl: FT2R xl = 0.
 move: H2 DWx; subst xr; rewrite /double_word xh0; move => H2.
-rewrite /rounded round_FLT_FLX Rplus_0_l => //. move => Hz. 
-apply: ( @eq_0_round_0_FLX radix2 (fprec t) _ 
+rewrite /rounded round_FLT_FLX Rplus_0_l => //. move => Hz.
+apply: ( @eq_0_round_0_FLX radix2 (fprec t) _
   (BinarySingleNaN.round_mode BinarySingleNaN.mode_NE) Hv2) => //.
 fold ( @emin t); by rewrite Rplus_0_l in H2.
 rewrite DWPlusFP0f in H => //; try lia. fold zl zh in H.
@@ -753,12 +711,12 @@ inversion H. move : H0; subst xr. rewrite H1; subst yr; nra.
   apply: generic_format_FLX_FLT;
   apply: Binary.generic_format_B2R. }
 
-move: H. 
+move: H.
 unfold DWPlus.DWPlusFP.
 rewrite DWPlus.TwoSum_correct => //.
 rewrite -!Rplus_assoc.
 replace (FT2R xl + FT2R xh) with xr. fold yr.
-rewrite H0 Rplus_0_l. 
+rewrite H0 Rplus_0_l.
 rewrite F2Sum.Fast2Sum0 => //. fold zl zh. move => Hz.
 inversion Hz => //=; lra.
 move => x.

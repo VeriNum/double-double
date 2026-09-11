@@ -1,8 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for the basic-block kernels and public wrappers in dd_ops.c. *)
-
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.

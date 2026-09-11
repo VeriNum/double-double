@@ -3,15 +3,10 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* fast2_sum_magnitude_order_check(x,y) returns 1 only if Fast2Sum_magnitude_order_cond x y:
-   (a+b) is finite (derived by isfinite_double(s)), and |b| ≤ |a| (by fabs comparison).
-   Because the C uses short-circuit &&, fabs is called only when fin=true,
-   so is_finite x and is_finite y can be derived from is_finite (BPLUS x y)
-   via is_finite_Float_add_l / is_finite_Float_add_r. *)
 Lemma body_fast2_sum_magnitude_order_check: semax_body Vprog Gprog f_fast2_sum_magnitude_order_check fast2_sum_magnitude_order_check_spec.
 Proof.
   start_function.
-  forward_call. (* isfinite_double(x + y) *)
+  forward_call.
   Intros vret_fin.
   rename H into Hfin_spec.
   set (Post_ret :=
@@ -23,7 +18,7 @@ Proof.
           temp _b (Vfloat (float_of_ftype y)))
     SEP()).
   forward_if Post_ret.
-  - (* fin ≠ 0: vret_fin = true, so BPLUS x y is finite *)
+  -
     assert (vret_fin = true) as Hvf.
     { destruct vret_fin; auto; simpl in H; rep_lia. }
     assert (is_finite (BPLUS x y) = true) as Hfin_sum.
@@ -37,9 +32,9 @@ Proof.
     { rewrite is_finite_Binary.
       apply is_finite_Float_add_r with (a := float_of_ftype x).
       exact Hfin_sum. }
-    forward_call (y). (* t'3 = fabs(b) *)
-    forward_call (x). (* t'4 = fabs(a) *)
-    forward. (* t'2 = (bool)(t'3 <= t'4) *)
+    forward_call (y).
+    forward_call (x).
+    forward.
     unfold Post_ret; clear Post_ret.
     Exists (Float.cmp Cle
       (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (float_of_ftype y))
@@ -60,13 +55,13 @@ Proof.
         (Binary.Babs (fprec Tdouble) 1024
           (abs_nan (fprec Tdouble) 1024 (fprec_gt_one Tdouble)) x)).
       intro b_cmp; destruct b_cmp; reflexivity.
-  - (* fin = 0: t'2 = 0 *)
-    forward. (* t'2 = 0 *)
+  -
+    forward.
     unfold Post_ret; clear Post_ret; Exists false; entailer!.
-  - (* join: return t'2 *)
+  -
     unfold Post_ret; clear Post_ret.
     Intros b_r.
     rename H into H_r.
-    forward. (* return t'2 *)
+    forward.
     Exists b_r; entailer!.
 Qed.

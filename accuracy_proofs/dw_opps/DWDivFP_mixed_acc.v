@@ -1,11 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Public whole range mixed accuracy interface for [DWDivFP].
-
-    The normal range proof is supplied by [DWDivFP_relative_acc]; the subnormal proof
-    leg is supplied by [DWDivFP_subnormal].  This file exposes only the public
-    condition ladder and the combined accuracy and validity guarantee. *)
+(** Mixed accuracy and output-validity results for [DWDivFP]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common float_acc_lems op_defs DDModels DDConds DWord_defs.

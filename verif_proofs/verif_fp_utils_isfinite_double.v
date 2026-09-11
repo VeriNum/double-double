@@ -3,11 +3,6 @@
 
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* isfinite_double(x) returns 1 iff x is finite.
-   The C implementation uses the trick (x - x) == 0.0: finite values give 0,
-   while infinities and NaNs give NaN, for which the == comparison is false.
-   The proof strategy: use is_finite x as the witness bool, then for the
-   finite case (B754_finite) show that x - x rounds to 0 and Rcompare gives Eq. *)
 Lemma body_isfinite_double: semax_body Vprog Gprog f_isfinite_double isfinite_double_spec.
 Proof.
   start_function.
@@ -37,7 +32,7 @@ Proof.
   symmetry;  apply Rcompare_Eq; auto.
   -
   subst; rewrite <-H; auto.
-  - (* x - x is finite: Bminus_no_overflow holds because the real difference is 0 *)
+  -
   pose proof (no_overflow_minus_is_finite Tdouble
   (Binary.B754_finite 53 1024 s m e e0)
   (Binary.B754_finite 53 1024 s m e e0)) as H.

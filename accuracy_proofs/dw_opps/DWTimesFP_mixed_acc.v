@@ -1,11 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole range mixed error and output validity results for [DWTimesFP].
-
-    This file imports the common runtime model facts and normal range relative
-    result from [DWTimesFP_relative_acc], then handles the Fast2Mult underflow
-    gap and exposes the mixed guarantee ladder. *)
+(** Mixed error and output-validity results for [DWTimesFP]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -20,18 +16,6 @@ Set Bullet Behavior "Strict Subproofs".
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
 
-(** Whole range mixed accuracy.  Below the TwoProd exactness threshold
-    [2^(emin+2p-1)], the product residual need not be representable; the
-    absolute [eta] term accounts for that underflow regime. *)
-
-(** Algorithm 9's closing Fast2Sum is exact as soon as its two inputs are
-    ordered by magnitude.  No precision bound, no input condition and no regime
-    hypothesis is needed -- [FastTwoSum_correct] applies directly.
-
-    This is the prerequisite for splitting the refinement block on the
-    ordering: in the ordered arm the two Fast2Sum roundings of
-    [DWDivDW_refinement_product_value_error_tight_floor] vanish, taking its
-    floor from [2*eta] down to [eta]. *)
 Lemma DWTimesFP_sum_exact_of_ord {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   is_finite_p (DWTimesFP ah al b) ->
@@ -57,9 +41,6 @@ change (FT2R (snd (DWTimesFP ah al b)) =
 lra.
 Qed.
 
-(** If Algorithm 9's closing Fast2Sum preserves its two inputs, its returned
-    pair is a double-word: the high component is exactly the rounding of that
-    preserved sum. *)
 Local Lemma DWTimesFP_double_word_of_sum {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   is_finite_p (DWTimesFP ah al b) ->
@@ -84,11 +65,6 @@ have Hfst : fst d=BPLUS ch cl3 by reflexivity.
 rewrite Hfst. symmetry. apply BPLUS_round_correct. exact (proj1 FIN).
 Qed.
 
-(* ---------- the gap regime: below the TwoProd exactness threshold ---------- *)
-
-(** In the gap below Fast2Mult's exactness threshold, the compensated core of
-    Algorithm 9 has only a floor error.  This is the value before its
-    closing Fast2Sum; no ordinary [u^2] term is introduced in this regime. *)
 Local Lemma DWTimesFP_core_error_floor_gap {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
@@ -182,10 +158,6 @@ eapply Rle_trans.
 - nra.
 Qed.
 
-(** Full Algorithm 9 in the Fast2Mult gap.  If the closing Fast2Sum ordering
-    holds it is exact.  If it fails, the leading and low terms are both within
-    six floor ulps, where their common fixed-point lattice makes Fast2Sum exact
-    as well.  Thus the compensated core's [2.51] ulps are the whole cost. *)
 Local Lemma DWTimesFP_error_floor_gap {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
@@ -286,14 +258,8 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
     ((FT2R ch+FT2R cl3)-(FT2R ah+FT2R al)*FT2R b)%R by ring.
   eapply Rle_trans; [exact Hcore|]. nra.
   + exact (Fast2Sum_is_DW ch cl3 (proj1 Fe) Hord).
-- (* Unordered closing Fast2Sum.  |cl3| > |ch| can only happen when the
-     leading product is tiny: |cl3| <= (1+u)(2uP + 1.501eta) + eta/2 while
-     |ch| >= (1-u)P - eta/2, and at u <= 1/8 those cross only below
-    4.5281*eta, so P < 4.6*eta.  The exact sum ch + cl3 is then within
-     one binade of the subnormal range -- bound it through the compensated
-     core error, not by the triangle inequality on |ch| and |cl3|
-     separately, which would overshoot 2^(emin+3) -- and the shared
-     FLT/FIX lattice at exponent emin makes Fast2Sum exact. *)
+-
+
   have HuP' : u*P<=/8*P.
   { have H := Rmult_le_compat_r P _ _ HP0 Hu. nra. }
   have Hueta' : u*eta<=/8*eta.
@@ -329,8 +295,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
     have Hstep : Rabs (FT2R ch+FT2R cl3)<=251/100*eta+(1+u)*P.
     { eapply Rle_trans; [exact Htri2|].
       apply Rplus_le_compat; [exact Hcore|exact Halb']. }
-    (* 2.51*eta + (1+u)*P < 2.51*eta + (9/8)*4.6*eta = 7.685*eta <= 8*eta.
-       Linear in the atoms eta, P and u*P, so lra suffices. *)
+
     have Hstep2 : 251/100*eta+(1+u)*P<=8*eta.
     { have H1 : ((1+u)*P = P+u*P)%R by ring.
       rewrite H1. lra. }
@@ -345,12 +310,6 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch)))
   + exact (DWTimesFP_double_word_of_sum ah al b FIN Hsum).
 Qed.
 
-(* ---------- public assembly: the whole range mixed API ---------- *)
-
-(* Normal arm.  Above the TwoProd exactness threshold the product residual
-   is representable and the entire Algorithm 9 error is relative, with no
-   physical floor contribution: this is the local relative accuracy core
-   cleared of its division by the exact product. *)
 Local Lemma DWTimesFP_error_normal_arm {NANS : Nans} {t : type}
     {STD : is_standard t} (ah al b : ftype t) :
   (3 <= fprec t)%Z -> double_word_prop ah al ->
@@ -379,9 +338,6 @@ have Hmul := Rmult_le_compat_r (Rabs Q) _ _ (Rabs_pos _) Hrel.
 eapply Rle_trans; [exact Hmul|]. right; ring.
 Qed.
 
-(* The public whole range result bundles the conventional mixed bound with
-   output validity.  The single local core below performs the only normal/gap
-   split used to establish that bundle. *)
 Definition DWTimesFP_guarantee {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) : Prop :=
   let '(zh, zl) := DWTimesFP xh xl y in
@@ -442,12 +398,6 @@ destruct (Rle_dec
   destruct (DWTimesFP xh xl y) as [zh zl].
   cbn [fst snd]. intros Hacc Hdw. exact (conj Hacc Hdw).
 Qed.
-
-(* Public mixed interface.  [DWTimesFP_weak_pre_and_finite_post_cond] combines the input
-   double-word property with result finiteness.  The following theorems expose
-   accuracy, output validity, and their conjunction.  A caller may instead
-   establish [DWTimesFP_strong_precond] before the operation.  Neither
-   route excludes the [Fast2Mult] underflow gap. *)
 
 Lemma DWTimesFP_weak_pre_and_finite_post_cond_of_strong_precond {NANS : Nans} {t : type}
     {STD : is_standard t} (xh xl y : ftype t) :

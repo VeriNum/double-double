@@ -1,10 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Public whole range mixed error and output validity API for [DWDivDW].
-
-    The shared reciprocal analysis and normal range relative theorem are in
-    [DWDivDW_relative_acc]. *)
+(** Mixed error and output-validity results for [DWDivDW]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import common op_defs DDConds DWord_defs.

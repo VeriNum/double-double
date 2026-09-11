@@ -1,8 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for double-word division kernels and public wrappers. *)
-
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
@@ -20,42 +18,30 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-(* Leaf reconciliation lemmas BDIV_Td/BMULT_Td/BOPP_Td/BFMA_Td/Zconst1_Td are
-   factored into dd_float_reconcile (imported above); body_dw_div_dw_kernel uses
-   them to make the stored value and the postcondition syntactically equal. *)
-
-(* Verification of the call sequence implementing [DWDivDW].  Each callee
-   returns its model result without an arithmetic precondition.  The struct
-   arguments produced by earlier calls are passed as explicit witnesses
-   because Coq cannot infer them through projections of [f2val]. *)
 Lemma body_dw_div_dw_kernel:
   semax_body Vprog Gprog f_dw_div_dw_kernel dw_div_dw_kernel_spec.
 Proof.
 start_function.
-forward.            (* t'4 = y->s *)
-forward.            (* th  = 1.0 / t'4 *)
-forward.            (* t'3 = y->s *)
-forward_call.       (* t'1 = fma(-t'3, th, 1.0) *)
-forward.            (* rh  = t'1 *)
-forward.            (* t'2 = y->t *)
-forward.            (* rl  = -(t'2 * th) *)
-forward_call.       (* fast_2sum_kernel(&e, rh, rl) *)
-(* dw_times_fp_kernel(&delta, &e, th): witness (s, x, xh, y) =
-   (v_delta, v_e, e pair, th). *)
+forward.
+forward.
+forward.
+forward_call.
+forward.
+forward.
+forward.
+forward_call.
+
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?E) v_e] =>
    forward_call (v_delta, v_e, E, T) end end.
-(* dw_plus_fp_kernel(&m, &delta, th): witness (v_m, v_delta, delta pair, th) *)
+
 match goal with |- context [temp _th (Vfloat ?T)] =>
  match goal with |- context [data_at _ _ (f2val ?D) v_delta] =>
    forward_call (v_m, v_delta, D, T) end end.
-(* dw_times_dw_kernel(z, x, &m): witness (s, x, v_m, xh, m pair). *)
+
 match goal with |- context [data_at _ _ (f2val ?M) v_m] =>
    forward_call (s, x, v_m, xh, M) end.
-(* Rewrite the postcondition's DWDivDW term into the exact composition the
-   cascade produced, so both `data_at` values become syntactically identical
-   and the closing entailer needs no whole term conversion between B and
-   CompCert floating-point operations. *)
+
 match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
   replace (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh)) with PROD end.
 2:{ unfold DWDivDW.
@@ -67,36 +53,28 @@ match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
 entailer!!.
 Qed.
 
-(* The callees (fast_2mult_kernel, fast_2sum_kernel) require no preconditions,
-   so the forward cascade needs no cond discharge.  The C directly performs the
-   subtractions/additions of Algorithm 15, so -- unlike the DW/DW kernel, whose
-   arithmetic is hidden inside the multiplication and addition kernels -- the
-   stored value is Fast2Sum th tl with th = BDIV xh y and tl the raw
-   BPLUS/BMINUS/BDIV cascade.  We rewrite DWDivFP into that exact CompCert float
-   composition (BDIV/BMINUS/BPLUS reconciled to Float.div/sub/add) so the two
-   data_at values become syntactically identical for the closing entailer. *)
 Lemma body_dw_div_fp_kernel:
   semax_body Vprog Gprog f_dw_div_fp_kernel dw_div_fp_kernel_spec.
 Proof.
 start_function.
-forward.            (* t'5 = x->s *)
-forward.            (* th  = t'5 / y *)
-(* fast_2mult_kernel(&p, th, y): witness (v_p, th, y) *)
+forward.
+forward.
+
 match goal with |- context [temp _th (Vfloat ?T)] =>
   forward_call (v_p, T, y) end.
-forward.            (* t'3 = x->s *)
-forward.            (* t'4 = p.s  *)
-forward.            (* dh  = t'3 - t'4 *)
-forward.            (* t'2 = p.t  *)
-forward.            (* dt  = dh - t'2 *)
-forward.            (* t'1 = x->t *)
-forward.            (* d   = dt + t'1 *)
-forward.            (* tl  = d / y *)
-(* fast_2sum_kernel(z, th, tl): witness (s, th, tl) *)
+forward.
+forward.
+forward.
+forward.
+forward.
+forward.
+forward.
+forward.
+
 match goal with |- context [temp _th (Vfloat ?TH)] =>
  match goal with |- context [temp _tl (Vfloat ?TL)] =>
    forward_call (s, TH, TL) end end.
-(* Rewrite the postcondition's DWDivFP into the produced composition. *)
+
 match goal with |- context [data_at _ _ (f2val ?PROD) s] =>
   replace (DWDivFP (fst xh) (snd xh) y) with PROD end.
 2:{ unfold DWDivFP.

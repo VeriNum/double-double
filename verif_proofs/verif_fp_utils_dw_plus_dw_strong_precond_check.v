@@ -4,28 +4,19 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* dw_plus_dw_strong_precond_check(x, y) returns 1 only if DWPlusDW_strong_precond holds:
-   each component is finite, both (xh, xl) and (yh, yl) are double-words,
-   and |xh|, |yh| <= Omega/4 = 2^1022.
-
-   Each &&-short-circuit becomes
-   a forward_if cascade with an EX b_i, PROP(b_i = true -> P_i) invariant.
-   Discharge of the propositional conjuncts at each join is delegated to the
-   short_circuit_*_concl lemmas in verif_fp_utils_short_circuit.v. *)
 Lemma body_dw_plus_dw_strong_precond_check :
   semax_body Vprog Gprog f_dw_plus_dw_strong_precond_check dw_plus_dw_strong_precond_check_spec.
 Proof.
   start_function.
-  (* fin_xh = isfinite_double(x->s) *)
+
   forward. forward_call. Intros vret_fxh. rename H into Hspec_fxh. forward.
-  (* fin_xl = isfinite_double(x->t) *)
+
   forward. forward_call. Intros vret_fxl. rename H into Hspec_fxl. forward.
-  (* fin_yh = isfinite_double(y->s) *)
+
   forward. forward_call. Intros vret_fyh. rename H into Hspec_fyh. forward.
-  (* fin_yl = isfinite_double(y->t) *)
+
   forward. forward_call. Intros vret_fyl. rename H into Hspec_fyl. forward.
 
-  (* --- dwx: (fin_xh && fin_xl) && (x->s + x->t == x->s) --- *)
   set (Post_t5 :=
     EX b5 : bool,
     PROP (b5 = true -> is_finite (fst xh) = true /\ is_finite (snd xh) = true)
@@ -38,22 +29,22 @@ Proof.
     SEP (data_at Tsh dword (f2val xh) x;
          data_at Tsh dword (f2val yh) y)).
   forward_if Post_t5.
-  - (* fin_xh ≠ 0 *)
+  -
     assert (vret_fxh = true) as Hvfxh.
     { destruct vret_fxh; auto; simpl in H; rep_lia. }
     forward.
     unfold Post_t5; Exists vret_fxl; entailer!.
-    (* entailer! subst's vret_fxh := true; refer to `true` below. *)
+
     split.
     + intros Hout.
       apply (short_circuit_fin_and_concl (fst xh) (snd xh) true vret_fxl vret_fxl
               Hspec_fxh Hspec_fxl eq_refl).
       exact Hout.
     + destruct vret_fxl; simpl; auto.
-  - (* fin_xh = 0 *)
+  -
     forward.
     unfold Post_t5; Exists false; entailer!.
-  - (* join Post_t5; do the DW check *)
+  -
     unfold Post_t5; clear Post_t5.
     Intros b5; rename H into Hb5.
     set (Post_t6 :=
@@ -68,7 +59,7 @@ Proof.
       SEP (data_at Tsh dword (f2val xh) x;
            data_at Tsh dword (f2val yh) y)).
     forward_if Post_t6.
-    + (* b5 = true: read x->s, x->t, x->s, then Sset _t'6 = (bool)(... == ...) *)
+    +
       assert (b5 = true) as Hb5_eq.
       { destruct b5; auto; simpl in H; rep_lia. }
       forward. forward. forward. forward.
@@ -86,15 +77,14 @@ Proof.
                  Hb5 eq_refl).
         exact Hout.
       * destruct (Float.cmp _ _ _); simpl; auto.
-    + (* b5 = false *)
+    +
       forward.
       unfold Post_t6; Exists false; entailer!.
-    + (* join Post_t6: store _dwx *)
+    +
       unfold Post_t6; clear Post_t6.
       Intros b6; rename H into Hb6.
       forward.
 
-      (* --- dwy: same shape on (yh, yl) --- *)
       set (Post_t7 :=
         EX b7 : bool,
         PROP (b7 = true -> is_finite (fst yh) = true /\ is_finite (snd yh) = true)
@@ -151,20 +141,17 @@ Proof.
         ** unfold Post_t8; clear Post_t8.
            Intros b8; rename H into Hb8.
            forward.
-           (* === ldexp(1.0, 1022) returns q_omega_val === *)
+
            forward_call.
            forward.
-           (* xh_bnd cascade: forward assigns _q_omega := _t'9 and _t'16 := x->s,
-              then forward_call applies fabs to fst xh, then forward chains
-              _xh_bnd := (_t'10 <= _q_omega). *)
+
            forward_call (fst xh).
            forward.
-           (* yh_bnd cascade at _t'15 := y->s: forward, forward_call, then forward. *)
+
            forward.
            forward_call (fst yh).
            forward.
 
-           (* Return cascade: t'14 = dwx && dwy && xh_bnd && yh_bnd. *)
            set (bxh := Float.cmp Cle
                          (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (fst xh))
                          q_omega_val).
@@ -184,7 +171,7 @@ Proof.
              SEP (data_at Tsh dword (f2val xh) x;
                   data_at Tsh dword (f2val yh) y)).
            forward_if Post_t12.
-           ++ (* dwx ≠ 0: b6 = true; Sset _t'12 = (bool)dwy *)
+           ++
               assert (b6 = true) as Hb6_eq.
               { destruct b6; auto; simpl in H; rep_lia. }
               forward.
@@ -203,7 +190,7 @@ Proof.
                 | |- context [Float.cmp Cle ?a ?b] =>
                     destruct (Float.cmp Cle a b); reflexivity
                 end. }
-           ++ (* dwx = 0: Sset _t'12 = 0 *)
+           ++
               forward. unfold Post_t12; Exists false; entailer!.
               split.
               { unfold byh, q_omega_val.
@@ -218,11 +205,10 @@ Proof.
                 | |- context [Float.cmp Cle ?a ?b] =>
                     destruct (Float.cmp Cle a b); reflexivity
                 end. }
-           ++ (* join Post_t12 *)
+           ++
               unfold Post_t12; clear Post_t12.
               Intros b12; rename H into Hb12.
 
-              (* Post_t13: extend with xh_bnd *)
               set (Post_t13 :=
                 EX b13 : bool,
                 PROP (b13 = true -> b6 = true /\ b8 = true /\ bxh = true)
@@ -233,7 +219,7 @@ Proof.
                 SEP (data_at Tsh dword (f2val xh) x;
                      data_at Tsh dword (f2val yh) y)).
               forward_if Post_t13.
-              +++ (* _t'12 ≠ 0: b12 = true; Sset _t'13 = (bool)xh_bnd *)
+              +++
                   assert (b12 = true) as Hb12_eq.
                   { destruct b12; auto; simpl in H; rep_lia. }
                   forward.
@@ -246,13 +232,12 @@ Proof.
                     | |- context [Float.cmp Cle ?a ?b] =>
                         destruct (Float.cmp Cle a b); reflexivity
                     end. }
-              +++ (* _t'12 = 0: Sset _t'13 = 0 *)
+              +++
                   forward. unfold Post_t13; Exists false; entailer!.
-              +++ (* join Post_t13 *)
+              +++
                   unfold Post_t13; clear Post_t13.
                   Intros b13; rename H into Hb13.
 
-                  (* Post_t14: extend with yh_bnd. Final value to return. *)
                   set (Post_t14 :=
                     EX b14 : bool,
                     PROP (b14 = true -> b6 = true /\ b8 = true /\
@@ -262,7 +247,7 @@ Proof.
                     SEP (data_at Tsh dword (f2val xh) x;
                          data_at Tsh dword (f2val yh) y)).
                   forward_if Post_t14.
-                  ++++ (* _t'13 ≠ 0: b13 = true; Sset _t'14 = (bool)yh_bnd *)
+                  ++++
                        assert (b13 = true) as Hb13_eq.
                        { destruct b13; auto; simpl in H; rep_lia. }
                        forward.
@@ -277,14 +262,14 @@ Proof.
                          | |- context [Float.cmp Cle ?a ?b] =>
                              destruct (Float.cmp Cle a b); reflexivity
                          end. }
-                  ++++ (* _t'13 = 0: Sset _t'14 = 0 *)
+                  ++++
                        forward. unfold Post_t14; Exists false; entailer!.
-                  ++++ (* join Post_t14: return _t'14 *)
+                  ++++
                        unfold Post_t14; clear Post_t14.
                        Intros b14; rename H into Hb14.
-                       forward. (* return _t'14 *)
+                       forward.
                        Exists b14; entailer!.
-                       (* entailer! substitutes b14 := true, leaving a true=true antecedent in Hb14. *)
+
                        destruct (Hb14 eq_refl) as [Hb6t [Hb8t [Hbxht Hbyht]]].
                        destruct (Hb6 Hb6t) as [Hfin_xh [Hfin_xl HDWx]].
                        destruct (Hb8 Hb8t) as [Hfin_yh [Hfin_yl HDWy]].

@@ -1,9 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Final accuracy results for the TwoSum algorithm in the FLT format.
-   Helper lemmas live in TwoSum_acc_helpers.v. *)
-
 Require Import vcfloat.VCFloat.
 From Stdlib Require Import ZArith.
 Require Import float_acc_lems op_defs dd_tactics.

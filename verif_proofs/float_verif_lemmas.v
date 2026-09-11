@@ -1,8 +1,5 @@
 
-(* float_verif_lemmas.v: Helper lemmas connecting CompCert floating-point
-   operations and comparisons with VCFloat/Flocq real semantics.
-   Includes finiteness, rounding bound, and concrete IEEE-754 threshold
-   results used by the VST verification proofs. *)
+
    (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
@@ -23,9 +20,9 @@ Lemma Float_cmp_Ceq_zero_finite:
     is_finite (ftype_of_float a) = true.
 Proof.
     intros; destruct a; simpl in *; auto;
-    destruct s; 
+    destruct s;
     cbv [Float.of_bits Bits.b64_of_bits Bits.binary_float_of_bits Float.cmp] in H;
-    simpl in H; auto. 
+    simpl in H; auto.
 Qed.
 
 Lemma Float_cmp_Ceq_zero_FT2R:
@@ -45,11 +42,11 @@ Qed.
 
 Lemma Float_cmp_Ceq_zero_mul_FT2R:
   forall x y,
-    Float.cmp Ceq (Float.mul x y) (Float.of_bits (Int64.repr 0)) = true -> 
+    Float.cmp Ceq (Float.mul x y) (Float.of_bits (Int64.repr 0)) = true ->
     FT2R (ftype_of_float (Float.mul x y)) = 0%R.
 Proof.
-    intros. apply Rcompare_Eq_inv. 
-    pose proof Float_cmp_Ceq_zero_finite (Float.mul x y) H. 
+    intros. apply Rcompare_Eq_inv.
+    pose proof Float_cmp_Ceq_zero_finite (Float.mul x y) H.
     cbv [Float.cmp cmp_of_comparison Float.compare Float.of_bits] in H.
     rewrite Binary.Bcompare_correct in H; simpl in H; auto.
     rewrite FT2R_ftype_of_float; simpl.
@@ -59,11 +56,11 @@ Qed.
 
 Lemma Float_cmp_Ceq_zero_mul_FT2R_l:
   forall x y,
-  Float.cmp Ceq x (Float.of_bits (Int64.repr 0)) = true -> 
+  Float.cmp Ceq x (Float.of_bits (Int64.repr 0)) = true ->
   (FT2R (ftype_of_float x) * y)%R = 0.
 Proof.
   intros.
-    pose proof Float_cmp_Ceq_zero_finite x H. 
+    pose proof Float_cmp_Ceq_zero_finite x H.
   cbv [Float.cmp cmp_of_comparison Float.compare Float.of_bits] in H.
   rewrite Binary.Bcompare_correct in H; simpl in H; auto.
   rewrite FT2R_ftype_of_float; simpl.
@@ -76,11 +73,11 @@ Qed.
 
 Lemma Float_cmp_Ceq_zero_mul_FT2R_r:
   forall x y,
-  Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true -> 
+  Float.cmp Ceq y (Float.of_bits (Int64.repr 0)) = true ->
   ( x * FT2R (ftype_of_float y))%R = 0.
 Proof.
   intros.
-  pose proof Float_cmp_Ceq_zero_finite y H. 
+  pose proof Float_cmp_Ceq_zero_finite y H.
   cbv [Float.cmp cmp_of_comparison Float.compare Float.of_bits] in H.
   rewrite Binary.Bcompare_correct in H; simpl in H; auto.
   rewrite FT2R_ftype_of_float; simpl.
@@ -91,9 +88,9 @@ Proof.
   destruct (Rcompare _ _); auto; try discriminate.
 Qed.
 
-Lemma Float_cmp_Ceq_eqb : 
+Lemma Float_cmp_Ceq_eqb :
 forall x y,
- Float.cmp Ceq x y = false -> 
+ Float.cmp Ceq x y = false ->
  eqb (Float.cmp Ceq x y) true = false.
 Proof.
   intros. destruct ((Float.cmp Ceq x y)); auto.
@@ -105,35 +102,29 @@ Notation fexp :=
 
 Lemma no_underflow_real_from_round_mul :
   forall (x y: ftype Tdouble),
-  bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) < 
+  bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1) <
     Rabs ((round radix2  fexp ZnearestE) (FT2R x * FT2R y))->
-  Rlt_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))   
+  Rlt_bool (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))
     (Rabs (FT2R x * FT2R y)%R) = true.
 Proof.
   intros x y H.
   set (bexp := (bpow Zaux.radix2 (emin + 2 * fprec Tdouble - 1))) in *.
   set (rnd_mult := round radix2 fexp ZnearestE (FT2R x * FT2R y)) in *.
-  destruct (Rlt_dec bexp (Rabs (FT2R x * FT2R y)%R)) 
-    as [Hlt | Hle]; auto. 
+  destruct (Rlt_dec bexp (Rabs (FT2R x * FT2R y)%R))
+    as [Hlt | Hle]; auto.
   apply Rlt_bool_true; nra.
   exfalso; apply Rnot_lt_le in Hle.
   apply (round_le radix2 fexp (Znearest common.choice)) in Hle.
   rewrite round_NE_abs in Hle; [ |   ].
   replace (round _ _ _ bexp) with bexp in Hle.
   unfold rnd_mult in H; nra.
-  rewrite round_generic; auto. 
+  rewrite round_generic; auto.
   apply valid_rnd_N.
   apply generic_format_bpow; cbv; exact finish_compute_le.
   apply FLT_exp_valid.
   cbv; auto.
 Qed.
 
-(* Upper bound mirror of no_underflow_real_from_round_mul: a strict rounded product
-   bound transfers to the exact product.  |RN(x*y)| < 2^1023 forces |x*y| < 2^1023
-   = /2 * Omega.  Sound only for the strict inequality: 2^1023 is a representable
-   power of two and RN is monotone/idempotent on it, so |x*y| >= 2^1023 would give
-   |RN(x*y)| >= 2^1023.  Used to lift the C guard `fabs(x->s*y) < ldexp(1.0,1023)`
-   into the cond's product magnitude bound Rabs (FT2R xh * FT2R y) <= /2 * Omega. *)
 Lemma no_overflow_real_from_round_mul :
   forall (x y: ftype Tdouble),
   Rabs ((round radix2 fexp ZnearestE) (FT2R x * FT2R y)) <
@@ -185,8 +176,6 @@ Proof.
     destruct s; simpl in H; try discriminate).
 Qed.
 
-(* dbl_max_val is the IEEE 754 double with bit pattern 0x7FEFFFFFFFFFFFFF,
-   which equals DBL_MAX = pred(2^1024) = (2^53-1)*2^971. *)
 Definition dbl_max_val :=
   Float.of_bits (Int64.repr 9218868437227405311).
 
@@ -226,7 +215,6 @@ Proof.
   lra.
 Qed.
 
-(* Float.cmp Cle (fabs b) (fabs a) = true → Rabs (FT2R b) ≤ Rabs (FT2R a) *)
 Lemma Float_cmp_Cle_abs :
   forall (a b : ftype Tdouble),
   is_finite a = true ->
@@ -252,11 +240,6 @@ Proof.
   - apply Rlt_le; apply Rcompare_Lt_inv; exact Hcmp.
 Qed.
 
-(* q_omega_val: IEEE-754 double for 2^1022 = Omega/4 in Tdouble.
-   Mirrors ldexp_val's construction: scale 1.0 (bit pattern 0x3FF0000000000000)
-   by 2^1022 via Bldexp. Used by Float_cmp_Cle_bpow1022 to lift the C runtime
-   check `fabs(a) <= ldexp(1.0, 1022)` into the abstract bound
-   Rabs (FT2R a) <= /4 * Omega. *)
 Definition q_omega_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -281,7 +264,6 @@ Proof.
   nra.
 Qed.
 
-(* Float.cmp Cle (fabs b) q_omega_val = true → Rabs (FT2R b) <= /4 * Omega *)
 Lemma Float_cmp_Cle_bpow1022 :
   forall (b : ftype Tdouble),
   is_finite b = true ->
@@ -316,12 +298,6 @@ Proof.
     apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 
-(* q_sqrt_val: IEEE-754 double for 2^(femax/2 - 1) = 2^511 in Tdouble, the
-   *factor* (square root scale) bound used by DWTimesFP_relative_precond / DWTimesDW_exact_leading_product_precond.
-   Same construction as q_omega_val but scaling 1.0 by 2^511 instead of 2^1022.
-   Used by Float_cmp_Cle_bpow511 to lift the C runtime check
-   `fabs(a) <= ldexp(1.0, 511)` into the abstract bound
-   Rabs (FT2R a) <= bpow radix2 (femax/2 - 1). *)
 Definition q_sqrt_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -346,9 +322,6 @@ Proof.
   nra.
 Qed.
 
-(* Float.cmp Cle (fabs b) q_sqrt_val = true → Rabs (FT2R b) <= 2^(femax/2 - 1).
-   The factor bound analog of Float_cmp_Cle_bpow1022 (no /4 factor: the bound
-   is bpow (femax/2 - 1) itself, matching DWTimesFP_relative_precond directly). *)
 Lemma Float_cmp_Cle_bpow511 :
   forall (b : ftype Tdouble),
   is_finite b = true ->
@@ -378,12 +351,6 @@ Proof.
   - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 
-(* q_prod_val: IEEE-754 double for 2^1023 = Omega/2 = 2^(femax-1) in Tdouble, the
-   *product* magnitude bound used by DWTimesFP_relative_precond / DWTimesDW_exact_leading_product_precond.  Same
-   construction as q_omega_val / q_sqrt_val but scaling 1.0 by 2^1023.  Used by
-   Float_cmp_Clt_bpow1023 to lift the C runtime check `fabs(z) < ldexp(1.0, 1023)`
-   into the abstract bound Rabs (FT2R z) < bpow radix2 1023 together with
-   is_finite z. *)
 Definition q_prod_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -408,12 +375,6 @@ Proof.
   nra.
 Qed.
 
-(* Float.cmp Clt (fabs b) q_prod_val = true → is_finite b = true ∧
-   Rabs (FT2R b) < 2^1023.  Unlike the Cle_bpow* lemmas, finiteness is derived
-   (not assumed): a strict `<` against the finite q_prod_val can only hold when b
-   is finite (a NaN abs compares unordered → false; +Inf → Gt → false).  This is
-   what makes the single prod_bnd check discharge both Fast2Mult's finiteness
-   requirement and the product magnitude bound. *)
 Lemma Float_cmp_Clt_bpow1023 :
   forall (b : ftype Tdouble),
   Float.cmp Clt
@@ -445,12 +406,6 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
 
-(* Packaging lemma for the guard: the single strict product check
-   `fabs(x->s * y) < ldexp(1.0, 1023)` establishes both Fast2Mult finiteness
-   requirement (is_finite (BMULT a b)) and the cond's product magnitude bound
-   (Rabs (FT2R a * FT2R b) <= /2 * Omega).  Combines Float_cmp_Clt_bpow1023 (which
-   also derives z finite) with no_overflow_real_from_round_mul.  It derives
-   both facts directly from the product bound. *)
 Lemma prod_bnd_facts :
   forall (a b : ftype Tdouble),
   Float.cmp Clt
@@ -471,9 +426,6 @@ Proof.
   apply no_overflow_real_from_round_mul; exact Hlt.
 Qed.
 
-(* Float.cmp Ceq (Float.add a b) a = true → FT2R a = round(FT2R a + FT2R b),
-   i.e., (a, b) satisfies the double-word relation in IEEE-754 RN.
-   The C test `(a + b) == a` lifts to double_word_prop. *)
 Lemma Float_add_eq_dw : forall (a b : ftype Tdouble),
   is_finite a = true ->
   is_finite b = true ->
@@ -484,41 +436,38 @@ Proof.
   intros a b Ha Hb Hcmp.
   set (sum := Float.add (float_of_ftype a) (float_of_ftype b)) in *.
   rewrite is_finite_Binary in Ha, Hb.
-  (* Derive finiteness of sum from Hcmp: Ceq with finite a forces sum to be
-     finite (otherwise Bcompare returns Gt/Lt for Inf, or None for NaN). *)
+
   assert (Hfin_sum : Binary.is_finite 53 1024 sum = true).
   { destruct sum; auto; cbv [Float.cmp cmp_of_comparison Float.compare] in Hcmp;
     destruct (float_of_ftype a); simpl in Hcmp; try discriminate;
     destruct s; simpl in Hcmp; try discriminate;
     destruct s0; simpl in Hcmp; discriminate. }
-  (* Bcompare yields B2R sum = B2R a. *)
+
   cbv [Float.cmp cmp_of_comparison Float.compare] in Hcmp.
   rewrite Binary.Bcompare_correct in Hcmp; [| exact Hfin_sum | exact Ha].
   destruct (Rcompare (Binary.B2R 53 1024 sum)
                      (Binary.B2R 53 1024 (float_of_ftype a))) eqn:Hcmpeq;
     simpl in Hcmp; try discriminate.
   apply Rcompare_Eq_inv in Hcmpeq.
-  (* Hcmpeq : Binary.B2R 53 1024 sum = Binary.B2R 53 1024 (float_of_ftype a) *)
-  (* For Tdouble standard: Binary.B2R 53 1024 = FT2R definitionally. *)
+
   change (Binary.B2R 53 1024 (float_of_ftype a)) with (FT2R a) in Hcmpeq.
-  (* sum = Float.add (float_of_ftype a) (float_of_ftype b) = BPLUS a b *)
+
   unfold sum in Hcmpeq.
   rewrite Float_add_rewrite in Hcmpeq.
   change (Binary.B2R 53 1024
             (@BPLUS _ Tdouble _ (float_of_ftype a) (float_of_ftype b)))
     with (FT2R (BPLUS a b)) in Hcmpeq.
-  (* Hcmpeq : FT2R (BPLUS a b) = FT2R a *)
+
   assert (Hfin_BPLUS : is_finite (BPLUS a b) = true).
   { rewrite is_finite_Binary. change (BPLUS a b) with sum. exact Hfin_sum. }
   pose proof (BPLUS_round_correct Tdouble a b Hfin_BPLUS) as Hbplus.
   simpl in Hbplus.
-  (* Hbplus : round (FT2R a + FT2R b) = FT2R (BPLUS a b) *)
+
   unfold rounded.
   transitivity (FT2R (BPLUS a b)); [exact (eq_sym Hcmpeq)|].
   symmetry. etransitivity; [|exact Hbplus]. reflexivity.
 Qed.
 
-(* Float.cmp Clt (fabs b) DBL_MAX = true → Rabs (FT2R b) < pred radix2 fexp Omega *)
 Lemma Float_cmp_Clt_dbl_max :
   forall (b : ftype Tdouble),
   is_finite b = true ->
@@ -550,14 +499,14 @@ Qed.
 Lemma Float_cmp_Cle_mul :
 forall x y A B (Hfin1: is_finite (ftype_of_float (Float.mul x y)) = true)
   (Hfin2: is_finite B = true) (Heq: A = FT2R B),
-  Vint (if Rlt_bool A (Rabs ((round radix2 fexp ZnearestE) 
+  Vint (if Rlt_bool A (Rabs ((round radix2 fexp ZnearestE)
     (FT2R (ftype_of_float x) * FT2R (ftype_of_float y)))) then Int.one else Int.zero) =
   bool2val (Float.cmp Clt (float_of_ftype B) (Binary.Babs _ _ (abs_nan _ _ (fprec_gt_one Tdouble)) (Float.mul x y))).
 Proof.
   intros.
   cbv [Float.cmp cmp_of_comparison Float.compare Float.of_bits bool2val].
   rewrite Binary.Bcompare_correct; simpl; auto.
-  rewrite Float_mul_rewrite. rewrite Binary.B2R_Babs. 
+  rewrite Float_mul_rewrite. rewrite Binary.B2R_Babs.
   rewrite <- (FT2R_ftype_of_float (x * y)%F64); simpl.
   change (Binary.Bmult _ _ _ _ _ _ _ _) with (BMULT (ftype_of_float x) (ftype_of_float y)).
   rewrite <- BMULT_round_correct; auto.
@@ -574,17 +523,6 @@ Proof.
   rewrite Binary.is_finite_Babs; auto.
 Qed.
 
-(* ==================================================================== *)
-(*  Division guard helpers (dw_div_fp_strong_check / DWDivFP_strong_precond)  *)
-(* ==================================================================== *)
-
-(* Generic rounded->exact magnitude transfer.  RN is monotone and idempotent on
-   a format value bpow k, so:
-     - a strict rounded bound below bpow k forces the exact value <= bpow k, and
-     - a strict rounded bound above bpow k forces the exact value > bpow k.
-   These are the division check analogs of no_overflow/underflow_real_from_round_mul,
-   stated for an arbitrary real r (instantiated at r = FT2R xh / FT2R y via
-   BDIV_round_correct in body_dw_div_fp_strong_check). *)
 Lemma round_abs_le_bpow (r : R) (k : Z) :
   generic_format radix2 fexp (bpow Zaux.radix2 k) ->
   Rabs (round radix2 fexp ZnearestE r) < bpow Zaux.radix2 k ->
@@ -617,9 +555,6 @@ Proof.
   lra.
 Qed.
 
-(* is_finite (BDIV a b) with b finite forces the divisor's real value nonzero:
-   a finite b with FT2R b = 0 is the zero float, and a/0 = +/-Inf (or NaN) is
-   not finite.  Lets the quotient checks invoke BDIV_round_correct. *)
 Lemma BDIV_denom_ne0 : forall (a b : ftype Tdouble),
   is_finite b = true ->
   is_finite (BDIV a b) = true ->
@@ -631,17 +566,12 @@ Proof.
   unfold BDIV, BINOP in Hfin.
   rewrite float_of_ftype_of_float in Hfin.
   destruct (float_of_ftype b) eqn:E; simpl in Hb; try discriminate.
-  - (* B754_zero: a / 0 is Inf/NaN, not finite -> Hfin false *)
+  -
     destruct (float_of_ftype a); simpl in Hfin; try discriminate.
-  - (* B754_finite: B2R is a nonzero F2R, contradicting Hb0 *)
+  -
     revert Hb0. cbn [Binary.B2R]. apply F2R_neq_0. destruct s; simpl; lia.
 Qed.
 
-(* BDIV packaging of the transfer from rounded to exact: from a magnitude bound on
-   the floating-point quotient FT2R (BDIV a b), with a nonzero real value for b and finite BDIV,
-   to the corresponding bound on the exact real quotient FT2R a / FT2R b.  Combines
-   BDIV_round_correct (FT2R (BDIV a b) = RN(FT2R a / FT2R b)) with round_abs_*_bpow,
-   exactly as prod_bnd_facts does for multiplication. *)
 Lemma BDIV_abs_le_bpow : forall (a b : ftype Tdouble) (k : Z),
   FT2R b <> 0%R -> is_finite (BDIV a b) = true ->
   generic_format radix2 fexp (bpow Zaux.radix2 k) ->
@@ -664,11 +594,6 @@ Proof.
   apply round_abs_gt_bpow; assumption.
 Qed.
 
-(* Normal powers of two used by the division guards.
-   [q_lo968_val = 2^-968] is the DW/FP product floor and the DW/DW divisor
-   floor.  [q_lo969_val = 2^-969] is used to derive the DW/DW divisor ceiling.
-   Their normal representation supports the strict transfer from rounded to exact
-   in [BDIV_abs_gt_bpow]. *)
 Definition q_lo968_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -717,11 +642,6 @@ Proof.
   nra.
 Qed.
 
-(* Generic magnitude comparisons against a concrete finite float constant v
-   whose real value is C.  Cle_lo / Clt_lo lift `v (<=|<) fabs b` into the
-   corresponding real lower bound on |FT2R b|; Clt_hi lifts `fabs b < v` into
-   finiteness of b and the strict upper bound |FT2R b| < C (deriving finiteness
-   the same way as Float_cmp_Clt_bpow1023). *)
 Lemma Float_cmp_Cle_lo :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),
   is_finite b = true ->
@@ -775,11 +695,6 @@ Proof.
   apply Rcompare_Lt_inv in Hcmp; exact Hcmp.
 Qed.
 
-(* Strict upper quotient bound against q_omega_val (2^1022 = Omega/4): the
-   analog of Float_cmp_Clt_bpow1023 for Clt and bpow1022, deriving finiteness of the
-   rounded quotient and the strict magnitude bound.  Specialized (not generic
-   in v) because the finiteness derivation needs q_omega_val concrete so that
-   Bcompare against an infinity/NaN left operand reduces. *)
 Lemma Float_cmp_Clt_bpow1022 :
   forall (b : ftype Tdouble),
   Float.cmp Clt
@@ -810,14 +725,7 @@ Proof.
     simpl in H; try discriminate.
   apply Rcompare_Lt_inv in Hcmp. lra.
 Qed.
-(* ==================================================================== *)
-(*  Double-word division check helpers (dw_div_dw_strong_precond_check / DWDivDW_strong_precond) *)
-(* ==================================================================== *)
 
-(* [q_hi966_val] represents [2^966 = 2^(femax-p-5)], the upper divisor bound
-   in [DWDivDW_strong_precond].  This bound is equivalent to
-   [eta*|yh| <= u^2/4], which pays for the reciprocal reconstruction floor.
-   The guard compares [|y->s|] directly with this value. *)
 Definition q_hi966_val :=
   Binary.Bldexp (fprec Tdouble) 1024 (fprec_gt_0 Tdouble)
     (fprec_lt_femax Tdouble) BinarySingleNaN.mode_NE
@@ -842,11 +750,6 @@ Proof.
   nra.
 Qed.
 
-(* Upper bound mirror of Float_cmp_Cle_lo: lifts the C test `fabs b <= v` into
-   the real bound Rabs (FT2R b) <= C.  Generic in the constant float v (unlike
-   Float_cmp_Cle_bpow1022, which is specialized to q_omega_val and concludes in
-   the /4*Omega form), so the same lemma serves both the 2^966 bound on |yh| and
-   the 2^(femax-2) bounds that DWDivDW_strong_precond states as bpow (femax t - 2). *)
 Lemma Float_cmp_Cle_hi :
   forall (v : Floats.float) (b : ftype Tdouble) (C : R),
   is_finite b = true ->
@@ -875,13 +778,6 @@ Proof.
   - apply Rlt_le. apply Rcompare_Lt_inv in Hcmp; lra.
 Qed.
 
-(* An upper bound on |r| is a lower bound on |1/r|, for r <> 0.  This is what
-   makes the check's direct nonstrict test on |y->s| discharge the DW/DW
-   reciprocal conjunct exactly (no rounding, no strictness slop).  The r <> 0
-   side condition is essential and not cosmetic: at r = 0 the Coq convention
-   1/0 = 0 makes the conclusion false while the hypothesis Rabs 0 <= C holds.
-   In the check it is supplied by the separate yh_lo clause
-   (2^(emin+2p) <= |y->s|), not by this bound. *)
 Lemma recip_lower_from_upper : forall (r C : R),
   0 < C -> r <> 0%R -> Rabs r <= C -> / C <= Rabs (1 / r).
 Proof.
@@ -892,10 +788,6 @@ Proof.
   apply Rinv_le_contravar; [exact Hra | exact H].
 Qed.
 
-(* Instance of recip_lower_from_upper expressed with bpow.  A nonstrict upper
-   bound |r| <= 2^k on the
-   divisor is exactly the lower bound 2^(-k) <= |1/r| on the reciprocal.  At
-   k = -(emin + 2p - 1) = 969 for Tdouble this is what yh_hi discharges. *)
 Lemma recip_lower_from_bpow_upper : forall (r : R) (k : Z),
   r <> 0%R ->
   Rabs r <= bpow Zaux.radix2 k ->

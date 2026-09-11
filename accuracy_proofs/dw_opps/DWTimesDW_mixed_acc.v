@@ -1,11 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Whole range mixed error and output validity results for [DWTimesDW].
-
-    This file imports the common runtime model facts and normal range relative
-    result from [DWTimesDW_relative_acc], then handles the leading product
-    underflow gap and exposes the mixed guarantee ladder. *)
+(** Mixed error and output-validity results for [DWTimesDW]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -22,9 +18,7 @@ Section FarLow0Apparatus.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation u      := (bpow Zaux.radix2 (- fprec t)).
 Notation eminA  := (SpecFloat.emin (fprec t) (femax t)).
-(* The explicit FLX rounding chain of the low order DW*DW nodes with a floor
-   term f at the low by low node.  This is notation (pure syntax), not a
-   synthetic algorithm Definition; it expands to the real nodes' FLX rounds. *)
+
 Local Notation FLXlow0 axh axl ayh ayl f :=
   (F2Sum.Fast2Sum (fprec t) choice
     (round radix2 (FLX_exp (fprec t)) (Znearest choice) (axh*ayh))
@@ -35,7 +29,6 @@ Local Notation FLXlow0 axh axl ayh ayl f :=
             + round radix2 (FLX_exp (fprec t)) (Znearest choice)
                 ((axh*ayl + axl*ayl) + f))))).
 
-(* Hard arm for the explicit FLX low node chain. *)
 Local Lemma flx_dwtimesdw_hard
     (axh axl ayh ayl f : R) :
   (5 <= fprec t)%Z ->
@@ -73,8 +66,7 @@ set ch := rp (axh*ayh).
 set cl1 := axh*ayh-ch.
 set base1 := axh*ayl+axl*ayl.
 set tl1 := rp (base1+f).
-(* reconcile the goal's cl2 argument (def form axl*ayh+tl1) with the
-   analysis form cross+f+(tl1-(base1+f)) *)
+
 have Ecl2arg : axl*ayh + tl1 = (axh*ayl+ayh*axl+axl*ayl)+f+(tl1-(base1+f)).
 { unfold base1. ring. }
 rewrite Ecl2arg.
@@ -643,7 +635,6 @@ destruct (Rle_dec (Rabs f) (u^2)) as [Hfs|Hfl].
   apply Rplus_le_compat;[exact Hscaled'|apply Rlt_le;exact Hfloor3].
 Qed.
 
-(* Homogeneity and symmetry of the FLX chain. *)
 Local Lemma flx_Asym_r (xh xl yh yl f : R) :
   FLXlow0 xh xl (-yh) (-yl) (-f) = F2Sum.pair_opp (FLXlow0 xh xl yh yl f).
 Proof.
@@ -693,7 +684,6 @@ all: try apply valid_rnd_N.
 all: apply FLX_exp_valid; exact (fprec_gt_0 t).
 Qed.
 
-(* Scaling reduction to normalized leading words (direct positive). *)
 Local Lemma flx_positive (xh0 xl0 yh0 yl0 f0 : R) :
   (5 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice xh0 xl0 ->
@@ -788,7 +778,6 @@ have HEq : ((bx*sy)*(4*u^2*Rabs ((xh0+xl0)*(yh0+yl0))+
 rewrite HEq. exact Hnorm.
 Qed.
 
-(* Sign reduction (direct mixed). *)
 Local Lemma flx_mixed (xh0 xl0 yh0 yl0 f0 : R) :
   (5 <= fprec t)%Z ->
   DWPlus.double_word (fprec t) choice xh0 xl0 ->
@@ -885,8 +874,6 @@ destruct (Rlt_dec 0 xh0) as [Hxp|Hxn].
     exact H.
 Qed.
 
-(* The far underflow bound for the low by low product, directly for the real DWTimesDW, via the
-   FLT floor decomposition (no synthetic floored algorithm). *)
 Lemma DWTimesDW_abs_low0_far (xh xl yh yl : ftype t) :
   double_word xh xl -> double_word yh yl ->
   is_finite_p (DWTimesDW xh xl yh yl) ->
@@ -931,7 +918,7 @@ rewrite Rplus_0_r in Seq1. rewrite Rplus_0_r in Seq2.
 rewrite Rplus_0_r in Seq3.
 have T0e : FT2R (BMULT xl yl) = FT2R xl*FT2R yl + ef0
   by (rewrite Teq0; ring).
-(* node reconciliations to the real nodes *)
+
 have Etl1 : round radix2 (FLX_exp (fprec t)) (Znearest choice)
     ((FT2R xh*FT2R yl + FT2R xl*FT2R yl) + ef0) =
     FT2R (BFMA xh yl (BMULT xl yl)).
@@ -968,7 +955,7 @@ have Hbridge : FLXlow0 (FT2R xh) (FT2R xl) (FT2R yh) (FT2R yl) ef0 =
     (BPLUS (Fast2Mult_err xh yh)
       (BFMA xl yh (BFMA xh yl (BMULT xl yl)))) FIN).
   reflexivity. }
-(* floor budget from the far threshold *)
+
 have HP0 : 0 < Rabs (FT2R xh*FT2R yh).
 { eapply Rlt_le_trans;[apply bpow_gt_0|exact T0]. }
 have Hxh0 : FT2R xh<>0.
@@ -1017,7 +1004,6 @@ Let zl := FT2R (snd (DWTimesDW xh xl yh yl)).
 Let xr := (FT2R xh + FT2R xl).
 Let yr := (FT2R yh + FT2R yl).
 
-
 Corollary DWTimesDW_abs_low0_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -1055,14 +1041,6 @@ have Heq : Rabs (zh+zl-xr*yr) =
 rewrite Heq. apply Rmult_le_compat_r; [apply Rabs_pos|exact Hrel].
 Qed.
 
-(** Absolute paper bound for the broader exact node regime.  Each node may
-    be normal or merely representable on the physical FIX lattice. *)
-
-
-(** If both the low by low node and the final correction node are subnormal,
-    their relative components vanish.  The two remaining relative errors fit
-    strictly inside the paper [4*u^2] budget; all additive pieces retain the
-    shared allowance of two ulps. *)
 Theorem DWTimesDW_abs_low0_final_underflow :
   double_word xh xl ->
   double_word yh yl ->
@@ -1190,10 +1168,6 @@ eapply Rle_trans.
 - right; ring.
 Qed.
 
-(** If the first cross term FMA underflows but the following two nodes are
-    normal, the small node hypothesis replaces one full [u*P] contribution.
-    The two active physical floors consume one ulp; their propagation consumes
-    at most the second ulp, leaving the paper [4*u^2] term unchanged. *)
 Theorem DWTimesDW_abs_low0_low1_tail_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -1426,10 +1400,6 @@ have Htri := Rabs_triang (er2+er3) (ef0+ef1).
 eapply Rle_trans; [exact Htri|]. nra.
 Qed.
 
-(** Symmetric tail case: the low by low node and the second FMA underflow,
-    while the first FMA and final addition are normal.  Here the subnormal
-    second FMA input bounds the whole correction entering the last round, so
-    the relative pieces fit in [4*u^2] and the two floor terms total one ulp. *)
 Theorem DWTimesDW_abs_low0_low2_other_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -1663,12 +1633,6 @@ rewrite (BMULT_round_correct t xl0 yl0 F0) in Hr.
 exact Hr.
 Qed.
 
-(* ===== Algorithm 12 underflow gap for the whole range mixed API ===== *)
-
-(* Error bound for the compensated core in the [Fast2Mult] gap, before the
-   final [Fast2Sum].  The exact sum [ch+cl3] differs from [xr*yr] by at most
-   [5/2*eta] plus the [u^2*P] term for the omitted [xl*yl] product.  The four
-   rounding charges are [eta/2], [eta/2], [eta/2], and [eta]. *)
 Lemma DWTimesDW_core_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (3 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
@@ -1877,9 +1841,6 @@ have Herr : Rabs ((FT2R ch+FT2R cl3)-X*M) <=
 exact Herr.
 Qed.
 
-(* Bridge: the output pair of Algorithm 12 IS the closing Fast2Sum of
-   (ch, cl3), so a preservation of the sum fact about that Fast2Sum transfers to
-   the algorithm's output.  Pure definitional unfolding. *)
 Local Lemma DWTimesDW_double_word_of_sum (xh0 xl0 yh0 yl0 : ftype t) :
   is_finite_p (DWTimesDW xh0 xl0 yh0 yl0) ->
   let ch := Fast2Mult_mul xh0 yh0 in
@@ -1900,16 +1861,6 @@ rewrite Hfst. symmetry. apply BPLUS_round_correct.
 rewrite -Hfst. exact (proj1 FIN).
 Qed.
 
-(* Two magnitude bounds on the closing Fast2Sum's arguments, in relative form
-   (multiples of u*P and eta rather than of N).  They are coarser than the
-   core chain's bounds in N form, but being expressed in u*P they make the
-   ordering test of DWTimesDW_error_floor_gap a single crossing computation
-   instead of the bootstrap with two steps that bounds in N form would force:
-   |cl3| <= 6uP+4eta against |ch| >= (1-u)P-eta/2 cross only below P ~ 6*eta.
-
-   Separate lemmas rather than inline [have]s so each nonlinear step runs
-   against a small context; nra does not cope with the about twenty hypotheses
-   in scope inside the gap theorem. *)
 Lemma gap_ch_lower_bound (xh0 yh0 : ftype t) :
   is_finite (BMULT xh0 yh0)=true ->
   (1-u)*Rabs (FT2R xh0*FT2R yh0)-/2*bpow radix2 (common.emin (t:=t))
@@ -1963,10 +1914,6 @@ replace (P0-FT2R ch)%R with (-(FT2R ch-P0))%R in Htri by ring.
 rewrite Rabs_Ropp in Htri. lra.
 Qed.
 
-(* |cl3| <= 6uP + 4eta.  Each node's rounding costs a relative u factor plus
-   eta/2; in the gap tl0 = 0, so only three products enter.  u <= /32 turns
-   every u*(u*P) term into (u*P)/32, which keeps the whole computation linear
-   in the two atoms u*P and eta. *)
 Lemma gap_cl3_upper_bound (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
@@ -2005,7 +1952,7 @@ have F2 : is_finite cl2=true by
 have F3 : is_finite cl3=true by
   (unfold cl3,cl1,cl2,tl1,tl0;exact (DWTimesDW_correction_finite xh0 xl0 yh0 yl0 FIN)).
 have Ffast := DWTimesDW_fast2mult_finite xh0 xl0 yh0 yl0 FIN.
-(* the two cross products, each at most u*P *)
+
 have Hxl := @dw_low_le_u_high t STD xh0 xl0 DWx0.
 have Hml := @dw_low_le_u_high t STD yh0 yl0 DWy0.
 fold u' in Hxl,Hml.
@@ -2017,14 +1964,14 @@ have Hxlyh : Rabs (FT2R xl0*FT2R yh0) <= u'*P.
 { unfold P,P0. rewrite !Rabs_mult.
   have H := Rmult_le_compat_r (Rabs (FT2R yh0)) _ _
     (Rabs_pos _) Hxl. eapply Rle_trans; [exact H|]. right;ring. }
-(* |cl1| <= uP + eta *)
+
 have Hcl1 := gap_cl1_upper_bound xh0 yh0 Hp3 Ffast.
 fold u' eta P0 P cl1 in Hcl1.
-(* tl0 = 0 in the gap *)
+
 have Htl00 := leading_product_gap_low_low_zero
   xh0 xl0 yh0 yl0 DWx0 DWy0 F0 Hgap.
 fold tl0 in Htl00.
-(* |tl1| <= 2uP + eta *)
+
 have H1r : FT2R tl1=round radix2
     (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
     (FT2R xh0*FT2R yl0).
@@ -2042,7 +1989,7 @@ have Htl1 : Rabs (FT2R tl1) <= 2*(u'*P)+eta.
     - apply Rmult_le_compat_r; [apply Rabs_pos|exact Hu].
     - apply Rmult_le_compat_l; [lra|exact Hxhyl]. }
   lra. }
-(* |cl2| <= 4uP + 2eta *)
+
 have H2r : FT2R cl2=round radix2
     (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
     (FT2R xl0*FT2R yh0+FT2R tl1).
@@ -2061,7 +2008,7 @@ have Hcl2 : Rabs (FT2R cl2) <= 4*(u'*P)+2*eta.
     - apply Rmult_le_compat_r; [exact Ha20|exact Hu].
     - apply Rmult_le_compat_l; [lra|exact Ha2]. }
   lra. }
-(* |cl3| <= 6uP + 4eta *)
+
 have H3r : FT2R cl3=round radix2
     (SpecFloat.fexp (fprec t) (femax t)) (Znearest choice)
     (FT2R cl1+FT2R cl2).
@@ -2082,11 +2029,6 @@ have Hgoal : 6*u'*P = 6*(u'*P) by ring.
 rewrite Hgoal. lra.
 Qed.
 
-(* Mixed error and output validity for Algorithm 12 in the [Fast2Mult] gap.
-   If [|cl3| <= |ch|], [FastTwoSum_correct] preserves the sum.  Otherwise the
-   leading product is small enough that [ch+cl3] lies on the shared FLT/FIX
-   lattice, and [Fast2Sum_sum_exact_of_sum_small] preserves it.  The core
-   contributes the full [5/2*eta] floor term. *)
 Lemma DWTimesDW_error_floor_gap (xh0 xl0 yh0 yl0 : ftype t) :
   (5 <= fprec t)%Z ->
   double_word_prop xh0 xl0 -> double_word_prop yh0 yl0 ->
@@ -2133,8 +2075,8 @@ have Fe : is_finite_p (Fast2Sum ch cl3).
 { unfold d, DWTimesDW in FIN. fold ch cl1 tl0 tl1 cl2 cl3 in FIN.
   exact FIN. }
 destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
-- (* ordered: the closing Fast2Sum pair reconstructs the sum exactly in FLT,
-     including for subnormal values *)
+-
+
   have Hsum := FastTwoSum_correct ch cl3 (proj1 Fe) Hord.
   change (FT2R (snd d)=FT2R ch+FT2R cl3-FT2R (fst d)) in Hsum.
   have HsumE : FT2R (fst d)+FT2R (snd d)=FT2R ch+FT2R cl3
@@ -2142,13 +2084,8 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   split.
   + rewrite HsumE. exact Hcore.
   + exact (Fast2Sum_is_DW ch cl3 (proj1 Fe) Hord).
-- (* Unordered closing Fast2Sum.  |cl3| > |ch| can only happen when the
-     leading product is tiny: |cl3| <= 6uP+4eta while |ch| >= (1-u)P-eta/2,
-     and at u <= /32 those cross only below 6*eta, so P < 6*eta.  The exact
-     sum ch+cl3 is then bounded using the compensated core error -- not by
-     the triangle inequality on |ch| and |cl3| separately, which would
-     overshoot -- and the shared FLT/FIX lattice at exponent emin makes
-     Fast2Sum exact there, with no ordering and no precision hypothesis. *)
+-
+
   have HuP' : u'*P <= /32*P.
   { have H := Rmult_le_compat_r P _ _ HP0 Hu. nra. }
   have HsmallP : P < 6*eta.
@@ -2183,7 +2120,7 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
     have Hstep : Rabs (FT2R ch+FT2R cl3) <= 5/2*eta+u'^2*P+(1+u')^2*P.
     { eapply Rle_trans; [exact Htri2|].
       apply Rplus_le_compat; [exact Hcore|exact HXM]. }
-    (* 2.5*eta + P/1024 + (1+u)^2*P < 2.5*eta + 6.4*eta < 16*eta *)
+
     have Hexp : (1+u')^2*P = P+(2*u'*P+u'^2*P) by ring.
     have Hstep2 : 5/2*eta+u'^2*P+(1+u')^2*P <= 16*eta.
     { rewrite Hexp. nra. }
@@ -2196,8 +2133,6 @@ destruct (Rle_dec (Rabs (FT2R cl3)) (Rabs (FT2R ch))) as [Hord|Hnord].
   + exact (DWTimesDW_double_word_of_sum xh0 xl0 yh0 yl0 FIN Hsum).
 Qed.
 
-(** Common proof near the threshold.  The numerical premise records exactly how
-    much of the physical floor is available after the [4u^2] relative term. *)
 Local Lemma DWTimesDW_abs_normal_near_threshold_core
     (floor_coeff : R) :
   double_word xh xl ->
@@ -2260,7 +2195,6 @@ have Hbudget : 15/2*u^2*P <=
 replace (u*u) with (u^2) by ring. exact Hbudget.
 Qed.
 
-(* At the sharper [2*eta] floor, the budget near the threshold requires p >= 8. *)
 Theorem DWTimesDW_abs_normal_near_threshold :
   double_word xh xl ->
   double_word yh yl ->
@@ -2283,7 +2217,6 @@ have Hu : u <= /256.
 nra.
 Qed.
 
-(* The [5/2*eta] mixed floor leaves enough budget already at p >= 5. *)
 Local Theorem DWTimesDW_abs_normal_near_threshold_floor52 :
   double_word xh xl ->
   double_word yh yl ->
@@ -2307,9 +2240,6 @@ have Hu : u <= /32.
 nra.
 Qed.
 
-(** Absolute form of the existing multiplication estimate independent of the regime
-    on the normal leading branch.  This is used only for the pure relative
-    fallback outside the regimes covered by the sharp paper result with a floor. *)
 Theorem DWTimesDW_abs_low0_low1_low2_final_normal :
   double_word xh xl ->
   double_word yh yl ->
@@ -2484,16 +2414,8 @@ eapply Rle_trans.
 - apply Req_le. field.
 Qed.
 
-(** Whole range mixed analysis.  The normal arm retains the paper's [4u^2]
-    coefficient.  Physical underflow in the low order nodes is represented
-    explicitly by the [2.5 eta] term.  A separate gap lemma covers leading
-    products below the Fast2Mult exactness threshold, so no normality condition
-    is required by the mixed API. *)
+(** Bounds the mixed error of [DWTimesDW] over the whole range. *)
 
-(* ---------- public assembly: the whole range mixed API ---------- *)
-
-(* Normal arm at the 5/2*eta floor.  The near the threshold leg uses the _floor52
-   variant, so the whole tree holds at p >= 5. *)
 Local Theorem DWTimesDW_error_floor_normal :
   (5 <= fprec t)%Z ->
   double_word xh xl ->
@@ -2543,10 +2465,6 @@ destruct (Rle_or_lt P (9 / 8 * T)) as [Hnear | Hfar].
   lra.
 Qed.
 
-(* Whole range error bound.  The mixed condition places no lower bound on the
-   leading product.  The gap lemma covers [P = 0] and [0 < P < T], while the
-   regime tree covers [T <= P].  The resulting floor term is [5/2*eta], and
-   the proof requires [p >= 5]. *)
 Theorem DWTimesDW_accuracy_from_weak_pre_and_finite_post_cond :
   (5 <= fprec t)%Z ->
   DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl ->
@@ -2557,8 +2475,8 @@ move => Hp5 [[DWx DWy] FIN].
 destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
     (Rabs (FT2R xh*FT2R yh))) as [Nprod | Hgap].
 - exact (DWTimesDW_error_floor_normal Hp5 DWx DWy FIN Nprod).
-- (* gap (P = 0 included): the u^2*P residual is absorbed into 4u^2|xr*yr|
-     because |xr*yr| >= (1-u)^2*P and 4*(1-u)^2 >= 1 for u <= /2. *)
+-
+
   have Hgap' : Rabs (FT2R xh*FT2R yh) <
       bpow radix2 (common.emin (t:=t)+2*fprec t-1) by exact Hgap.
   have H := proj1 (DWTimesDW_error_floor_gap xh xl yh yl
@@ -2577,8 +2495,7 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
   { have -> : (/32:R)=bpow radix2 (-5) by (simpl;lra).
     apply bpow_le; lia. }
   have HP0 : 0 <= P by (unfold P;apply Rabs_pos).
-  (* absorb the gap lemma's u^2*P residual into the target's 4u^2*|xr*yr|,
-     using |xr*yr| >= (1-u)^2*P and 4*(1-u)^2 >= 1 at u <= /32 *)
+
   have Hc : 1 <= 4*(1-u)^2 by nra.
   have Hup : 0 <= u^2*P by nra.
   have H1 : u^2*P*1 <= u^2*P*(4*(1-u)^2)
@@ -2588,10 +2505,6 @@ destruct (Rle_or_lt (bpow radix2 (eminA+2*fprec t-1))
   lra.
 Qed.
 
-(* Whole range output validity.  Both regimes preserve the closing Fast2Sum's sum, so
-   both give the double-word property: above the threshold through the
-   ordering |cl3| <= |ch| (aux_cl3_le_ch), in the gap through the small sum
-   lattice argument inside DWTimesDW_error_floor_gap. *)
 Theorem DWTimesDW_double_word_from_weak_pre_and_finite_post_cond :
   (5 <= fprec t)%Z ->
   DWTimesDW_weak_pre_and_finite_post_cond xh xl yh yl ->

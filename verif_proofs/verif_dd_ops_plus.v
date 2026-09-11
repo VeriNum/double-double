@@ -1,8 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Body proofs for double-word addition kernels and public wrappers. *)
-
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
@@ -19,23 +17,16 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-(* The C body matches the DWPlusFP model directly:
-     two_sum(&sh, x->s, y);   (sh.s,sh.t) = TwoSumF xh y
-     v = x->t + sh.t;         v = BPLUS xl sl
-     fast_2sum_kernel(s, sh.s, v);   (zh,zl) = Fast2Sum sh.s v
-   The inner two_sum / fast_2sum_kernel specs have empty preconditions, so the
-   forward_call cascade discharges no side conditions -- identical in shape
-   to body_dw_plus_dw_kernel and body_dw_times_fp_kernel. *)
 Lemma body_dw_plus_fp_kernel:
   semax_body Vprog Gprog f_dw_plus_fp_kernel dw_plus_fp_kernel_spec.
 Proof.
   start_function.
-  (* two_sum(&sh, x->s, y) *)
+
   forward.
   forward_call (v_sh, fst xh, y).
-  (* v = x->t + sh.t *)
+
   forward.  forward.  forward.
-  (* fast_2sum_kernel(s, sh.s, v) *)
+
   forward.
   forward_call (s, TwoSumF_sum (fst xh) y,
                 BPLUS (snd xh) (TwoSumF_err (fst xh) y)).

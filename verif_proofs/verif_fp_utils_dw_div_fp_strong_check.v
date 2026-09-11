@@ -4,10 +4,6 @@
 Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_short_circuit.
 
-(* The strong check reuses the weak check for finite inputs, the double-word
-   property, and the dividend floor.  It adds the dividend and quotient
-   ceilings.  The strict quotient ceiling proves that the rounded quotient is
-   finite and transfers to the corresponding exact quotient bound. *)
 Lemma body_dw_div_fp_strong_check :
   semax_body Vprog Gprog f_dw_div_fp_strong_check dw_div_fp_strong_check_spec.
 Proof.
@@ -124,9 +120,6 @@ Proof.
             q_omega_val); reflexivity. }
 Qed.
 
-(* The default interface checks the input part of the mixed condition.  Its
-   successful result also exposes the finite-input facts so the strong check
-   can reuse them without repeating the same runtime tests. *)
 Lemma body_dw_div_fp_weak_check :
   semax_body Vprog Gprog f_dw_div_fp_weak_check dw_div_fp_weak_check_spec.
 Proof.

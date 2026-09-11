@@ -10,17 +10,11 @@ From Flocq Require Import Pff2Flocq Core.
 
 Require Import mathcomp.ssreflect.ssreflect.
 
-(* for choice functions : choice = fun x0 : Z => negb (Z.even x0) *)
 From Stdlib Require Import Logic.FunctionalExtensionality.
 
 Section DWHighBnd.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(* Bridge: if a double-word (xh, xl) satisfies |xh + xl| < Omega/4 then 
-|xh| <= Omega/4 (the high part bound used in DWPlusFP_strong_precond / DWPlusDW_strong_precond).
-The implication holds because Omega/4 = 2^(femax - 2) is a power of two, hence
-in generic_format, and round-to-nearest cannot push a value with |x| < B above 
-B when B is representable. *)
 Lemma dw_high_bnd_of_sum (xh xl : ftype t)
   (Hdw  : double_word_prop xh xl)
   (Hsum : Rabs (FT2R xh + FT2R xl) < /4 * (bpow radix2 (femax t))) :
@@ -58,8 +52,6 @@ Notation ulp := (Ulp.ulp Zaux.radix2 fexp).
 Local Instance valid_fexp_inst_low : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 
-(** The low component of a double-word is at most half an ulp of its high
-    component. *)
 Lemma dw_low_le_half_ulp (xh xl : ftype t) :
   double_word_prop xh xl ->
   Rabs (FT2R xl) <= /2 * ulp (FT2R xh).
@@ -76,8 +68,6 @@ rewrite Hxl Rabs_Ropp Hulp.
 apply Ulp.error_le_half_ulp_round; FLT_basics.
 Qed.
 
-(** Relative form of [dw_low_le_half_ulp].  If the high component is
-    subnormal, the double-word relation forces the low component to zero. *)
 Lemma dw_low_le_u_high (xh xl : ftype t) :
   double_word_prop xh xl ->
   Rabs (FT2R xl) <=
@@ -111,7 +101,6 @@ destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1))
   apply Rmult_le_pos; [apply bpow_ge_0 | exact Hxh0].
 Qed.
 
-(** Exponent and ulp ordering inherited by the low word of a double-word. *)
 Lemma cexp_dw_le (xh xl : ftype t) :
   double_word xh xl -> FT2R xh <> 0 -> FT2R xl <> 0 ->
   (Generic_fmt.cexp radix2 fexp (FT2R xl) <=

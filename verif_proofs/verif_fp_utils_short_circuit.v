@@ -1,16 +1,8 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* verif_fp_utils_short_circuit.v: pure propositional helper lemmas that
-   factor out the three short-circuit patterns appearing in
-   body_dw_plus_dw_strong_precond_check. These are not VST proofs — they are standalone
-   boolean / conjunction arithmetic that the main body proof's entailer!
-   sites cite via `apply short_circuit_*_concl`. *)
-
 Require Import DD.verif_proofs.verif_fp_utils_common.
 
-(* short_circuit_fin_and_concl: the dwx/dwy first stage.
-   C: `dwx_stage1 := fin_a && fin_b` where each fin_X has an iff spec. *)
 Lemma short_circuit_fin_and_concl :
   forall (a b : ftype Tdouble) (vret_a vret_b b_out : bool),
   (vret_a = true <-> is_finite a = true) ->
@@ -27,9 +19,6 @@ Proof.
   - apply (proj1 Hspec_b); reflexivity.
 Qed.
 
-(* short_circuit_dw_eq_concl: the dwx/dwy second stage.
-   C: `dwx := dwx_stage1 && (a + b == a)`. Reuses Phase 1.1's
-   Float_add_eq_dw to lift the FP equality to the double-word relation. *)
 Lemma short_circuit_dw_eq_concl :
   forall (a b : ftype Tdouble) (vret_pre b_out : bool),
   (vret_pre = true -> is_finite a = true /\ is_finite b = true) ->
@@ -50,9 +39,6 @@ Proof.
   subst b_out; exact Hout.
 Qed.
 
-(* short_circuit_magbnd_concl: the xh_bnd / yh_bnd stage.
-   C: `xh_bnd := fabs(a) <= q_omega`.  Reuses Phase 1.1's
-   Float_cmp_Cle_bpow1022 to lift the comparison to the magnitude bound. *)
 Lemma short_circuit_magbnd_concl :
   forall (a : ftype Tdouble) (b_out : bool),
   is_finite a = true ->

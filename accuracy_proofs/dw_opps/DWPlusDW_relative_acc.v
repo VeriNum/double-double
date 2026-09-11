@@ -35,7 +35,6 @@ Let xlr := (FT2R xl).
 Let yhr := (FT2R yh).
 Let ylr := (FT2R yl).
 
-(* connect paper proofs to local defs *)
 Local Definition DWPlusDW_FLX :=
   F2Sum.Fast2Sum p choice
            (fst
@@ -49,7 +48,6 @@ Local Definition DWPlusDW_FLX :=
                     (round radix2 (FLX_exp p) (Znearest choice)
                        (TwoSum_err p choice xhr yhr + TwoSum_sum p choice xlr ylr)))))
 .
-
 
 Hypothesis Hcond: DWPlusDW_weak_pre_and_finite_post_cond xh xl yh yl.
 Hypothesis Hp3 : (3 <= fprec t)%Z.
@@ -86,8 +84,6 @@ Proof. prove_finite. Qed.
 Local Fact FIN5 : is_finite (BPLUS x y) = true.
 Proof. prove_finite. Qed.
 
-(* the result of the FLT format algorithm and the FLX format algorithm are
-  equal, regardless of underflow. *)
 Local Lemma DWPlusDWEq_FLT :
   DWPlusDW_FLX = F2Rp (DWPlusDW xh xl yh yl).
 Proof.
@@ -175,7 +171,6 @@ have Hf0 : TwoSum_sum p choice xhr yhr = FT2R f0.
                            ---- apply generic_format_FLT_FT2R.
                        *** repeat f_equal => //.
 Qed.
-
 
 Let zh := (FT2R (fst (DWPlusDW xh xl yh yl))).
 Let zl := (FT2R (snd (DWPlusDW xh xl yh yl))).

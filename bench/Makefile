@@ -33,6 +33,7 @@ CLANG_CFLAGS ?= -O3 -std=c11
 CXXFLAGS   ?= -O3 -std=c++14 -Wall
 STRICT_FP_FLAGS := -fno-fast-math -ffp-contract=off
 PKG_CONFIG ?= pkg-config
+PYTHON     ?= python3
 
 ifeq ($(origin FENCEDD_DIR), undefined)
   ifneq ($(wildcard fenceDD/include/dw_arith.h),)
@@ -60,6 +61,7 @@ CLANG_OBJ_DIR := $(BUILD_DIR)/obj/clang
 RUN_DIR ?= results
 RUN_PATH := $(patsubst %/,%,$(RUN_DIR))
 ANALYSIS_DIR ?= $(RUN_PATH)/analysis
+TEX_DIR ?= $(RUN_PATH)/tex
 
 SAMPLES_PER_EXPONENT ?= 40
 NUM_INPUTS_FOR_PERF ?= 65536
@@ -92,7 +94,8 @@ PERFORMANCE_CLANG_OBJS := \
     $(CXX_OBJ_DIR)/generate_performance_data_clang.o \
     $(INPUT_GENERATION_OBJ)
 
-.PHONY: all-results raw-results analyze-results clean check-dependencies
+.PHONY: all-results raw-results analyze-results tex-results clean \
+        check-dependencies
 
 check-dependencies:
 	@test -f "$(FENCEDD_DIR)/include/dw_arith.h" || { \
@@ -196,7 +199,8 @@ all-results:
 	+$(MAKE) --no-print-directory raw-results RUN_DIR="$(RUN_PATH)"
 	+$(MAKE) --no-print-directory analyze-results \
 	  RUN_DIR="$(RUN_PATH)" ANALYSIS_DIR="$(ANALYSIS_DIR)"
-	@echo "Analysis files: $(ANALYSIS_DIR)"
+	+$(MAKE) --no-print-directory tex-results \
+	  RUN_DIR="$(RUN_PATH)" ANALYSIS_DIR="$(ANALYSIS_DIR)" TEX_DIR="$(TEX_DIR)"
 
 raw-results: $(BIN_DIR)/generate_numerical_data \
              $(BIN_DIR)/generate_performance_data_compcert \
@@ -231,5 +235,13 @@ analyze-results: $(ANALYZERS)
 	mv "$(ANALYSIS_DIR)/rq1.tsv.partial" "$(ANALYSIS_DIR)/rq1.tsv"
 	mv "$(ANALYSIS_DIR)/rq2.tsv.partial" "$(ANALYSIS_DIR)/rq2.tsv"
 	mv "$(ANALYSIS_DIR)/rq3.tsv.partial" "$(ANALYSIS_DIR)/rq3.tsv"
+
+tex-results:
+	@test -f "$(ANALYSIS_DIR)/rq1.tsv" || { echo "$(ANALYSIS_DIR)/rq1.tsv not found" >&2; exit 1; }
+	@test -f "$(ANALYSIS_DIR)/rq2.tsv" || { echo "$(ANALYSIS_DIR)/rq2.tsv not found" >&2; exit 1; }
+	@test -f "$(ANALYSIS_DIR)/rq3.tsv" || { echo "$(ANALYSIS_DIR)/rq3.tsv not found" >&2; exit 1; }
+	$(PYTHON) generate_paper_tables.py "$(ANALYSIS_DIR)" "$(TEX_DIR)"
+	@echo "LaTeX table files: $(TEX_DIR)"
+
 -include $(wildcard $(CXX_OBJ_DIR)/*.d $(COMPCERT_OBJ_DIR)/*.d \
                    $(CLANG_OBJ_DIR)/*.d)

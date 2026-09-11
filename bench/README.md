@@ -8,6 +8,8 @@ The benchmark has one measurement path and one analysis path.
   CompCert objects and once with Clang objects.
 - `analyze_rq1.cpp`, `analyze_rq2.cpp`, and `analyze_rq3.cpp` analyze one
   research question each.
+- `generate_paper_tables.py` formats the analysis TSV files as LaTeX table
+  rows.
 - `numerical_analysis.cpp` contains the numerical parser and MPFR work shared
   by RQ1 and RQ2.
 - `analysis_common.hpp` contains the small schema and file helpers shared by
@@ -45,7 +47,8 @@ From this directory, run:
 make QD_PREFIX=/absolute/path/to/qd all-results RUN_DIR=results/
 ```
 
-This runs the full measurement first and the analysis second. It produces:
+This runs the full measurement first, the analysis second, and the LaTeX
+formatting last. It produces:
 
 ```text
 results/
@@ -56,6 +59,13 @@ results/
     rq1.tsv
     rq2.tsv
     rq3.tsv
+  tex/
+    rq1-relative.tex
+    rq1-absolute.tex
+    rq2-composite.tex
+    rq2-transformations.tex
+    rq3-default.tex
+    rq3-strong.tex
 ```
 
 The `make raw-results` command refuses to overwrite existing data files. The
@@ -63,11 +73,12 @@ analysis files are derived and may be regenerated.
 
 ## Separate steps
 
-The same work may be run in two commands:
+The same work may be run in separate commands:
 
 ```sh
 make QD_PREFIX=/absolute/path/to/qd raw-results RUN_DIR=results/
 make analyze-results RUN_DIR=results/
+make tex-results RUN_DIR=results/
 ```
 
 The main workload values are:
@@ -319,6 +330,36 @@ The RQ3 columns are:
 Time rows and time differences are in nanoseconds per call. Ratio rows have no
 unit.
 
+## LaTeX table files
+
+`make tex-results RUN_DIR=results/` reads the three analysis TSV files and
+writes table rows below `results/tex/`. `TEX_DIR` may be set to use another
+output directory.
+
+The Python formatter uses fixed operation, implementation, wrapper, regime,
+build, and measure selections. It takes timing ratios, differences, medians,
+and interquartile ranges directly from `rq3.tsv`. It forms display percentages
+directly from the counts in `rq1.tsv` and `rq2.tsv`, applies the declared
+display rounding, and writes LaTeX syntax. It does not read raw measurement
+files or change analysis files.
+
+The generated files contain table rows rather than complete table
+environments:
+
+| File | Contents |
+| --- | --- |
+| `rq1-relative.tex` | Relative regime rows for the six composite operations. |
+| `rq1-absolute.tex` | Absolute regime rows for the four operations with mixed bounds. |
+| `rq2-composite.tex` | Default and strong rejection rows for the six composite operations. |
+| `rq2-transformations.tex` | Rejection rows for the three error free transformations. |
+| `rq3-default.tex` | Default wrapper performance rows for Table 5. |
+| `rq3-strong.tex` | Strong wrapper performance rows for Table 6. |
+
+RQ1 bound ratios use four digits after the decimal point. RQ1 and RQ2
+percentages use two digits after the decimal point. RQ3 medians and
+interquartile ranges use two significant digits. Ties use round to nearest
+with ties to even.
+
 If compiler flags, compiler commands, or `QD_PREFIX` change, run `make clean`
 before rebuilding.
 
@@ -331,6 +372,7 @@ The analyzer can also be invoked directly:
 .build/bin/analyze_rq2 results/numerical.tsv results/analysis/rq2.tsv
 .build/bin/analyze_rq3 results/timing-compcert.tsv results/timing-clang.tsv \
   results/analysis/rq3.tsv
+python3 generate_paper_tables.py results/analysis results/tex
 ```
 
 It rejects any output path that names an input file.

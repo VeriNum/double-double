@@ -1,14 +1,7 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(** Relative and mixed error analysis for [DWDivFP].  The FLT to FLX bridge
-    connects [DDModels.DWDivFP] with [DWDivFP.DWDivFP3].  In the normal regime,
-    [DWDivFP_relative_accuracy_from_weak_pre_and_finite_post_cond] transfers the
-    paper's [3u^2] relative bound; [DWDivFP_relative_accuracy] is its strong
-    precondition wrapper.  [DWDivFP_error_mixed_acc] adds one [eta] term when
-    the correction quotient underflows.  [DWDivFP_mixed_acc] combines that
-    result with the subnormal leading quotient proof and exports the mixed
-    guarantee. *)
+(** Relative and mixed accuracy results for [DWDivFP]. *)
 
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs dd_tactics common FLT_helpers.
@@ -23,19 +16,6 @@ Require Import mathcomp.ssreflect.ssreflect.
 
 Set Bullet Behavior "Strict Subproofs".
 
-(* ============================================================
-   Abstract real arithmetic lemmas for the finiteness cascade.
-
-   [nra]/[lra] cannot parse [Rabs], so instead of massaging goals that mention
-   it, the affine bookkeeping of the finiteness proof is stated here over plain
-   real variables:  X stands for |xh|, W for |xh|*2^-p, E for 2^emin, Om for the
-   overflow threshold 2^femax.  Each node's magnitude is bounded by an affine
-   form c0*X + c1*W + c2*E.  The lemmas state this algebra once and are
-   applied below with X, W, E, and Om instantiated to concrete terms. *)
-
-(* One rounding step (via round_ub_emin): if |z| <= K*W + M*E then the rounded
-   node |round z| <= |z| + |z|*u + E/2 is at most (K+1)*W + (M+1)*E, provided
-   u <= 1/16 and the coefficients stay in the used range. *)
 Local Lemma abst_round_step (W u E B R0 K M : R) :
   0 <= u -> u <= /16 -> 0 <= E -> 0 <= B -> 0 <= W ->
   0 <= K -> K <= 16 -> 0 <= M -> M <= 8 ->
@@ -44,8 +24,6 @@ Local Lemma abst_round_step (W u E B R0 K M : R) :
   R0 <= (K+1)*W + (M+1)*E.
 Proof. intros; nra. Qed.
 
-(* Product error node (via round_err_emin): |pih - th*y| <= |th*y|*u + E/2 with
-   |th*y| <= X + X*u yields the 2*W + E bound (W = X*u). *)
 Local Lemma abst_pih_err (X u E B R0 : R) :
   0 <= X -> 0 <= u -> u <= /16 -> 0 <= E -> 0 <= B ->
   B <= X + X*u ->
@@ -63,12 +41,10 @@ assert (HBu : B*u <= X*u + X*u).
 lra.
 Qed.
 
-(* |xl| <= 1/2 ulp(xh) <= 1/2 (X*(2u) + E) = W + E/2 <= W + E. *)
 Local Lemma abst_xl (X u E V UL : R) :
   0 <= E -> V <= /2*UL -> UL <= X*(2*u) + E -> V <= X*u + E.
 Proof. intros; nra. Qed.
 
-(* A node in canonical affine form c0*X + c1*W + c2*E stays below Omega. *)
 Local Lemma abst_lt_Om (V Om X W E c0 c1 c2 : R) :
   0 <= c0 -> c0 <= 1 -> 0 <= c1 -> c1 <= 10 -> 0 <= c2 -> c2 <= 7 ->
   32 <= Om -> X <= /4*Om -> W <= /64*Om -> E <= 1 -> 0 <= X -> 0 <= W -> 0 <= E ->
@@ -76,8 +52,6 @@ Local Lemma abst_lt_Om (V Om X W E c0 c1 c2 : R) :
   V < Om.
 Proof. intros; nra. Qed.
 
-(* Finiteness closing: |round v| <= |v| + 1/2 ulp v, with |v| affine and
-   1/2 ulp v <= Om/16, stays below the overflow threshold Om. *)
 Local Lemma abst_fin (RV UV Om X W E c0 c1 c2 : R) :
   0 <= c0 -> c0 <= 1 -> 0 <= c1 -> c1 <= 10 -> 0 <= c2 -> c2 <= 7 ->
   32 <= Om -> X <= /4*Om -> W <= /64*Om -> E <= 1 -> 0 <= X -> 0 <= W -> 0 <= E ->
@@ -86,7 +60,6 @@ Local Lemma abst_fin (RV UV Om X W E c0 c1 c2 : R) :
   RV + UV < Om.
 Proof. intros; nra. Qed.
 
-(* The two arithmetic facts for the |d/y| residual bound. *)
 Local Lemma abst_H1 (L Om Y u : R) :
   0 <= Om -> 0 <= Y -> 0 <= u -> u <= /16 ->
   L <= (/4*Om*Y)*u*10 ->
@@ -108,9 +81,6 @@ Local Lemma abst_fin_dy (RV UV Om : R) :
   32 <= Om -> RV <= 5/32*Om + 7 -> UV <= /16*Om -> RV + UV < Om.
 Proof. intros; lra. Qed.
 
-(* Closing Fast2Sum node: |th| and |tl| are each round_ub_emin bounds of the two
-   quotients (Q1 = |xh/y| <= Om/4, Q2 = |d/y| <= 5/32 Om + 7), so |th + tl| (and
-   the rounded sum, adding 1/2 ulp <= Om/16) stays below the overflow threshold. *)
 Local Lemma abst_fst_sum (S Q1 Q2 Om u E : R) :
   0 <= u -> u <= /16 -> 0 <= E -> E <= 1 -> 32 <= Om ->
   0 <= Q1 -> Q1 <= /4*Om -> 0 <= Q2 -> Q2 <= 5/32*Om + 7 ->
@@ -126,7 +96,6 @@ Local Lemma abst_fst_fin (S UV Q1 Q2 Om u E : R) :
   S + UV < Om.
 Proof. intros; nra. Qed.
 
-(* |th| <= Om/2: th = round(xh/y), |xh/y| <= Om/4. *)
 Local Lemma abst_th_half (X u E Om : R) :
   0<=X -> X<=/4*Om -> 0<=u -> u<=/16 -> 0<=E -> E<=1 -> 32<=Om ->
   X + X*u + /2*E <= /2*Om.
@@ -136,7 +105,6 @@ intros. assert (X*u <= /4*Om*/16)
       [apply Rmult_le_compat_r|apply Rmult_le_compat_l]; nra). nra.
 Qed.
 
-(* |tl| <= Om/2: tl = round(d/y), |d/y| <= 5/32 Om + 7. *)
 Local Lemma abst_tl_half (Q u E Om : R) :
   0<=Q -> Q<=5/32*Om+7 -> 0<=u -> u<=/16 -> 0<=E -> E<=1 -> 32<=Om ->
   Q + Q*u + /2*E <= /2*Om.
@@ -146,7 +114,6 @@ intros. assert (Q*u <= (5/32*Om+7)*/16)
       [apply Rmult_le_compat_r|apply Rmult_le_compat_l]; nra). nra.
 Qed.
 
-(* Error nodes in the closing Fast2Sum stay below Omega (all residual ulps <= Om/16). *)
 Local Lemma abst_z (D U1 U2 Tl Om : R) :
   32<=Om -> U1<=/16*Om -> Tl<=/2*Om -> U2<=/16*Om -> D <= U1+Tl -> D+U2 < Om.
 Proof. intros; lra. Qed.
@@ -155,7 +122,6 @@ Local Lemma abst_snd (D U1 U2 U3 Om : R) :
   32<=Om -> U1<=/16*Om -> U2<=/16*Om -> U3<=/16*Om -> D <= U1+U2 -> D+U3 < Om.
 Proof. intros; lra. Qed.
 
-(* Closeness of the product node to xh: 2u + u^2 <= 1/2 for u <= 1/16. *)
 Local Lemma abst_pih_close (X u : R) :
   0 <= X -> 0 <= u -> u <= /16 -> u * (X + u * X) + u * X <= /2 * X.
 Proof.
@@ -166,8 +132,6 @@ assert (H2 : u * (u * X) <= /16 * (u * X)) by (apply Rmult_le_compat_r; [ exact 
 nra.
 Qed.
 
-(* Reverse triangle rearrangement and the product lower bound arithmetic used by
-   cond_UF_prod (stated over plain reals so lra applies cleanly). *)
 Local Lemma abst_revtri (A B C : R) : A - B <= C -> A - C <= B.
 Proof. lra. Qed.
 
@@ -175,14 +139,8 @@ Local Lemma abst_prod_lb (P R X B2 : R) :
   R <= X * / 2 -> X - R <= P -> B2 <= X -> / 2 * B2 <= P.
 Proof. lra. Qed.
 
-(* Keep the paper's two-product folded; proofs expose it via DWTimesFP.TwoProdE. *)
 Opaque DWTimesFP.TwoProd.
 Arguments DWTimesFP.TwoProd : simpl never.
-
-(* The paper's DWDFP3_correct (Algorithm 15) uses the concrete two-product
-   operator (see FLX_analysis/DWDivFP.v), so it is instantiated at
-   the concrete operator with only (p, choice, ZNE, Hp4, ...) — no F2Mult
-   discharge lemma is needed here. *)
 
 Section CorrectDWDivFP.
   Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -198,8 +156,6 @@ Section CorrectDWDivFP.
     subexpr_finite => //
   .
 
-  (* th = BDIV xh y, pih = BMULT th y, pil = Fast2Mult_err th y,
-     dh = BMINUS xh pih, dt = BMINUS dh pil, d = BPLUS dt xl, tl = BDIV d y. *)
   Let th  := BDIV xh y.
   Let pih := fst (Fast2Mult th y).
   Let pil := snd (Fast2Mult th y).
@@ -221,9 +177,6 @@ Section CorrectDWDivFP.
 
 End CorrectDWDivFP.
 
-(* FLT to FLX bridge for [DWDivFP].  Normal range bounds make each FLT
-   rounding agree with its FLX counterpart.  [FastTwoSumEq_FLT] handles the
-   final sum, and [xhmpih_exact] supplies the exact subtraction facts. *)
 Section BridgeDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -237,7 +190,6 @@ Hypothesis FIN : is_finite_p (DWDivFP xh xl y).
 Hypothesis Hp4 : (4 <= fprec t)%Z.
 Hypothesis Hyne : FT2R y <> 0.
 
-(* th = BDIV xh y ; d = BPLUS (BMINUS (BMINUS xh (BMULT th y)) (Fast2Mult_err th y)) xl *)
 Notation th := (BDIV xh y).
 Notation pih := (BMULT th y).
 Notation pil := (Fast2Mult_err th y).
@@ -245,17 +197,11 @@ Notation dh := (BMINUS xh pih).
 Notation dt := (BMINUS dh pil).
 Notation d  := (BPLUS dt xl).
 
-(* Normal range hypotheses for individual nodes (strong underflow discipline). *)
 Hypothesis UF_th   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
 Hypothesis UF_prod : bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R th * FT2R y).
-(* UF_dh eliminated: dh = xh - pih is exact by Sterbenz (bridge_dh), unconditionally. *)
-(* UF_dt eliminated: dt = dh - pil is exact by a magnitude case split (bridge_dt),
-   unconditionally -- large residual lifts FLX->FLT, small residual is exact by
-   Hauser's FLT_format_plus_small. *)
+
 Hypothesis UF_tl   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R d / FT2R y).
 
-(* Node (A), proven standalone to validate the round_FLT_FLX + BDIV_round_correct
-   collapse pattern used throughout the bridge. *)
 Lemma bridge_th :
   round radix2 (FLX_exp (fprec t)) (Znearest choice) (FT2R xh / FT2R y)
     = FT2R (BDIV xh y).
@@ -264,7 +210,6 @@ rewrite -(BDIV_round_correct t xh y Hyne (FINth xh xl y FIN)).
 by rewrite round_FLT_FLX //; exact UF_th.
 Qed.
 
-(* FLX format facts for the two floating-point operands. *)
 Lemma Fxh_flx : generic_format radix2 (FLX_exp (fprec t)) (FT2R xh).
 Proof.
 apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t)).
@@ -283,7 +228,6 @@ apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec
 apply generic_format_FLT_FT2R.
 Qed.
 
-(* Finiteness of the BPLUS/BMINUS intermediates, chained from FINtl. *)
 Lemma FIN_d :
   is_finite (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                            (Fast2Mult_err (BDIV xh y) y)) xl) = true.
@@ -297,11 +241,6 @@ Proof. exact (proj1 (BPLUS_finite_e t _ xl FIN_d)). Qed.
 Lemma FIN_dh : is_finite (BMINUS xh (BMULT (BDIV xh y) y)) = true.
 Proof. exact (proj1 (BMINUS_finite_e t _ _ FIN_dt)). Qed.
 
-(* Node (B): the FLX two-product equals the runtime Fast2Mult (product bridge).
-   Uses the weak variant (Fast2Mult_correct_weak) at the minimal TwoProd exactness
-   threshold emin+2p-1, not the strong emin+3p (the latter is an artifact of Pff's
-   format_dq).  This lets cond_UF_prod be discharged from a |xh| lower bound of only
-   bpow(emin+2p). *)
 Lemma bridge_prod :
   DWTimesFP.Fast2Mult (fprec t) choice (FT2R (BDIV xh y)) (FT2R y)
     = F2Rp (Fast2Mult (BDIV xh y) y).
@@ -328,7 +267,6 @@ have H := f_equal (@snd R R) bridge_prod.
 rewrite /DWTimesFP.Fast2Mult /F2Rp /= in H. exact H.
 Qed.
 
-(* Product exactness: pih + pil = th*y  (Dekker / mult_error_FLX). *)
 Lemma prodExact :
   FT2R (BMULT (BDIV xh y) y) + FT2R (Fast2Mult_err (BDIV xh y) y)
     = FT2R (BDIV xh y) * FT2R y.
@@ -343,8 +281,6 @@ have Hg : generic_format radix2 (FLX_exp (fprec t))
 rewrite (round_generic radix2 (FLX_exp (fprec t)) (Znearest choice) _ Hg); ring.
 Qed.
 
-(* pih = round(th*y) lies within a factor 2 of xh, so the FLT subtraction
-   xh - pih is exact by Sterbenz -- no normal range hypothesis needed. *)
 Lemma pih_close_xh :
   Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R xh) <= / 2 * Rabs (FT2R xh).
 Proof.
@@ -362,7 +298,7 @@ have Hxhy : FT2R xh / FT2R y * FT2R y = FT2R xh by (field; exact Hyne).
 have Heq2u : (/2 * bpow radix2 (- fprec t + 1) = u)%R.
 { rewrite /u. have -> : (- fprec t + 1 = 1 + - fprec t)%Z by lia.
   rewrite bpow_plus. have -> : bpow radix2 1 = 2%R by reflexivity. lra. }
-(* |th*y - xh| <= u * |xh| *)
+
 have Hrel1 : Rabs (rnd_p (FT2R xh / FT2R y) - FT2R xh / FT2R y)
              <= /2 * bpow radix2 (- fprec t + 1) * Rabs (FT2R xh / FT2R y)
   by apply: Relative.relative_error_N_FLX; lia.
@@ -375,13 +311,13 @@ have HthyX : Rabs (FT2R (BDIV xh y) * FT2R y - FT2R xh) <= u * Rabs (FT2R xh).
   apply Rle_trans with (u * Rabs (FT2R xh / FT2R y) * Rabs (FT2R y)).
   { apply Rmult_le_compat_r; [exact Hyabs | exact Hrel1]. }
   rewrite Rmult_assoc -Rabs_mult Hxhy. apply Req_le; ring. }
-(* |th*y| <= |xh| + u*|xh| *)
+
 have HthyBnd : Rabs (FT2R (BDIV xh y) * FT2R y) <= Rabs (FT2R xh) + u * Rabs (FT2R xh).
 { apply Rle_trans with (Rabs (FT2R xh) + Rabs (FT2R (BDIV xh y) * FT2R y - FT2R xh)).
   - rewrite Rplus_comm. apply Rcomplements.Rle_minus_l.
     exact (Rabs_triang_inv (FT2R (BDIV xh y) * FT2R y) (FT2R xh)).
   - apply Rplus_le_compat_l. exact HthyX. }
-(* |pih - th*y| <= u*(|xh| + u*|xh|) *)
+
 have Hrel2 : Rabs (rnd_p (FT2R (BDIV xh y) * FT2R y) - FT2R (BDIV xh y) * FT2R y)
              <= /2 * bpow radix2 (- fprec t + 1) * Rabs (FT2R (BDIV xh y) * FT2R y)
   by apply: Relative.relative_error_N_FLX; lia.
@@ -390,7 +326,7 @@ have Hpih2 : Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R y)
            <= u * (Rabs (FT2R xh) + u * Rabs (FT2R xh)).
 { apply Rle_trans with (u * Rabs (FT2R (BDIV xh y) * FT2R y)); [ exact Hrel2 |].
   apply Rmult_le_compat_l; [ exact upos | exact HthyBnd ]. }
-(* combine: |pih - xh| <= |pih - th*y| + |th*y - xh| <= /2 |xh| *)
+
 apply Rle_trans with (Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R y)
                       + Rabs (FT2R (BDIV xh y) * FT2R y - FT2R xh)).
 - have -> : FT2R (BMULT (BDIV xh y) y) - FT2R xh
@@ -401,7 +337,6 @@ apply Rle_trans with (Rabs (FT2R (BMULT (BDIV xh y) y) - FT2R (BDIV xh y) * FT2R
   exact (abst_pih_close (Rabs (FT2R xh)) u Hxpos upos Hu16).
 Qed.
 
-(* Node (C): dh = xh - pih is exact -- via Sterbenz (no UF_dh needed). *)
 Lemma bridge_dh :
   FT2R xh - FT2R (BMULT (BDIV xh y) y) = FT2R (BMINUS xh (BMULT (BDIV xh y) y)).
 Proof.
@@ -432,7 +367,6 @@ rewrite -(BMINUS_round_correct t xh (BMULT (BDIV xh y) y) FIN_dh).
 symmetry; apply: round_generic; exact HgFLT.
 Qed.
 
-(* Node (D): dt = dh - pil is exact (residual xh - th*y is a float, div_error_FLX). *)
 Lemma bridge_dt :
   FT2R (BMINUS xh (BMULT (BDIV xh y) y)) - FT2R (Fast2Mult_err (BDIV xh y) y)
     = FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)).
@@ -445,14 +379,7 @@ have Hgflx : generic_format radix2 (FLX_exp (fprec t))
 { rewrite Heq -bridge_th.
   apply: (div_error_FLX radix2 (fprec t) (Znearest choice)
            (FT2R xh) (FT2R y)); [ exact Fxh_flx | exact Fy_flx ]. }
-(* dt is exact without the normal range hypothesis UF_dt: prodExact (from UF_prod)
-   already gives dh - pil = xh - th*y, which is FLX format (div_error_FLX).  Split
-   on the residual's own magnitude -- the residual can be tiny/subnormal even when
-   the quotient is large, which is exactly why UF_dt is not derivable:
-   - large (>= bpow(emin+p-1)): normal range, lift FLX->FLT, with the branch
-     proving the normal range condition;
-   - small (< bpow(emin+p-1)): Hauser's FLT_format_plus_small on the two floats
-     dh, -pil -- a small difference of floats is exactly representable. *)
+
 have HgFLT : generic_format radix2 (FLT_exp (SpecFloat.emin (fprec t) (femax t)) (fprec t))
     (FT2R (BMINUS xh (BMULT (BDIV xh y) y)) - FT2R (Fast2Mult_err (BDIV xh y) y)).
 { destruct (Rle_lt_dec (bpow radix2 (emin + fprec t - 1))
@@ -477,7 +404,6 @@ rewrite -(BMINUS_round_correct t (BMINUS xh (BMULT (BDIV xh y) y))
 symmetry; apply: round_generic; exact HgFLT.
 Qed.
 
-(* Node (E): d = rnd(dt + xl). *)
 Lemma bridge_d :
   round radix2 (FLX_exp (fprec t)) (Znearest choice)
     (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) + FT2R xl)
@@ -488,7 +414,6 @@ rewrite -(BPLUS_round_correct t _ xl FIN_d).
 by rewrite rnd_plus_FLT_FLX_eq'.
 Qed.
 
-(* Node (F): tl = rnd(d / y). *)
 Lemma bridge_tl :
   round radix2 (FLX_exp (fprec t)) (Znearest choice)
     (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
@@ -516,10 +441,6 @@ rewrite (FastTwoSumEq_FLT (BDIV xh y) _ FIN).
 by rewrite /DDModels.DWDivFP.
 Qed.
 
-(* The paper FLX DWDivFP peeled down to the closing Fast2Sum, without bridge_tl:
-   every node except tl is rewritten to the runtime float value, leaving the
-   second Fast2Sum argument as the FLX rounding of the runtime d/y.  Does not use
-   UF_tl -- this is the shared reduction behind both the normal and underflow legs. *)
 Lemma paper_reduced :
   DWDivFP.DWDivFP3 (fprec t) choice (FT2R xh) (FT2R xl) (FT2R y)
     = F2Sum.Fast2Sum (fprec t) choice (FT2R (BDIV xh y))
@@ -542,10 +463,6 @@ End BridgeDWDivFP.
 Section DWDivFP_DoubleWord.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(* The result of DWDivFP is a double-word.  Pure structural consequence of the
-   closing Fast2Sum (Fast2Sum_is_DW): it needs only (a) finiteness of the sum
-   node BPLUS th tl and (b) the magnitude ordering |tl| <= |th|.  No FLX/FLT
-   bridge, no strong underflow node discipline, no accuracy bound. *)
 Lemma DWDivFP_is_DW (xh xl y : ftype t) :
   is_finite (BPLUS (BDIV xh y)
               (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
@@ -586,7 +503,7 @@ Hypothesis Hp4 : (4 <= fprec t)%Z.
 Hypothesis Hyne : FT2R y <> 0.
 Hypothesis UF_th   : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
 Hypothesis UF_prod : bpow radix2 (emin + 2 * fprec t - 1) <= Rabs (FT2R (BDIV xh y) * FT2R y).
-(* UF_dh, UF_dt eliminated (dh, dt exact -- Sterbenz / magnitude case split). *)
+
 Hypothesis UF_tl   : bpow radix2 (emin + fprec t - 1)
                      <= Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                                    (Fast2Mult_err (BDIV xh y) y)) xl)
@@ -615,14 +532,6 @@ Qed.
 
 End FiniteAccuracyDWDivFP.
 
-(* ============================================================
-   Layer-2: finiteness + treatment of underflow facts derived from DWDivFP_relative_precond.
-
-   The cond bounds only the components (|xh| <= bpow(femax/2-1), |y| >=
-   bpow(1-femax/2)) plus the quotient underflow bound; from these the quotient
-   is bounded, |xh/y| <= Omega/4 (proved by cond_quotient_bound), which is what
-   keeps every rounded node of DWDivFP finite.
-   ============================================================ *)
 Section DWDivFP_Finite.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -631,15 +540,6 @@ Notation fexp  := (SpecFloat.fexp (fprec t) (femax t)).
 Notation ulp   := (Ulp.ulp Zaux.radix2 fexp).
 Notation Omega := (bpow Zaux.radix2 (femax t)).
 
-(* Internal normal leading quotient proof condition for DWDivFP.  This is not
-   a runtime guard or a public accuracy tier: DWDivFP_strong_precond is
-   the canonical whole range mixed error condition, while
-   DWDivFP_relative_precond is the normal range pure relative one.
-   The helper records the normal quotient branch used to reuse the FLX proof
-   when |xh/y| is at least 2^(emin+p-1).  It differs from the safe input cond
-   only in the clause-5 slot, where finiteness of the leading quotient node is
-   traded for that node being normal; the final lower bound is on the distinct
-   product node th*y and remains necessary in this branch. *)
 Definition DWDivFP_relative_normal_quotient_precond
     (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
@@ -655,12 +555,6 @@ Definition DWDivFP_relative_normal_quotient_precond
     (SpecFloat.emin (fprec t) (femax t) + 2 * fprec t)
     <= Rabs (FT2R xh).
 
-(** Internal numerical analysis condition.  It retains the finite inputs,
-    finite leading quotient, input double-word property and product node
-    floor used by the accuracy proof, but omits the two overflow ceilings.
-    Those ceilings belong only to the condition checked before the operation to prove
-    result finiteness; the postchecked interface supplies result finiteness
-    directly through [DWDivFP_weak_pre_and_finite_post_cond]. *)
 Definition DWDivFP_internal_precond (xh xl y : ftype t) : Prop :=
   is_finite xh = true /\
   is_finite xl = true /\
@@ -730,8 +624,6 @@ Qed.
 Local Instance valid_fexp_inst_div : Generic_fmt.Valid_exp fexp.
 Proof. apply FLT.FLT_exp_valid, fprec_gt_0. Qed.
 
-(* Residual of the quotient node: th*y is within |xh|*2^-p of xh, since
-   th = round(xh/y) and the quotient is in the normal range. *)
 Lemma thy_residual (xh y : ftype t) :
   is_finite (BDIV xh y) = true -> FT2R y <> 0 ->
   bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y) ->
@@ -769,7 +661,6 @@ have Hbp : bpow radix2 (- fprec t) = / 2 * bpow radix2 (1 - fprec t)
 rewrite Hbp -Hxhy. apply Req_le. field.
 Qed.
 
-(* The quotient node th = BDIV xh y is finite: |round(xh/y)| <= Omega/4 + tiny. *)
 Lemma th_finite (xh y : ftype t) :
   is_finite xh = true -> FT2R y <> 0 ->
   Rabs (FT2R xh / FT2R y) <= bpow radix2 (femax t - 2) ->
@@ -792,13 +683,6 @@ have Hhalf : bpow radix2 (femax t - fprec t) <= /2 * Omega.
 lra.
 Qed.
 
-(* Finiteness of the high result component.  The quotient and dividend bounds
-   control [th] and [pih]; the residual identities control [dh], [dt], and
-   [d].  A tight bound on [d/y] keeps [tl] and the final sum finite. *)
-(* Worst case half-ulp bound (fprec>=4): 1/2 ulp v <= Omega/16 for |v| < Omega.
-   Kept out of the finiteness proof context: a universally quantified hypothesis makes
-   [lra] bail ("No applicable tactic"), so this is a standalone lemma applied
-   pointwise, never a local [have]. *)
 Lemma half_ulp_le (v : R) :
   (4 <= fprec t)%Z -> Rabs v < Omega -> / 2 * ulp v <= / 16 * Omega.
 Proof.
@@ -814,13 +698,6 @@ have HΩ0 : 0 <= Omega by apply bpow_ge_0.
 lra.
 Qed.
 
-(* Shared finiteness cascade for DWDivFP: proves both quotient nodes and their
-   BPLUS are finite, with |th| and |tl| bounded by Omega/2 and |th+tl| < Omega.
-   Consumed by both DWDivFP_fst_finite_acc and DWDivFP_snd_finite_acc.
-
-   Stated on DWDivFP_relative_normal_quotient_precond: the quotient bound enters only
-   through Hnorm below, at emin+p-1 (thy_residual / ulp_FLT_le), and the
-   product node is carried by clause 8, which the relaxed cond keeps. *)
 Lemma DWDivFP_cascade_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_relative_normal_quotient_precond xh xl y ->
@@ -832,7 +709,7 @@ Lemma DWDivFP_cascade_acc (xh xl y : ftype t) :
   Rabs (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) < Omega.
 Proof.
 intros Hp4 (Hfxh & Hfxl & Hfy & Hdwp & Hquot & Hxhb & Hqub & Hxhlb).
-(* ---- constants + nonneg facts ---- *)
+
 have HΩ : 0 < Omega by apply bpow_gt_0.
 have HΩ0 : 0 <= Omega by apply bpow_ge_0.
 have HΩ32 : 32 <= Omega.
@@ -855,8 +732,7 @@ have HYpos : 0 < Rabs (FT2R y)
   by (eapply Rlt_le_trans; [apply bpow_gt_0 | exact HYe]).
 have Hxh4 : Rabs (FT2R xh) <= / 4 * Omega by (rewrite -H4Ω; exact Hxhb).
 have Hxhp : 0 <= Rabs (FT2R xh) by apply Rabs_pos.
-(* 2^emin <= 1 (emin <= 0) and |xh|*2^-p <= Omega/64: the two side conditions
-   for the abstract lemmas used in the finiteness and <Omega proofs below. *)
+
 have He1 : bpow radix2 emin <= 1.
 { have Hb0 : bpow radix2 0 = 1 by reflexivity.
   rewrite -Hb0. apply bpow_le.
@@ -872,7 +748,7 @@ have HW0 : 0 <= Rabs (FT2R xh) * bpow radix2 (- fprec t)
   by apply Rmult_le_pos; [ exact Hxhp | apply bpow_ge_0 ].
 have Hnorm : bpow radix2 (emin + fprec t - 1) <= Rabs (FT2R xh / FT2R y).
 { change (@common.emin t) with (SpecFloat.emin (fprec t) (femax t)). exact Hquot. }
-(* ---- th ---- *)
+
 have Fth : is_finite (BDIV xh y) = true
   by apply th_finite; [ exact Hfxh | exact Hyne | exact Hqub ].
 have Hthy_res : Rabs (FT2R (BDIV xh y) * FT2R y - FT2R xh) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t))
@@ -881,13 +757,13 @@ have Hthy_xh : Rabs (FT2R (BDIV xh y) * FT2R y) <= Rabs (FT2R xh) + Rabs (FT2R x
 { have Hti := Rabs_triang_inv (FT2R (BDIV xh y) * FT2R y) (FT2R xh).
   rewrite Rplus_comm.
   apply Rcomplements.Rle_minus_l.
-  eapply Rle_trans. apply Hti. exact Hthy_res. } 
+  eapply Rle_trans. apply Hti. exact Hthy_res. }
 have Hthy_lt : Rabs (FT2R (BDIV xh y) * FT2R y) < Omega.
 { apply (abst_lt_Om _ Omega (Rabs (FT2R xh)) (Rabs (FT2R xh) * bpow radix2 (- fprec t)) (bpow radix2 emin) 1 1 0);
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
     | (eapply Rle_trans; [ exact Hthy_xh |]; apply Req_le; ring) ]. }
-(* ---- pih ---- *)
+
 have Fpih : is_finite (BMULT (BDIV xh y) y) = true.
 { apply no_overflow_mult_is_finite; [ exact Fth | exact Hfy |].
   eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
@@ -920,7 +796,7 @@ have Hpih_lt : Rabs (FT2R (BMULT (BDIV xh y) y)) < Omega.
     [ lra | lra | lra | lra | lra | lra | exact HΩ32 | exact Hxh4 | exact HW | exact He1
     | exact Hxhp | exact HW0 | exact He0
     | (eapply Rle_trans; [ exact Hpih_b |]; apply Req_le; ring) ]. }
-(* ---- pil = BFMA th y (BOPP pih) ---- *)
+
 have FBpih : is_finite (BOPP (BMULT (BDIV xh y) y)) = true
   by (apply (BOPP_is_finite t (BMULT (BDIV xh y) y)); exact Fpih).
 have Hpe_e : FT2R (BDIV xh y) * FT2R y + FT2R (BOPP (BMULT (BDIV xh y) y))
@@ -972,7 +848,7 @@ have Hpil_b : Rabs (FT2R (Fast2Mult_err (BDIV xh y) y)) <= Rabs (FT2R xh) * (bpo
       | exact (@round_ub_emin t
           (FT2R (BDIV xh y) * FT2R y - FT2R (BMULT (BDIV xh y) y))) ].
   - apply Req_le; ring. }
-(* ---- dh = BMINUS xh pih ---- *)
+
 have Hxhpih_b : Rabs (FT2R xh - FT2R (BMULT (BDIV xh y) y)) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 3 + bpow radix2 emin.
 { have Hsplit : Rabs (FT2R xh - FT2R (BMULT (BDIV xh y) y))
               <= Rabs (FT2R xh - FT2R (BDIV xh y) * FT2R y)
@@ -1022,7 +898,7 @@ have Hdh_b : Rabs (FT2R (BMINUS xh (BMULT (BDIV xh y) y)))
       | exact (@round_ub_emin t
           (FT2R xh - FT2R (BMULT (BDIV xh y) y))) ].
   - apply Req_le; ring. }
-(* ---- dt = BMINUS dh pil ---- *)
+
 have Hdtarg_b : Rabs (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
                       - FT2R (Fast2Mult_err (BDIV xh y) y))
               <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 7 + bpow radix2 emin * 4.
@@ -1067,7 +943,7 @@ have Hdt_b : Rabs (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err
       | exact (@round_ub_emin t (FT2R (BMINUS xh (BMULT (BDIV xh y) y))
                               - FT2R (Fast2Mult_err (BDIV xh y) y))) ].
   - apply Req_le; ring. }
-(* ---- xl ---- *)
+
 have Hxl_b : Rabs (FT2R xl) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) + bpow radix2 emin.
 { have Hdwu := DW_acc_lemmas.dw_low_le_half_ulp xh xl Hdwp.
   have Hul := @ulp_le_lin t (FT2R xh).
@@ -1078,7 +954,7 @@ have Hxl_b : Rabs (FT2R xl) <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) + bpow
   apply (abst_xl (Rabs (FT2R xh)) (bpow radix2 (- fprec t)) (bpow radix2 emin)
                  _ (ulp (FT2R xh)));
     [ apply bpow_ge_0 | exact Hdwu | exact Hul ]. }
-(* ---- d = BPLUS dt xl ---- *)
+
 have Hdarg_b : Rabs (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y))
                      + FT2R xl)
              <= Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 9 + bpow radix2 emin * 6.
@@ -1126,7 +1002,7 @@ have Hd_b : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                  (FT2R (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y))
                   + FT2R xl)) ].
   - apply Req_le; ring. }
-(* ---- |d/y| bound (residual scaling) ---- *)
+
 have Hxhq : Rabs (FT2R xh) <= / 4 * Omega * Rabs (FT2R y).
 { have Heq : Rabs (FT2R xh) = Rabs (FT2R xh / FT2R y) * Rabs (FT2R y)
     by (rewrite -Rabs_mult; f_equal; field; exact Hyne).
@@ -1135,13 +1011,13 @@ have Hdy_b : Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                        (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)
            <= 5 / 32 * Omega + 7.
 { rewrite Rabs_mult Rabs_inv.
-  (* |d|/|y| <= (10|xh|(bpow radix2 (- fprec t)) + 7 2^emin)/|y| <= 10(Omega/4)(bpow radix2 (- fprec t)) + 7 *)
+
   apply Rle_trans with ((Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 10 + bpow radix2 emin * 7) * / Rabs (FT2R y)).
   { apply Rmult_le_compat_r; [ apply Rlt_le, Rinv_0_lt_compat; exact HYpos | exact Hd_b ]. }
-  (* multiply through: use |xh| <= Omega/4 |y| and 2^emin <= |y| *)
+
   apply (Rmult_le_reg_r (Rabs (FT2R y)) _ _ HYpos).
   rewrite Rmult_assoc Rinv_l; [ rewrite Rmult_1_r | lra ].
-  (* goal: (10|xh|(bpow radix2 (- fprec t)) + 7 2^emin) <= (5/32 Omega + 7)|y| *)
+
   have H1 : Rabs (FT2R xh) * (bpow radix2 (- fprec t)) * 10 <= 5 / 32 * Omega * Rabs (FT2R y).
   { apply (abst_H1 _ Omega (Rabs (FT2R y)) (bpow radix2 (- fprec t)));
       [ apply bpow_ge_0 | apply Rabs_pos | exact Hu0 | exact Hu16 |].
@@ -1159,7 +1035,7 @@ have Ftl : is_finite (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
   eapply Rle_lt_trans; [ apply round_abs_le_abs_plus_half_ulp |].
   apply (abst_fin_dy _ _ Omega);
     [ exact HΩ32 | exact Hdy_b | exact (half_ulp_le _ Hp4 Hdy_lt) ]. }
-(* ---- closing Fast2Sum: fst (DWDivFP xh xl y) = BPLUS th tl ---- *)
+
 have Hth_r : round radix2 fexp (Znearest choice) (FT2R xh / FT2R y) = FT2R (BDIV xh y)
   by apply (BDIV_round_correct t xh y Hyne Fth).
 have Htl_r : round radix2 fexp (Znearest choice)
@@ -1243,9 +1119,6 @@ rewrite Hfstred.
 exact (proj1 (proj2 (proj2 (DWDivFP_cascade_acc xh xl y Hp4 COND)))).
 Qed.
 
-(* Finiteness of snd (DWDivFP): the closing Fast2Sum's snd needs the ulp
-   ordering ulp(tl) <= ulp(th) (or th = 0), from the double-word relation of the
-   result (|tl| <= ulp(th)), then is_finite_FastSum_ulp. *)
 Lemma DWDivFP_snd_finite_acc (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_relative_normal_quotient_precond xh xl y ->
@@ -1263,7 +1136,7 @@ have Hsndred : snd (DWDivFP xh xl y)
 rewrite Hsndred.
 have Hs_r : round radix2 fexp (Znearest choice) (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) = FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))
   by (rewrite (BPLUS_round_correct t (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y) Hfp)).
-(* z = BMINUS (BPLUS th tl) th is finite *)
+
 have Herr : Rabs (FT2R (BPLUS (BDIV xh y) (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) - FT2R (BDIV xh y)) <= / 2 * ulp (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) + Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)).
 { rewrite -Hs_r.
   apply Rle_trans with (Rabs (round radix2 fexp (Znearest choice) (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y)) - (FT2R (BDIV xh y) + FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))) + Rabs (FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y)) (Fast2Mult_err (BDIV xh y) y)) xl) y))).
@@ -1352,10 +1225,6 @@ apply (abst_prod_lb (Rabs (FT2R (BDIV xh y) * FT2R y))
   [ exact HRX | exact HP | exact Hxhlb ].
 Qed.
 
-(** The final correction numerator remains no larger than the high input.
-    This is the ordering fact needed by the closing Fast2Sum.  Its proof uses
-    result finiteness for the exact residual identities, but no overflow
-    ceiling on [xh] or [xh/y]. *)
 Lemma DWDivFP_residual_le_high_internal (xh xl y : ftype t) :
   (4 <= fprec t)%Z ->
   DWDivFP_internal_precond xh xl y ->
@@ -1474,21 +1343,8 @@ apply DWDivFP_is_DW.
 - exact (DWDivFP_ordering_internal xh xl y Hp4 COND FIN Hquot).
 Qed.
 
-(* cond_UF_dh removed: dh = xh - pih is exact by Sterbenz (bridge_dh).
-   cond_UF_dt removed: dt = dh - pil is exact by a magnitude case split
-   (bridge_dt) -- large residual lifts FLX->FLT, small residual is exact by
-   Hauser's FLT_format_plus_small -- so the dt node needs no normal range fact.
-   cond_UF_tl is not derivable from the cond: it lower bounds |d/y| where d is the
-   division residual, which is 0 for exact division -- no input condition can force
-   it.  It is therefore the split line of the case analysis theorem: the normal leg
-   (|d/y| normal) assumes it and gets 3u^2; the underflow leg (|d/y| subnormal)
-   drops it and pays the single node tl perturbation bounded by round_FLT_FLX_diff. *)
-
 End DWDivFP_Finite.
 
-(* Pure [3u^2] relative bound when the leading quotient and nonzero correction
-   quotient are normal.  [DWDivFP_relative_regime_cond] packages the correction condition
-   with the zero case needed for exact division. *)
 Section CondAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1517,10 +1373,6 @@ Qed.
 
 End CondAccuracyDWDivFP.
 
-(* Error bound when only the correction quotient may underflow.  The FLT and
-   FLX computations can differ only at [tl = round(d/y)], so the bound keeps
-   that difference symbolic.  [DWDivFP_tl_perturbation_le_eta] bounds it by
-   [eta] for the mixed result; in exact division it is zero. *)
 Section CondAccuracyDWDivFP_underflow.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1568,7 +1420,7 @@ have HFy : generic_format radix2 (FLX_exp (fprec t)) (FT2R y)
       apply generic_format_FLT_FT2R).
 have HDWx : DWPlus.double_word (fprec t) choice (FT2R xh) (FT2R xl)
   by (apply (dw_word_DWdouble xh xl y); exact Hdwp).
-(* FLX format facts and the two roundings of v0 = d/y *)
+
 set v0 := (FT2R d / FT2R y).
 have Fth : generic_format radix2 (FLX_exp (fprec t)) (FT2R (BDIV xh y))
   by (apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t));
@@ -1579,9 +1431,7 @@ have Ftls : generic_format radix2 (FLX_exp (fprec t))
 have Ftl : generic_format radix2 (FLX_exp (fprec t)) (FT2R (BDIV d y))
   by (apply (generic_format_FLX_FLT radix2 (SpecFloat.emin (fprec t) (femax t)) (fprec t));
       apply generic_format_FLT_FT2R).
-(* |FT2R th| is >= bpow(emin+p-1); both roundings of v0 are <= bpow(emin+p-1).
-   These two meet exactly at emin+p-1, which is why that exponent is the floor of
-   the whole construction: Hord_p / Hord_r below are tight there. *)
+
 have Fbnd_lo_flx : generic_format radix2 (FLX_exp (fprec t))
                  (bpow radix2 (emin + fprec t - 1)).
 { apply generic_format_bpow. unfold FLX_exp, common.emin. pose proof (fprec_gt_one t). lia. }
@@ -1606,7 +1456,7 @@ have Hord_p : Rabs (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0)
               <= Rabs (FT2R (BDIV xh y)) by (eapply Rle_trans; [ exact Htls_le | exact Hth_gelo ]).
 have Hord_r : Rabs (FT2R (BDIV d y)) <= Rabs (FT2R (BDIV xh y))
   by (eapply Rle_trans; [ exact Htl_le | exact Hth_gelo ]).
-(* Apply the paper bound. *)
+
 pose proof (@DWDFP3_correct (fprec t) (fprec_gt_one t) choice eq_refl
               (FT2R xh) (FT2R xl) (FT2R y) HDWx HFy Hp4 Hyne) as Hpaper.
 rewrite (paper_reduced xh xl y FIN Hp4 Hyne Hquot UFprod) in Hpaper.
@@ -1614,13 +1464,13 @@ move: Hpaper.
 case Ep : (F2Sum.Fast2Sum (fprec t) choice (FT2R (BDIV xh y))
              (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0)) => [zhp zlp].
 move => Hpaper.
-(* paper sum = th + round_FLX(v0) *)
+
 have Hsum_p : zhp + zlp = FT2R (BDIV xh y)
               + round radix2 (FLX_exp (fprec t)) (Znearest choice) v0.
 { have Hs := @flx_f2s_sum t (FT2R (BDIV xh y))
               (round radix2 (FLX_exp (fprec t)) (Znearest choice) v0) Fth Ftls Hord_p.
   rewrite Ep /= in Hs. exact Hs. }
-(* runtime sum = th + tl *)
+
 have Hrun : F2Sum.Fast2Sum (fprec t) choice (FT2R (BDIV xh y)) (FT2R (BDIV d y))
             = F2Rp (DDModels.Fast2Sum (BDIV xh y) (BDIV d y)).
 { apply (FastTwoSumEq_FLT (BDIV xh y) (BDIV d y)). exact FIN. }
@@ -1631,7 +1481,7 @@ have Hsum_r : FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))
   have Heqr : DWDivFP xh xl y = DDModels.Fast2Sum (BDIV xh y) (BDIV d y)
     by rewrite /DWDivFP /Fast2Mult_err /Fast2Mult /Fast2Sum //=.
   rewrite Hrun /F2Rp /= in Hs. rewrite Heqr. exact Hs. }
-(* the single node divergence, left symbolic *)
+
 have Hdiff : Rabs ((FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)))
                    - (zhp + zlp))
              <= Rabs (FT2R (BDIV d y)
@@ -1641,7 +1491,7 @@ have Hdiff : Rabs ((FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y)))
              - round radix2 (FLX_exp (fprec t)) (Znearest choice) v0
     by rewrite Hsum_r Hsum_p; ring.
   apply Rle_refl. }
-(* convert paper relative bound to absolute *)
+
 have Hxhne : FT2R xh <> 0.
 { intro Hx0. move: Hquot; rewrite Hx0 /Rdiv Rmult_0_l Rabs_R0 => Hc.
   have := bpow_gt_0 radix2 (emin + fprec t - 1). lra. }
@@ -1660,7 +1510,7 @@ have Hpabs : Rabs (zhp + zlp - (FT2R xh + FT2R xl) / FT2R y)
     by (rewrite /=; ring).
   apply Rmult_le_compat_r; [ apply Rabs_pos |].
   rewrite Hupow. exact Hpaper. }
-(* Apply the triangle inequality. *)
+
 eapply Rle_trans with
   (Rabs ((FT2R (fst (DWDivFP xh xl y)) + FT2R (snd (DWDivFP xh xl y))) - (zhp + zlp))
    + Rabs (zhp + zlp - (FT2R xh + FT2R xl) / FT2R y)).
@@ -1674,8 +1524,6 @@ Qed.
 
 End CondAccuracyDWDivFP_underflow.
 
-(* The mixed tier's charge for the tl node: FLT and FLX rounding of the same
-   real differ by at most one floor ulp (round_FLT_FLX_diff). *)
 Local Lemma DWDivFP_tl_perturbation_le_eta
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
@@ -1701,10 +1549,6 @@ have Htl_r : FT2R (BDIV (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
 rewrite Htl_r. exact (@round_FLT_FLX_diff t _).
 Qed.
 
-(* The exact division case: the correction d is zero, so both roundings at the
-   tl node are applied to 0 and the perturbation vanishes identically.  This is
-   the disjunct DDConds.DWDivFP_relative_regime_cond keeps alongside "d/y is normal", and it
-   is why the relative tier does not have to exclude exact divisions. *)
 Local Lemma DWDivFP_error_exact_division
   {NANS: Nans} {t : type} {STD: is_standard t}
   (xh xl y : ftype t)
@@ -1748,10 +1592,6 @@ rewrite Hpert Rplus_0_r in Habs.
 exact Habs.
 Qed.
 
-(* Mixed bound for a normal leading quotient.  Split on whether [d/y] is
-   normal.  The normal case uses [DWDivFP_relative_accuracy_normal_quotient];
-   the underflow case uses [DWDivFP_error_underflow_perturbation] and charges
-   its symbolic difference by [eta].  Both yield [3u^2|Q| + eta]. *)
 Section CondAccuracyDWDivFP_mixed.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1775,7 +1615,7 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
             (Rabs (FT2R (BPLUS (BMINUS (BMINUS xh (BMULT (BDIV xh y) y))
                                        (Fast2Mult_err (BDIV xh y) y)) xl) / FT2R y)))
   as [Hdyn | Huf].
-- (* normal leg: scale the 3u^2 relative bound to absolute, then weaken by 2^emin *)
+-
   move: (COND) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hxhlb]]]]].
   have Hyne := DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth.
   have Hxhne : FT2R xh <> 0.
@@ -1798,7 +1638,7 @@ destruct (Rle_or_lt (bpow radix2 (emin + fprec t - 1))
   rewrite Habs.
   eapply Rle_trans; [ apply Rmult_le_compat_r; [ apply Rabs_pos | exact Hrel ] | ].
   have Hb := bpow_ge_0 radix2 emin. lra.
-- (* underflow leg: charge the symbolic perturbation at one floor ulp *)
+-
   eapply Rle_trans;
     [ exact (DWDivFP_error_underflow_perturbation
         xh xl y Hp4 COND FIN Hquot Huf) |].
@@ -1808,14 +1648,6 @@ Qed.
 
 End CondAccuracyDWDivFP_mixed.
 
-(* Public pure relative theorems.  [DWDivFP_relative_regime_cond] requires a
-   normal leading quotient and either a zero correction or a normal correction
-   quotient.  The paper-facing interface combines this regime with the weak
-   input condition and a posteriori result finiteness.  The original
-   [DWDivFP_relative_accuracy] theorem remains as a convenience wrapper using
-   [DWDivFP_relative_precond], which adds the stronger safe input requirements.
-   In either interface the FLT and FLX models agree, giving the paper's [3u^2]
-   bound without an absolute floor term. *)
 Section RelativeAccuracyDWDivFP.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
@@ -1844,8 +1676,8 @@ specialize (FIN STD).
 destruct Hcorr as [Hd0 | Hdyn]; last first.
 - exact (DWDivFP_relative_accuracy_normal_quotient
     xh xl y Hp4 INTERNAL FIN Hquot Hdyn).
-- (* exact division: the tl node is unperturbed, so the FLX bound transfers
-     verbatim.  Convert the absolute form back to the relative one. *)
+-
+
   move: (INTERNAL) => [Hfxh [Hfxl [Hfy [Hdwp [Hfth Hxhlb]]]]].
   have Hyne := DWDivFP_denom_nonzero_from_finite xh y Hfy Hfth.
   have Hsne : FT2R xh + FT2R xl <> 0.

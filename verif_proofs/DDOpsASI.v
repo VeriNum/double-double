@@ -1,18 +1,11 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Abstract Spec Interface (ASI) for the double-word *operations* translation
-   unit (dd_ops.c / verif_objs/dd_ops.v).  Every kernel and public wrapper funspec is
-   DECLAREd here exactly once, under the dd_ops program's CompSpecs, so that the
-   body proof files and the VSU builder reference the same funspec terms.
-   Runtime-check funspecs are imported from [fp_utils_specs.v], their canonical
-   definition site.  fma is provided by MathASI. *)
-
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
 Require Import vcfloat.FPCompCert.
 
-Require Import VSTlib.spec_math.   (* Provides fma_spec. *)
+Require Import VSTlib.spec_math.
 Require Import DDConds common real_extras.
 Require Import TwoSum_acc Fast2Sum_acc.
 Require Import DD.accuracy_proofs.dw_opps.DWPlusFP_relative_acc.
@@ -45,10 +38,6 @@ Definition default_wrapper_status (status : int) : Prop :=
 Definition strong_wrapper_status (status : int) : Prop :=
   status = Int.zero \/ status = Int.repr 3.
 
-(* ======================================================================== *)
-(*  Leaf primitives                                                          *)
-(* ======================================================================== *)
-
 Definition two_sum_spec :=
   DECLARE _two_sum
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
@@ -72,10 +61,6 @@ Definition fast_2mult_kernel_spec :=
     PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
   POST [ tvoid ]
     PROP() RETURN() SEP(data_at Tsh dword (f2val (Fast2Mult a b)) s).
-
-(* ======================================================================== *)
-(*  Composite operations                                                     *)
-(* ======================================================================== *)
 
 Definition dw_plus_fp_kernel_spec :=
   DECLARE _dw_plus_fp_kernel
@@ -171,21 +156,21 @@ Definition dw_times_fp_kernel_spec :=
 Definition dw_times_dw_kernel_spec :=
   DECLARE _dw_times_dw_kernel
   WITH s: val, x : val, y: val,
-      xh : ftype Tdouble * ftype Tdouble, 
+      xh : ftype Tdouble * ftype Tdouble,
       yh : ftype Tdouble * ftype Tdouble
-  PRE [tptr dword, tptr dword, tptr dword ] (* c lang types *)
+  PRE [tptr dword, tptr dword, tptr dword ]
     PROP()
     PARAMS (s; x; y)
-    SEP(data_at_ Tsh dword s; 
+    SEP(data_at_ Tsh dword s;
           data_at Tsh dword (f2val xh) x;
           data_at Tsh dword (f2val yh) y)
   POST [ tvoid ]
     PROP()
     RETURN()
-    SEP(data_at Tsh dword 
+    SEP(data_at Tsh dword
           (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
         data_at Tsh dword (f2val xh) x;
-        data_at Tsh dword (f2val yh) y). 
+        data_at Tsh dword (f2val yh) y).
 
 Definition dw_div_dw_kernel_spec :=
   DECLARE _dw_div_dw_kernel
@@ -221,11 +206,6 @@ Definition dw_div_fp_kernel_spec :=
     SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
         data_at Tsh dword (f2val xh) x).
 
-
-(* ======================================================================== *)
-(*  Public wrappers                                                          *)
-(* ======================================================================== *)
-
 Definition fast_2sum_spec :=
   DECLARE _fast_2sum
   WITH p: val, a : ftype Tdouble, b : ftype Tdouble
@@ -240,8 +220,6 @@ Definition fast_2sum_spec :=
         then data_at Tsh dword (f2val (Fast2Sum a b)) p
         else data_at_ Tsh dword p).
 
-(* Tier A full Fast2Mult wrapper: error term bound, exact reconstruction, and
-   output double-word property. *)
 Definition fast_2mult_spec :=
   DECLARE _fast_2mult
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
@@ -491,12 +469,6 @@ Definition dw_div_dw_strong_spec :=
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
-(* ======================================================================== *)
-(*  Spec groupings for the ops VSU (and its body proof Gprog)                *)
-(* ======================================================================== *)
-
-(* Externals the ops TU calls but does not define: fma and the runtime checks
-   provided by the checks VSU. *)
 Definition Ops_Imports : funspecs :=
   [ fma_spec;
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
@@ -515,7 +487,6 @@ Definition Ops_Imports : funspecs :=
     fp_utils_specs.dw_div_dw_weak_precond_check_spec;
     fp_utils_specs.dw_div_dw_strong_precond_check_spec ].
 
-(* Specs of the internal functions, in dd_ops prog order. *)
 Definition Ops_Internal : funspecs :=
   [ two_sum_spec; fast_2sum_kernel_spec; fast_2mult_kernel_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
@@ -527,8 +498,6 @@ Definition Ops_Internal : funspecs :=
     dw_div_dw_kernel_spec; dw_div_dw_spec; dw_div_dw_strong_spec;
     dw_div_fp_kernel_spec; dw_div_fp_spec; dw_div_fp_strong_spec ].
 
-(* Updated double-word operations expose default and strong interfaces with
-   the same guarantee. *)
 Definition Ops_Exports : funspecs :=
   [ two_sum_spec; fast_2sum_spec; fast_2mult_spec;
     dw_plus_fp_spec; dw_plus_fp_strong_spec;

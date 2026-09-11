@@ -1,9 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Final accuracy results for the Fast2Mult algorithm in the FLT format.
-   Helper lemmas live in Fast2Mult_acc_helpers.v. *)
-
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common dd_tactics FLT_helpers.
 Require Import DDConds.
@@ -27,16 +24,11 @@ Hypothesis (Fast2Mult_overflow_condition : is_finite (BMULT a b) = true).
 Theorem Fast2Mult_accuracy_norm:
     Rabs (FT2R (Fast2Mult_err a b))  <= /2 * ulp (FT2R a * FT2R b).
 Proof.
-  (* Accuracy follows from finiteness alone (no underflow condition).
-     The error term is fl(a*b - fl(a*b)) = round d, with d = ab - round ab,
-     |d| <= /2 ulp(ab) = bpow(cexp ab - 1).  Rounding d cannot exceed that
-     bound: if cexp ab - 1 >= emin then bpow(cexp ab - 1) is representable and
-     round fixes it; otherwise cexp ab = emin, d lies at/below the midpoint
-     bpow(emin-1) of the smallest normal number and rounds to 0. *)
+
   have FIN := Fast2Mult_finite_unconditional a b Fast2Mult_overflow_condition.
   destruct FIN as (FINs & FINd).
   set (ab := FT2R a * FT2R b) in *.
-  (* Rewrite the error term to round d. *)
+
   unfold Fast2Mult_err, Fast2Mult, snd in FINd |- *.
   rewrite -(BFMA_round_correct t a b (BOPP (BMULT a b)) FINd).
   rewrite -(BOPP_binary t (BMULT a b)); [ | right; exact Fast2Mult_overflow_condition ].
@@ -44,18 +36,18 @@ Proof.
   fold ab.
   set (rab := round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice) ab).
   set (d := ab + - rab).
-  (* |d| <= /2 ulp(ab). *)
+
   have Hd : Rabs d <= /2 * ulp ab.
   { rewrite /d /rab.
     have -> : (ab + - round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice) ab)
        = - (round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice) ab - ab) by ring.
     rewrite Rabs_Ropp.
     apply (error_le_half_ulp Zaux.radix2 (FLT_exp emin (fprec t)) choice ab). }
-  (* handle ab = 0 separately. *)
+
   destruct (Req_dec ab 0) as [Hab0 | Hab0].
   { rewrite /d /rab Hab0 round_0 Ropp_0 Rplus_0_r round_0 Rabs_R0.
     have Hge := ulp_ge_0 Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t)) 0. lra. }
-  (* ab <> 0 : /2 ulp ab = bpow (cexp ab - 1). *)
+
   set (c := cexp Zaux.radix2 (FLT_exp emin (fprec t)) ab).
   have Hulp : /2 * ulp ab = bpow Zaux.radix2 (c - 1).
   { rewrite (ulp_neq_0 _ _ _ Hab0). fold c.
@@ -63,27 +55,26 @@ Proof.
       by rewrite -bpow_plus; f_equal; lia.
     rewrite Hstep bpow_1 /=. lra. }
   rewrite Hulp. rewrite Hulp in Hd.
-  (* Goal: Rabs (round d) <= bpow (c - 1). *)
+
   destruct (Z.le_gt_cases emin (c - 1)) as [Hle | Hgt].
-  - (* bpow (c-1) is representable; round fixes it. *)
+  -
     apply abs_round_le_generic; [ FLT_basics | FLT_basics | | exact Hd ].
     apply generic_format_bpow. cbv [FLT_exp].
     revert Hle. cbv [emin SpecFloat.emin].
     pose proof (fprec_gt_0 t) as Hp; red in Hp. lia.
-  - (* c = emin: |d| <= bpow(emin-1) (the exact midpoint), which
-       round-to-nearest-even sends to 0. *)
+  -
+
     have Hc : (c = emin)%Z.
     { have Hcge : (emin <= c)%Z by rewrite /c /cexp /FLT_exp; lia.
       lia. }
-    (* Reduce to monotonicity of rounding: |round d| = round|d| <= round(bpow(emin-1)). *)
+
     rewrite -round_NE_abs.
     apply Rle_trans with
       (round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice)
              (bpow Zaux.radix2 (emin - 1))).
     { apply round_le; [ FLT_basics | FLT_basics | ].
       eapply Rle_trans; [ apply Hd | apply bpow_le; lia ]. }
-    (* round(bpow(emin-1)) = 0 by direct computation (ties-to-even at the
-       midpoint bpow(emin-1) = (0 + bpow emin)/2 picks the even neighbour 0). *)
+
     have Hround0 :
       round Zaux.radix2 (FLT_exp emin (fprec t)) (Znearest choice)
         (bpow Zaux.radix2 (emin - 1)) = 0.
@@ -214,8 +205,6 @@ Notation ulp := (Ulp.ulp Zaux.radix2 (SpecFloat.fexp (fprec t) (femax t))).
 
 Variables (a b : ftype t).
 
-(* Fast2Mult_exact_cond is the single precondition shared with the verif spec
-   (fast2_mult_exact_check_spec at Tdouble). *)
 Corollary Fast2Mult_accuracy_from_exact_cond :
   Fast2Mult_exact_cond a b ->
   Rabs (FT2R (Fast2Mult_err a b)) <= /2 * ulp (FT2R a * FT2R b).
@@ -224,12 +213,6 @@ Proof.
   now apply Fast2Mult_accuracy_norm.
 Qed.
 
-(* Exact reconstruction and the double-word property need the full condition:
-   both a finite rounded product and the underflow disjunct. *)
-(* Stated as a propositional conjunction (/\) using double_word_prop, so it is
-   usable in VST PROP clauses.  double_word_prop is definitionally the same
-   equality as double_word (just : Prop instead of : Type), so the equality
-   from TwoMult_is_DW closes the double_word_prop goal. *)
 Corollary Fast2Mult_correct_from_exact_cond :
   Fast2Mult_exact_cond a b ->
   FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) = FT2R a * FT2R b

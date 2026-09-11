@@ -1,16 +1,6 @@
 (* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
 
-(* Helper lemmas for the accuracy and correctness proofs of the
-   Fast2Mult algorithm in the FLT format.
-
-   Layout:
-     1. Finiteness (TwoMultFinite section)
-     2. Correctness & double-word property (TwoMultCorrect section)
-
-   The two sections are kept separate because they take different
-   hypothesis blocks. *)
-
 Require Import vcfloat.VCFloat.
 Require Import float_acc_lems op_defs common dd_tactics.
 Require Import DDModels.
@@ -19,10 +9,6 @@ From Flocq Require Import Pff2Flocq Core.
 Require Import mathcomp.ssreflect.ssreflect.
 
 Set Bullet Behavior "Strict Subproofs".
-
-(* ===================================================================== *)
-(* 1. Finiteness                                                           *)
-(* ===================================================================== *)
 
 Section TwoMultFinite.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -101,21 +87,12 @@ Qed.
 
 End TwoMultFinite.
 
-(* ===================================================================== *)
-(* 1b. Unconditional facts (finiteness and double-word) from finiteness of *)
-(*     the rounded product alone — no underflow hypothesis in this section. *)
-(* ===================================================================== *)
-
 Section TwoMultUnconditional.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 Notation emin := (@common.emin t).
 
 Variables (a b : ftype t).
 
-(* Finiteness of the Fast2Mult pair from finiteness of the rounded product
-alone (no underflow condition).  The FMA that computes the error term
-   cannot overflow because its rounded result has magnitude <= /2 ulp(a*b),
-   which is bounded by bpow (femax - fprec - 1) < bpow femax. *)
 Lemma Fast2Mult_finite_unconditional:
   is_finite (BMULT a b) = true -> is_finite_p (Fast2Mult a b).
 Proof.
@@ -136,10 +113,10 @@ Proof.
   apply Rabs_eq_R0 in H0. rewrite H0 round_0 Rminus_diag round_0 Rabs_R0.
   apply bpow_gt_0.
   -
-  (* Nonzero case: bound the rounded error unconditionally. *)
+
   set (ab := FT2R a * FT2R b) in *.
   have Habne : ab <> 0 by move => Hc; apply H0; rewrite Hc Rabs_R0.
-  (* mag ab <= femax, from is_finite_BMULT_no_overflow. *)
+
   have Hnoov : Rabs (rounded t ab) < bpow radix2 (femax t).
   { have Hno := is_finite_BMULT_no_overflow t a b Hfin.
     rewrite /Bmult_no_overflow in Hno. apply Hno. }
@@ -157,14 +134,14 @@ Proof.
       pose proof (femax_lb t); pose proof (fprec_lt_femax t); lia. }
     rewrite -round_NE_abs.
     apply round_le; try assumption; FLT_basics. }
-  (* Bound the rounded error. *)
+
   rewrite -round_NE_abs.
   eapply Rle_lt_trans.
   { apply round_le;
       [ FLT_basics | FLT_basics
       | rewrite Rabs_minus_sym;
         apply (error_le_half_ulp radix2 (FLT_exp emin (fprec t)) choice ab) ]. }
-  (* /2 * ulp ab = bpow (cexp ab - 1) <= bpow (femax - fprec - 1) *)
+
   rewrite ulp_neq_0 //.
   have Hcexp : (cexp radix2 (FLT_exp emin (fprec t)) ab <= femax t - fprec t)%Z.
   { rewrite /cexp /FLT_exp. cbv [emin SpecFloat.emin].
@@ -175,10 +152,7 @@ Proof.
   { have Hstep : bpow radix2 c = bpow radix2 (c - 1) * bpow radix2 1.
     { rewrite -bpow_plus. f_equal. lia. }
     rewrite Hstep bpow_1 /=. lra. }
-  (* round (bpow (c-1)) <= |round (bpow (c-1))| <= bpow (femax - fprec - 1) < bpow femax.
-     We use abs_round_le_generic with the generic format target bpow (femax - fprec - 1);
-     this avoids requiring bpow (c-1) itself to be in generic format (which fails in the
-     subnormal case c = emin). *)
+
   apply Rle_lt_trans with (bpow radix2 (femax t - fprec t - 1)).
   { eapply Rle_trans; [ apply Rle_abs | ].
     apply abs_round_le_generic;
@@ -208,10 +182,6 @@ Proof.
 Qed.
 
 End TwoMultUnconditional.
-
-(* ===================================================================== *)
-(* 2. Correctness and double-word property                                 *)
-(* ===================================================================== *)
 
 Section TwoMultCorrect.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
@@ -249,7 +219,6 @@ Proof.
     (Generic_fmt.Znearest choice) (FT2R a) (FT2R b)) => //;
   apply generic_format_FLT_FT2R.
 Qed.
-
 
 Lemma TwoMult_is_DW:
   double_word (Fast2Mult_mul a b) (Fast2Mult_err a b).
