@@ -1,7 +1,7 @@
-
-
-   (* Copyright 2023-2026 Ariel Kellison *)
+(* Copyright 2023-2026 Ariel Kellison *)
 (* Licensed under the MIT License. See LICENSE. *)
+
+(** Floating-point lemmas connecting CompCert and VCFloat. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.FPCompCert.
