@@ -55,8 +55,8 @@ struct dword {
     double t;
 };
 \end{lstlisting}
-  \caption{The C structure used to store a double-double number. The fields
-  contain the two binary64 components.}
+  \caption{The C structure storing the two binary64 components of a
+  double-double.}
   \label{fig:dword-struct}
 \end{figure}
 
@@ -153,10 +153,8 @@ enum dw_status dw_div_fp(
     return DW_OK;
 }
 \end{lstlisting}
-  \caption{The default wrapper for dividing a
-  double-double value by a binary64 value.  It invokes a runtime check on the
-  operands before calling the arithmetic kernel and checks the returned components
-  after kernel execution.}
+\caption{The default wrapper for dividing a double-double by a binary64 value.
+It checks the operands before the kernel call and the result afterward.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
@@ -185,8 +183,8 @@ int dw_div_fp_weak_check(
     return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
-  \caption{The weak check in the default wrapper establishes operand finiteness,
-  that the dividend is a double-double, and the kernel's lower bound.}
+\caption{The weak check for operand finiteness, the double-double relation,
+and the kernel's lower bound.}
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
@@ -206,9 +204,8 @@ int isfinite_dword(
            isfinite_double(x->t);
 }
 \end{lstlisting}
-  \caption{The helper functions \texttt{isfinite\_double} and
-  \texttt{isfinite\_dword}, which test one binary64 value and both components
-  of a double-double value, respectively.}
+\caption{Finiteness tests for a binary64 value and both components of a
+double-double.}
   \label{fig:finite-checks}
 \end{figure}
 
@@ -258,10 +255,9 @@ int dw_div_fp_strong_check(
     return fabs(q) < q_omega;
 }
 \end{lstlisting}
-  \caption{The strong check, factored through the
-  weak check.  It reuses the tests in
-  \Cref{fig:dw-div-fp-input-check} and then bounds the high word and rounded
-  leading quotient.}
+\caption{The strong check, which reuses the weak check in
+\Cref{fig:dw-div-fp-input-check} and bounds the high word and rounded leading
+quotient.}
   \label{fig:dw-div-fp-check}
 \end{figure}
 

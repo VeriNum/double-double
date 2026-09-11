@@ -16,32 +16,26 @@ running times compare with QD?
 \subsection{Experimental Setup}
 \label{sec:evaluation-setup}
 
-We compare \FenceDD{} with QD \citep{Hida2001,QD} against reference values
-computed using MPFR at greater precision \citep{Fousse2007}. We test both
+We compare \FenceDD{} with QD \citep{Hida2001,QD} using reference values
+computed at greater precision with MPFR \citep{Fousse2007}. We test both
 wrappers for each double-word operation and the single wrapper for each
-error-free transformation, using identical binary64 operands in both libraries.
+error-free transformation using identical binary64 operands in both libraries.
 
-To exercise the binary64 range, we generate the same number of inputs at each
-base-two exponent. Binary64 operands cover exponents from $-1074$ through
-$1023$, while double-word inputs cover exponents from $-969$ through $1022$.
-We balance signs, and every generated operand forms a double word according to
-\Cref{def:double-word}.
-
-RQ1 and RQ2 use \RQOneSamplesPerExponent{} inputs at each exponent, giving
-79,680 inputs per double-word operation and 83,920 per error-free
-transformation. The input construction and
-full experimental details appear in Appendix~\ref{app:evaluation-details}.
+Inputs are balanced by sign and distributed equally across base-two
+exponents. Binary64 operands span exponents $-1074$ through $1023$, and
+double-word inputs span $-969$ through $1022$. Every double-word operand
+satisfies \Cref{def:double-word}. RQ1 and RQ2 use
+\RQOneSamplesPerExponent{} inputs per exponent, totaling 79,680 per
+double-word operation and 83,920 per error-free transformation. Further
+details appear in Appendix~\ref{app:evaluation-details}.
 
 \subsection{Usefulness of the Error Bounds (RQ1)}
 
-On the generated tests, we find that the proved error bounds are useful: the
-largest actual errors approach the bounds, while the mean errors remain well
-below them.
-
-To address RQ1, we evaluate the six double-word operations using accepted calls to
-the default wrappers. Using MPFR \citep{Fousse2007}, we reconstruct exactly the values represented
-by the input and output pairs and compute the reference result at greater
-precision.
+Across accepted calls to the default wrappers for the six double-word
+operations, the largest actual errors approach the proved bounds, while the
+mean errors remain well below them. Using MPFR, we exactly
+reconstruct the values represented by the input and output pairs and compute
+the reference result at greater precision.
 
 Let $r$ be the reference result and $(z_h,z_\ell)$ the pair returned by
 \FenceDD{}. The proved bound has the form
@@ -66,10 +60,9 @@ algorithm, $B(r)$ is not a proved bound for these results.
 
 
 \begin{table}[tbp]
-  \caption{RQ1: Mean and maximum values of the error ratio $\rho$ defined in
-  \Cref{eq:rq1-error-ratio}. Results gives the percentage of returned values
-  for which the indicated term dominates. For QD, $\rho$ provides a common
-  comparison scale rather than a proved bound.}
+\caption{RQ1: Mean and maximum error ratios $\rho$ from
+\Cref{eq:rq1-error-ratio}. Results gives the percentage for which the indicated
+term dominates. QD ratios provide a comparison scale, not proved bounds.}
   \label{tab:rq1-tightness}
   \centering
   \setlength{\tabcolsep}{2pt}
@@ -105,16 +98,13 @@ division of two double words.
 
 \subsection{Usefulness of the Wrappers (RQ2)}
 
-On the generated tests, we find that the wrappers are useful: for rejected
+On the generated tests, the wrappers are useful: for rejected \FenceDD{}
 calls, QD usually does not return a result satisfying the corresponding
-numerical properties.
-
-For every rejected \FenceDD{} call, we run the corresponding QD operation on
-the same input. For a double-word operation, the QD result satisfies the
-relevant properties when it is finite, its components form a double word, and
-its actual error is no greater than $B(r)$ from
-\Cref{eq:rq1-error-bound}. For an error-free transformation, its returned
-components must sum to the exact result.
+numerical properties. For each such call, we run the corresponding QD
+operation on the same input. A QD double-word result must be finite, form a
+double word, and have error at most $B(r)$ from
+\Cref{eq:rq1-error-bound}; an error-free transformation result must sum to the
+exact value.
 
 We examine default and alternative wrapper rejections separately. Every input
 rejected by a default wrapper is also rejected by the corresponding
@@ -124,11 +114,10 @@ numbers of inputs at each exponent, the percentages describe the generated
 population rather than application workloads.
 
 \begin{table}[tbp]
-  \caption{RQ2: QD outcomes on inputs from rejected \FenceDD{} calls.
-  Percentages use the number of rejected calls in each row as their
-  denominator. For a double-word operation, satisfying the properties requires
-  a finite double word with error at most $B(r)$; for an error-free
-  transformation, it requires exact reconstruction.}
+\caption{RQ2: QD outcomes for rejected \FenceDD{} calls. Percentages use the
+rejected calls in each row. A satisfying double-word result is finite and has
+error at most $B(r)$; an error-free transformation requires exact
+reconstruction.}
   \label{tab:rq2-results}
   \centering
   \setlength{\tabcolsep}{2pt}
@@ -165,13 +154,10 @@ respectively.
 
 \subsection{Performance Cost of the Wrappers (RQ3)}
 
-On the timing tests, the wrappers add only a few nanoseconds per call. Their
-relative cost is noticeable because the unchecked kernels are small.
-
-We time the default wrappers for the six double-word operations and the single
-wrapper for each error-free transformation. Each test consists of
-\RQThreeTrialCount{} trials on \RQThreeInputCount{} inputs with operand
-exponents between $-100$ and $100$.
+Across 24 trials on 65,536 inputs with operand exponents from $-100$ to $100$,
+the default double-double wrappers and error-free transformation wrappers add
+only a few nanoseconds per call. This is a noticeable relative cost because
+the unchecked kernels are small.
 
 We compare each CompCert wrapper with its kernel. We also compare \FenceDD{}
 and QD after compiling both with Homebrew Clang; this comparison includes
@@ -180,11 +166,10 @@ Appendix~\ref{app:evaluation-timing} gives the machine, compiler versions,
 options, and timing procedure.
 %
 \begin{table}[tbp]
-  \caption{RQ3: Performance of the default double-word wrappers and the
-  error-free transformation wrappers. Wrapper/Kernel and Wrapper/QD are time
-  ratios; Added is the difference from the kernel in nanoseconds per call.
-  Entries are medians [interquartile ranges]. Results for the alternative
-  wrappers appear in \Cref{tab:rq3-performance-detail}.}
+\caption{RQ3: Performance of default double-word and error-free transformation
+wrappers. Ratios compare wrappers with kernels under CompCert and with QD under
+Clang; Added is the wrapper cost in nanoseconds. Entries are medians
+[interquartile ranges].}
   \label{tab:rq3-performance}
   \centering
   \setlength{\tabcolsep}{3pt}

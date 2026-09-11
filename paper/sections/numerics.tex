@@ -191,12 +191,11 @@ to Dekker
       \end{minipage}}
   \end{subfigure}
   \endgroup
-  \caption{The three error-free transformations used by the double-word
-  algorithms. \TwoSum{} and \FastTwoSum{} return a rounded sum and a correction;
-  \FastTwoMult{} returns a rounded product and a correction computed using a
-  fused multiply-add. 
-  \Cref{thm:addition-transformations,thm:fast-two-sum-small,thm:fast-two-mult}
-  state when each correction equals the exact rounding error.}
+\caption{Error-free transformations used by the double-word algorithms.
+\TwoSum{} and \FastTwoSum{} return a rounded sum and correction;
+\FastTwoMult{} returns a rounded product and FMA correction.
+\Cref{thm:addition-transformations,thm:fast-two-sum-small,thm:fast-two-mult}
+state when each correction equals the exact rounding error.}
   \label{fig:error-free-transformations}
 \end{figure}
 
