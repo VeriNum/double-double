@@ -85,14 +85,14 @@ TimingValue parse_timing_value(const std::string &implementation,
                                const OperationSpec &operation,
                                const std::string &path,
                                std::size_t line) {
-    if (implementation == "dd_lib" && interface_name == "default") {
+    if (implementation == "fenceDD" && interface_name == "default") {
         return TimingValue::default_path;
     }
-    if (implementation == "dd_lib" && interface_name == "strong") {
+    if (implementation == "fenceDD" && interface_name == "strong") {
         if (operation.eft) fail(path, line, "strong time is not valid here");
         return TimingValue::strong_path;
     }
-    if (implementation == "dd_lib" && interface_name == "kernel") {
+    if (implementation == "fenceDD" && interface_name == "kernel") {
         return TimingValue::kernel;
     }
     if (implementation == "QD" && interface_name == "reference") {

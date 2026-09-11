@@ -1,16 +1,16 @@
-# Benchmark harness: dd_lib (ours) vs QD (Bailey et al.)
+# Benchmark harness: fenceDD vs QD (Bailey et al.)
 #
 # Variables you can override on the command line:
-#   DD_CC       compiler for dd_lib .c files            (default: ccomp)
+#   FENCEDD_CC  compiler for fenceDD .c files            (default: ccomp)
 #   CLANG_CC    Clang compiler for comparison objects    (default: clang)
 #   CXX         compiler for harness + linking          (default: g++)
-#   DD_CFLAGS   flags for dd_lib .c files               (default: -O3)
-#   CLANG_CFLAGS flags for Clang dd_lib objects          (default: -O3 -std=c11)
+#   FENCEDD_CFLAGS flags for fenceDD .c files             (default: -O3)
+#   CLANG_CFLAGS flags for Clang fenceDD objects          (default: -O3 -std=c11)
 #   CXXFLAGS    non-floating-point C++ flags            (default: -O3 -std=c++14 -Wall)
-#   DD_LIB_DIR  dd_lib source directory                  (default: local or ../dd_lib)
+#   FENCEDD_DIR fenceDD source directory                  (default: local or ../fenceDD)
 #   QD_PREFIX   install prefix containing the qd/ headers       (required)
 #
-# CompCert and Clang build separate copies of the unchanged dd_lib sources.
+# CompCert and Clang build separate copies of the unchanged fenceDD sources.
 # QD and the shared harness require C++ and therefore build with $(CXX).
 #
 # STRICT FLOAT: -fno-fast-math is NOT enough. clang/gcc default to FP contraction
@@ -20,25 +20,25 @@
 # separately-rounded IEEE op, and an FMA appears ONLY where the source calls fma().
 # So we force -ffp-contract=off on both sides; explicit fma() calls remain FMA.
 # qd_evaluation.hpp selects QD's inline FMA implementation. CompCert never
-# contracts floating-point expressions, so the default dd_lib flags need no
+# contracts floating-point expressions, so the default fenceDD flags need no
 # contraction option. Native compilers need the strict flags above.
 
 .DEFAULT_GOAL := all-results
 
-DD_CC      ?= ccomp
+FENCEDD_CC ?= ccomp
 CLANG_CC   ?= clang
 CXX        ?= g++
-DD_CFLAGS  ?= -O3
+FENCEDD_CFLAGS ?= -O3
 CLANG_CFLAGS ?= -O3 -std=c11
 CXXFLAGS   ?= -O3 -std=c++14 -Wall
 STRICT_FP_FLAGS := -fno-fast-math -ffp-contract=off
 PKG_CONFIG ?= pkg-config
 
-ifeq ($(origin DD_LIB_DIR), undefined)
-  ifneq ($(wildcard dd_lib/include/dw_arith.h),)
-    DD_LIB_DIR := dd_lib
+ifeq ($(origin FENCEDD_DIR), undefined)
+  ifneq ($(wildcard fenceDD/include/dw_arith.h),)
+    FENCEDD_DIR := fenceDD
   else
-    DD_LIB_DIR := ../dd_lib
+    FENCEDD_DIR := ../fenceDD
   endif
 endif
 
@@ -48,7 +48,7 @@ ifeq ($(strip $(MPFR_LIBS)),)
 MPFR_LIBS := -lmpfr -lgmp
 endif
 
-DD_INC     := -I$(DD_LIB_DIR)/include
+FENCEDD_INC := -I$(FENCEDD_DIR)/include
 QD_INC     := -I$(QD_PREFIX)/include
 
 BUILD_DIR := .build
@@ -95,9 +95,9 @@ PERFORMANCE_CLANG_OBJS := \
 .PHONY: all-results raw-results analyze-results clean check-dependencies
 
 check-dependencies:
-	@test -f "$(DD_LIB_DIR)/include/dw_arith.h" || { \
-	  echo "dd_lib headers not found under $(DD_LIB_DIR)" >&2; \
-	  echo "Set DD_LIB_DIR to the dd_lib source directory." >&2; \
+	@test -f "$(FENCEDD_DIR)/include/dw_arith.h" || { \
+	  echo "fenceDD headers not found under $(FENCEDD_DIR)" >&2; \
+	  echo "Set FENCEDD_DIR to the fenceDD source directory." >&2; \
 	  exit 1; \
 	}
 	@test -n "$(QD_PREFIX)" || { \
@@ -113,24 +113,24 @@ check-dependencies:
 $(BIN_DIR) $(CXX_OBJ_DIR) $(COMPCERT_OBJ_DIR) $(CLANG_OBJ_DIR):
 	mkdir -p "$@"
 
-# --- dd_lib objects: generic rule (one .o per dd_lib .c) ------------------
-$(COMPCERT_OBJ_DIR)/%.o: $(DD_LIB_DIR)/%.c \
-                         $(DD_LIB_DIR)/include/dw_arith.h \
+# --- fenceDD objects: generic rule (one .o per fenceDD .c) ----------------
+$(COMPCERT_OBJ_DIR)/%.o: $(FENCEDD_DIR)/%.c \
+                         $(FENCEDD_DIR)/include/dw_arith.h \
                          | $(COMPCERT_OBJ_DIR) check-dependencies
-	$(DD_CC) $(DD_CFLAGS) $(DD_INC) -c $< -o $@
+	$(FENCEDD_CC) $(FENCEDD_CFLAGS) $(FENCEDD_INC) -c $< -o $@
 
 $(addprefix $(COMPCERT_OBJ_DIR)/,\
   $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
-    $(DD_LIB_DIR)/include/fp_utils.h
+    $(FENCEDD_DIR)/include/fp_utils.h
 
-$(CLANG_OBJ_DIR)/%.o: $(DD_LIB_DIR)/%.c \
-                      $(DD_LIB_DIR)/include/dw_arith.h \
+$(CLANG_OBJ_DIR)/%.o: $(FENCEDD_DIR)/%.c \
+                      $(FENCEDD_DIR)/include/dw_arith.h \
                       | $(CLANG_OBJ_DIR) check-dependencies
-	$(CLANG_CC) $(CLANG_CFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) -c $< -o $@
+	$(CLANG_CC) $(CLANG_CFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) -c $< -o $@
 
 $(addprefix $(CLANG_OBJ_DIR)/,\
   $(addsuffix .o,fast_2sum fast_2mult fp_utils $(DW_OPS))): \
-    $(DD_LIB_DIR)/include/fp_utils.h
+    $(FENCEDD_DIR)/include/fp_utils.h
 
 # --- C++ analysis objects -------------------------------------------------
 $(CXX_OBJ_DIR)/numerical_analysis.o: numerical_analysis.cpp \
@@ -151,18 +151,18 @@ $(CXX_OBJ_DIR)/analyze_rq3.o: analyze_rq3.cpp analysis_common.hpp \
 
 # --- C++ generation objects -----------------------------------------------
 $(CXX_OBJ_DIR)/%.o: %.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
 	  -I. -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/generate_performance_data_compcert.o: \
         generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
-	  -I. -DDD_BUILD_LABEL=\"compcert\" -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	  -I. -DFENCEDD_BUILD_LABEL=\"compcert\" -MMD -MP -c $< -o $@
 
 $(CXX_OBJ_DIR)/generate_performance_data_clang.o: \
         generate_performance_data.cpp | $(CXX_OBJ_DIR) check-dependencies
-	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(DD_INC) $(QD_INC) $(MPFR_CFLAGS) \
-	  -I. -DDD_BUILD_LABEL=\"clang\" -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(STRICT_FP_FLAGS) $(FENCEDD_INC) $(QD_INC) $(MPFR_CFLAGS) \
+	  -I. -DFENCEDD_BUILD_LABEL=\"clang\" -MMD -MP -c $< -o $@
 
 # --- benchmark links ------------------------------------------------------
 $(BIN_DIR)/generate_numerical_data: $(NUMERICAL_DATA_OBJS) \

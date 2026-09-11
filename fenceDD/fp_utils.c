@@ -1,4 +1,4 @@
-// dd_lib/fp_utils.c
+// fenceDD/fp_utils.c
 #include <stdint.h>
 #include "include/dw_arith.h"
 #include "include/fp_utils.h"

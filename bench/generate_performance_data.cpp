@@ -203,8 +203,8 @@ Summary summarize(std::vector<double> values) {
 
 }  // namespace bench_timing
 
-#ifndef DD_BUILD_LABEL
-#error "DD_BUILD_LABEL must identify the linked dd_lib build"
+#ifndef FENCEDD_BUILD_LABEL
+#error "FENCEDD_BUILD_LABEL must identify the linked fenceDD build"
 #endif
 
 namespace {
@@ -215,7 +215,7 @@ using bench_timing::CompositeSamples;
 using bench_timing::Samples;
 using bench_timing::Summary;
 
-const char *const build_label = DD_BUILD_LABEL;
+const char *const build_label = FENCEDD_BUILD_LABEL;
 
 struct QdInputs {
     std::vector<dd_real> first;
@@ -439,16 +439,16 @@ void report_series(const char *operation, const char *implementation,
 
 void report_exact(const char *name, const Samples &samples,
                   std::FILE *result_file) {
-    report_series(name, "dd_lib", "default", samples.default_ns, result_file);
-    report_series(name, "dd_lib", "kernel", samples.kernel_ns, result_file);
+    report_series(name, "fenceDD", "default", samples.default_ns, result_file);
+    report_series(name, "fenceDD", "kernel", samples.kernel_ns, result_file);
     report_series(name, "QD", "reference", samples.qd_ns, result_file);
 }
 
 void report_composite(const char *name, const CompositeSamples &samples,
                       std::FILE *result_file) {
-    report_series(name, "dd_lib", "default", samples.default_ns, result_file);
-    report_series(name, "dd_lib", "strong", samples.strong_ns, result_file);
-    report_series(name, "dd_lib", "kernel", samples.kernel_ns, result_file);
+    report_series(name, "fenceDD", "default", samples.default_ns, result_file);
+    report_series(name, "fenceDD", "strong", samples.strong_ns, result_file);
+    report_series(name, "fenceDD", "kernel", samples.kernel_ns, result_file);
     report_series(name, "QD", "reference", samples.qd_ns, result_file);
 }
 
@@ -872,7 +872,7 @@ int main(int argc, char **argv) {
             "operation\timplementation\tinterface\ttrial\tns_per_call\n");
     }
 
-    std::printf("RQ3 performance: %s dd_lib build and QD\n", build_label);
+    std::printf("RQ3 performance: %s fenceDD build and QD\n", build_label);
     std::puts("  composite operations: default = two-stage, strong = input-only");
     std::puts("  exact transformations: default = guarded");
     std::printf("  inputs = %zu, trials = %zu, fingerprint of timing inputs = 0x%016llx\n",

@@ -1,13 +1,15 @@
 # Benchmark targets are handled by bench/Makefile rather than CoqMakefile.
 BENCHTARGETS := all-results raw-results analyze-results
+PROOFTARGETS := accuracy verification
 
 # KNOWNTARGETS will not be passed along to CoqMakefile
-KNOWNTARGETS := CoqMakefile extra-stuff extra-stuff2 $(BENCHTARGETS)
+KNOWNTARGETS := CoqMakefile AccuracyMakefile extra-stuff extra-stuff2
+KNOWNTARGETS += $(BENCHTARGETS) $(PROOFTARGETS)
 # KNOWNFILES will not get implicit targets from the final rule, and so
 # depending on them won't invoke the submake
 # Warning: These files get declared as PHONY, so any targets depending
 # on them always get rebuilt
-KNOWNFILES   := Makefile _CoqProject
+KNOWNFILES   := Makefile _CoqProject _CoqProject.accuracy
 
 .DEFAULT_GOAL := invoke-coqmakefile
 
@@ -16,6 +18,9 @@ ifneq ($(MAKECMDGOALS),clean)
 .SECONDEXPANSION:
 CoqMakefile: Makefile _CoqProject $$(OBJS)
 	$(COQBIN)coq_makefile -f _CoqProject -o CoqMakefile
+
+AccuracyMakefile: Makefile _CoqProject.accuracy
+	$(COQBIN)coq_makefile -f _CoqProject.accuracy -o AccuracyMakefile
 
 invoke-coqmakefile: CoqMakefile
 	$(MAKE) --no-print-directory -f CoqMakefile $(filter-out $(KNOWNTARGETS),$(MAKECMDGOALS))
@@ -26,6 +31,12 @@ endif
 ####################################################################
 ##                      Your targets here                         ##
 ####################################################################
+
+.PHONY: $(PROOFTARGETS)
+accuracy: AccuracyMakefile
+	$(MAKE) --no-print-directory -f AccuracyMakefile
+
+verification: invoke-coqmakefile
 
 .PHONY: $(BENCHTARGETS)
 $(BENCHTARGETS):
@@ -42,7 +53,7 @@ OBJ += fp_utils.v
 # whole operations translation unit compiles to one Clight program / CompSpecs.
 OBJ += dd_ops.v
 OBJS = $(addprefix $(OBJDIR)/,$(OBJ))
-SRCDIR = dd_lib
+SRCDIR = fenceDD
 INCLUDES = -I $(SRCDIR)/include
 CLIGHT_HEADERS = $(SRCDIR)/include/dw_arith.h $(SRCDIR)/include/fp_utils.h
 CLIGHT_SOURCES = $(addprefix $(SRCDIR)/,$(OBJ:.v=.c))
@@ -62,7 +73,7 @@ $(OBJS): $(OBJDIR)/%.v: $(SRCDIR)/%.c
 	clightgen -normalize $(INCLUDES) $< -o $@
 
 clean:
-	rm -f CoqMakefile CoqMakefile.conf
+	rm -f CoqMakefile CoqMakefile.conf AccuracyMakefile AccuracyMakefile.conf
 	rm -f *.vo *.vos *.vok *.glob
 	rm -f FLX_analysis/*.{vo,vos,vok,glob}
 	rm -f common/*.vo

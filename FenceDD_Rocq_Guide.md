@@ -2,7 +2,7 @@
 
 FenceDD is a verified library for double-word arithmetic over IEEE 754 floating-point formats. This guide summarizes the main definitions and theorems in the Rocq development and maps the numbered results in the accompanying paper to their formal counterparts.
 
-For the C implementation, runtime interfaces, and usage instructions, see the documentation in [`dd_lib`](dd_lib/).
+For the C implementation, runtime interfaces, and usage instructions, see the documentation in [`fenceDD`](fenceDD/).
 
 ## Contents
 
@@ -133,21 +133,21 @@ Every theorem listed below proves a combined accuracy and double-word result.
 
 | Transformation | Kernel implementation | Public wrapper | Runtime check implementation |
 |---|---|---|---|
-| TwoSum | `two_sum` ([source](dd_lib/two_sum.c#L4)) | Same function | None |
-| Fast2Sum | `fast_2sum_kernel` ([source](dd_lib/fast_2sum_kernel.c#L4)) | `fast_2sum` ([source](dd_lib/fast_2sum.c#L5)) | `fast2_sum_magnitude_order_check` ([source](dd_lib/fp_utils.c#L48)) |
-| Fast2Mult exact | `fast_2mult_kernel` ([source](dd_lib/fast_2mult_kernel.c#L4)) | `fast_2mult` ([source](dd_lib/fast_2mult.c#L5)) | `fast2_mult_exact_check` ([source](dd_lib/fp_utils.c#L23)) |
+| TwoSum | `two_sum` ([source](fenceDD/two_sum.c#L4)) | Same function | None |
+| Fast2Sum | `fast_2sum_kernel` ([source](fenceDD/fast_2sum_kernel.c#L4)) | `fast_2sum` ([source](fenceDD/fast_2sum.c#L5)) | `fast2_sum_magnitude_order_check` ([source](fenceDD/fp_utils.c#L48)) |
+| Fast2Mult exact | `fast_2mult_kernel` ([source](fenceDD/fast_2mult_kernel.c#L4)) | `fast_2mult` ([source](fenceDD/fast_2mult.c#L5)) | `fast2_mult_exact_check` ([source](fenceDD/fp_utils.c#L23)) |
 
 | Operation | Kernel implementation | Default (weak) and alternative (strong) wrappers | Weak and strong runtime checks |
 |---|---|---|---|
-| DWPlusFP | `dw_plus_fp_kernel` ([source](dd_lib/dw_plus_fp_kernel.c#L6)) | `dw_plus_fp` ([source](dd_lib/dw_plus_fp.c#L7)), `dw_plus_fp_strong` ([source](dd_lib/dw_plus_fp.c#L18)) | [`dw_plus_fp_weak_precond_check`](dd_lib/fp_utils.c#L247), [`dw_plus_fp_strong_precond_check`](dd_lib/fp_utils.c#L231) |
-| DWPlusDW | `dw_plus_dw_kernel` ([source](dd_lib/dw_plus_dw_kernel.c#L4)) | `dw_plus_dw` ([source](dd_lib/dw_plus_dw.c#L7)), `dw_plus_dw_strong` ([source](dd_lib/dw_plus_dw.c#L18)) | [`dw_plus_dw_weak_precond_check`](dd_lib/fp_utils.c#L71), [`dw_plus_dw_strong_precond_check`](dd_lib/fp_utils.c#L53) |
-| DWTimesFP | `dw_times_fp_kernel` ([source](dd_lib/dw_times_fp_kernel.c#L4)) | `dw_times_fp` ([source](dd_lib/dw_times_fp.c#L5)), `dw_times_fp_strong` ([source](dd_lib/dw_times_fp.c#L15)) | [`dw_times_fp_weak_precond_check`](dd_lib/fp_utils.c#L145), [`dw_times_fp_strong_precond_check`](dd_lib/fp_utils.c#L81) |
-| DWTimesDW | `dw_times_dw_kernel` ([source](dd_lib/dw_times_dw_kernel.c#L4)) | `dw_times_dw` ([source](dd_lib/dw_times_dw.c#L5)), `dw_times_dw_strong` ([source](dd_lib/dw_times_dw.c#L15)) | [`dw_times_dw_weak_precond_check`](dd_lib/fp_utils.c#L205), [`dw_times_dw_strong_precond_check`](dd_lib/fp_utils.c#L149) |
-| DWDivFP | `dw_div_fp_kernel` ([source](dd_lib/dw_div_fp_kernel.c#L4)) | `dw_div_fp` ([source](dd_lib/dw_div_fp.c#L5)), `dw_div_fp_strong` ([source](dd_lib/dw_div_fp.c#L15)) | [`dw_div_fp_weak_check`](dd_lib/fp_utils.c#L221), [`dw_div_fp_strong_check`](dd_lib/fp_utils.c#L209) |
-| DWDivDW | `dw_div_dw_kernel` ([source](dd_lib/dw_div_dw_kernel.c#L4)) | `dw_div_dw` ([source](dd_lib/dw_div_dw.c#L5)), `dw_div_dw_strong` ([source](dd_lib/dw_div_dw.c#L15)) | [`dw_div_dw_weak_precond_check`](dd_lib/fp_utils.c#L338), [`dw_div_dw_strong_precond_check`](dd_lib/fp_utils.c#L259) |
+| DWPlusFP | `dw_plus_fp_kernel` ([source](fenceDD/dw_plus_fp_kernel.c#L6)) | `dw_plus_fp` ([source](fenceDD/dw_plus_fp.c#L7)), `dw_plus_fp_strong` ([source](fenceDD/dw_plus_fp.c#L18)) | [`dw_plus_fp_weak_precond_check`](fenceDD/fp_utils.c#L247), [`dw_plus_fp_strong_precond_check`](fenceDD/fp_utils.c#L231) |
+| DWPlusDW | `dw_plus_dw_kernel` ([source](fenceDD/dw_plus_dw_kernel.c#L4)) | `dw_plus_dw` ([source](fenceDD/dw_plus_dw.c#L7)), `dw_plus_dw_strong` ([source](fenceDD/dw_plus_dw.c#L18)) | [`dw_plus_dw_weak_precond_check`](fenceDD/fp_utils.c#L71), [`dw_plus_dw_strong_precond_check`](fenceDD/fp_utils.c#L53) |
+| DWTimesFP | `dw_times_fp_kernel` ([source](fenceDD/dw_times_fp_kernel.c#L4)) | `dw_times_fp` ([source](fenceDD/dw_times_fp.c#L5)), `dw_times_fp_strong` ([source](fenceDD/dw_times_fp.c#L15)) | [`dw_times_fp_weak_precond_check`](fenceDD/fp_utils.c#L145), [`dw_times_fp_strong_precond_check`](fenceDD/fp_utils.c#L81) |
+| DWTimesDW | `dw_times_dw_kernel` ([source](fenceDD/dw_times_dw_kernel.c#L4)) | `dw_times_dw` ([source](fenceDD/dw_times_dw.c#L5)), `dw_times_dw_strong` ([source](fenceDD/dw_times_dw.c#L15)) | [`dw_times_dw_weak_precond_check`](fenceDD/fp_utils.c#L205), [`dw_times_dw_strong_precond_check`](fenceDD/fp_utils.c#L149) |
+| DWDivFP | `dw_div_fp_kernel` ([source](fenceDD/dw_div_fp_kernel.c#L4)) | `dw_div_fp` ([source](fenceDD/dw_div_fp.c#L5)), `dw_div_fp_strong` ([source](fenceDD/dw_div_fp.c#L15)) | [`dw_div_fp_weak_check`](fenceDD/fp_utils.c#L221), [`dw_div_fp_strong_check`](fenceDD/fp_utils.c#L209) |
+| DWDivDW | `dw_div_dw_kernel` ([source](fenceDD/dw_div_dw_kernel.c#L4)) | `dw_div_dw` ([source](fenceDD/dw_div_dw.c#L5)), `dw_div_dw_strong` ([source](fenceDD/dw_div_dw.c#L15)) | [`dw_div_dw_weak_precond_check`](fenceDD/fp_utils.c#L338), [`dw_div_dw_strong_precond_check`](fenceDD/fp_utils.c#L259) |
 
 Every default wrapper calls `isfinite_dword` after the arithmetic kernel
-([source](dd_lib/fp_utils.c#L255)). Every alternative wrapper obtains result
+([source](fenceDD/fp_utils.c#L255)). Every alternative wrapper obtains result
 finiteness from the strong input condition.
 
 ## Verified weak and strong wrappers

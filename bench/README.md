@@ -35,7 +35,7 @@ The build obtains MPFR and GMP flags from `pkg-config`. Set `MPFR_CFLAGS` and
 make QD_PREFIX=/absolute/path/to/qd all-results RUN_DIR=results/
 ```
 
-`DD_LIB_DIR` may be used when `dd_lib` is not next to this directory.
+`FENCEDD_DIR` may be used when `fenceDD` is not next to this directory.
 
 ## Full run
 

@@ -13,11 +13,11 @@ The motivation for these checks and their precise definitions are described in
 the FenceDD paper. Functions ending in `_kernel` are the arithmetic implementations
 used by the wrappers.
 
-Run `make -C dd_lib` from the repository root to build `libfencedd.a` and the
+Run `make -C fenceDD` from the repository root to build `libfencedd.a` and the
 example program with CompCert. Run the example with:
 
 ```sh
-./dd_lib/example
+./fenceDD/example
 ```
 
 For the numerical theorems and the VST proofs attached to each interface, see

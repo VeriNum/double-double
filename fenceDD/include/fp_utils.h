@@ -1,4 +1,4 @@
-// dd_lib/include/fp_utils.h
+// fenceDD/include/fp_utils.h
 #ifndef FP_UTILS_H
 #define FP_UTILS_H
 

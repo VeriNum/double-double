@@ -166,7 +166,7 @@ void write_results(const std::string &path, const Results &results) {
                 const char *error_measure = regime == 0
                     ? "relative_error" : "absolute_error";
                 file << operation.name << '\t'
-                     << (implementation == 0 ? "fencedd" : "qd") << '\t'
+                     << (implementation == 0 ? "fenceDD" : "qd") << '\t'
                      << regime_names[regime] << '\t'
                      << analysis_precision << '\t' << check_precision << '\t'
                      << result.eligible_cases << '\t'
