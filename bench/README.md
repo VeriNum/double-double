@@ -349,7 +349,7 @@ environments:
 | --- | --- |
 | `rq1-relative.tex` | Relative regime rows for the six composite operations. |
 | `rq1-absolute.tex` | Absolute regime rows for the four operations with mixed bounds. |
-| `rq2-composite.tex` | Default and strong rejection rows for the six composite operations. |
+| `rq2-composite.tex` | Aggregate and per operation default and strong rejection rows for the six composite operations. |
 | `rq2-transformations.tex` | Rejection rows for the three error free transformations. |
 | `rq3-default.tex` | Default wrapper performance rows for Table 5. |
 | `rq3-strong.tex` | Strong wrapper performance rows for Table 6. |

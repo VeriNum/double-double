@@ -145,11 +145,11 @@ def significant(value, digits=2):
     return format(rounded, "f")
 
 
-def percentage(part, whole):
+def percentage(part, whole, places=2):
     if whole == 0:
         return EM_DASH
     value = Decimal(part) * Decimal(100) / Decimal(whole)
-    return fixed(value, 2) + r"\%"
+    return fixed(value, places) + r"\%"
 
 
 def integer(value):
@@ -189,12 +189,36 @@ def rq2_percentage(row, column):
 
 def rq2_composite_rows(rows, path):
     result = ["% Generated from rq2.tsv; do not edit."]
+    selected = {}
     for operation in COMPOSITE_OPERATIONS:
-        for wrapper, label in (("default", "Default"),
-                               ("strong", "Alternative")):
+        for wrapper in ("default", "strong"):
             row = require_row(rows, (operation, wrapper), path)
             if row["criterion"] != "error_bound":
                 raise FormatError(f"{path}: bad criterion for {operation} {wrapper}")
+            selected[(operation, wrapper)] = row
+
+    for wrapper, label in (("default", "Default"),
+                           ("strong", "Alternative")):
+        wrapper_rows = [
+            selected[(operation, wrapper)]
+            for operation in COMPOSITE_OPERATIONS
+        ]
+        rejected = sum(count(row, "rejected_cases") for row in wrapper_rows)
+        nonfinite = sum(count(row, "qd_nonfinite") for row in wrapper_rows)
+        passed = sum(count(row, "qd_passed") for row in wrapper_rows)
+        result.append(latex_row(
+            "All operations",
+            label,
+            integer(rejected),
+            percentage(nonfinite, rejected, 1),
+            percentage(passed, rejected, 1),
+        ))
+
+    result.append(r"\midrule")
+    for operation in COMPOSITE_OPERATIONS:
+        for wrapper, label in (("default", "Default"),
+                               ("strong", "Alternative")):
+            row = selected[(operation, wrapper)]
             result.append(latex_row(
                 LABELS[operation],
                 label,
