@@ -115,16 +115,13 @@ quotient is
 \[
   q=\frac{x_h+x_\ell}{y}.
 \]
-Line~11 assigns the rounded quotient $x_h/y$ to \texttt{th}, giving an initial
-approximation to $q$. The difference between $q$ and \texttt{th} reflects both
-the omitted contribution of $x_\ell$ and the error introduced by rounding
-$x_h/y$ to binary64. Lines~12--16 compute a second quotient term that accounts
-for both effects and assign it to \texttt{tl}. Line~17 combines the two terms
-and stores the resulting high and low words in the object pointed to by
-\texttt{z}.
-
-The kernel does not check whether the dividend satisfies
-\Cref{eq:dw-representation} and the required lower bound, or whether the
+Line~11 assigns the rounded quotient $x_h/y$ to \texttt{th} as an initial
+approximation to $q$. This approximation omits the contribution of $x_\ell$
+and includes the rounding error in $x_h/y$. Lines~12--16 compute
+\texttt{tl} to account for both effects, and Line~17 combines the two terms
+and writes the resulting high and low words through \texttt{z}. The kernel
+does not check whether the dividend satisfies
+\Cref{eq:dw-representation} and the required lower bound or whether the
 returned quotient is finite.
 
 \subsubsection{Default Wrapper and Runtime Checks}

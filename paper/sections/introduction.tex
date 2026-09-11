@@ -8,9 +8,9 @@ required, libraries such as MPFR provide arbitrary-precision arithmetic
 sufficient, double-double arithmetic offers a faster alternative. A
 double-double represents a real number as the unevaluated sum of two binary64
 components. Rounding this sum recovers the first component, while the second
-component retains the information lost in the rounding. Double-double
-arithmetic uses ordinary binary64 operations and therefore does not require
-hardware support for a wider format.
+component retains the information lost in the rounding. 
+Because it uses ordinary binary64 operations, double-double arithmetic
+does not require specialized hardware.
 
 Double-double arithmetic and the more general technique of floating-point
 expansion arithmetic are used in numerical linear algebra
@@ -93,19 +93,18 @@ lower end, the relative term dominates and provides roughly twice the
 relative precision of binary64. Near it, the absolute term can dominate; for
 the example above, this term covers the lost correction.
 
-More generally, our Rocq development identifies sufficient conditions under which the
-algorithms satisfy these numerical guarantees and proves the results in a
-faithful model of IEEE\~754. It covers adding a binary64 value to a double-double,
-adding two double-doubles, multiplying a double-double by a binary64 value, multiplying
-two double-doubles, dividing a double-double by a binary64 value, and dividing
-one double-double by another. Under these conditions, the addition operations
-satisfy relative error bounds, while multiplication and division satisfy
-bounds with relative and absolute terms. For every double-double operation,
-the returned pair satisfy the relation required
-by subsequent operations. For the three error-free transformations used by
-these algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---the
-development identifies sufficient conditions under which the returned
-correction equals the exact rounding error in the sum or product.
+More generally, our Rocq development identifies sufficient conditions for
+these guarantees and proves them in a faithful model of IEEE~754. It covers
+adding a binary64 value to a double-double, adding two double-doubles,
+multiplying a double-double by a binary64 value, multiplying two
+double-doubles, dividing a double-double by a binary64 value, and dividing one
+double-double by another. Under these conditions, addition satisfies relative
+error bounds, while multiplication and division satisfy bounds with relative
+and absolute terms. Each returned pair also satisfies the relation required by
+subsequent operations. For the three error-free transformations used by these
+algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---we identify
+sufficient conditions for the returned correction to equal the exact rounding
+error in the sum or product.
 
 We implement these algorithms in \FenceDD{}, a verified C library for
 double-double arithmetic. Each public function returns a status indicating
@@ -115,12 +114,9 @@ algorithms and that successful runtime checks imply the corresponding
 numerical conditions. Consequently, on successful return, the output satisfies
 the corresponding proved guarantee.
 
-The numerical and VST proofs are checked in Rocq during library development;
-they are not executed during a library call. Instead, each public function
-performs runtime checks around an arithmetic kernel and returns a status
-indicating whether the proved numerical guarantee applies.
-\Cref{fig:proof-runtime-roles} illustrates the roles of the proofs and runtime
-checks.
+The numerical and VST proofs are checked in Rocq during development, not
+during library calls. \Cref{fig:proof-runtime-roles} contrasts the proof work
+with the runtime checks performed on each call.
 
 \input{figures/proof-runtime-roles}
 

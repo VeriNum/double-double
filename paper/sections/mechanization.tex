@@ -49,11 +49,13 @@ arithmetic kernels.
 Kernel refinement identifies the pair computed by the C kernel, but it does
 not establish the conditions assumed by the numerical theorem. The next proof
 obligation is therefore to show that successful runtime checks establish
-these conditions. For division of a double word by a binary64 value, the weak
-and strong checks appear in
-\Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check}, and the result finiteness
-check appears in \Cref{fig:finite-checks}. The following theorem connects
-these checks to the conditions defined in \Cref{sec:division-conditions}.
+these conditions. For division of a double word by a binary64 value, the 
+following theorem connects 
+the weak
+and strong checks appearing in
+\Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check} and the result finiteness
+check appears in \Cref{fig:finite-checks}
+to the conditions defined in \Cref{sec:division-conditions}.
 
 \begin{theorem}[Soundness of the Runtime Checks for Division by a Binary64
 Value]
