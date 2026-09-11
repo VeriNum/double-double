@@ -1,44 +1,29 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-The numerical theorems underlying the guarantees in
-\Cref{tab:operation-preview} concern the algorithms implemented by the
-arithmetic kernels. We state these theorems for double-word arithmetic over a
-generic radix-two floating-point format and identify the conditions
-under which they hold for each operation. \FenceDD{} uses the binary64 instances
-of these theorems.
+The guarantees in \Cref{tab:operation-preview} are proved for functional models
+of the algorithms implemented by the arithmetic kernels. A functional model
+is a Rocq function that describes the rounded operations and returned pair
+without the details of the C implementation. We state the models over a
+generic radix-two format; \FenceDD{} uses their binary64 instances.
 
-
-For each algorithm, we define a Rocq function that models the sequence of
-rounded operations and defines the resulting pair. We call this function the
-\emph{functional model} of the algorithm.
-A functional model describes the floating-point computation independently of
-the C implementation.
-We present these models mathematically; they are defined in Rocq
-using the floating-point types and IEEE~754 operations from VCFloat2
-together with the binary floating-point representation from Flocq. 
-For each model, we bound the error in the value represented by the 
-returned pair and prove that the pair forms a double word.
-
-The proofs of all results in this section are checked in Rocq. To illustrate
-the proof method, we continue the division example from
-\Cref{sec:overview-division} with a proof sketch of the numerical guarantee for
-division. For the remaining operations, we present only the arguments that
-differ from the division case and identify results inherited from earlier
-analyses.
+The models use IEEE~754 operations from VCFloat2 and the binary floating-point
+representation from Flocq. For each model, we bound the error in the represented
+value and prove that the returned pair forms a double word. All results are
+checked in Rocq. We give a proof sketch for division by a floating-point value
+and present only the distinct arguments for the remaining operations.
 
 \subsection{FLX, FLT, and IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
-To account for gradual underflow, we compare two formats defined in Flocq:
-FLX and FLT \citep[Sections~III-C and III-D]{Boldo2011}. Both have the same
-precision. FLX has an unbounded exponent range, whereas FLT imposes a lower
-exponent bound. The analysis of \citet{Joldes2017}, mechanized by
-\citet{Rideau2022}, uses FLX and therefore excludes underflow. We use FLT 
-because the lower exponent bound models gradual underflow in
-IEEE~754 arithmetic \citep{IEEE754-2019}.
+To model gradual underflow, we relate two Flocq formats with the same
+precision: FLX and FLT \citep[Sections~III-C and III-D]{Boldo2011}. FLX has an
+unbounded exponent range, whereas FLT imposes a lower exponent bound. The
+analysis of \citet{Joldes2017}, mechanized by \citet{Rideau2022}, uses FLX and
+therefore excludes underflow. We use FLT because its lower exponent bound
+models gradual underflow in IEEE~754 arithmetic \citep{IEEE754-2019}.
 
-For a radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
+For radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
 formats represent
 \[
 \begin{aligned}
@@ -52,11 +37,11 @@ formats represent
       m,q\in\mathbb{Z},\ |m|<\beta^p,\ q\geq e_{\min}\right\}.
 \end{aligned}
 \]
-Consequently,
+Thus,
 $\mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
  \subseteq\mathbb{F}_{\mathrm{FLX}}(\beta,p)$.
 
-The lower exponent bound determines the smallest positive value $\eta$ and the
+The lower exponent bound determines the smallest positive value $\eta$ and
 smallest positive normal value $\nu$:
 \begin{equation}
   \eta=\beta^{e_{\min}}
@@ -64,18 +49,13 @@ smallest positive normal value $\nu$:
   \nu=\beta^{e_{\min}+p-1}.
   \label{eq:flt-thresholds}
 \end{equation}
-Values below $\nu$ are multiples of $\eta$ and
-have fewer significant bits. For binary64, $\eta=2^{-1074}$ and
-$\nu=2^{-1022}$.
+Below $\nu$, representable values are multiples of $\eta$ and have fewer
+significant bits. For binary64, $\eta=2^{-1074}$ and $\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
-$\operatorname{RN}_{\mathrm{FLT}}$ denote functions that round a real value to
-the nearest representable value in $\mathbb{F}_{\mathrm{FLX}}$ and
-$\mathbb{F}_{\mathrm{FLT}}$, respectively, with ties to even. When the exact
-value lies in the normal range, both functions produce the same rounded
-value\footnote{This fact is established by the Flocq theorem
-\texttt{FLT.round\_FLT\_FLX}.}:
-
+$\operatorname{RN}_{\mathrm{FLT}}$ denote rounding to nearest with ties to even
+in the two formats. In the normal range, the Flocq theorem
+\texttt{FLT.round\_FLT\_FLX} gives
 \begin{equation}
   |x|\geq\nu
   \quad\Longrightarrow\quad
@@ -83,16 +63,13 @@ value\footnote{This fact is established by the Flocq theorem
     =\operatorname{RN}_{\mathrm{FLX}}(x).
   \label{eq:round-flt-flx}
 \end{equation}
-For $|x|<\nu$, the two rounded values may differ. In this region, we analyze
-the FLT rounding directly rather than assume the corresponding FLX result.
+For $|x|<\nu$, the rounded values may differ, so we analyze FLT rounding
+directly.
 
-Unlike IEEE~754 formats, FLT and FLX allow arbitrarily large finite values and
-therefore do not model overflow. We use FLT to describe an IEEE~754 operation
-only when the operands and rounded result are finite. Under these conditions,
-the IEEE~754 result and the corresponding FLT rounding represent the same real
-value. Our numerical analysis of double-word operations and error-free
-transformations includes the finiteness conditions required for this
-correspondence.
+Neither FLX nor FLT has an upper exponent bound. We therefore relate FLT
+rounding to IEEE~754 only when the operands and rounded result are finite;
+under this condition, they represent the same real value. The numerical
+theorems state the finiteness conditions required for this correspondence.
 
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
@@ -259,38 +236,22 @@ Let $\nu$ be the smallest positive normal value in the format, as defined in
 and $|a+b|\leq2\nu$, then $s=\operatorname{RN}(a+b)$ and $s+t=a+b$.
 \end{theorem}
 
-\begin{proof}
-Every value in the FLT format is an integer multiple of $\eta$, so the exact sum $a+b$
-lies on the same fixed lattice. The bound $|a+b|\leq2\nu$ ensures that this
-lattice point is representable in the format. Line~1 of
-\Cref{alg:fast-two-sum} therefore gives $s=a+b$. Consequently, Lines~2
-and~3 give $z=\operatorname{RN}(s-a)=\operatorname{RN}(b)=b$ and
-$t=\operatorname{RN}(b-z)=0$. Thus, $s+t=a+b$ and
-$s=\operatorname{RN}(a+b)$.
-\end{proof}
+The proof appears in Appendix~\ref{app:fast-two-sum-small-proof}; like all 
+results in this section, it is checked in Rocq.
 
 \subsubsection{Corrections for multiplication near underflow.}
 
-The correction returned by \FastTwoMult{} requires separate treatment.
-For finite inputs $a$ and $b$, the transformation first computes
-\[
-  \pi_h=\operatorname{RN}(ab)
-\]
-and then rounds the exact error $d=ab-\pi_h$ to obtain $\pi_\ell$. If $d$ is
-representable, then $\pi_\ell=d$ and the returned components sum to the exact
-product. Near underflow, however, $d$ may be too small to represent.
-
-Theorem~2 of \citet[Section~3]{BoldoDaumas2003} proves that $d$ is
-representable when $a$ and $b$ have representations
-\[
-  a=n_a2^{e_a}
-  \qquad\text{and}\qquad
-  b=n_b2^{e_b}
-\]
-satisfying $e_a+e_b\geq e_{\min}$. We derive a sufficient condition stated
-directly in terms of the magnitude of the product. We also prove that, whenever
-both returned components are finite, their sum differs from the exact product
-by at most half the spacing between subnormal values.
+\FastTwoMult{} returns
+$\pi_h=\operatorname{RN}(ab)$ and
+$\pi_\ell=\operatorname{RN}(d)$, where $d=ab-\pi_h$ is the exact rounding
+error. If $d$ is representable, then $\pi_\ell=d$ and the returned components
+sum to $ab$; near underflow, however, $d$ may be too small to represent.
+Theorem~2 of \citet[Section~3]{BoldoDaumas2003} proves representability when
+$a=n_a2^{e_a}$ and $b=n_b2^{e_b}$ satisfy
+$e_a+e_b\geq e_{\min}$. From this result, we derive a sufficient condition on $|ab|$ under which the
+returned components sum to the exact product. When this condition does not
+hold but both components are finite, we instead bound the difference between
+their sum and the exact product.
 
 \begin{theorem}[\FastTwoMult{} over IEEE~754]
 \label{thm:fast-two-mult}
@@ -318,45 +279,20 @@ If $ab=0$ or $|ab|\geq\tau$, then
 
 \begin{proof}[Proof sketch]
 Let $d=ab-\pi_h$ be the exact rounding error. Lines~1 and~2 of
-\Cref{alg:fast-two-mult} give
-\[
-  \pi_h=\operatorname{RN}(ab)
-  \qquad\text{and}\qquad
-  \pi_\ell=\operatorname{RN}(d).
-\]
-Consequently,
-\[
-  (\pi_h+\pi_\ell)-ab=\pi_\ell-d.
-\]
+\Cref{alg:fast-two-mult} give $\pi_h=\operatorname{RN}(ab)$ and
+$\pi_\ell=\operatorname{RN}(d)$, so
+$|(\pi_h+\pi_\ell)-ab|=|\pi_\ell-d|$.
 
-If $ab=0$, then $d=\pi_\ell=0$. Now suppose $|ab|\geq\tau$. Choose
-representations
-\[
-  a=n_a2^{e_a}
-  \qquad\text{and}\qquad
-  b=n_b2^{e_b},
-\]
-where $|n_a|,|n_b|<2^p$, as permitted by the definition of FLT. If
-$e_a+e_b<e_{\min}$, then
-\[
-  |ab|
-  =|n_an_b|2^{e_a+e_b}
-  <2^{2p}2^{e_{\min}-1}
-  =\tau,
-\]
-contradicting $|ab|\geq\tau$. Therefore $e_a+e_b\geq e_{\min}$, and
-Theorem~2 of \citet[Section~3]{BoldoDaumas2003} shows that $d$ is
-representable. It follows that $\pi_\ell=d$ and
-$\pi_h+\pi_\ell=ab$.
+If $ab=0$, then $d=\pi_\ell=0$. If $|ab|\geq\tau$, representations
+$a=n_a2^{e_a}$ and $b=n_b2^{e_b}$ cannot satisfy
+$e_a+e_b<e_{\min}$, since that inequality would imply $|ab|<\tau$.
+Theorem~2 of \citet[Section~3]{BoldoDaumas2003} therefore shows that $d$ is
+representable, giving $\pi_\ell=d$ and exact reconstruction.
 
-It remains to consider when $0<|ab|<\tau$. Let
-$\nu=2^{e_{\min}+p-1}$ be the smallest positive normal value. The FLT bound
-for rounding to nearest and $p\geq3$ give $|d|<2\nu$. Adjacent representable
-values in this range are spaced by $\eta$, so
-\[
-  |\pi_\ell-d|\leq\frac{\eta}{2}.
-\]
-This proves the stated error bound.
+In the remaining case, $0<|ab|<\tau$. The FLT rounding bound gives
+$|d|<2\nu$, where $\nu=2^{e_{\min}+p-1}$. Representable values in this range
+are spaced by $\eta$, so $|\pi_\ell-d|\leq\eta/2$, which proves the stated
+error bound.
 \end{proof}
 
 \subsection{Numerical Guarantees for Division of a Double Word by a
@@ -526,47 +462,27 @@ $|\delta/y|\geq\nu$, the sharper bound holds:
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-Together, the two conditions imply that $y\neq0$ and that the intermediate
-results used below are finite.
-If $x_h=0$, the double-word condition gives
-$x_\ell=0$, and the result follows directly. Otherwise, the lower bound in
-$\mathcal{I}_{\mathrm{div}}$ gives
+The conditions imply that $y\neq0$ and that the relevant intermediate results
+are finite. If $x_h=0$, the double-word condition gives $x_\ell=0$, and the
+result follows directly. Otherwise,
 $|x_h|\geq2^{e_{\min}+2p}$.
 
 \noindent\emph{Normal leading quotient.}
-Suppose first that $|q_0|\geq\nu$. Rounding on Line~1 then agrees in FLT and
-FLX. The lower bound on $|x_h|$ gives
-\[
-  |t_hy|\geq2^{e_{\min}+2p-1}.
-\]
-Thus, \Cref{thm:fast-two-mult} gives
-$\pi_h+\pi_\ell=t_hy$ on Line~2. Sterbenz's lemma makes the subtraction on
-Line~3 exact
-\citep{Sterbenz1974}; representability and the fixed spacing of subnormal
-values then transfer the existing FLX residual argument through Lines~4--5.
-
-If $\delta=0$ or $|\delta/y|\geq\nu$, rounding on Line~6 also agrees in the
-two formats and gives the sharper relative bound in
-\Cref{eq:dw-div-fp-relative}. 
-Otherwise, the values of $t_\ell$ obtained by FLT and FLX rounding differ by
-at most $\eta$, giving the mixed bound.
-The residual
-analysis also gives $|t_\ell|\leq|t_h|$, so
-\Cref{thm:addition-transformations} shows that \FastTwoSum{} on Line~7
-preserves their sum and returns a double word.
+If $|q_0|\geq\nu$, rounding on Line~1 agrees in FLT and FLX. The lower bound on
+$|x_h|$ gives $|t_hy|\geq2^{e_{\min}+2p-1}$, so
+\Cref{thm:fast-two-mult} gives $\pi_h+\pi_\ell=t_hy$. Sterbenz's lemma and
+representability then carry the FLX residual analysis through Lines~3--5
+\citep{Sterbenz1974}. If $\delta=0$ or $|\delta/y|\geq\nu$, Line~6 also agrees
+in the two formats and gives \Cref{eq:dw-div-fp-relative}; otherwise, its FLT
+and FLX results differ by at most $\eta$, giving the mixed bound. Finally,
+$|t_\ell|\leq|t_h|$, so \FastTwoSum{} preserves their sum and returns a double
+word by \Cref{thm:addition-transformations}.
 
 \noindent\emph{Subnormal leading quotient.}
-Now suppose that $|q_0|<\nu$. The fixed FLT spacing gives
-$|t_h-q_0|\leq\eta/2$. Because the input is a double word,
-$|x_\ell|\leq u|x_h|$, so
-\[
-  \left|\frac{x_\ell}{y}\right|<\frac{\eta}{2},
-  \qquad |t_h-q|\leq\eta.
-\]
-Moreover, the lower bound in $\mathcal{I}_{\mathrm{div}}$ implies
-$|y|>2^{p+1}$. Applying the FLT rounding
-bounds and \Cref{thm:fast-two-mult} to Lines~2--5 gives the essential aggregate
-residual bound
+If $|q_0|<\nu$, fixed FLT spacing gives $|t_h-q_0|\leq\eta/2$. The double-word
+condition gives $|x_\ell/y|<\eta/2$, and hence $|t_h-q|\leq\eta$. The lower
+bound on $|x_h|$ also implies $|y|>2^{p+1}$. Applying the FLT rounding bounds
+and \Cref{thm:fast-two-mult} to Lines~2--5 gives
 \begin{equation}
   |\delta-(x_h+x_\ell-t_hy)|
     \leq\frac{\eta|y|}{2},
@@ -574,17 +490,15 @@ residual bound
   \left|\frac{\delta}{y}-(q-t_h)\right|\leq\frac{\eta}{2}.
   \label{eq:dw-div-subnormal-residual}
 \end{equation}
-By \Cref{eq:dw-div-subnormal-residual}, rounding on Line~6 adds at most another
-$\eta/2$, while the same bounds give
-$|t_h+t_\ell|\leq2\nu$. Hence \Cref{thm:fast-two-sum-small} shows that
-Line~7 preserves the sum and returns a double word, with
+Line~6 adds at most another $\eta/2$, and $|t_h+t_\ell|\leq2\nu$.
+\Cref{thm:fast-two-sum-small} therefore shows that Line~7 preserves the sum
+and returns a double word, with
 \[
   |(z_h+z_\ell)-q|
     \leq\eta
     \leq3u^2|q|+\eta.
 \]
-This proves the mixed bound, the conditional sharper bound, and the
-double-word property.
+This proves both error bounds and the double-word property.
 \end{proof}
 
 By \Cref{lem:dw-div-safe-implies-finite},

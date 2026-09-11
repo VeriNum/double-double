@@ -111,3 +111,16 @@ in \Cref{tab:rq3-performance-detail} compare the total running times of these
 wrappers with QD.
 
 \FloatBarrier
+
+\section{Proof of the Small-\FastTwoSum{} Result}
+\label{app:fast-two-sum-small-proof}
+
+\begin{proof}[Proof of \Cref{thm:fast-two-sum-small}]
+Every value in the FLT format is an integer multiple of $\eta$, so the exact
+sum $a+b$ lies on the same fixed lattice. The bound $|a+b|\leq2\nu$ ensures
+that this lattice point is representable in the format. Line~1 of
+\Cref{alg:fast-two-sum} therefore gives $s=a+b$. Consequently, Lines~2 and~3
+give $z=\operatorname{RN}(s-a)=\operatorname{RN}(b)=b$ and
+$t=\operatorname{RN}(b-z)=0$. Thus, $s+t=a+b$ and
+$s=\operatorname{RN}(a+b)$.
+\end{proof}

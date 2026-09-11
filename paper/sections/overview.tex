@@ -131,13 +131,12 @@ returned quotient is finite.
 \label{sec:overview-division-wrappers}
 \label{sec:overview-post-check}
 
-\Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, which we call
-the \emph{default wrapper}. It performs the weak check before invoking the
-kernel and checks the computed quotient for finiteness afterward. If the weak
-check fails, the wrapper does not invoke the kernel and returns
-\texttt{DW\_WEAK\_INPUT\_REJECTED}. If the finiteness check fails after kernel
-execution, it returns \texttt{DW\_POST\_CHECK\_REJECTED}. Otherwise, it returns
-\texttt{DW\_OK}.
+\Cref{fig:default-division-wrapper} shows \texttt{dw\_div\_fp}, the
+\emph{default wrapper}. A failed weak check returns
+\texttt{DW\_\allowbreak WEAK\_\allowbreak INPUT\_\allowbreak REJECTED} without
+invoking the kernel. If the result is nonfinite, the wrapper returns
+\texttt{DW\_\allowbreak POST\_\allowbreak CHECK\_\allowbreak REJECTED};
+otherwise, it returns \texttt{DW\_OK}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -165,11 +164,9 @@ enum dw_status dw_div_fp(
 \end{figure}
 
 \paragraph{Weak check before kernel execution.}
-The default wrapper first calls the weak check shown in
-\Cref{fig:dw-div-fp-input-check}. 
-The check tests three properties of the operands: they must be finite, the two
-words of the dividend must satisfy \Cref{eq:dw-representation}, and the high
-word of the dividend must satisfy the lower bound derived in
+\Cref{fig:dw-div-fp-input-check} shows the weak check. It requires finite
+operands, a dividend satisfying \Cref{eq:dw-representation}, and the lower
+bound derived in
 \Cref{sec:division-conditions}.
 
 \begin{figure}[t]
@@ -196,10 +193,7 @@ int dw_div_fp_weak_check(
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
-The check first tests operand finiteness. Lines~4--6 call
-\texttt{isfinite\_\allowbreak double}, defined in \Cref{fig:finite-checks}.
-The same figure defines \texttt{isfinite\_\allowbreak dword}, which the
-default wrapper uses after kernel execution.
+Lines~4--6 use the helpers in \Cref{fig:finite-checks}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -221,11 +215,9 @@ int isfinite_dword(
   \label{fig:finite-checks}
 \end{figure}
 
-Under strict IEEE~754 semantics, the computation $x-x$ on Line~3 of
-\texttt{isfinite\_double} produces zero when $x$ is finite and NaN otherwise.
-Because the equality comparison returns false when either operand is NaN, the
-weak check returns $0$ if any operand is an infinity or NaN, and the wrapper
-returns a failure status before invoking the kernel.
+Under strict IEEE~754 semantics, $x-x$ is zero for finite $x$ and NaN
+otherwise. Because the equality comparison is false for NaN, any nonfinite
+operand causes the weak check to return $0$.
 
 Operand finiteness alone does not establish that the dividend is a
 double-double. Lines~8--9 therefore test \Cref{eq:dw-representation} by
@@ -236,29 +228,22 @@ $2^{-52}$, the rounded sum differs from \texttt{x->s}, so the comparison
 fails. \Cref{sec:check-soundness} proves that a successful comparison,
 together with the finiteness tests, establishes \Cref{eq:dw-representation}.
 
-The final operand condition is the lower bound tested on Lines~11--13.  The
-check permits either $x_h=0$ or $|x_h|\geq2^{-968}$. If $x_h=0$,
-\Cref{eq:dw-representation} implies $x_\ell=0$. Otherwise, this lower bound is 
-needed to bound the error in \texttt{tl}, which accounts for the low 
-word of the dividend and the information lost when Line~11 rounds $x_h/y$. 
-\Cref{sec:division-numerics} derives this threshold.
+Lines~11--13 permit either $x_h=0$ or $|x_h|\geq2^{-968}$. In the first case,
+\Cref{eq:dw-representation} also implies $x_\ell=0$. Otherwise, the lower
+bound controls the error in the second quotient term.
+\Cref{sec:division-numerics} derives the threshold.
 
 \paragraph{Result finiteness check after kernel execution.}
-The weak check establishes the conditions required before the computation,
-but it does not establish that the quotient will be finite. After the kernel
-returns, Line~10 of \Cref{fig:default-division-wrapper} calls
-\texttt{isfinite\_dword} to test both words of the computed quotient.  The
-wrapper returns successfully only when both words are finite.
+The weak check does not establish quotient finiteness. After kernel execution,
+Line~10 of \Cref{fig:default-division-wrapper} tests both returned words, and
+the wrapper succeeds only when both are finite.
 
 \subsubsection{Alternative Wrapper and Strong Check}
 \label{sec:overview-strong-check}
 
-Some users may want a wrapper that ensures the result will be finite before 
-invoking the kernel.
-For this use case, \FenceDD{} provides an
-\emph{alternative wrapper} that tests stronger operand conditions before
-invoking the kernel.  We call this runtime test the \emph{strong check}.
-\Cref{fig:dw-div-fp-check} shows its implementation.
+Some users may want result finiteness established before kernel execution.
+For this purpose, the \emph{alternative wrapper} uses the \emph{strong check}
+shown in \Cref{fig:dw-div-fp-check}.
 
 \begin{figure}[t]
   \begin{lstlisting}[style=sectiontwoc]
@@ -283,21 +268,18 @@ int dw_div_fp_strong_check(
   \label{fig:dw-div-fp-check}
 \end{figure}
 
-The strong check begins with the weak check, so the operands must satisfy the
-conditions required by the default wrapper. It then excludes a zero divisor
-and bounds both the high word of the dividend and the rounded leading quotient.
-These additional tests are sufficient to establish, before the kernel is
-executed, that both words of its result will be finite.
+The strong check reuses the weak check, excludes a zero divisor, and bounds
+the dividend's high word and the rounded leading quotient. These conditions
+are sufficient to establish before kernel execution that both result words
+will be finite.
 
-If the strong check fails, the alternative wrapper returns
-\texttt{DW\_STRONG\_INPUT\_REJECTED} without invoking the kernel. If the check
-succeeds, the wrapper invokes the same arithmetic kernel and returns
-\texttt{DW\_OK}; no result check is required afterward. The stronger
-conditions are conservative: the check can fail even when the kernel would
-produce a finite quotient. The default wrapper can return a result in such
-cases because it checks the computed quotient instead.
-\Cref{sec:division-conditions} proves that these additional bounds are
-sufficient to establish finiteness of the quotient.
+If the check fails, the alternative wrapper returns
+\texttt{DW\_\allowbreak STRONG\_\allowbreak INPUT\_\allowbreak REJECTED}
+without invoking the kernel. If the check succeeds, it invokes the kernel and
+returns \texttt{DW\_OK} without a result check. The strong check can fail even
+when the computed quotient would be finite; in such cases, the default wrapper
+may succeed by checking the result afterward.
+\Cref{sec:division-conditions} proves the required finiteness result.
 
 \subsubsection{Guarantee on Successful Return}
 \label{sec:overview-division-guarantee}
@@ -325,11 +307,10 @@ where $u=2^{-53}$ is the unit roundoff and $\eta=2^{-1074}$ is the smallest
 positive subnormal binary64 value.
 \end{theorem}
 
-For either wrapper, successful return means that its runtime checks succeeded.
-These checks establish the operand conditions and quotient finiteness required
-by the numerical theorem. The caller therefore need not establish these
-numerical preconditions. In \Cref{sec:mechanization}, we prove using VST that
-both wrappers satisfy this contract.
+On successful return, the runtime checks have established the operand
+conditions and quotient finiteness required by the numerical theorem. The
+caller therefore supplies no numerical preconditions. In
+\Cref{sec:mechanization}, we prove this contract using VST.
 
 \subsection{Numerical Guarantees for All Operations and Error-Free Transformations}
 \label{sec:overview-library-guarantees}
@@ -370,18 +351,11 @@ Division $(x,y)$ & $x/y$ & $9.8u^2|r|+2.5\eta$ \\
 \end{tabular}
 \end{table}
 
-For each of the six double-double operations, \FenceDD{} provides one
-arithmetic kernel and two public wrappers. The default and alternative
-wrappers for an operation invoke the kernel for that operation and provide the
-guarantee shown in \Cref{tab:operation-preview}. 
-Each error-free transformation has a single
-public wrapper whose runtime checks establish sufficient conditions
-under which the returned correction equals the exact rounding error. The
-arithmetic kernels for the double-double operations do not invoke these public
-wrappers; they call the error-free transformation kernels directly. The numerical
-analysis of each double-double operation establishes the properties needed for
-these internal calls. It uses the exact rounding error when the sufficient
-conditions hold and, for \FastTwoMult{} near underflow, includes the bound on
-the lost correction in the final error bound. The conditions depend on the
-computations in each algorithm, so the runtime checks differ among
-double-double operations and error-free transformations.
+Each double-double operation has one arithmetic kernel and two wrappers that
+provide the guarantee in \Cref{tab:operation-preview}. Each error-free
+transformation has one wrapper that checks sufficient conditions for its
+correction to equal the exact rounding error. Operation kernels call the
+error-free transformation kernels directly. Their numerical analyses use the
+exact correction when available and propagate the bound on a lost
+\FastTwoMult{} correction near underflow. Because the required conditions
+depend on the algorithm, the runtime checks differ among functions.

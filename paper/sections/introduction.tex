@@ -21,13 +21,13 @@ dynamics \citep{BaileyKrasnyPelz1993,HeDing2001}, quantum calculations
 elementary functions \citep{CRLibm2006,CoreMath2022}. Implementations include
 XBLAS and the QD library for double-double and quad-double arithmetic
 \citep{Li2002,Hida2001,QD}. Each double-double operation is implemented as a
-sequence of rounded binary64 operations, so its accuracy depends on how
+sequence of rounded binary64 operations, so accuracy depends on how
 rounding errors interact across that sequence. This combination of speed and
 subtle numerical behavior led \citet{Li2002} to call double-double arithmetic
 ``an `attractive nuisance,' like an unfenced backyard swimming pool.''
 
 The hazard is that a double-double operation does not behave like a single
-operation performed with twice the precision. Characterizing its
+operation performed with twice the precision. Characterizing the resulting
 error is difficult, and even expert numerical analysts can make subtle
 mistakes. \citet{Zhang2025} highlight an example from XBLAS: an algorithm for
 adding two double-doubles was claimed to have relative error at most $2u^2$,
@@ -36,7 +36,8 @@ found inputs producing a relative error of $2.25u^2$, exceeding the claimed
 bound. They gave a revised analysis, which \citet{Rideau2022} subsequently
 mechanized in Rocq.
 
-A mechanized theorem applies only to the arithmetic model used in its proof.
+A mechanized theorem holds only for the particular model of arithmetic in
+which it is stated.
 \citet{Rideau2022} use a format with an unbounded exponent range, where
 underflow and overflow do not occur. IEEE~754 binary64 has a finite exponent
 range, so both can occur. Obtaining verified guarantees for a C library
@@ -54,9 +55,10 @@ we obtain $(2^{-1030},0)$. However,
 \[
  a^2=2^{-1030}+2^{-1081}+2^{-1134}.
 \]
-The returned pair is still a double-double, but its relative error is
-approximately $2^{-51}$, giving about the same relative precision as a
-binary64 multiplication rather than roughly twice that precision.
+The returned pair is still a double-double, but the represented value has
+relative error approximately $2^{-51}$, giving about the same relative
+precision as a binary64 multiplication rather than roughly twice that
+precision.
 
 The precision loss occurs in \FastTwoMult{}, a building block used by the
 double-double multiplication algorithm. In this example, it returns a
@@ -99,11 +101,11 @@ two double-doubles, dividing a double-double by a binary64 value, and dividing
 one double-double by another. Under these conditions, the addition operations
 satisfy relative error bounds, while multiplication and division satisfy
 bounds with relative and absolute terms. For every double-double operation,
-the returned pair satisfies the relation between its components required by
-subsequent operations. For the three error-free transformations used by these
-algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---the development
-identifies sufficient conditions under which the returned correction equals
-the exact rounding error in the sum or product.
+the returned pair satisfy the relation required
+by subsequent operations. For the three error-free transformations used by
+these algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---the
+development identifies sufficient conditions under which the returned
+correction equals the exact rounding error in the sum or product.
 
 We implement these algorithms in \FenceDD{}, a verified C library for
 double-double arithmetic. Each public function returns a status indicating

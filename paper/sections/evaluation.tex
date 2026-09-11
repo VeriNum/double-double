@@ -219,11 +219,12 @@ versions, options, and timing procedure.
   \end{tabular}
 \end{table}
 
-Under CompCert, the default wrapper/kernel ratios are
-\RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{}, with
-added times of
+Under CompCert, default wrappers ran
+\RQThreeDefaultMinimumKernelRatio{}--\RQThreeDefaultMaximumKernelRatio{} times
+as long as their kernels, adding
 \RQThreeDefaultMinimumAddedTime{}--\RQThreeDefaultMaximumAddedTime{}
-nanoseconds. The added times for wrappers of error-free transformations are
+nanoseconds per call; error-free transformation wrappers added
 \RQThreeTransformationMinimumAddedTime{}--\RQThreeTransformationMaximumAddedTime{}
-nanoseconds. With Clang, the default wrapper/QD ratios are
-\RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{}.
+nanoseconds. Under Clang, default wrappers ran
+\RQThreeDefaultMinimumQDRatio{}--\RQThreeDefaultMaximumQDRatio{} times as long
+as QD.

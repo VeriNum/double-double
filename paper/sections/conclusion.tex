@@ -10,8 +10,7 @@ C kernels implement the analyzed algorithms and that successful runtime checks
 establish the conditions required by the numerical theorems.
 
 In generated tests, observed errors approached the proved bounds, QD rarely
-returned results satisfying the corresponding numerical properties for inputs
-that caused \FenceDD{} to return a failure status, and the runtime checks added
-$2.5$--$11$ nanoseconds per call. These results show that proved guarantees for
-double-double arithmetic can be provided through ordinary C functions at
-modest absolute cost.
+returned results satisfying the corresponding numerical properties when
+\FenceDD{} returned a failure status, and the runtime checks had modest
+absolute cost. These results show that proved guarantees for double-double
+arithmetic can be provided through ordinary C functions.
