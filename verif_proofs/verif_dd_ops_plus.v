@@ -84,8 +84,8 @@ forward_if.
   unfold default_wrapper_status; simpl; entailer!.
 - assert_PROP (DWPlusFP_weak_precond (fst xh) (snd xh) y) as Hin.
   { entailer!. apply H. destruct vret_fin; auto. }
-  forward_call (v_result, x, xh, y).
-  forward_call (v_result, DWPlusFP (fst xh) (snd xh) y).
+  forward_call (s, x, xh, y).
+  forward_call (s, DWPlusFP (fst xh) (snd xh) y).
   Intros vret_out.
   forward_if.
   + forward. Exists (Int.repr 2).
@@ -107,8 +107,7 @@ forward_if.
       (@DWPlusFP_relative_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) y Hfp Hcond)
       as Hg.
-    change_compspecs fp_utils_specs.CompSpecs.
-    do 5 forward.
+    forward.
     Exists Int.zero.
     unfold default_wrapper_status; simpl; entailer!.
 Qed.
@@ -125,14 +124,14 @@ forward_if.
   unfold strong_wrapper_status; simpl; entailer!.
 - assert_PROP (DWPlusFP_strong_precond (fst xh) (snd xh) y) as HFC.
   { entailer!. apply H. destruct vret_fin; auto. }
-  forward_call (v_result, x, xh, y).
+  forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
     (@DWPlusFP_relative_guarantee_from_strong_precond
        _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hg.
-  do 5 forward.
+  forward.
   Exists Int.zero.
   unfold strong_wrapper_status; simpl; entailer!.
 Qed.
@@ -150,9 +149,9 @@ forward_if.
 - assert_PROP
     (DWPlusDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin.
   { entailer!. apply H. destruct vret_fin; auto. }
-  forward_call (v_result, x, y, xh, yh).
+  forward_call (s, x, y, xh, yh).
   forward_call
-    (v_result, DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)).
+    (s, DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh)).
   Intros vret_out.
   forward_if.
   + forward. Exists (Int.repr 2).
@@ -174,8 +173,7 @@ forward_if.
       (@DWPlusDW_relative_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hfp Hcond)
       as Hg.
-    change_compspecs fp_utils_specs.CompSpecs.
-    do 5 forward.
+    forward.
     Exists Int.zero.
     unfold default_wrapper_status; simpl; entailer!.
 Qed.
@@ -193,14 +191,14 @@ forward_if.
 - assert_PROP
     (DWPlusDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC.
   { entailer!. apply H. destruct vret_fin; auto. }
-  forward_call (v_result, x, y, xh, yh).
+  forward_call (s, x, y, xh, yh).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
   pose proof
     (DWPlusDW_relative_guarantee_from_strong_precond
        (fst xh) (snd xh) (fst yh) (snd yh) Hfp HFC)
     as Hg.
-  do 5 forward.
+  forward.
   Exists Int.zero.
   unfold strong_wrapper_status; simpl; entailer!.
 Qed.

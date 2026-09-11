@@ -14,7 +14,7 @@ struct dword {
  double t;
 };
 
-/* A public wrapper changes its output only when it returns DW_OK. */
+/* A caller may read the output only when a public wrapper returns DW_OK. */
 enum dw_status {
  DW_OK = 0,
  DW_WEAK_INPUT_REJECTED = 1,

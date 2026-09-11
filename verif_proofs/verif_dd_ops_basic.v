@@ -65,11 +65,7 @@ forward_if.
     - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
     - apply FLT.FLT_exp_monotone.
     - exact Hle. }
-  forward_call (v_result, a, b).
-  forward.
-  forward.
-  forward.
-  forward.
+  forward_call (p, a, b).
   forward.
   assert (HG : Fast2Sum_exact_guarantee a b).
   { apply Fast2Sum_exact_guarantee_from_magnitude_order; assumption. }
@@ -89,11 +85,7 @@ forward_if.
   unfold weak_wrapper_status; simpl; entailer!.
 - assert_PROP (Fast2Mult_exact_cond a b) as HFC.
   { entailer!. apply H. destruct vret_fin; auto. }
-  forward_call (v_result, a, b).
-  forward.
-  forward.
-  forward.
-  forward.
+  forward_call (st, a, b).
   forward.
   pose proof (Fast2Mult_correct_from_exact_cond a b HFC) as [Heq Hdw].
   assert (HG :

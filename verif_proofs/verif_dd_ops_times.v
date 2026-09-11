@@ -65,49 +65,37 @@ Proof.
 start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
-set (Post_if :=
-  PROP (DWTimesFP_weak_precond (fst xh) (snd xh) y)
-  LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
-  SEP (data_at_ Tsh dword s;
-       data_at Tsh dword (f2val xh) x)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (DWTimesFP_weak_precond (fst xh) (snd xh) y) as Hin
-    by entailer!.
+forward_if.
+- forward. Exists Int.one.
+  assert (Hone : Int.one <> Int.zero) by computable.
+  unfold default_wrapper_status; simpl; entailer!.
+- assert_PROP (DWTimesFP_weak_precond (fst xh) (snd xh) y) as Hin.
+  { entailer!. apply H. destruct vret_fin; auto. }
   forward_call (s, x, xh, y).
   forward_call (s, DWTimesFP (fst xh) (snd xh) y).
   Intros vret_out.
-  set (Post_out :=
-    PROP (DWTimesFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y)
-    LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
-    SEP (data_at Tsh dword
-           (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
-         data_at Tsh dword (f2val xh) x)).
-  forward_if Post_out.
-  + forward_call (Int.repr 1).
-    unfold Post_out. entailer!.
-  + forward.
-    unfold Post_out, DWTimesFP_weak_pre_and_finite_post_cond, DWTimesFP_finite_post_cond.
-    entailer!.
+  forward_if.
+  + forward. Exists (Int.repr 2).
+    assert (Htwo : Int.repr 2 <> Int.zero) by computable.
+    unfold default_wrapper_status; simpl; entailer!.
+  + assert_PROP
+      (DWTimesFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y)
+      as Hcond.
+    { unfold DWTimesFP_weak_pre_and_finite_post_cond,
+             DWTimesFP_finite_post_cond.
+      entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
         apply Hfin; destruct vret_out; auto
-    end.
-  + unfold Post_out.
-    assert_PROP (DWTimesFP_weak_pre_and_finite_post_cond (fst xh) (snd xh) y) as Hcond
-      by entailer!.
+    end. }
     assert (Hfp : (3 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
       (@DWTimesFP_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) y Hfp Hcond)
       as Hg.
-    entailer!!.
+    forward. Exists Int.zero.
+    unfold default_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_dw_times_fp_strong :
@@ -116,19 +104,12 @@ Proof.
 start_function.
 forward_call (x, xh, y).
 Intros vret_fin.
-set (Post_if :=
-  PROP (DWTimesFP_strong_precond (fst xh) (snd xh) y)
-  LOCAL (temp _st s; temp _x x; temp _y (Vfloat y))
-  SEP (data_at_ Tsh dword s;
-       data_at Tsh dword (f2val xh) x)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (DWTimesFP_strong_precond (fst xh) (snd xh) y) as HFC by entailer!.
+forward_if.
+- forward. Exists (Int.repr 3).
+  assert (Hthree : Int.repr 3 <> Int.zero) by computable.
+  unfold strong_wrapper_status; simpl; entailer!.
+- assert_PROP (DWTimesFP_strong_precond (fst xh) (snd xh) y) as HFC.
+  { entailer!. apply H. destruct vret_fin; auto. }
   forward_call (s, x, xh, y).
   assert (Hfp : (3 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
@@ -136,7 +117,8 @@ forward_if Post_if.
     (@DWTimesFP_guarantee_from_strong_precond
        _ Tdouble _ (fst xh) (snd xh) y Hfp HFC)
     as Hg.
-  entailer!!.
+  forward. Exists Int.zero.
+  unfold strong_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_dw_times_dw :
@@ -145,54 +127,39 @@ Proof.
 start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
-set (Post_if :=
-  PROP (DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh))
-  LOCAL (temp _st s; temp _x x; temp _y y)
-  SEP (data_at_ Tsh dword s;
-       data_at Tsh dword (f2val xh) x;
-       data_at Tsh dword (f2val yh) y)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP
-    (DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin
-    by entailer!.
+forward_if.
+- forward. Exists Int.one.
+  assert (Hone : Int.one <> Int.zero) by computable.
+  unfold default_wrapper_status; simpl; entailer!.
+- assert_PROP
+    (DWTimesDW_weak_precond (fst xh) (snd xh) (fst yh) (snd yh)) as Hin.
+  { entailer!. apply H. destruct vret_fin; auto. }
   forward_call (s, x, y, xh, yh).
   forward_call
     (s, DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh)).
   Intros vret_out.
-  set (Post_out :=
-    PROP (DWTimesDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh))
-    LOCAL (temp _st s; temp _x x; temp _y y)
-    SEP (data_at Tsh dword
-           (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
-         data_at Tsh dword (f2val xh) x;
-         data_at Tsh dword (f2val yh) y)).
-  forward_if Post_out.
-  + forward_call (Int.repr 1).
-    unfold Post_out. entailer!.
-  + forward.
-    unfold Post_out, DWTimesDW_weak_pre_and_finite_post_cond, DWTimesDW_finite_post_cond.
-    entailer!.
+  forward_if.
+  + forward. Exists (Int.repr 2).
+    assert (Htwo : Int.repr 2 <> Int.zero) by computable.
+    unfold default_wrapper_status; simpl; entailer!.
+  + assert_PROP
+      (DWTimesDW_weak_pre_and_finite_post_cond
+         (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond.
+    { unfold DWTimesDW_weak_pre_and_finite_post_cond,
+             DWTimesDW_finite_post_cond.
+      entailer!.
     match goal with
     | Hfin : vret_out = true -> is_finite_p _ |- _ =>
         apply Hfin; destruct vret_out; auto
-    end.
-  + unfold Post_out.
-    assert_PROP
-      (DWTimesDW_weak_pre_and_finite_post_cond (fst xh) (snd xh) (fst yh) (snd yh)) as Hcond
-      by entailer!.
+    end. }
     assert (Hp5 : (5 <= fprec Tdouble)%Z)
       by (unfold fprec, Tdouble; simpl; lia).
     pose proof
       (@DWTimesDW_guarantee_from_weak_pre_and_finite_post_cond
          _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp5 Hcond)
       as Hg.
-    entailer!!.
+    forward. Exists Int.zero.
+    unfold default_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_dw_times_dw_strong :
@@ -201,21 +168,13 @@ Proof.
 start_function.
 forward_call (x, y, xh, yh).
 Intros vret_fin.
-set (Post_if :=
-  PROP (DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh))
-  LOCAL (temp _st s; temp _x x; temp _y y)
-  SEP (data_at_ Tsh dword s;
-       data_at Tsh dword (f2val xh) x;
-       data_at Tsh dword (f2val yh) y)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP
-    (DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC by entailer!.
+forward_if.
+- forward. Exists (Int.repr 3).
+  assert (Hthree : Int.repr 3 <> Int.zero) by computable.
+  unfold strong_wrapper_status; simpl; entailer!.
+- assert_PROP
+    (DWTimesDW_strong_precond (fst xh) (snd xh) (fst yh) (snd yh)) as HFC.
+  { entailer!. apply H. destruct vret_fin; auto. }
   forward_call (s, x, y, xh, yh).
   assert (Hp5 : (5 <= fprec Tdouble)%Z)
     by (unfold fprec, Tdouble; simpl; lia).
@@ -223,5 +182,6 @@ forward_if Post_if.
     (@DWTimesDW_guarantee_from_strong_precond
        _ Tdouble _ (fst xh) (snd xh) (fst yh) (snd yh) Hp5 HFC)
     as Hg.
-  entailer!!.
+  forward. Exists Int.zero.
+  unfold strong_wrapper_status; simpl; entailer!.
 Qed.
