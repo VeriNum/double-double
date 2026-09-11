@@ -17,7 +17,6 @@
 #include "fast_2sum.c"
 #include "fast_2mult_kernel.c"
 #include "fast_2mult.c"
-#include "fast_2mult_acc.c"
 
 #include "dw_plus_fp_kernel.c"
 #include "dw_plus_fp.c"

@@ -99,26 +99,3 @@ forward_if.
   Exists Int.zero.
   unfold weak_wrapper_status; simpl; entailer!.
 Qed.
-
-Lemma body_fast_2mult_acc:
-  semax_body Vprog Gprog f_fast_2mult_acc fast_2mult_acc_spec.
-Proof.
-start_function.
-forward_call (a,b).
-Intros vret_fin.
-set (Post_if :=
-  PROP (is_finite (BMULT a b) = true)
-  LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
-  SEP (data_at_ Tsh dword st)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
-- forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (is_finite (BMULT a b) = true) as HFC by entailer!.
-  forward_call (st, a, b).
-  entailer!!.
-  apply Fast2Mult_accuracy_norm, HFC.
-Qed.

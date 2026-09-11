@@ -6,7 +6,7 @@
    DECLAREd here exactly once, under the dd_ops program's CompSpecs, so that the
    body proof files and the VSU builder reference the same funspec terms.
    Runtime-check funspecs are imported from [fp_utils_specs.v], their canonical
-   definition site.  fma is provided by MathASI; exit is a libc external. *)
+   definition site.  fma is provided by MathASI. *)
 
 Require Import VST.floyd.proofauto.
 Require Import vcfloat.VCFloat.
@@ -261,19 +261,6 @@ Definition fast_2mult_spec :=
         then data_at Tsh dword (f2val (Fast2Mult a b)) st
         else data_at_ Tsh dword st).
 
-(* The Tier B wrapper exposes a bound on the returned error component.  Its
-   finiteness guard does not support exact reconstruction or prove that the
-   output is a valid double-word. *)
-Definition fast_2mult_acc_spec :=
-  DECLARE _fast_2mult_acc
-  WITH st: val, a : ftype Tdouble, b : ftype Tdouble
-  PRE [ tptr dword, tdouble, tdouble ]
-    PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
-  POST [ tvoid ]
-    PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
-
 Definition dw_plus_dw_spec :=
   DECLARE _dw_plus_dw
   WITH s: val, x: val, y: val,
@@ -505,28 +492,15 @@ Definition dw_div_dw_strong_spec :=
         data_at Tsh dword (f2val yh) y).
 
 (* ======================================================================== *)
-(*  libc external.                                                           *)
-(* ======================================================================== *)
-
-Definition exit_spec :=
-  DECLARE _exit
-  WITH code : int
-  PRE [ tint ]
-    PROP() PARAMS (Vint (Int.repr 1)) SEP()
-  POST [ tvoid ]
-    PROP(False) LOCAL() SEP().
-
-(* ======================================================================== *)
 (*  Spec groupings for the ops VSU (and its body proof Gprog)                *)
 (* ======================================================================== *)
 
-(* Externals the ops TU calls but does not define: fma, exit for the internal
-   accuracy wrapper, and the runtime checks provided by the checks VSU. *)
+(* Externals the ops TU calls but does not define: fma and the runtime checks
+   provided by the checks VSU. *)
 Definition Ops_Imports : funspecs :=
-  [ fma_spec; exit_spec;
+  [ fma_spec;
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
     fp_utils_specs.fast2_mult_exact_check_spec;
-    fp_utils_specs.fast2_mult_product_finite_check_spec;
     fp_utils_specs.isfinite_dword_spec;
     fp_utils_specs.dw_plus_fp_weak_precond_check_spec;
     fp_utils_specs.dw_plus_fp_strong_precond_check_spec;
@@ -548,7 +522,6 @@ Definition Ops_Internal : funspecs :=
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_kernel_spec;
     fast_2sum_spec; fast_2mult_spec;
-    fast_2mult_acc_spec;
     dw_times_fp_spec; dw_times_fp_strong_spec;
     dw_times_dw_kernel_spec; dw_times_dw_spec; dw_times_dw_strong_spec;
     dw_div_dw_kernel_spec; dw_div_dw_spec; dw_div_dw_strong_spec;

@@ -17,7 +17,6 @@ Require Import DD.verif_proofs.verif_fp_utils_common.
 Require Import DD.verif_proofs.verif_fp_utils_isfinite_double.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_sum_magnitude_order_check.
 Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_exact_check.
-Require Import DD.verif_proofs.verif_fp_utils_fast2_mult_product_finite_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_dw_strong_precond_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_times_dw_strong_precond_check.
 Require Import DD.verif_proofs.verif_fp_utils_dw_plus_fp_strong_precond_check.
@@ -33,7 +32,6 @@ Proof.
   mkVSU prog Checks_Internal.
   1:{ solve_SF_dd body_isfinite_double. }
   1:{ solve_SF_dd body_fast2_mult_exact_check. }
-  1:{ solve_SF_dd body_fast2_mult_product_finite_check. }
   1:{ solve_SF_dd body_fast2_sum_magnitude_order_check. }
   1:{ solve_SF_dd body_dw_plus_dw_strong_precond_check. }
   1:{ solve_SF_dd body_dw_plus_dw_weak_precond_check. }

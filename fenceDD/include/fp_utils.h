@@ -12,8 +12,6 @@ int fast2_sum_magnitude_order_check(double a, double b);
 
 int fast2_mult_exact_check(double x, double y);
 
-int fast2_mult_product_finite_check(double x, double y);
-
 int dw_plus_dw_strong_precond_check(const struct dword *x, const struct dword *y);
 
 int dw_plus_dw_weak_precond_check(const struct dword *x, const struct dword *y);

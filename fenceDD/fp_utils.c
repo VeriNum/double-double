@@ -36,15 +36,6 @@ int fast2_mult_exact_check(double x, double y) {
     return fin && ((zx || zy) || thresh < fabs(z)); 
 }
 
-int fast2_mult_product_finite_check(double x, double y) {
-    /* This Fast2Mult guard checks that the rounded product is finite.  That is
-       exactly what the bound |err| <= 1/2 ulp(x*y) needs in every regime, so the
-       check omits fast2_mult_exact_check's underflow zero/threshold test.  It does
-       NOT certify that mul + err == x*y or that the result is a valid double
-       word; use fast2_mult_exact_check for those guarantees. */
-    return isfinite_double(x * y);
-}
-
 int fast2_sum_magnitude_order_check(double a, double b) {
     /* short-circuit: fabs called only when fin=true, i.e. a and b are finite */
     return isfinite_double(a + b) && (fabs(b) <= fabs(a));

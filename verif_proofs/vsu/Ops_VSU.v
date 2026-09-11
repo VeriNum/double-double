@@ -2,8 +2,8 @@
 (* Licensed under the MIT License. See LICENSE. *)
 
 (* The operations VSU packages the kernels and public wrappers in [dd_ops.c].
-   The checks are discharged by linking with [ChecksVSU]; fma and exit remain
-   imports of the linked VSU. *)
+   The checks are discharged by linking with [ChecksVSU]; fma remains an import
+   of the linked VSU. *)
 
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.
@@ -40,7 +40,6 @@ Proof.
   1:{ solve_SF_dd body_dw_times_fp_kernel. }
   1:{ solve_SF_dd body_fast_2sum. }
   1:{ solve_SF_dd body_fast_2mult. }
-  1:{ solve_SF_dd body_fast_2mult_acc. }
   1:{ solve_SF_dd body_dw_times_fp. }
   1:{ solve_SF_dd body_dw_times_fp_strong. }
   1:{ solve_SF_dd body_dw_times_dw_kernel. }

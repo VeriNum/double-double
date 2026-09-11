@@ -3,7 +3,7 @@
 
 (* The linked double-word library VSU.  linkVSUs merges the operation and check
    translation units and discharges their internal calls.  The only remaining
-   imports are the libc and libm functions fma, exit, fabs, and ldexp. *)
+   imports are the libm functions fma, fabs, and ldexp. *)
 
 Require Import VST.floyd.proofauto.
 Require Import VST.floyd.VSU.

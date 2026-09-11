@@ -43,9 +43,8 @@ End Fast2SumCond.
 Section Fast2MultCond.
 Context {NANS: Nans} {t : type} {STD: is_standard t}.
 
-(* The rounded leading product is finite.  This is the property certified by
-   [fast2_mult_product_finite_check]; it suffices for the error-component
-   accuracy result but not for exact reconstruction. *)
+(* The rounded leading product is finite.  This suffices for the
+   error-component accuracy result but not for exact reconstruction. *)
 Definition Fast2Mult_product_finite_cond (a b : ftype t) : Prop :=
   is_finite (BMULT a b) = true.
 
