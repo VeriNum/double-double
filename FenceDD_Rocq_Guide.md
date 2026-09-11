@@ -133,7 +133,7 @@ Every theorem listed below proves a combined accuracy and double-word result.
 
 | Transformation | Kernel implementation | Public wrapper | Runtime check implementation |
 |---|---|---|---|
-| TwoSum | `two_sum` ([source](fenceDD/two_sum.c#L4)) | Same function | None |
+| TwoSum | `two_sum_kernel` ([source](fenceDD/two_sum_kernel.c)) | `two_sum` ([source](fenceDD/two_sum.c)) | `isfinite_double` on both operands and `isfinite_dword` on the result ([source](fenceDD/fp_utils.c)) |
 | Fast2Sum | `fast_2sum_kernel` ([source](fenceDD/fast_2sum_kernel.c#L4)) | `fast_2sum` ([source](fenceDD/fast_2sum.c#L5)) | `fast2_sum_magnitude_order_check` ([source](fenceDD/fp_utils.c#L48)) |
 | Fast2Mult exact | `fast_2mult_kernel` ([source](fenceDD/fast_2mult_kernel.c#L4)) | `fast_2mult` ([source](fenceDD/fast_2mult.c#L5)) | `fast2_mult_exact_check` ([source](fenceDD/fp_utils.c#L23)) |
 
@@ -192,7 +192,7 @@ The transformation interfaces do not use the weak and strong wrapper split.
 
 | Transformation | Kernel spec / proof | Public wrapper spec / proof | Runtime check spec / proof |
 |---|---|---|---|
-| TwoSum | `two_sum_spec` / `body_two_sum` ([spec](verif_proofs/DDOpsASI.v#L43), [proof](verif_proofs/verif_dd_ops_basic.v#L21)) | Same function and proof | None |
+| TwoSum | `two_sum_kernel_spec` / `body_two_sum_kernel` ([spec](verif_proofs/DDOpsASI.v), [proof](verif_proofs/verif_dd_ops_basic.v)) | `two_sum_spec` / `body_two_sum` ([spec](verif_proofs/DDOpsASI.v), [proof](verif_proofs/verif_dd_ops_basic.v)) | `isfinite_double_spec` and `isfinite_dword_spec` ([specs](verif_proofs/fp_utils_specs.v)) |
 | Fast2Sum | `fast_2sum_kernel_spec` / `body_fast_2sum_kernel` ([spec](verif_proofs/DDOpsASI.v#L51), [proof](verif_proofs/verif_dd_ops_basic.v#L29)) | `fast_2sum_spec` / `body_fast_2sum` ([spec](verif_proofs/DDOpsASI.v#L208), [proof](verif_proofs/verif_dd_ops_basic.v#L45)) | `fast2_sum_magnitude_order_check_spec` / `body_fast2_sum_magnitude_order_check` ([spec](verif_proofs/fp_utils_specs.v#L73), [proof](verif_proofs/verif_fp_utils_fast2_sum_magnitude_order_check.v#L11)) |
 | Fast2Mult exact | `fast_2mult_kernel_spec` / `body_fast_2mult_kernel` ([spec](verif_proofs/DDOpsASI.v#L59), [proof](verif_proofs/verif_dd_ops_basic.v#L37)) | `fast_2mult_spec` / `body_fast_2mult` ([spec](verif_proofs/DDOpsASI.v#L220), [proof](verif_proofs/verif_dd_ops_basic.v#L76)) | `fast2_mult_exact_check_spec` / `body_fast2_mult_exact_check` ([spec](verif_proofs/fp_utils_specs.v#L34), [proof](verif_proofs/verif_fp_utils_fast2_mult_exact_check.v#L10)) |
 

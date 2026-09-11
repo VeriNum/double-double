@@ -1,7 +1,7 @@
 CC = ccomp
 AR = ar
 
-LIB_SRCS = two_sum.c fast_2sum_kernel.c fast_2sum.c fast_2mult_kernel.c fast_2mult.c
+LIB_SRCS = two_sum_kernel.c two_sum.c fast_2sum_kernel.c fast_2sum.c fast_2mult_kernel.c fast_2mult.c
 LIB_SRCS += fp_utils.c dw_plus_fp_kernel.c dw_plus_fp.c dw_plus_dw_kernel.c dw_plus_dw.c
 LIB_SRCS += dw_times_fp_kernel.c dw_times_fp.c dw_times_dw_kernel.c dw_times_dw.c
 LIB_SRCS += dw_div_fp_kernel.c dw_div_fp.c dw_div_dw_kernel.c dw_div_dw.c

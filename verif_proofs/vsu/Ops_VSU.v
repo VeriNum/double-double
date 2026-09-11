@@ -22,6 +22,7 @@ Definition OpsVSU: @VSU NullExtension.Espec
 Proof.
   mkVSU prog Ops_Internal.
 
+  1:{ solve_SF_dd body_two_sum_kernel. }
   1:{ solve_SF_dd body_two_sum. }
   1:{ solve_SF_dd body_fast_2sum_kernel. }
   1:{ solve_SF_dd body_fast_2mult_kernel. }

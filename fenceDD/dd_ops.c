@@ -12,6 +12,7 @@
  * the aggregated .c files are harmless.  Each .c is included exactly once.
  */
 
+#include "two_sum_kernel.c"
 #include "two_sum.c"
 #include "fast_2sum_kernel.c"
 #include "fast_2sum.c"

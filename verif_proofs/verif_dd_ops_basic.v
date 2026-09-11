@@ -16,12 +16,50 @@ Set Bullet Behavior "Strict Subproofs".
 
 Open Scope logic.
 
-Lemma body_two_sum: semax_body Vprog Gprog f_two_sum two_sum_spec.
+Lemma body_two_sum_kernel:
+  semax_body Vprog Gprog f_two_sum_kernel two_sum_kernel_spec.
 Proof.
 start_function.
 forward. forward. forward. forward.
 forward. forward. forward. forward.
 entailer!.
+Qed.
+
+Lemma body_two_sum: semax_body Vprog Gprog f_two_sum two_sum_spec.
+Proof.
+start_function.
+forward_call (a).
+Intros vret_a.
+forward_if.
+- forward. Exists Int.one.
+  assert (Hone : Int.one <> Int.zero) by computable.
+  unfold default_wrapper_status; simpl; entailer!.
+- forward_call (b).
+  Intros vret_b.
+  forward_if.
+  + forward. Exists Int.one.
+    assert (Hone : Int.one <> Int.zero) by computable.
+    unfold default_wrapper_status; simpl; entailer!.
+  + forward_call (s, a, b).
+    forward_call (s, TwoSumF a b).
+    Intros vret_out.
+    forward_if.
+    * forward. Exists (Int.repr 2).
+      assert (Htwo : Int.repr 2 <> Int.zero) by computable.
+      unfold default_wrapper_status; simpl; entailer!.
+    * assert_PROP (is_finite_p (TwoSumF a b)) as Hfin.
+      { entailer!.
+        match goal with
+        | Hout : vret_out = true -> is_finite_p _ |- _ =>
+            apply Hout; destruct vret_out; auto
+        end. }
+      pose proof (TwoSumF_correct a b Hfin) as Hcorrect.
+      pose proof (TwoSum_is_DW a b Hfin) as Hdw.
+      assert (Hguarantee : TwoSum_guarantee a b).
+      { unfold TwoSum_guarantee.
+        split; [lra | exact Hdw]. }
+      forward. Exists Int.zero.
+      unfold default_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_fast_2sum_kernel:

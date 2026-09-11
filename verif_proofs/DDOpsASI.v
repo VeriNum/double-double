@@ -38,13 +38,32 @@ Definition default_wrapper_status (status : int) : Prop :=
 Definition strong_wrapper_status (status : int) : Prop :=
   status = Int.zero \/ status = Int.repr 3.
 
-Definition two_sum_spec :=
-  DECLARE _two_sum
+Definition two_sum_kernel_spec :=
+  DECLARE _two_sum_kernel
   WITH s: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
   POST [ tvoid ]
     PROP() RETURN() SEP(data_at Tsh dword (f2val (TwoSumF a b)) s).
+
+Definition TwoSum_guarantee (a b : ftype Tdouble) : Prop :=
+  (FT2R (TwoSumF_sum a b) + FT2R (TwoSumF_err a b) =
+    FT2R a + FT2R b)%R /\
+  double_word_prop (TwoSumF_sum a b) (TwoSumF_err a b).
+
+Definition two_sum_spec :=
+  DECLARE _two_sum
+  WITH s: val, a : ftype Tdouble, b : ftype Tdouble
+  PRE [ tptr dword, tdouble, tdouble ]
+    PROP() PARAMS (s; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword s)
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero -> TwoSum_guarantee a b)
+    RETURN(Vint status)
+    SEP(if Int.eq status Int.zero
+        then data_at Tsh dword (f2val (TwoSumF a b)) s
+        else data_at_ Tsh dword s).
 
 Definition fast_2sum_kernel_spec :=
   DECLARE _fast_2sum_kernel
@@ -471,6 +490,7 @@ Definition dw_div_dw_strong_spec :=
 
 Definition Ops_Imports : funspecs :=
   [ fma_spec;
+    fp_utils_specs.isfinite_double_spec;
     fp_utils_specs.fast2_sum_magnitude_order_check_spec;
     fp_utils_specs.fast2_mult_exact_check_spec;
     fp_utils_specs.isfinite_dword_spec;
@@ -488,7 +508,8 @@ Definition Ops_Imports : funspecs :=
     fp_utils_specs.dw_div_dw_strong_precond_check_spec ].
 
 Definition Ops_Internal : funspecs :=
-  [ two_sum_spec; fast_2sum_kernel_spec; fast_2mult_kernel_spec;
+  [ two_sum_kernel_spec; two_sum_spec;
+    fast_2sum_kernel_spec; fast_2mult_kernel_spec;
     dw_plus_fp_kernel_spec; dw_plus_fp_spec; dw_plus_fp_strong_spec;
     dw_plus_dw_kernel_spec; dw_plus_dw_spec; dw_plus_dw_strong_spec;
     dw_times_fp_kernel_spec;

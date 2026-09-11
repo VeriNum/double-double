@@ -5,7 +5,7 @@
    dw_plus_fp_strong. */
 void dw_plus_fp_kernel(struct dword *st,struct dword *x, double y) {
    double v; struct dword sh;
-   two_sum(&sh,x->s,y);
+   two_sum_kernel(&sh,x->s,y);
    v      = x->t + sh.t;
    fast_2sum_kernel(st,sh.s,v);
 }

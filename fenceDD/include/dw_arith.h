@@ -26,7 +26,9 @@ void fast_2mult_kernel(struct dword *st, double a, double b);
 
 enum dw_status fast_2mult(struct dword *st, double a, double b);
 
-void two_sum(struct dword *st, double a, double b);
+void two_sum_kernel(struct dword *st, double a, double b);
+
+enum dw_status two_sum(struct dword *st, double a, double b);
 
 void fast_2sum_kernel(struct dword *st, double a, double b);
 
