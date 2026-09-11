@@ -10,7 +10,8 @@ enum dw_status dw_times_dw(struct dword *st, struct dword *x, struct dword *y) {
    if (!isfinite_dword(&result)) {
       return DW_POST_CHECK_REJECTED;
    }
-   *st = result;
+   st->s = result.s;
+   st->t = result.t;
    return DW_OK;
 }
 
@@ -21,6 +22,7 @@ enum dw_status dw_times_dw_strong(struct dword *st, struct dword *x,
       return DW_STRONG_INPUT_REJECTED;
    }
    dw_times_dw_kernel(&result, x, y);
-   *st = result;
+   st->s = result.s;
+   st->t = result.t;
    return DW_OK;
 }

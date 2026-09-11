@@ -36,6 +36,15 @@ Definition dword := Tstruct _dword noattr.
 Definition f2val (pq: ftype Tdouble * ftype Tdouble) : reptype dword :=
  (Vfloat (fst pq), Vfloat (snd pq)).
 
+Definition weak_wrapper_status (status : int) : Prop :=
+  status = Int.zero \/ status = Int.one.
+
+Definition default_wrapper_status (status : int) : Prop :=
+  status = Int.zero \/ status = Int.one \/ status = Int.repr 2.
+
+Definition strong_wrapper_status (status : int) : Prop :=
+  status = Int.zero \/ status = Int.repr 3.
+
 (* ======================================================================== *)
 (*  Leaf primitives                                                          *)
 (* ======================================================================== *)
@@ -92,10 +101,16 @@ Definition dw_plus_fp_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero ->
+           DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWPlusFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_plus_fp_strong_spec :=
@@ -107,10 +122,16 @@ Definition dw_plus_fp_strong_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWPlusFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero ->
+           DWPlusFP_relative_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWPlusFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_plus_dw_kernel_spec :=
@@ -210,10 +231,14 @@ Definition fast_2sum_spec :=
   WITH p: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (p; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword p)
-  POST [ tvoid ]
-    PROP(Fast2Sum_exact_guarantee a b)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (Fast2Sum a b)) p).
+  POST [ tint ]
+    EX status : int,
+    PROP(weak_wrapper_status status;
+         status = Int.zero -> Fast2Sum_exact_guarantee a b)
+    RETURN(Vint status)
+    SEP(if Int.eq status Int.zero
+        then data_at Tsh dword (f2val (Fast2Sum a b)) p
+        else data_at_ Tsh dword p).
 
 (* Tier A full Fast2Mult wrapper: error term bound, exact reconstruction, and
    output double-word property. *)
@@ -222,12 +247,19 @@ Definition fast_2mult_spec :=
   WITH st: val, a : ftype Tdouble, b : ftype Tdouble
   PRE [ tptr dword, tdouble, tdouble ]
     PROP() PARAMS (st; Vfloat a; Vfloat b) SEP(data_at_ Tsh dword st)
-  POST [ tvoid ]
-    PROP((Rabs (FT2R (Fast2Mult_err a b)) <= / 2 * ulp (FT2R a * FT2R b))%R
-         /\ (FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) = FT2R a * FT2R b)%R
-         /\ double_word_prop (Fast2Mult_mul a b) (Fast2Mult_err a b))
-    RETURN()
-    SEP(data_at Tsh dword (f2val (Fast2Mult a b)) st).
+  POST [ tint ]
+    EX status : int,
+    PROP(weak_wrapper_status status;
+         status = Int.zero ->
+           (Rabs (FT2R (Fast2Mult_err a b)) <=
+              / 2 * ulp (FT2R a * FT2R b))%R /\
+           (FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) =
+              FT2R a * FT2R b)%R /\
+           double_word_prop (Fast2Mult_mul a b) (Fast2Mult_err a b))
+    RETURN(Vint status)
+    SEP(if Int.eq status Int.zero
+        then data_at Tsh dword (f2val (Fast2Mult a b)) st
+        else data_at_ Tsh dword st).
 
 (* The Tier B wrapper exposes a bound on the returned error component.  Its
    finiteness guard does not support exact reconstruction or prove that the
@@ -253,12 +285,17 @@ Definition dw_plus_dw_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWPlusDW_relative_guarantee
-           (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero ->
+           DWPlusDW_relative_guarantee
+             (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -273,12 +310,17 @@ Definition dw_plus_dw_strong_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWPlusDW_relative_guarantee
-           (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero ->
+           DWPlusDW_relative_guarantee
+             (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWPlusDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -292,10 +334,15 @@ Definition dw_times_fp_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWTimesFP_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero -> DWTimesFP_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWTimesFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_times_fp_strong_spec :=
@@ -308,10 +355,15 @@ Definition dw_times_fp_strong_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWTimesFP_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWTimesFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero -> DWTimesFP_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWTimesFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_times_dw_spec :=
@@ -325,12 +377,16 @@ Definition dw_times_dw_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWTimesDW_guarantee
-           (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero ->
+           DWTimesDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -345,12 +401,16 @@ Definition dw_times_dw_strong_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWTimesDW_guarantee
-           (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero ->
+           DWTimesDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWTimesDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -364,10 +424,15 @@ Definition dw_div_fp_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWDivFP_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero -> DWDivFP_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWDivFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_div_fp_strong_spec :=
@@ -380,10 +445,15 @@ Definition dw_div_fp_strong_spec :=
     PARAMS (s; x; Vfloat y)
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x)
-  POST [ tvoid ]
-    PROP(DWDivFP_guarantee (fst xh) (snd xh) y)
-    RETURN()
-    SEP(data_at Tsh dword (f2val (DWDivFP (fst xh) (snd xh) y)) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero -> DWDivFP_guarantee (fst xh) (snd xh) y)
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWDivFP (fst xh) (snd xh) y)) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x).
 
 Definition dw_div_dw_spec :=
@@ -397,11 +467,16 @@ Definition dw_div_dw_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(default_wrapper_status status;
+         status = Int.zero ->
+           DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 
@@ -416,11 +491,16 @@ Definition dw_div_dw_strong_spec :=
     SEP(data_at_ Tsh dword s;
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y)
-  POST [ tvoid ]
-    PROP(DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
-    RETURN()
-    SEP(data_at Tsh dword
-          (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s;
+  POST [ tint ]
+    EX status : int,
+    PROP(strong_wrapper_status status;
+         status = Int.zero ->
+           DWDivDW_guarantee (fst xh) (snd xh) (fst yh) (snd yh))
+    RETURN(Vint status)
+    SEP((if Int.eq status Int.zero
+         then data_at Tsh dword
+                (f2val (DWDivDW (fst xh) (snd xh) (fst yh) (snd yh))) s
+         else data_at_ Tsh dword s);
         data_at Tsh dword (f2val xh) x;
         data_at Tsh dword (f2val yh) y).
 

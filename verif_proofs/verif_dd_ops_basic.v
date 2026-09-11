@@ -47,20 +47,17 @@ Proof.
 start_function.
 forward_call (a, b).
 Intros vret_fin.
-set (Post_if :=
-  PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)
-  LOCAL (temp _st p; temp _a (Vfloat a); temp _b (Vfloat b))
-  SEP (data_at_ Tsh dword p)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
+forward_if.
 - forward.
-  unfold Post_if. entailer!.
-  unfold fp_utils_specs.Fast2Sum_magnitude_order_cond in H.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (is_finite (BPLUS a b) = true /\ (Rabs (FT2R b) <= Rabs (FT2R a))%R)
-    as Hsafe by entailer!.
+  assert (Hone : Int.one <> Int.zero) by computable.
+  Exists Int.one.
+  unfold weak_wrapper_status; simpl; entailer!.
+- assert_PROP
+    (is_finite (BPLUS a b) = true /\
+     (Rabs (FT2R b) <= Rabs (FT2R a))%R) as Hsafe.
+  { entailer!.
+    unfold fp_utils_specs.Fast2Sum_magnitude_order_cond in H.
+    apply H. destruct vret_fin; auto. }
   destruct Hsafe as [Hfin Hle].
   assert (HFC : Fast2Sum_exact_cond a b).
   { split; [exact Hfin |].
@@ -68,9 +65,16 @@ forward_if Post_if.
     - apply BinarySingleNaN.fexp_correct; apply fprec_gt_0.
     - apply FLT.FLT_exp_monotone.
     - exact Hle. }
-  forward_call (p, a, b).
-  entailer!!.
-  apply Fast2Sum_exact_guarantee_from_magnitude_order; assumption.
+  forward_call (v_result, a, b).
+  forward.
+  forward.
+  forward.
+  forward.
+  forward.
+  assert (HG : Fast2Sum_exact_guarantee a b).
+  { apply Fast2Sum_exact_guarantee_from_magnitude_order; assumption. }
+  Exists Int.zero.
+  unfold weak_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_fast_2mult: semax_body Vprog Gprog f_fast_2mult fast_2mult_spec.
@@ -78,22 +82,30 @@ Proof.
 start_function.
 forward_call (a,b).
 Intros vret_fin.
-set (Post_if :=
-  PROP (Fast2Mult_exact_cond a b)
-  LOCAL (temp _st st; temp _a (Vfloat a); temp _b (Vfloat b))
-  SEP (data_at_ Tsh dword st)).
-forward_if Post_if.
-- forward_call (Int.repr 1).
-  unfold Post_if. entailer!.
+forward_if.
 - forward.
-  unfold Post_if. entailer!.
-  apply H. destruct vret_fin; auto.
-- unfold Post_if.
-  assert_PROP (Fast2Mult_exact_cond a b) as HFC by entailer!.
-  forward_call (st, a, b).
-  entailer!!.
+  assert (Hone : Int.one <> Int.zero) by computable.
+  Exists Int.one.
+  unfold weak_wrapper_status; simpl; entailer!.
+- assert_PROP (Fast2Mult_exact_cond a b) as HFC.
+  { entailer!. apply H. destruct vret_fin; auto. }
+  forward_call (v_result, a, b).
+  forward.
+  forward.
+  forward.
+  forward.
+  forward.
   pose proof (Fast2Mult_correct_from_exact_cond a b HFC) as [Heq Hdw].
-  split; [ apply Fast2Mult_accuracy_from_exact_cond, HFC | split; assumption ].
+  assert (HG :
+    (Rabs (FT2R (Fast2Mult_err a b)) <=
+       / 2 * ulp (FT2R a * FT2R b))%R /\
+    (FT2R (Fast2Mult_mul a b) + FT2R (Fast2Mult_err a b) =
+       FT2R a * FT2R b)%R /\
+    double_word_prop (Fast2Mult_mul a b) (Fast2Mult_err a b)).
+  { split; [ apply Fast2Mult_accuracy_from_exact_cond, HFC
+           | split; assumption ]. }
+  Exists Int.zero.
+  unfold weak_wrapper_status; simpl; entailer!.
 Qed.
 
 Lemma body_fast_2mult_acc:

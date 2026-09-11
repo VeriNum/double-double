@@ -12,7 +12,8 @@ enum dw_status dw_plus_fp(struct dword *st, struct dword *x, double y) {
    if (!isfinite_dword(&result)) {
       return DW_POST_CHECK_REJECTED;
    }
-   *st = result;
+   st->s = result.s;
+   st->t = result.t;
    return DW_OK;
 }
 
@@ -23,6 +24,7 @@ enum dw_status dw_plus_fp_strong(struct dword *st, struct dword *x, double y) {
       return DW_STRONG_INPUT_REJECTED;
    }
    dw_plus_fp_kernel(&result, x, y);
-   *st = result;
+   st->s = result.s;
+   st->t = result.t;
    return DW_OK;
 }

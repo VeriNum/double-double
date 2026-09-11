@@ -7,6 +7,7 @@ enum dw_status fast_2sum(struct dword *st, double a, double b) {
       return DW_WEAK_INPUT_REJECTED;
    }
    fast_2sum_kernel(&result, a, b);
-   *st = result;
+   st->s = result.s;
+   st->t = result.t;
    return DW_OK;
 }
