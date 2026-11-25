@@ -1,39 +1,55 @@
-\begin{figure}[t]
+\begin{figure*}[t]
+  \newsavebox{\dwdivfpspecbox}
+  \begin{lrbox}{\dwdivfpspecbox}
+  \begin{minipage}{\dimexpr\textwidth-2\fboxsep\relax}
   \begin{lstlisting}[
     language=Coq,
-    basicstyle=\ttfamily\normalsize,
-    numbers=left
+    basicstyle=\ttfamily\normalsize\color{black},
+    keywordstyle=\bfseries\color{black},
+    morekeywords={DECLARE,WITH,PRE,POST,PROP,PARAMS,EX,RETURN,SEP},
+    keywordstyle={[2]\color{blue!70!black}},
+    morekeywords={[2]{val,int,ftype}},
+    keywordstyle={[3]\color{purple!80!black}},
+    morekeywords={[3]{z_ptr,x_ptr,x_pair,y,status}},
+    identifierstyle=\color{VSTIdentifier},
+    alsoletter={_},
+    numbers=none,
+    frame=none,
+    backgroundcolor={},
+    xleftmargin=0pt,
+    xrightmargin=0pt,
+    framexleftmargin=0pt,
+    framexrightmargin=0pt,
+    columns=fullflexible,
+    keepspaces=true,
+    aboveskip=0pt,
+    belowskip=0pt,
+    showstringspaces=false
   ]
 Definition dw_div_fp_spec :=
   DECLARE _dw_div_fp
-  WITH z_ptr: val, x_ptr: val,
-       x_pair: ftype Tdouble *
-               ftype Tdouble,
-       y: ftype Tdouble
+  WITH z_ptr : val, x_ptr : val, x_pair : ftype Tdouble * ftype Tdouble, y : ftype Tdouble
   PRE [tptr dword, tptr dword, tdouble]
-    PROP()
-    ...
+    PROP ()
+    PARAMS (z_ptr; x_ptr; Vfloat y)
+    SEP (data_at_ Tsh dword z_ptr; data_at Tsh dword (f2val x_pair) x_ptr)
   POST [tint]
     EX status : int,
-    PROP(default_wrapper_status
-           status;
-      status = Int.zero ->
-      DWDivFP_guarantee
-        (fst x_pair)
-        (snd x_pair) y)
-    RETURN(Vint status)
-    SEP((if Int.eq status Int.zero
-      then data_at Tsh dword
-        (f2val
-          (DWDivFP
-            (fst x_pair)
-            (snd x_pair) y))
-        z_ptr
-      else data_at_ Tsh dword z_ptr);
-      ...).
-  \end{lstlisting}
-\caption{Relevant clauses of the VST specification for the default division
-wrapper. On success, the postcondition supplies the numerical guarantee.
-Omitted assertions describe the parameters and unchanged input object.}
+      PROP (default_wrapper_status status;
+            status = Int.zero -> DWDivFP_guarantee (fst x_pair) (snd x_pair) y)
+      RETURN (Vint status)
+      SEP ((if Int.eq status Int.zero
+            then data_at Tsh dword (f2val (DWDivFP (fst x_pair) (snd x_pair) y)) z_ptr
+            else data_at_ Tsh dword z_ptr);
+           data_at Tsh dword (f2val x_pair) x_ptr).
+\end{lstlisting}
+  \end{minipage}
+  \end{lrbox}
+  \noindent\colorbox{gray!5}{\usebox{\dwdivfpspecbox}}
+\caption{VST specification for the default
+division wrapper. On successful return, the output stores the
+result of \DWDivFP{} and satisfies the stated error bound and
+double-word relation. The input is preserved on both successful
+and failed return.}
   \label{fig:dw-div-fp-vst-spec}
-\end{figure}
+\end{figure*}

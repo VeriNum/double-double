@@ -1,16 +1,10 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented \FenceDD{}, a verified C library that provides proved numerical
-guarantees for double-double arithmetic on successful return. Our Rocq
-analysis extends prior results from unbounded exponents to IEEE\~754,
-preserving relative bounds for addition and deriving mixed relative and
-absolute bounds for multiplication and division. Using VST, we prove that the
-C kernels implement the analyzed algorithms and that successful runtime checks
-establish the conditions required by the numerical theorems.
-
-In generated tests, observed errors approached the proved bounds, QD rarely
-returned results satisfying the corresponding numerical properties when
-\FenceDD{} returned a failure status, and the runtime checks had modest
-absolute cost. These results show that proved guarantees for double-double
-arithmetic can be provided through ordinary C functions.
+\FenceDD{} is a verified C library for double-double arithmetic.
+Our Rocq analysis extends earlier double-word results to
+IEEE~754 arithmetic, accounting for gradual underflow and
+establishing sufficient conditions for finite results.
+Using VST, we prove that the C kernels in \FenceDD{} implement the analyzed
+algorithms and that successful runtime checks establish the
+conditions required by the numerical theorems.

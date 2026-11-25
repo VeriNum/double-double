@@ -2,47 +2,62 @@
 \label{sec:related-work}
 
 \paragraph{Double-word error analysis.}
-\citet{Joldes2017} analyze double-word addition, multiplication, and division
-assuming that underflow and overflow do not occur. \citet{Rideau2022}
-mechanize this analysis in Rocq using Flocq's FLX format, which has an
-unbounded exponent range. Earlier results characterize product corrections
-near underflow \citep{BoldoDaumas2003} and exactness results for \TwoSum{}
-and \FastTwoSum{} \citep{Boldo2017}. We extend these results to complete
-double-word operations under IEEE~754 arithmetic.
+\citet{Joldes2017} analyze double-word addition, multiplication,
+and division assuming that underflow and overflow do not occur.
+\citet{Rideau2022} mechanize this analysis in Rocq using the
+Flocq FLX format, which has an unbounded exponent range.
+For the arithmetic building blocks, \citet{BoldoDaumas2003}
+give conditions for representability of product corrections,
+and \citet{Boldo2017} establish exactness properties for
+\TwoSum{} and \FastTwoSum{}. We use these results to extend
+the double-word mechanization to account for gradual underflow,
+bounding the effect of inexact product corrections on the final
+multiplication and division results.
+%We also establish
+%sufficient conditions for finite results.
 
 \paragraph{Floating-point expansions.}
-Floating-point expansions provide additional precision using several values
-from an underlying format. \citet{Shewchuk1997} uses error-free transformations
-and nonoverlapping expansions for adaptive geometric predicates, and
-\citet{Boldo2017Renorm} formally verify expansion renormalization.
-\citet{Zhang2025} automatically verifies floating-point accumulation networks
-and synthesizes an improved network for double-double addition. We verify
-complete double-word operations, including multiplication and division, under
-IEEE~754 arithmetic.
+A floating-point expansion represents a number as the unevaluated
+sum of several floating-point values; a double word is an
+expansion with two components. \citet{Shewchuk1997} uses
+error-free transformations and nonoverlapping expansions for
+adaptive geometric predicates, and \citet{Boldo2017Renorm}
+formally verify expansion renormalization. Preserving the
+required relations between expansion components is also part
+of the numerical guarantees we establish.
+\citet{Zhang2025} automatically verify expansion-based summation
+algorithms, including double-double addition, and extend the
+method to subnormal inputs. Our numerical analysis also covers
+double-word multiplication and division in the subnormal regime.
 
-\paragraph{Tools for floating-point error analysis.}
-These tools derive numerical bounds relating floating-point computations to
-real arithmetic. Gappa produces proofs checked in Coq
-\citep{deDinechin2011}. FPTaylor can emit proof certificates for HOL Light
-\citep{Solovyev2015}, and PRECiSA produces certificates checked in PVS
-\citep{Titolo2024PRECiSA}. Daisy analyzes and optimizes floating-point and
-fixed-point programs \citep{Darulova2018}; FloVer checks its certificates in
-Coq or HOL4 \citep{Becker2018}. \citet{Roux2016} formalizes techniques for
-rounding error proofs, while VCFloat2 performs error analysis inside Coq
-\citep{AppelKellison2024}. Such analysis does not itself connect a result to
-the semantics of an executable C program.
+\paragraph{Tools for automated floating-point error analysis.}
+Gappa, FPTaylor, and PRECiSA automate roundoff-error analysis
+with proofs checked in Coq, HOL Light, and PVS, respectively
+\citep{deDinechin2011,Solovyev2015,Titolo2024PRECiSA}.
+Modeling rounding errors only as bounded perturbations can
+obscure the exact cancellations needed for proving double-word
+accuracy. We use the modeling facilities of VCFloat2
+\citep{AppelKellison2024} and prove the bounds separately in
+Rocq using algorithm-specific exactness and representability
+results.
 
 \paragraph{Floating-point program verification.}
-Program verification connects numerical results to executable code.
-\citet{Ramananandro2016} verify floating-point C programs in Rocq.
-\citet{AppelBertot2020} combine VST and Flocq, and LAProof and a verified
-Jacobi solver follow that same structure
-\citep{Kellison2023LAProof,Tekriwal2023Jacobi}. \FenceDD{} similarly connects
-numerical results to C programs.
+\citet{Ramananandro2016} combine Flocq with the semantics of
+CompCert Clight to verify floating-point C programs.
+\citet{AppelBertot2020} separate numerical analysis of
+functional models from verification of C implementations
+using VST. LAProof and a verified Jacobi solver follow the
+same organization
+\citep{Kellison2023LAProof,Tekriwal2023Jacobi}.
+We follow this separation in \FenceDD{}: the numerical theorems
+establish guarantees for the functional models, and the VST
+proofs show that the C kernels implement those models.
 
 \paragraph{Double-double libraries.}
-XBLAS provides extended and mixed precision BLAS routines using double-double
-arithmetic \citep{Li2002}. QD implements double-double and quad-double
-algorithms based on techniques introduced by \citet{Dekker1971}
-\citep{Hida2001,QD}. It does not check the numerical conditions considered
-here and serves as the comparison library in \Cref{sec:evaluation}.
+XBLAS uses double-double arithmetic in extended and mixed
+precision BLAS routines \citep{Li2002}. QD provides
+double-double and quad-double arithmetic \citep{Hida2001,QD},
+building on techniques introduced by \citet{Dekker1971}.
+QD does not check the sufficient conditions established here.
+In \FenceDD{}, verified runtime checks connect those
+conditions to numerical guarantees on successful return.

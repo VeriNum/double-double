@@ -1,33 +1,46 @@
 \section{Evaluation}
 \label{sec:evaluation}
 
-Sections~3 and~4 prove the guarantees provided by the public \FenceDD{}
-wrappers. We evaluate these wrappers through three questions. A call is
-\emph{accepted} when it returns successfully and \emph{rejected} when it
-returns a failure status. \textbf{(RQ1) Usefulness of the error bounds.} For
-accepted calls to default wrappers, how closely do observed errors approach
-the proved bounds, and how do QD errors compare on the same inputs?
-\textbf{(RQ2) Usefulness of the wrappers.} For rejected \FenceDD{} calls, how
-often does QD produce a result satisfying the corresponding numerical
-properties? \textbf{(RQ3) Cost of the wrappers.} For accepted timing inputs,
-what overhead do the wrappers add relative to their kernels, and how do their
-running times compare with QD?
+We evaluate \FenceDD{} through three questions about the error
+bounds and runtime checks. A call is \emph{accepted} when it
+returns successfully and \emph{rejected} when it returns a
+failure status.
+
+\textbf{(RQ1) Usefulness of the error bounds.}
+For accepted calls to the default double-double wrappers, how
+closely do observed errors approach the proved bounds, and how
+do QD errors compare on the same inputs?
+
+\textbf{(RQ2) Usefulness of the wrappers.}
+For rejected \FenceDD{} calls, how often does QD produce a
+result satisfying the corresponding numerical properties?
+
+\textbf{(RQ3) Cost of the wrappers.}
+For accepted calls, how much execution
+time do the wrappers add relative to the unchecked kernels,
+and how do wrapper times compare with QD?
 
 \subsection{Experimental Setup}
 \label{sec:evaluation-setup}
 
-We compare \FenceDD{} with QD \citep{Hida2001,QD} using reference values
-computed at greater precision with MPFR \citep{Fousse2007}. We test both
-wrappers for each double-word operation and the single wrapper for each
-error-free transformation using identical binary64 operands in both libraries.
+We compare \FenceDD{} with QD \citep{Hida2001,QD} on identical
+binary64 operands, using MPFR \citep{Fousse2007} to compute
+reference values at greater precision. We test both wrappers
+for each double-double operation and the single wrapper for
+each error-free transformation.
 
-Inputs are balanced by sign and distributed equally across base-two
-exponents. Binary64 operands span exponents $-1074$ through $1023$, and
-double-word inputs span $-969$ through $1022$. Every double-word operand
-satisfies \Cref{def:double-word}. RQ1 and RQ2 use
-\RQOneSamplesPerExponent{} inputs per exponent, totaling 79,680 per
-double-word operation and 83,920 per error-free transformation. Further
-details appear in Appendix~\ref{app:evaluation-details}.
+For RQ1 and RQ2, we generate equal numbers of positive and
+negative values at each base-two exponent. Binary64 operands span
+exponents $-1074$ through $1023$, and double-double inputs span
+$-969$ through $1022$. Every double-double operand satisfies
+\Cref{def:double-word}. With \RQOneSamplesPerExponent{} inputs
+per exponent, the sets contain 79,680 inputs per double-double
+operation and 83,920 per error-free transformation.
+
+Appendix~\ref{app:evaluation-details} describes the input
+construction and reference calculations.
+Appendix~\ref{app:evaluation-timing} describes the timing inputs
+and the procedure used to measure execution time.
 
 \subsection{Usefulness of the Error Bounds (RQ1)}
 

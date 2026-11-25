@@ -3,7 +3,7 @@
 
 To establish the numerical guarantees for the C implementations in
 \FenceDD{}, we verify the arithmetic kernels, runtime checks, and
-wrappers using the Verified Software Toolchain \citep{Appel2014}.
+wrappers using the Verified Software Toolchain \citep{Cao2018VSTFloyd}.
 The kernel proofs show that the C kernels implement the
 corresponding functional models in \Cref{sec:numerics}.
 The runtime check proofs show that successful checks establish
@@ -24,124 +24,143 @@ properties to the compiled program.
 \subsection{Kernel Correctness}
 \label{sec:kernel-refinement}
 
-For each arithmetic kernel, we give a VST specification whose
-postcondition states that the output object stores the result of
-the corresponding functional model. We prove that the C function
-satisfies this specification.
-
-For the division kernel in \Cref{fig:dw-div-fp-kernel}, suppose
-that \ccode|x| initially stores $(x_h,x_\ell)$, the divisor is the
-binary64 value $y$, and the kernel returns with \ccode|z| storing
-$(z_h,z_\ell)$. The postcondition gives
+For each arithmetic kernel, we prove that the C function satisfies
+a VST specification whose postcondition states that the output
+object stores the result of the corresponding functional model.
+For the division kernel in \Cref{fig:dw-div-fp-kernel}, the
+specification uses the binary64 instance of \DWDivFP{}. If
+\ccode|x| initially stores $(x_h,x_\ell)$ and the kernel returns
+with \ccode|z| storing $(z_h,z_\ell)$, the postcondition gives
 \begin{equation}
   (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y),
   \label{eq:dw-div-fp-kernel-refinement}
 \end{equation}
-where \DWDivFP{} denotes the binary64 instance of the functional
-model.
+where $y$ is the binary64 divisor.
 
-The specification imposes no numerical preconditions. The equality
-identifies the computed pair. To apply
-\Cref{thm:dw-div-fp-numerical}, we must also establish the numerical
-conditions assumed in the theorem statement.
-
-The proof follows the computations in the C kernel and uses the
-VST specifications of the \FastTwoMult{} and \FastTwoSum{} kernels
-for the internal calls. Equalities between the CompCert and
-VCFloat2 binary64 operations connect the C arithmetic to the
-operations in the functional model. We verify the other arithmetic
+To establish this postcondition, we follow the computations in
+the C kernel. Equalities between the CompCert and VCFloat2
+binary64 operations identify each arithmetic result with the
+corresponding result in the functional model, while the VST
+specifications of the \FastTwoMult{} and \FastTwoSum{} kernels
+account for the internal calls. We verify the other arithmetic
 kernels in the same way.
+
+The specification identifies the computed pair without imposing
+numerical preconditions. Applying
+\Cref{thm:dw-div-fp-numerical} additionally requires establishing
+the numerical conditions assumed in that theorem.
 
 \subsection{Soundness of the Runtime Checks}
 \label{sec:check-soundness}
 
-Kernel refinement identifies the pair computed by the C kernel, but it does
-not establish the conditions assumed by the numerical theorem. The next proof
-obligation is therefore to show that successful runtime checks establish
-these conditions. For division of a double word by a binary64 value, the 
-following theorem connects 
-the weak
-and strong checks appearing in
-\Cref{fig:dw-div-fp-input-check,fig:dw-div-fp-check} and the result finiteness
-check appears in \Cref{fig:finite-checks}
-to the conditions defined in \Cref{sec:division-conditions}.
+We prove that the C runtime checks satisfy VST specifications
+whose postconditions assert the corresponding numerical conditions
+when the checks succeed. For division, the following theorem states
+these postconditions using the conditions defined in
+\Cref{sec:division-conditions}.
 
-\begin{theorem}[Soundness of the Runtime Checks for Division by a Binary64
-Value]
+\begin{theorem}[Soundness of the Runtime Checks for Division by a
+Binary64 Value]
 \label{thm:division-checks}
-Suppose that \ccode|x| stores $(x_h,x_\ell)$ and that \ccode|z| stores
-$(z_h,z_\ell)$.
-
+Suppose that \ccode|x| stores $(x_h,x_\ell)$, $y$ is the binary64
+divisor, and \ccode|z| stores $(z_h,z_\ell)$, where
+$
+  (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y).
+$
 \begin{enumerate}
-  \item If the weak check returns $1$, then
+  \item If the weak check succeeds, then
     $\mathcal{I}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
-  \item If the strong check returns $1$, then
+  \item If the strong check succeeds, then
     $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
-  \item If the result finiteness check applied to \ccode|z| returns $1$, then
-    $\operatorname{Fin}(z_h,z_\ell)$ holds.
+  \item If the result finiteness check applied to \ccode|z|
+    succeeds, then $\mathcal{F}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{enumerate}
 \end{theorem}
 
-The VST proofs follow the short-circuit evaluation of the C checks and use
-specifications for the finiteness functions, \ccode|fabs|, and
-\ccode|ldexp|. The main arithmetic step concerns the rounded quotient
-comparison in the strong check. We prove that passing this comparison implies
-the required bound on the exact quotient, using exact representability of the
-comparison thresholds and monotonicity of rounding.
+The proofs follow the short-circuit evaluation of the C checks
+and use VST specifications for \ccode|isfinite_double| and
+\ccode|isfinite_dword| from \Cref{fig:finite-checks}, together
+with specifications for \ccode|fabs| and \ccode|ldexp|. 
+The strong check requires an
+additional numerical argument: the C code compares a rounded
+quotient with a threshold, whereas
+$\mathcal{S}_{\mathrm{div}}$ bounds the exact quotient.
+We use exact representability of the threshold and monotonicity
+of rounding to show that a successful comparison establishes
+the required bound on the exact quotient.
 
-Each implication establishes that check success is sufficient for the
-corresponding mathematical condition. The converse does not hold in general:
-a check returning $0$ need not imply that the condition is false.
+A failed check does not necessarily mean that the corresponding
+numerical condition is false.
 
-\subsection{Public Wrapper Contracts}
+\subsection{Wrapper Correctness}
 \label{sec:division-wrapper-contracts}
 
-The VST proofs of the wrappers combine kernel refinement, soundness of the runtime 
-checks, and the numerical theorem.  
-\Cref{fig:dw-div-fp-vst-spec} shows the clauses of the VST
-specification for the default wrapper in
-\Cref{fig:default-division-wrapper} that state its numerical contract; routine
-memory assertions are omitted.
+We prove that the division wrappers satisfy VST specifications by
+combining kernel correctness, soundness of the runtime checks,
+and \Cref{thm:dw-div-fp-numerical}.
+\Cref{fig:dw-div-fp-vst-spec} shows the VST
+specification for the
+default division wrapper in \Cref{fig:default-division-wrapper}.
+For the notation of VST function specifications, see
+\citet[Chapter~8]{AppelVCManual}.
+
+In the figure, \vstidentifier{default\_wrapper\_status} abbreviates the
+condition that the return status is one of the three values
+described in \Cref{sec:overview-division-wrappers}: success,
+rejection by the weak check, or rejection by the result finiteness
+check. The predicate
+\vstidentifier{DWDivFP\_\allowbreak guarantee} asserts that the result of
+\DWDivFP{} satisfies the error bound and double-word relation in
+\Cref{thm:dw-div-fp-numerical}.
 
 \input{figures/dw-div-fp-vst-spec}
 
-The empty \texttt{PROP} clause imposes no numerical condition on the caller.
-The status predicate permits the three return statuses described in
-\Cref{sec:overview-division-wrappers}, with \texttt{Int.zero} representing
-\ccode|DW_OK|. On successful return, the postcondition states that the
-output stores the result of \DWDivFP{} and that
-\texttt{DWDivFP\_\allowbreak guarantee} holds. This predicate names the
-conclusion of \Cref{thm:dw-div-fp-numerical}: the returned pair satisfies the
-double-word relation and its represented value satisfies the error bound. On
-a failed return, the specification provides no numerical guarantee for the
-output.
+The empty \vstkeyword{PROP} clause imposes no numerical preconditions
+on the caller. On successful return, represented by
+\vstidentifier{Int.zero} for \ccode|DW_OK|, the postcondition states that
+the output stores the result of \DWDivFP{} and that
+\vstidentifier{DWDivFP\_\allowbreak guarantee} holds. This predicate
+asserts the error bound and double-word relation from
+\Cref{thm:dw-div-fp-numerical}. On a failed return, the
+specification provides no numerical guarantee for the output.
 
-For the default wrapper, the weak check establishes
-$\mathcal{I}_{\mathrm{div}}$, kernel refinement identifies the computed result
-with \DWDivFP{}, and the result check establishes
-$\mathcal{F}_{\mathrm{div}}$. For the alternative wrapper, the strong check
-establishes $\mathcal{S}_{\mathrm{div}}$, which ensures result finiteness by
-\Cref{cor:dw-div-conditions}. Thus, both wrappers provide the same numerical
-guarantee on successful return, although their failure statuses differ.
+For the default wrapper, the weak-check postcondition establishes
+$\mathcal{I}_{\mathrm{div}}$. The kernel postcondition identifies
+the computed pair with the result of \DWDivFP{}, so the successful
+result finiteness check establishes
+$\mathcal{F}_{\mathrm{div}}$. These conditions establish
+finiteness and allow us to apply
+\Cref{thm:dw-div-fp-numerical} for the error bound and double-word
+relation.
+
+For the alternative wrapper, the strong-check postcondition
+establishes $\mathcal{S}_{\mathrm{div}}$. This condition includes
+$\mathcal{I}_{\mathrm{div}}$ and implies
+$\mathcal{F}_{\mathrm{div}}$ by
+\Cref{lem:dw-div-safe-implies-finite}. Kernel correctness
+identifies the returned pair with the result covered by the
+numerical theorem. Thus, both wrappers provide the same numerical
+guarantee on successful return.
 
 \subsection{Compilation and the Verification Boundary}
 \label{sec:verification-boundary}
 
-The C proofs assume that \ccode|double| is binary64 and that arithmetic uses
-round-to-nearest, ties-to-even, with gradual underflow.
-Compilation and execution must preserve these semantics without reassociating
-floating-point expressions or flushing subnormal values to zero.
-Floating-point exceptions are nontrapping, which allows the default wrapper to
-reach the result check on Line~10 of \Cref{fig:default-division-wrapper} when
-the kernel produces an infinity or NaN \citep{IEEE754-2019}.
-The verified functions call \ccode|fma|, \ccode|fabs|, and \ccode|ldexp|.
-In the VST proofs, we use the behavior described by the specifications of
-these functions, but their platform implementations and the floating-point
-hardware are outside the verification boundary
+The VST proofs use binary64 arithmetic with rounding to nearest,
+ties to even, and gradual underflow. We assume that floating-point
+exceptions do not trap. This assumption allows the default wrapper
+to reach the result finiteness check and return a failure status
+when the kernel produces an infinity or NaN
+\citep{IEEE754-2019}.
+For calls to \ccode|fma|, \ccode|fabs|, and \ccode|ldexp|, the
+proofs assume that the external implementations satisfy the
+VST specifications used in the verification
 \citep{Appel2023VSTlib}.
 
-We prove the C-level contracts using VST. For a CompCert build, we apply
-semantic preservation to carry these results to assembly
-\citep{Leroy2009,Boldo2013CompCert}.  Compilation with another
-compiler is not covered by this result and must independently preserve the
-required IEEE~754 semantics.
+Under these assumptions, the semantic-preservation theorem for
+CompCert carries the verified C behavior to the generated assembly
+\citep{Leroy2009,Boldo2013CompCert}. This theorem does not cover
+builds using other compilers, including the Clang build evaluated
+in \Cref{sec:evaluation}. Such builds must preserve the modeled
+floating-point behavior: optimizations must not change the
+rounding semantics, and execution must preserve
+subnormal values rather than flush them to zero.
