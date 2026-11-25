@@ -53,7 +53,7 @@ identifier, random seed, input fingerprint, and component bit patterns.
 \subsection{Numerical Reference Calculations}
 
 We use QD 2.3.24, MPFR 4.2.2, and GMP 6.3.0. We enable QD's FMA
-implementation of \texttt{two\_prod}.
+implementation of \ccode|two_prod|.
 
 For RQ1, we use MPFR to reconstruct the real values represented by the input
 and output pairs and to compute each reference operation at 2112-bit
@@ -64,11 +64,11 @@ No result produced by an accepted RQ1 call has $B(r)=0$.
 
 For each double-word operation, we select the QD routine computing the same
 mathematical operation. For addition of two double words, we use
-\texttt{ieee\_add}; for division of two double words, we use
-\texttt{accurate\_div}; and for the remaining operations, we use the
+\ccode|ieee_add|; for division of two double words, we use
+\ccode|accurate_div|; and for the remaining operations, we use the
 corresponding QD operators. For the error-free transformations, we compare
 with QD's
-\texttt{two\_sum}, \texttt{quick\_two\_sum}, and \texttt{two\_prod}.
+\ccode|two_sum|, \ccode|quick_two_sum|, and \ccode|two_prod|.
 
 For RQ2, we classify results obtained using QD as nonfinite; finite with
 components that do not form a double word; or finite with components that form
