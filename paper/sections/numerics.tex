@@ -1,27 +1,34 @@
 \section{Numerical Guarantees for Double-Word Arithmetic over IEEE~754}
 \label{sec:numerics}
 
-The guarantees in \Cref{tab:operation-preview} are proved for functional models
-of the algorithms implemented by the arithmetic kernels. A functional model
-is a Rocq function that describes the rounded operations and returned pair
-without the details of the C implementation. We state the models over a
-generic radix-two format; \FenceDD{} uses their binary64 instances.
+To prove the numerical guarantees presented in \Cref{sec:overview},
+we define \emph{functional models} of the arithmetic algorithms.
+These mathematical models are expressed as Rocq functions using
+IEEE~754 operations from VCFloat2 \citep{AppelKellison2024} and the
+binary floating-point representation from Flocq \citep{Boldo2011}.
+Each model follows the sequence of rounded operations in the
+corresponding arithmetic kernel and returns a pair of floating-point
+values, independently of the C representation. We define the models
+over a generic radix-two format; \FenceDD{} uses the binary64
+instances.
 
-The models use IEEE~754 operations from VCFloat2 and the binary floating-point
-representation from Flocq. For each model, we bound the error in the represented
-value and prove that the returned pair forms a double word. All results are
-checked in Rocq. We give a proof sketch for division by a floating-point value
-and present only the distinct arguments for the remaining operations.
+We first establish the rounding properties and error-free
+transformation results needed to analyze complete double-word
+operations. We then continue the division example from
+\Cref{sec:overview-division}, giving a proof sketch of the numerical
+guarantee and explaining how the proofs for the remaining operations
+differ.
 
 \subsection{FLX, FLT, and IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
 
-To model gradual underflow, we relate two Flocq formats with the same
-precision: FLX and FLT \citep[Sections~III-C and III-D]{Boldo2011}. FLX has an
-unbounded exponent range, whereas FLT imposes a lower exponent bound. The
-analysis of \citet{Joldes2017}, mechanized by \citet{Rideau2022}, uses FLX and
-therefore excludes underflow. We use FLT because its lower exponent bound
-models gradual underflow in IEEE~754 arithmetic \citep{IEEE754-2019}.
+To extend the earlier mechanization by \citeauthor{Rideau2022} to
+IEEE~754 arithmetic \citep{IEEE754-2019}, we relate rounding in two
+Flocq formats with the same radix and precision: floating-point with
+unbounded exponents (FLX) and floating-point with gradual underflow
+(FLT). The earlier mechanization uses FLX and therefore excludes
+both underflow and overflow. FLT imposes a lower exponent bound and
+includes subnormal values.
 
 For radix $\beta>1$, precision $p>0$, and lower exponent $e_{\min}$, the two
 formats represent
@@ -41,20 +48,22 @@ Thus,
 $\mathbb{F}_{\mathrm{FLT}}(\beta,p,e_{\min})
  \subseteq\mathbb{F}_{\mathrm{FLX}}(\beta,p)$.
 
-The lower exponent bound determines the smallest positive value $\eta$ and
-smallest positive normal value $\nu$:
+The lower exponent bound determines the smallest positive
+representable value $\eta$ and the smallest positive normal value $\nu$:
 \begin{equation}
   \eta=\beta^{e_{\min}}
   \qquad\text{and}\qquad
   \nu=\beta^{e_{\min}+p-1}.
   \label{eq:flt-thresholds}
 \end{equation}
-Below $\nu$, representable values are multiples of $\eta$ and have fewer
-significant bits. For binary64, $\eta=2^{-1074}$ and $\nu=2^{-1022}$.
+Nonzero representable values with magnitude below $\nu$ are
+subnormal. In this range, adjacent representable values are spaced
+$\eta$ apart. For binary64, $\eta=2^{-1074}$ and $\nu=2^{-1022}$.
 
 Let $\operatorname{RN}_{\mathrm{FLX}}$ and
-$\operatorname{RN}_{\mathrm{FLT}}$ denote rounding to nearest with ties to even
-in the two formats. In the normal range, the Flocq theorem
+$\operatorname{RN}_{\mathrm{FLT}}$ denote rounding to nearest with
+ties to even in the two formats. For exact real values with
+magnitude at least $\nu$, the Flocq theorem
 \texttt{FLT.round\_FLT\_FLX} gives
 \begin{equation}
   |x|\geq\nu
@@ -63,26 +72,30 @@ in the two formats. In the normal range, the Flocq theorem
     =\operatorname{RN}_{\mathrm{FLX}}(x).
   \label{eq:round-flt-flx}
 \end{equation}
-For $|x|<\nu$, the rounded values may differ, so we analyze FLT rounding
-directly.
+This equality allows us to reuse the earlier FLX arguments for
+operations whose exact results have magnitude at least $\nu$.
+For smaller exact results, the two roundings may differ, so we
+analyze FLT rounding directly.
 
-Neither FLX nor FLT has an upper exponent bound. We therefore relate FLT
-rounding to IEEE~754 only when the operands and rounded result are finite;
-under this condition, they represent the same real value. The numerical
-theorems state the finiteness conditions required for this correspondence.
+Neither FLX nor FLT has an upper exponent bound. Our error analysis
+assumes that the returned components are finite and uses this
+hypothesis to relate the IEEE~754 computations to FLT rounding.
+We separately establish sufficient conditions under which the
+returned components are finite.
 
 \subsection{Error-Free Transformations over IEEE~754}
 \label{sec:error-free-transformations}
 
-Existing analyses of double-word algorithms rely on error-free transformations
-to retain information lost when intermediate sums and products are rounded.
-To extend those analyses to IEEE~754 arithmetic, we must determine whether the
-returned correction still equals the exact rounding error when gradual
-underflow occurs. For addition, the equality remains valid under suitable 
-conditions. For multiplication, the exact rounding error may be too small to
-represent. We identify a sufficient condition under which the correction
-remains exact and otherwise bound the error in the sum of the returned
-components.
+Double-word algorithms use error-free transformations that return
+a rounded sum or product together with a correction intended to
+equal the exact rounding error. To extend the analysis of these
+algorithms to IEEE~754 arithmetic, we must determine whether this
+correction remains exact when gradual underflow occurs. For
+addition, the equality remains valid under suitable conditions.
+For multiplication, the exact rounding error may be too small to
+represent. We identify a sufficient condition under which the
+correction remains exact and otherwise bound the error in the sum
+of the returned components.
 
 \begin{definition}[Error-free transformation]
 \label[definition]{def:error-free-transformation}
@@ -105,9 +118,8 @@ transformations used by the double-word algorithms in \FenceDD{}.
 We use the naming conventions and algorithms from 
 \citet[Algorithms\ 1--3]{Joldes2017}.
 \TwoSum{} is due to Knuth, while
-\FastTwoSum{} and the original error-free transformation for products are due
-to Dekker
-\citep{Knuth1997,Dekker1971}.
+\FastTwoSum{} and the original error-free transformations for products are due
+to Dekker \citep{Knuth1997,Dekker1971}.
 
 \begin{figure}[t]
   \centering
@@ -191,17 +203,18 @@ to Dekker
       \end{minipage}}
   \end{subfigure}
   \endgroup
-\caption{Error-free transformations used by the double-word algorithms.
+\caption{Error-free transformations used by the double-word algorithms
+implemented in \FenceDD.
 \TwoSum{} and \FastTwoSum{} return a rounded sum and correction;
 \FastTwoMult{} returns a rounded product and FMA correction.
 \Cref{thm:addition-transformations,thm:fast-two-sum-small,thm:fast-two-mult}
-state when each correction equals the exact rounding error.}
+state when each correction is exact.}
   \label{fig:error-free-transformations}
 \end{figure}
 
 \subsubsection{Exact corrections for addition.}
 
-Gradual underflow does not introduce an additional error into the corrections
+Gradual underflow does not affect the corrections
 returned by \TwoSum{} and \FastTwoSum{}. When the returned components are
 finite, \TwoSum{} returns the rounded sum and its exact rounding error.
 \FastTwoSum{} also returns the rounded sum and its exact rounding error
@@ -222,11 +235,12 @@ returned components are finite.
 \end{enumerate}
 \end{theorem}
 
-The ordering condition $|b|\leq|a|$ cannot be established for every use of
-\FastTwoSum{} in the double-word algorithms. We prove another sufficient
-condition needed by the later analysis: the correction remains exact when the
-magnitude of the exact sum is at most twice the smallest positive normal
-value.
+The ordering condition $|b|\leq|a|$ is sufficient but not necessary
+for exactness, and it cannot be established for every use of
+\FastTwoSum{} in the double-word algorithms. We prove another
+sufficient condition needed by the later analysis: assuming finite
+returned components, the correction remains exact when
+$|a+b|\leq2\nu$.
 
 \begin{theorem}[\FastTwoSum{} for small exact sums]
 \label{thm:fast-two-sum-small}
@@ -294,7 +308,7 @@ are spaced by $\eta$, so $|\pi_\ell-d|\leq\eta/2$, which proves the stated
 error bound.
 \end{proof}
 
-\subsection{Numerical Guarantees for Division of a Double Word by a
+\subsection{Numerical Guarantee for Division of a Double Word by a
 Floating-Point Value}
 \label{sec:division-numerics}
 
@@ -362,13 +376,14 @@ Lines~2--5 approximate the residual $x-t_hy$, including the contribution of
 the low word $x_\ell$. Line~6 divides this residual by $y$ to obtain the
 correction $t_\ell$. Line~7 constructs the final pair.
 
-\subsubsection{Sufficient conditions.}
+\subsubsection{Sufficient Conditions for the Numerical Guarantee}
 \label{sec:division-conditions}
 
-The numerical analysis of the division algorithm requires conditions on the operands and finiteness of
-the returned pair. We state these requirements separately so that result
-finiteness can either be assumed directly or derived from stronger conditions
-on the operands and leading quotient.
+We state sufficient conditions for \DWDivFP{} to return a finite
+double word satisfying an error bound. We state the operand
+conditions separately from the assumption that the returned
+components are finite, then give stronger conditions under which
+result finiteness follows.
 
 For operands $x_h,x_\ell,y$, let
 $(z_h,z_\ell)=\DWDivFP{}(x_h,x_\ell,y)$, and let $t_h$ be the rounded leading
@@ -428,7 +443,7 @@ bound with relative and absolute terms. Under additional magnitude conditions,
 the absolute term is unnecessary. By the preceding finiteness lemma, the same
 conclusions also follow from $\mathcal{S}_{\mathrm{div}}$.
 
-\begin{theorem}[Numerical guarantees for \DWDivFP{}]
+\begin{theorem}[Numerical guarantee for \DWDivFP{}]
 \label{thm:dw-div-fp-numerical}
 Let the underlying format be radix two with precision $p\geq4$, lower
 exponent $e_{\min}$, unit roundoff $u=2^{-p}$, and
@@ -466,8 +481,8 @@ are finite. If $x_h=0$, the double-word condition gives $x_\ell=0$, and the
 result follows directly. Otherwise,
 $|x_h|\geq2^{e_{\min}+2p}$.
 
-\noindent\emph{Normal leading quotient.}
-If $|q_0|\geq\nu$, rounding on Line~1 agrees in FLT and FLX. The lower bound on
+First suppose $|q_0|\geq\nu$. Rounding on Line~1 agrees in FLT
+and FLX. The lower bound on
 $|x_h|$ gives $|t_hy|\geq2^{e_{\min}+2p-1}$, so
 \Cref{thm:fast-two-mult} gives $\pi_h+\pi_\ell=t_hy$. Sterbenz's lemma and
 representability then carry the FLX residual analysis through Lines~3--5
@@ -477,8 +492,8 @@ and FLX results differ by at most $\eta$, giving the mixed bound. Finally,
 $|t_\ell|\leq|t_h|$, so \FastTwoSum{} preserves their sum and returns a double
 word by \Cref{thm:addition-transformations}.
 
-\noindent\emph{Subnormal leading quotient.}
-If $|q_0|<\nu$, fixed FLT spacing gives $|t_h-q_0|\leq\eta/2$. The double-word
+Now suppose $|q_0|<\nu$. The fixed spacing in FLT gives
+$|t_h-q_0|\leq\eta/2$. The double-word
 condition gives $|x_\ell/y|<\eta/2$, and hence $|t_h-q|\leq\eta$. The lower
 bound on $|x_h|$ also implies $|y|>2^{p+1}$. Applying the FLT rounding bounds
 and \Cref{thm:fast-two-mult} to Lines~2--5 gives
@@ -548,12 +563,15 @@ components or established from the sufficient conditions in
 %
 \begin{table}[t]
 \centering
-\caption{Conditions sufficient for each remaining functional model to return
-finite components. Here $x=(x_h,x_\ell)$ and $y=(y_h,y_\ell)$ are double-word
-operands, $a$ is a floating-point operand, and $\Omega$ is the least power of
-two greater than every finite magnitude. Each row provides an alternative to
-assuming $\operatorname{Fin}(z_h,z_\ell)$ directly; the other conditions of
-\Cref{thm:remaining-numerical-guarantees} still apply.}
+\caption{Sufficient conditions for the five remaining functional
+models to return finite components. Each row provides an
+alternative to the result-finiteness assumption in
+\Cref{thm:remaining-numerical-guarantees}; all other hypotheses
+still apply. Here $x=(x_h,x_\ell)$ and $y=(y_h,y_\ell)$ are
+double-word operands, $a$ is a floating-point operand, and
+$\operatorname{Fin}$ states that all listed values are finite.
+The constant $\Omega$ is the least power of two greater than
+every finite magnitude in the underlying format.}
 \label{tab:remaining-numerical-conditions}
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}p{0.31\columnwidth}p{0.64\columnwidth}@{}}
@@ -588,28 +606,34 @@ satisfies its operation-specific error bound:
 %
 \begin{theorem}[Numerical guarantees for the remaining operations]
 \label{thm:remaining-numerical-guarantees}
-For one of the five operations in
-\Cref{tab:remaining-numerical-conditions}, let $(z_h,z_\ell)$ be the pair
-returned by its functional model, and let $r$ be the corresponding exact
-result in \Cref{tab:operation-preview}. Let the underlying format be radix two
-with precision $p$, unit roundoff $u=2^{-p}$, and smallest positive
-representable value $\eta=2^{e_{\min}}$.
+Let the underlying format be radix two with precision $p$, unit
+roundoff $u=2^{-p}$, and smallest positive representable value
+$\eta=2^{e_{\min}}$. Choose one of the five operations in
+\Cref{tab:remaining-numerical-conditions}, and let $(z_h,z_\ell)$
+be the pair returned by the corresponding functional model.
+Let $r$ be the exact real result of the operation on the values
+represented by the operands.
 
-Assume $p\geq3$ for the addition operations and for multiplication by a
-floating-point value, $p\geq5$ for multiplication of two double words, and
-$p\geq14$ for division of two double words. Suppose every double-word operand
-satisfies \Cref{def:double-word}. For division of two double words, also
-suppose \Cref{eq:dw-div-dw-divisor-condition} holds. Finally, suppose either
-that $\operatorname{Fin}(z_h,z_\ell)$ holds or that the corresponding condition
-in \Cref{tab:remaining-numerical-conditions} holds.
+Assume $p\geq3$ for the addition operations and multiplication by a
+floating-point value, $p\geq5$ for multiplication of two double
+words, and $p\geq14$ for division of two double words. Suppose every
+double-word operand satisfies \Cref{def:double-word}. For division
+of two double words, also suppose
+\Cref{eq:dw-div-dw-divisor-condition} holds.
 
-Then the returned pair is a double word:
+Finally, suppose either that the returned components are finite,
+$\operatorname{Fin}(z_h,z_\ell)$, or that the sufficient conditions
+for finiteness in the corresponding row of
+\Cref{tab:remaining-numerical-conditions} hold.
+
+Then both returned components are finite and form a double word:
 \[
   z_h=\operatorname{RN}(z_h+z_\ell).
 \]
-Its represented value $\widehat r=z_h+z_\ell$ satisfies the corresponding
-error bound on $|\widehat r-r|$ in \Cref{tab:operation-preview}, interpreted
-using $u$ and $\eta$ for the underlying format.
+The represented value $\widehat r=z_h+z_\ell$ satisfies the
+corresponding error bound on $|\widehat r-r|$ in
+\Cref{tab:operation-preview}, using $u$ and $\eta$ for the underlying
+format.
 \end{theorem}
 
 \paragraph{Proof overview.}

@@ -75,7 +75,7 @@ to even. The correction is therefore absent from both the output of
 \FastTwoMult{} and the value returned by the double-double multiplication.
 
 We show that losing this correction does not preclude a useful
-guarantee. For multiplication of two double-doubles, write $r$
+error bound. For multiplication of two double-doubles, write $r$
 for the exact product and $\widehat r$ for the value represented by the
 returned pair. Our analysis proves
 \[
@@ -89,7 +89,7 @@ relative precision of binary64. Near it, the absolute term can dominate; for
 the example above, this term covers the lost correction.
 
 More generally, we identify sufficient conditions and prove in Rocq that
-the algorithms satisfy their accuracy guarantees whenever these conditions
+the algorithms satisfy their numerical guarantees whenever these conditions
 hold, using a faithful model of IEEE~754 arithmetic. Our analysis covers
 adding a binary64 value to a double-double, adding two double-doubles,
 multiplying a double-double by a binary64 value, multiplying two
@@ -106,7 +106,7 @@ library for double-double arithmetic. Each library operation combines a kernel
 call with runtime checks and returns a status indicating success or failure. 
 Using the Verified Software Toolchain (VST) \citep{Appel2014}, we prove that the 
 kernels implement the analyzed algorithms and that successful runtime checks 
-establish the sufficient conditions under which the proved accuracy guarantees 
+establish the sufficient conditions under which the proved numerical guarantees 
 hold. Consequently, on successful return, the output satisfies the corresponding
 numerical guarantee. The numerical and VST proofs are checked in Rocq during 
 development, not during library calls. \Cref{fig:proof-runtime-roles} contrasts 

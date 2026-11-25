@@ -22,10 +22,6 @@
   showstringspaces=false
 }
 
-%The postconditions of successful runtime checks imply the preconditions
-%under which the arithmetic kernel returns a valid double-double
-%satisfying a proved error bound.
-
 Each \FenceDD{} operation combines an \emph{arithmetic kernel} with
 runtime checks that test whether sufficient conditions for the proved
 numerical guarantee hold. We illustrate how these checks work using
@@ -166,9 +162,9 @@ enum dw_status dw_div_fp(
   return DW_OK;
 }
 \end{lstlisting}
-\caption{The default wrapper for dividing a double-double by a binary64 value.
-It checks the operands before the kernel call and whether the result
-is finite afterward.}
+\caption{The default wrapper for dividing a double-double by a
+binary64 value. It performs the weak check before calling the kernel
+and checks both result components for finiteness afterward.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
@@ -197,8 +193,9 @@ int dw_div_fp_weak_check(
   return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
-\caption{The weak check for operand finiteness, the double-double relation,
-and the magnitude condition on the high component.}
+\caption{The weak check for dividing a double-double by a binary64
+value. It tests operand finiteness, the double-word relation, and
+a magnitude condition on the high component of the dividend.}
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
@@ -219,8 +216,8 @@ int isfinite_dword(const struct dword *x) {
          isfinite_double(x->t);
 }
 \end{lstlisting}
-\caption{Finiteness tests for a binary64 value and both components of a
-double-double.}
+\caption{Finiteness tests for a binary64 value and a pair of
+binary64 values.}
   \label{fig:finite-checks}
 \end{figure}
 
@@ -272,9 +269,10 @@ int dw_div_fp_strong_check(
   return fabs(q) < q_omega;
 }
 \end{lstlisting}
-\caption{The strong check, which reuses the weak check in
-\Cref{fig:dw-div-fp-input-check} and bounds the high word and rounded leading
-quotient.}
+\caption{The strong check for dividing a double-double by a binary64
+value. It performs the weak check, excludes a zero divisor, and
+bounds the high component and rounded leading quotient to guarantee
+that both kernel result components are finite.}
   \label{fig:dw-div-fp-check}
 \end{figure}
 

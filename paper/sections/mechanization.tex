@@ -1,47 +1,56 @@
 \section{Verification of \FenceDD}
 \label{sec:mechanization}
 
-Section~3 proves numerical properties of the functional models, whereas
-clients call the C wrappers presented in Section~2. We connect the functional
-models to C wrappers in three steps. First, we prove that each arithmetic
-kernel implements its functional model. Second, we prove that successful
-runtime checks establish the conditions required by the corresponding
-numerical theorem. Finally, we compose these results into the contract of each 
-wrapper, which specifies its return status and numerical guarantee on
-successful return. This follows the layered organization used in earlier
-verifications of numerical C programs
+To establish the numerical guarantees for the C implementations in
+\FenceDD{}, we verify the arithmetic kernels, runtime checks, and
+wrappers using the Verified Software Toolchain \citep{Appel2014}.
+The kernel proofs show that the C kernels implement the
+corresponding functional models in \Cref{sec:numerics}.
+The runtime check proofs show that successful checks establish
+the conditions assumed by the corresponding numerical theorems.
+We combine these results in the wrapper proofs to show that
+successful library calls satisfy the corresponding numerical
+guarantees. The separation of the numerical analysis of the 
+functional models from the verification of the C implementations
+follows related work on verifying numerical C programs
 \citep{AppelBertot2020,Kellison2023LAProof,Tekriwal2023Jacobi}.
-Continuing the example from \Cref{sec:overview,sec:numerics}, we illustrate
-these steps for division of a double word by a binary64 value.
 
-\subsection{Kernel Refinement}
+We continue the division example from
+\Cref{sec:overview-division,sec:division-numerics} to illustrate
+these proofs. We then state the assumptions on arithmetic and
+external functions and explain how CompCert carries the verified
+properties to the compiled program.
+
+\subsection{Kernel Correctness}
 \label{sec:kernel-refinement}
 
-Kernel refinement connects the execution of an arithmetic kernel to the
-functional model analyzed in Section~3. For division of a double word by a
-binary64 value, the numerical theorem in
-\Cref{thm:dw-div-fp-numerical} concerns the functional model \DWDivFP{},
-whereas both wrappers call the C kernel in
-\Cref{fig:dw-div-fp-kernel}. Suppose that \ccode|x| initially stores
-$(x_h,x_\ell)$ and that the kernel returns with \ccode|z| storing
-$(z_h,z_\ell)$. Using VST, we prove
+For each arithmetic kernel, we give a VST specification whose
+postcondition states that the output object stores the result of
+the corresponding functional model. We prove that the C function
+satisfies this specification.
+
+For the division kernel in \Cref{fig:dw-div-fp-kernel}, suppose
+that \ccode|x| initially stores $(x_h,x_\ell)$, the divisor is the
+binary64 value $y$, and the kernel returns with \ccode|z| storing
+$(z_h,z_\ell)$. The postcondition gives
 \begin{equation}
-  (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y).
+  (z_h,z_\ell)=\DWDivFP(x_h,x_\ell,y),
   \label{eq:dw-div-fp-kernel-refinement}
 \end{equation}
+where \DWDivFP{} denotes the binary64 instance of the functional
+model.
 
-This result identifies the pair computed by the C kernel with the pair
-returned by the functional model. It requires no numerical condition and does
-not itself establish either the error bound or the double-word relation.
+The specification imposes no numerical preconditions. The equality
+identifies the computed pair. To apply
+\Cref{thm:dw-div-fp-numerical}, we must also establish the numerical
+conditions assumed in the theorem statement.
 
-To prove \Cref{eq:dw-div-fp-kernel-refinement}, the VST proof matches each
-computation in the C kernel with the corresponding operation in \DWDivFP{}.
-VST gives the C operations CompCert semantics, while \DWDivFP{} uses VCFloat2
-\citep{AppelKellison2024}; binary64 equalities identify the corresponding
-operations. The division kernel also calls the \FastTwoMult{} and
-\FastTwoSum{} kernels directly. Their VST specifications connect these calls
-to the corresponding functional models. We use the same method for the other
-arithmetic kernels.
+The proof follows the computations in the C kernel and uses the
+VST specifications of the \FastTwoMult{} and \FastTwoSum{} kernels
+for the internal calls. Equalities between the CompCert and
+VCFloat2 binary64 operations connect the C arithmetic to the
+operations in the functional model. We verify the other arithmetic
+kernels in the same way.
 
 \subsection{Soundness of the Runtime Checks}
 \label{sec:check-soundness}
