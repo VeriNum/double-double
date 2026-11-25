@@ -12,11 +12,11 @@ closely do observed errors approach the proved bounds, and how
 do QD errors compare on the same inputs?
 
 \textbf{(RQ2) Usefulness of the wrappers.}
-For rejected \FenceDD{} calls, how often does QD produce a
+For calls rejected by \FenceDD{}, how often does QD produce a
 result satisfying the corresponding numerical properties?
 
 \textbf{(RQ3) Cost of the wrappers.}
-For accepted calls, how much execution
+For accepted calls, how much
 time do the wrappers add relative to the unchecked kernels,
 and how do wrapper times compare with QD?
 
@@ -24,23 +24,20 @@ and how do wrapper times compare with QD?
 \label{sec:evaluation-setup}
 
 We compare \FenceDD{} with QD \citep{Hida2001,QD} on identical
-binary64 operands, using MPFR \citep{Fousse2007} to compute
-reference values at greater precision. We test both wrappers
-for each double-double operation and the single wrapper for
-each error-free transformation.
+binary64 operands, using MPFR \citep{Fousse2007} for reference
+values. We test both wrappers for each double-double operation
+and the single wrapper for each error-free transformation.
 
 For RQ1 and RQ2, we generate equal numbers of positive and
-negative values at each base-two exponent. Binary64 operands span
-exponents $-1074$ through $1023$, and double-double inputs span
-$-969$ through $1022$. Every double-double operand satisfies
-\Cref{def:double-word}. With \RQOneSamplesPerExponent{} inputs
-per exponent, the sets contain 79,680 inputs per double-double
-operation and 83,920 per error-free transformation.
+negative values at each base-two exponent. Binary64 operands
+span exponents $-1074$ through $1023$; double-double operands
+span $-969$ through $1022$ and satisfy \Cref{def:double-word}.
+With \RQOneSamplesPerExponent{} inputs per exponent, the sets
+contain 79,680 inputs per double-double operation and 83,920
+per error-free transformation.
 
-Appendix~\ref{app:evaluation-details} describes the input
-construction and reference calculations.
-Appendix~\ref{app:evaluation-timing} describes the timing inputs
-and the procedure used to measure execution time.
+The artifact documents input generation, reference calculations,
+and timing procedures, and includes the detailed results.
 
 \subsection{Usefulness of the Error Bounds (RQ1)}
 
@@ -74,8 +71,9 @@ algorithm, $B(r)$ is not a proved bound for these results.
 
 \begin{table}[tbp]
 \caption{RQ1: Mean and maximum error ratios $\rho$ from
-\Cref{eq:rq1-error-ratio}. Results gives the percentage for which the indicated
-term dominates. QD ratios provide a comparison scale, not proved bounds.}
+\Cref{eq:rq1-error-ratio}. Results gives the percentage for which
+the indicated term dominates. For QD, the ratios use a comparison
+scale rather than a proved bound.}
   \label{tab:rq1-tightness}
   \centering
   \setlength{\tabcolsep}{2pt}
@@ -174,11 +172,12 @@ the default double-double wrappers and error-free transformation wrappers add
 only a few nanoseconds per call. This is a noticeable relative cost because
 the unchecked kernels are small.
 
-We compare each CompCert wrapper with its kernel. We also compare \FenceDD{}
-and QD after compiling both with Homebrew Clang; this comparison includes
-differences in their algorithms.
-Appendix~\ref{app:evaluation-timing} gives the machine, compiler versions,
-options, and timing procedure.
+We compare each wrapper with the corresponding un\-checked kernel,
+both compiled with CompCert.
+We also compare \FenceDD{} and QD after compiling both with
+Homebrew Clang; this comparison includes algorithmic differences.
+The artifact records the machine, compiler versions, build options,
+and timing procedure.
 %
 \begin{table}[tbp]
 \caption{RQ3: Performance of default double-word and error-free transformation

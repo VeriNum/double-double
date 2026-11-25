@@ -1,6 +1,6 @@
 %% Main manuscript for the double-word library paper.
-\documentclass[sigplan,10pt,review]{acmart}
-\settopmatter{printfolios=true,printccs=false,printacmref=false}
+\documentclass[sigplan,screen]{acmart}
+\settopmatter{printfolios=false,printccs=true,printacmref=true}
 
 \setcopyright{none}
 \acmConference[CPP '27]{Certified Programs and Proofs}
@@ -51,7 +51,7 @@
   numbersep=6pt,
   breaklines=true,
   captionpos=b,
-  frame=single,
+  frame=none,
   framesep=3pt,
   xleftmargin=1.5em,
   framexleftmargin=1.2em,
@@ -71,6 +71,10 @@
   columns=fullflexible,keepspaces=true,showstringspaces=false]}
 % Allow explicit line breaks within long C identifiers.
 \newcommand{\cidentifier}[1]{\texttt{\color{CIdentifier}#1}}
+
+\colorlet{VSTIdentifier}{green!45!black}
+\newcommand{\vstidentifier}[1]{\texttt{\color{VSTIdentifier}#1}}
+\newcommand{\vstkeyword}[1]{\texttt{\bfseries\color{black}#1}}
 
 \lstdefinelanguage{Coq}{
   keywords={Theorem,Lemma,Proof,Qed,Definition,Fixpoint,Inductive,
@@ -101,14 +105,6 @@
 \newcommand{\DW}{\mathrm{DW}}
 \newcommand{\FenceDD}{FenceDD}
 
-\author{Ariel Kellison}
-\affiliation{%
-  \institution{Code Metal, Inc.}
-  \city{Boston}
-  \state{Massachusetts}
-  \country{USA}
-}
-
 \title{\FenceDD: A Verified Library of Double-Double Arithmetic}
 
 \begin{abstract}
@@ -135,26 +131,55 @@ nanoseconds per call relative to the unchecked kernels.
 
 \begin{CCSXML}
 <ccs2012>
- <concept>
-  <concept_id>10003752.10003790.10003794</concept_id>
-  <concept_desc>Theory of computation~Automated reasoning</concept_desc>
-  <concept_significance>500</concept_significance>
- </concept>
- <concept>
-  <concept_id>10010583.10010786.10010813</concept_id>
-  <concept_desc>Hardware~Arithmetic and datapath circuits</concept_desc>
-  <concept_significance>300</concept_significance>
- </concept>
-</ccs2012>
+   <concept>
+       <concept_id>10011007.10011074.10011099.10011692</concept_id>
+       <concept_desc>Software and its engineering~Formal software verification</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10002950.10003714.10003715</concept_id>
+       <concept_desc>Mathematics of computing~Numerical analysis</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+ </ccs2012>
 \end{CCSXML}
 
-\ccsdesc[500]{Theory of computation~Automated reasoning}
-\ccsdesc[300]{Hardware~Arithmetic and datapath circuits}
+\ccsdesc[500]{Software and its engineering~Formal software verification}
+\ccsdesc[500]{Mathematics of computing~Numerical analysis}
 
-\keywords{floating-point arithmetic, double-word arithmetic, formal verification,
-  Rocq, error analysis, IEEE 754}
+\keywords{floating-point arithmetic, double-double arithmetic,
+  formal verification, Rocq, rounding error analysis}
+
+%%% The following is specific to CPP '27 and the paper
+%%% 'FenceDD: A Verified Library of Double-Double Arithmetic'
+%%% by Ariel E. Kellison.
+%%%
+\setcopyright{cc}
+\setcctype{by}
+\acmDOI{10.1145/3871849.3871896}
+\acmYear{2027}
+\copyrightyear{2027}
+\acmISBN{979-8-4007-3146-4/2027/01}
+\acmConference[CPP '27]{Proceedings of the 16th ACM SIGPLAN International Conference on Certified Programs and Proofs}{January 11--12, 2027}{Mexico City, Mexico}
+\acmBooktitle{Proceedings of the 16th ACM SIGPLAN International Conference on Certified Programs and Proofs (CPP '27), January 11--12, 2027, Mexico City, Mexico}
+\acmSubmissionID{poplws27cppmain-p185-p}
+\received{2026-09-10}
+\received[accepted]{2026-11-10}
 
 \begin{document}
+
+\title{FenceDD: A Verified Library of Double-Double Arithmetic}
+
+\author{Ariel E. Kellison}
+\correspondingauthor
+\orcid{0000-0003-3177-7958}
+\affiliation{%
+  \institution{Code Metal}
+  \city{Boston}
+  \country{USA}
+}
+\email{ariel.kellison@codemetal.ai}
+
 \maketitle
 
 \input{sections/introduction}
@@ -167,10 +192,16 @@ nanoseconds per call relative to the unchecked kernels.
 
 
 \begin{acks}
-The author thanks Andrew Appel and Nate Foster for helpful discussions.
+I thank Andrew W. Appel for introducing me to double-word
+arithmetic and for encouraging this project. I thank Laurence
+Rideau for sharing the open-source version of the earlier
+mechanized analysis, and Nate Foster for teaching the Certified
+Software Systems course at Cornell, where I had the opportunity 
+to start this project during my PhD.
+I also thank Loris D'Antoni for feedback on early paper drafts.
 \end{acks}
 
 \bibliography{refs}
-\clearpage
-\input{sections/appendix}
+%\clearpage
+%\input{sections/appendix}
 \end{document}

@@ -9,12 +9,13 @@
   y=1cm,
   flow/.style={-{Latex[length=2.1mm]},thick},
   proofbox/.style={draw,rounded corners=1.5pt,fill=introproofshade,
-    align=left,inner sep=3.5pt,font=\scriptsize},
+    align=left,inner sep=3.5pt,font=\fontsize{8}{9}\selectfont},
   runtimebox/.style={draw,rounded corners=1.5pt,fill=introruntimeshade,
-    align=left,inner sep=3.5pt,font=\scriptsize},
+    align=left,inner sep=3.5pt,font=\fontsize{8}{9}\selectfont},
   rejectbox/.style={draw,rounded corners=1.5pt,fill=introrejectshade,
-    align=left,inner sep=3.5pt,font=\scriptsize},
-  edgelabel/.style={font=\tiny,fill=white,inner sep=1pt,align=center}
+    align=left,inner sep=3.5pt,font=\fontsize{8}{9}\selectfont},
+  edgelabel/.style={font=\fontsize{8}{9}\selectfont,
+    fill=white,inner sep=1pt,align=center}
 ]
 
 % Static verification, performed once.
@@ -24,20 +25,20 @@
 \node[proofbox,text width=3.5cm,minimum height=1.3cm,anchor=north] (numerical)
   at (-2.05,-0.35)
   {{\centering\textbf{Numerical proof}\par}\vspace{2pt}
-sufficient conditions $\Longrightarrow$\\ \qquad \qquad \quad numerical guarantee};
+sufficient conditions $\Longrightarrow$\\ \hfill numerical guarantee};
 
-\node[proofbox,text width=3.15cm,minimum height=1.7cm,anchor=north] (program)
-  at (2.05,-0.35)
+\node[proofbox,text width=3.2cm,minimum height=1.7cm,inner ysep=2pt,anchor=north] (program)
+  at (2.0,-0.35)
   {{\centering\textbf{VST Proofs}\par}\vspace{2pt}
    \emph{Runtime check soundness:}\\[-1pt]
-   successful checks establish \\
+   successful checks establish
    the sufficient conditions\\[1pt]
    \emph{Kernel correctness:}\\[-1pt]
-   the C kernel implements \\
+   the C kernel implements
    the analyzed algorithm};
 
 \node[proofbox,align=center,text width=7.2cm,minimum height=0.85cm,anchor=north] (contract)
-  at (0,-2.87)
+  at (0,-3.07)
   {\textbf{Verified guarantee for each \FenceDD{} operation}\\[2pt]
    successful return $\Rightarrow$ numerical guarantee};
 
@@ -45,32 +46,36 @@ sufficient conditions $\Longrightarrow$\\ \qquad \qquad \quad numerical guarante
 \draw[flow] (program.south) -- (program.south |- contract.north);
 
 % Separation between proof time and execution time.
-\draw[gray!65] (-3.85,-3.87) -- (3.85,-3.87);
-\node[anchor=west,font=\small\bfseries] at (-3.85,-4.24)
+\draw[gray!65] (-3.85,-4.07) -- (3.85,-4.07);
+\node[anchor=west,font=\small\bfseries] at (-3.85,-4.34)
   {Run time \normalfont(on each library call)};
-\node[anchor=west,font=\scriptsize\itshape,text=black!75]
-  at (-3.85,-4.63) {The C program runs; the proofs are not rerun.};
+\node[anchor=west,font=\fontsize{8}{9}\selectfont\itshape,text=black!75]
+  at (-3.85,-4.73) {The C program runs; the proofs are not rerun.};
 
 \node[runtimebox,align=center,text width=1.4cm,minimum height=0.82cm,anchor=north] (call)
-  at (-2.9,-4.97)
+  at (-2.9,-5.07)
   {Concrete\\operands};
 
-\node[runtimebox,text width=3.5cm,minimum height=1.05cm,inner xsep=7pt,anchor=north] (wrapper)
-  at (0.65,-4.97)
+\node[runtimebox,text width=4cm,minimum height=1.05cm,inner xsep=7pt,anchor=north] (wrapper)
+  at (0.65,-5.07)
   {{\centering\textbf{\FenceDD{} operation}\par}\vspace{2pt}
-   performs runtime checks around
-   a call to an arithmetic kernel};
+   performs runtime checks
+   around a call to an
+   arithmetic kernel};
 
 \node[runtimebox,text width=3.5cm,minimum height=1.35cm,anchor=north] (success)
   at (-1.95,-7.11)
   {{\centering\textbf{Successful return}\par}\vspace{2pt}
-   output satisfies the corresponding numerical guarantee};
+   output satisfies the\\
+   corresponding numerical\\
+   guarantee};
 
 \node[rejectbox,text width=3.5cm,minimum height=1.35cm,anchor=north] (rejection)
   at (1.95,-7.11)
   {{\centering\textbf{Failure status}\par}\vspace{2pt}
-   a runtime check failed;
-   numerical guarantee not established};
+   a runtime check failed;\\
+   numerical guarantee
+   not \\ established};
 
 \draw[flow] (call.east) -- (call.east -| wrapper.west);
 \coordinate (runtimefork) at (0.65,-6.64);
@@ -80,8 +85,8 @@ sufficient conditions $\Longrightarrow$\\ \qquad \qquad \quad numerical guarante
 \draw[thick] (successdrop) -- (rejectiondrop);
 \draw[flow] (successdrop) -- (success.north);
 \draw[flow] (rejectiondrop) -- (rejection.north);
-\node[edgelabel,above] at (-1.0,-6.59) {success};
-\node[edgelabel,above] at (1.25,-6.59) {failure};
+\node[edgelabel,above=1pt] at (-1.0,-6.64) {success};
+\node[edgelabel,above=1pt] at (1.25,-6.64) {failure};
 
 \end{tikzpicture}
 \caption{Proofs and runtime checks in \FenceDD{}. Numerical and VST proofs are

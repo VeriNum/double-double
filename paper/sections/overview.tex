@@ -12,7 +12,8 @@
   numbersep=6pt,
   breaklines=true,
   breakatwhitespace=true,
-  frame=single,
+  frame=none,
+  backgroundcolor={},
   framesep=3pt,
   xleftmargin=1.5em,
   framexleftmargin=1.2em,
@@ -20,6 +21,17 @@
   aboveskip=0pt,
   belowskip=0pt,
   showstringspaces=false
+}
+
+% Paint one continuous background behind each borderless C listing.
+\newsavebox{\sectiontwocbox}
+\newenvironment{sectiontwocpanel}{%
+  \begin{lrbox}{\sectiontwocbox}%
+  \begin{minipage}{\dimexpr\linewidth-2\fboxsep\relax}%
+}{%
+  \end{minipage}%
+  \end{lrbox}%
+  \noindent\colorbox{gray!5}{\usebox{\sectiontwocbox}}%
 }
 
 Each \FenceDD{} operation combines an \emph{arithmetic kernel} with
@@ -52,12 +64,14 @@ respectively, such that
 \end{definition}
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 struct dword {
   double s;
   double t;
 };
 \end{lstlisting}
+  \end{sectiontwocpanel}
   \caption{The C structure storing the two binary64 components of a
   double-double.}
   \label{fig:dword-struct}
@@ -94,6 +108,7 @@ reads the dividend from the
 \ccode|y|, and writes the result to the object pointed to by \ccode|z|.
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 void dw_div_fp_kernel(
     struct dword *z, struct dword *x,
@@ -110,6 +125,7 @@ void dw_div_fp_kernel(
   fast_2sum_kernel(z, th, tl);
 }
 \end{lstlisting}
+  \end{sectiontwocpanel}
   \caption{The arithmetic kernel for dividing a
   double-double value by a binary64 value.}
   \label{fig:dw-div-fp-kernel}
@@ -145,6 +161,7 @@ if either returned word is nonfinite and \ccode|DW_OK| otherwise.
 \endgroup
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 enum dw_status dw_div_fp(
     struct dword *z, struct dword *x,
@@ -162,13 +179,14 @@ enum dw_status dw_div_fp(
   return DW_OK;
 }
 \end{lstlisting}
+  \end{sectiontwocpanel}
 \caption{The default wrapper for dividing a double-double by a
-binary64 value. It performs the weak check before calling the kernel
-and checks both result components for finiteness afterward.}
+binary64 value. It applies the weak check before the kernel call
+and checks result finiteness afterward.}
   \label{fig:default-division-wrapper}
 \end{figure}
 
-\paragraph{Weak check before kernel execution.}
+\paragraph{Weak Check Before Kernel Execution.}
 The weak check in \Cref{fig:dw-div-fp-input-check} tests the operand
 conditions required by the numerical analysis. It succeeds only if
 the operands are finite, the dividend satisfies
@@ -176,6 +194,7 @@ the operands are finite, the dividend satisfies
 $|x_h|\geq2^{-968}$.
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 int dw_div_fp_weak_check(
     const struct dword *x, double y) {
@@ -193,9 +212,10 @@ int dw_div_fp_weak_check(
   return dwx && fin_y && xh_lo;
 }
 \end{lstlisting}
+  \end{sectiontwocpanel}
 \caption{The weak check for dividing a double-double by a binary64
 value. It tests operand finiteness, the double-word relation, and
-a magnitude condition on the high component of the dividend.}
+a magnitude condition on the high component.}
 \label{fig:dw-div-fp-input-check}
 \end{figure}
 
@@ -203,9 +223,10 @@ Lines~3--5 use \ccode|isfinite_double|, shown in
 \Cref{fig:finite-checks}, to test both components of the dividend and
 the divisor. For finite \ccode|x|, subtracting \ccode|x| from itself
 gives zero. For an infinity or NaN, the subtraction produces NaN,
-so the equality test returns false.
+so the comparison with zero is false.
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 int isfinite_double(double x) {
   return (x - x) == 0.0;
@@ -216,6 +237,7 @@ int isfinite_dword(const struct dword *x) {
          isfinite_double(x->t);
 }
 \end{lstlisting}
+  \end{sectiontwocpanel}
 \caption{Finiteness tests for a binary64 value and a pair of
 binary64 values.}
   \label{fig:finite-checks}
@@ -237,7 +259,7 @@ in the correction \ccode|tl|. We derive this threshold in
 
 \begingroup
 \setlength{\emergencystretch}{1em}
-\paragraph{Result finiteness check after kernel execution.}
+\paragraph{Result Finiteness Check After Kernel Execution.}
 The weak check does not guarantee a finite quotient. After the kernel
 returns, the default wrapper therefore calls \ccode|isfinite_dword|
 from \Cref{fig:finite-checks} to check that both result components are
@@ -255,6 +277,7 @@ the alternative wrapper, \ccode|dw_div_fp_strong|, uses the
 \emph{strong check} shown in \Cref{fig:dw-div-fp-check}.
 
 \begin{figure}[t]
+  \begin{sectiontwocpanel}
   \begin{lstlisting}[style=sectiontwoc]
 int dw_div_fp_strong_check(
     const struct dword *x, double y) {
@@ -269,10 +292,11 @@ int dw_div_fp_strong_check(
   return fabs(q) < q_omega;
 }
 \end{lstlisting}
+  \end{sectiontwocpanel}
 \caption{The strong check for dividing a double-double by a binary64
 value. It performs the weak check, excludes a zero divisor, and
-bounds the high component and rounded leading quotient to guarantee
-that both kernel result components are finite.}
+bounds the high component and rounded leading quotient to ensure
+finite result components.}
   \label{fig:dw-div-fp-check}
 \end{figure}
 

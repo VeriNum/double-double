@@ -1,7 +1,7 @@
 \section{Related Work}
 \label{sec:related-work}
 
-\paragraph{Double-word error analysis.}
+\paragraph{Double-Word Error Analysis.}
 \citet{Joldes2017} analyze double-word addition, multiplication,
 and division assuming that underflow and overflow do not occur.
 \citet{Rideau2022} mechanize this analysis in Rocq using the
@@ -16,9 +16,9 @@ multiplication and division results.
 %We also establish
 %sufficient conditions for finite results.
 
-\paragraph{Floating-point expansions.}
+\paragraph{Floating-Point Expansions.}
 A floating-point expansion represents a number as the unevaluated
-sum of several floating-point values; a double word is an
+sum of floating-point values; a double word is an
 expansion with two components. \citet{Shewchuk1997} uses
 error-free transformations and nonoverlapping expansions for
 adaptive geometric predicates, and \citet{Boldo2017Renorm}
@@ -30,7 +30,7 @@ algorithms, including double-double addition, and extend the
 method to subnormal inputs. Our numerical analysis also covers
 double-word multiplication and division in the subnormal regime.
 
-\paragraph{Tools for automated floating-point error analysis.}
+\paragraph{Tools for Automated Floating-Point Error Analysis.}
 Gappa, FPTaylor, and PRECiSA automate roundoff-error analysis
 with proofs checked in Coq, HOL Light, and PVS, respectively
 \citep{deDinechin2011,Solovyev2015,Titolo2024PRECiSA}.
@@ -41,7 +41,7 @@ accuracy. We use the modeling facilities of VCFloat2
 Rocq using algorithm-specific exactness and representability
 results.
 
-\paragraph{Floating-point program verification.}
+\paragraph{Floating-Point Program Verification.}
 \citet{Ramananandro2016} combine Flocq with the semantics of
 CompCert Clight to verify floating-point C programs.
 \citet{AppelBertot2020} separate numerical analysis of
@@ -53,7 +53,7 @@ We follow this separation in \FenceDD{}: the numerical theorems
 establish guarantees for the functional models, and the VST
 proofs show that the C kernels implement those models.
 
-\paragraph{Double-double libraries.}
+\paragraph{Double-Double Libraries.}
 XBLAS uses double-double arithmetic in extended and mixed
 precision BLAS routines \citep{Li2002}. QD provides
 double-double and quad-double arithmetic \citep{Hida2001,QD},

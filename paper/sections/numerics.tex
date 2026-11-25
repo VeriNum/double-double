@@ -8,16 +8,15 @@ IEEE~754 operations from VCFloat2 \citep{AppelKellison2024} and the
 binary floating-point representation from Flocq \citep{Boldo2011}.
 Each model follows the sequence of rounded operations in the
 corresponding arithmetic kernel and returns a pair of floating-point
-values, independently of the C representation. We define the models
+values. We define the models
 over a generic radix-two format; \FenceDD{} uses the binary64
 instances.
 
 We first establish the rounding properties and error-free
 transformation results needed to analyze complete double-word
-operations. We then continue the division example from
-\Cref{sec:overview-division}, giving a proof sketch of the numerical
-guarantee and explaining how the proofs for the remaining operations
-differ.
+operations. Continuing the division example from \Cref{sec:overview-division},
+we sketch the proof of the numerical guarantee and explain how
+the proofs for the other operations differ.
 
 \subsection{FLX, FLT, and IEEE~754 Arithmetic}
 \label{sec:flx-to-ieee}
@@ -93,9 +92,8 @@ algorithms to IEEE~754 arithmetic, we must determine whether this
 correction remains exact when gradual underflow occurs. For
 addition, the equality remains valid under suitable conditions.
 For multiplication, the exact rounding error may be too small to
-represent. We identify a sufficient condition under which the
-correction remains exact and otherwise bound the error in the sum
-of the returned components.
+represent. We identify a sufficient condition for an exact correction
+and otherwise bound the error in the sum of the returned components.
 
 \begin{definition}[Error-free transformation]
 \label[definition]{def:error-free-transformation}
@@ -125,11 +123,10 @@ to Dekker \citep{Knuth1997,Dekker1971}.
   \centering
   \begingroup
   \setlength{\fboxsep}{6pt}
-  \setlength{\fboxrule}{0.4pt}
   \begin{subfigure}[t]{\columnwidth}
     \phantomsubcaption\label{alg:two-sum}
-    \fcolorbox{gray!35}{gray!3}{%
-      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \colorbox{gray!3}{%
+      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep\relax}
         \centering
         \textbf{(\thesubfigure) \TwoSum{}$(a,b)$}
         \par\smallskip
@@ -156,8 +153,8 @@ to Dekker \citep{Knuth1997,Dekker1971}.
 
   \begin{subfigure}[t]{\columnwidth}
     \phantomsubcaption\label{alg:fast-two-sum}
-    \fcolorbox{gray!35}{gray!3}{%
-      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \colorbox{gray!3}{%
+      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep\relax}
         \centering
         \textbf{(\thesubfigure) \FastTwoSum{}$(a,b)$}
         \par\smallskip
@@ -181,8 +178,8 @@ to Dekker \citep{Knuth1997,Dekker1971}.
 
   \begin{subfigure}[t]{\columnwidth}
     \phantomsubcaption\label{alg:fast-two-mult}
-    \fcolorbox{gray!35}{gray!3}{%
-      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \colorbox{gray!3}{%
+      \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep\relax}
         \centering
         \textbf{(\thesubfigure) \FastTwoMult{}$(a,b)$}
         \par\smallskip
@@ -212,16 +209,16 @@ state when each correction is exact.}
   \label{fig:error-free-transformations}
 \end{figure}
 
-\subsubsection{Exact corrections for addition.}
+\subsubsection{Exact Corrections for Addition.}
 
 Gradual underflow does not affect the corrections
 returned by \TwoSum{} and \FastTwoSum{}. When the returned components are
 finite, \TwoSum{} returns the rounded sum and its exact rounding error.
 \FastTwoSum{} also returns the rounded sum and its exact rounding error
 under the usual ordering condition on the operands. 
-These results, proved by \citet{Boldo2017}, allow the later
-double-word proofs to use the addition transformations without imposing a
-lower bound on the magnitude of the operands.
+These results, proved by \citet{Boldo2017}, let the later
+double-word proofs use the addition transformations without a
+lower bound on operand magnitudes.
 
 \begin{theorem}[Error-free transformations for addition over IEEE~754]
 \label{thm:addition-transformations}
@@ -249,10 +246,9 @@ Let $\nu$ be the smallest positive normal value in the format, as defined in
 and $|a+b|\leq2\nu$, then $s=\operatorname{RN}(a+b)$ and $s+t=a+b$.
 \end{theorem}
 
-The proof appears in Appendix~\ref{app:fast-two-sum-small-proof}; like all 
-results in this section, it is checked in Rocq.
+Like all results in this section, the proof of this theorem is checked in Rocq.
 
-\subsubsection{Corrections for multiplication near underflow.}
+\subsubsection{Corrections for Multiplication Near Underflow.}
 
 \FastTwoMult{} returns
 $\pi_h=\operatorname{RN}(ab)$ and
@@ -270,11 +266,8 @@ their sum and the exact product.
 \label{thm:fast-two-mult}
 Let $a$ and $b$ be finite values in a radix-two format with precision
 $p\geq3$ and lower exponent $e_{\min}$. Define
-\[
-  \eta\triangleq2^{e_{\min}}
-  \qquad\text{and}\qquad
-  \tau\triangleq2^{e_{\min}+2p-1}.
-\]
+$\eta\triangleq2^{e_{\min}}$ and
+$\tau\triangleq2^{e_{\min}+2p-1}$.
 Suppose $(\pi_h,\pi_\ell)=\FastTwoMult{}(a,b)$ returns two finite components.
 Then
 \[
@@ -283,11 +276,7 @@ Then
   \left|(\pi_h+\pi_\ell)-ab\right|\leq\frac{\eta}{2}.
 \]
 If $ab=0$ or $|ab|\geq\tau$, then
-\[
-  \pi_\ell=ab-\pi_h
-  \qquad\text{and}\qquad
-  \pi_h+\pi_\ell=ab.
-\]
+$\pi_\ell=ab-\pi_h$ and $\pi_h+\pi_\ell=ab$.
 \end{theorem}
 
 \begin{proof}[Proof sketch]
@@ -335,9 +324,8 @@ definition. Each $\operatorname{RN}$ denotes rounding to nearest with ties to ev
   \centering
   \begingroup
   \setlength{\fboxsep}{6pt}
-  \setlength{\fboxrule}{0.4pt}
-  \fcolorbox{gray!35}{gray!3}{%
-    \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+  \colorbox{gray!3}{%
+    \begin{minipage}[t]{\dimexpr\linewidth-2\fboxsep\relax}
       \centering
       \textbf{\DWDivFP{}$(x_h,x_\ell,y)$}
       \par\smallskip
@@ -518,7 +506,7 @@ This proves both error bounds and the double-word property.
 By \Cref{lem:dw-div-safe-implies-finite},
 $\mathcal{S}_{\mathrm{div}}$ implies $\mathcal{F}_{\mathrm{div}}$ and already
 includes $\mathcal{I}_{\mathrm{div}}$. Consequently,
-\Cref{thm:dw-div-fp-numerical} gives the following two alternatives.
+\Cref{thm:dw-div-fp-numerical} yields the following corollary.
 
 \begin{corollary}[Conditions for the Division Guarantee]
 \label[corollary]{cor:dw-div-conditions}
@@ -531,9 +519,9 @@ The conclusions of \Cref{thm:dw-div-fp-numerical} hold if
 holds, or if $\mathcal{S}_{\mathrm{div}}(x_h,x_\ell,y)$ holds.
 \end{corollary}
 
-\Cref{thm:division-checks} proves that the weak and result finiteness checks in
-the default wrapper establish the first alternative, while the strong check in
-the alternative wrapper establishes the second.
+The weak and result finiteness checks establish the first alternative
+for the default wrapper; the strong check establishes the second for
+the alternative wrapper (\Cref{thm:division-checks}).
 
 \subsection{Numerical Guarantees for the Remaining Operations}
 \label{sec:remaining-numerical-conditions}
@@ -630,13 +618,12 @@ Then both returned components are finite and form a double word:
 \[
   z_h=\operatorname{RN}(z_h+z_\ell).
 \]
-The represented value $\widehat r=z_h+z_\ell$ satisfies the
+The value $\widehat r=z_h+z_\ell$ satisfies the
 corresponding error bound on $|\widehat r-r|$ in
-\Cref{tab:operation-preview}, using $u$ and $\eta$ for the underlying
-format.
+\Cref{tab:operation-preview}, with $u$ and $\eta$ defined by the format.
 \end{theorem}
 
-\paragraph{Proof overview.}
+\paragraph{Proof Overview.}
 \emph{Addition.}
 The error-free transformations for addition continue to return the exact
 rounding error when intermediate results are subnormal by
