@@ -1,5 +1,5 @@
 %% Main manuscript for the double-word library paper.
-\documentclass[sigplan,10pt,anonymous,review]{acmart}
+\documentclass[sigplan,10pt,review]{acmart}
 \settopmatter{printfolios=true,printccs=false,printacmref=false}
 
 \setcopyright{none}
@@ -100,33 +100,25 @@
 \title{\FenceDD: A Verified Library of Double-Double Arithmetic}
 
 \begin{abstract}
-Double-double arithmetic provides roughly twice the precision of binary64 by
-representing a real number as the unevaluated sum of two binary64 values. Each
-operation combines several rounded binary64 calculations rather than performing
-one operation at twice the precision. Earlier mechanized analyses establish
-numerical guarantees using arithmetic with unbounded exponents and therefore
-do not cover overflow or gradual underflow in IEEE~754 execution.
+Libraries for double-double arithmetic implement algorithms that can achieve
+roughly twice the precision of binary64 arithmetic using only binary64
+operations. Existing analyses of these algorithms prove error bounds assuming
+the absence of underflow and overflow, even though both can occur in practice:
+underflow can erase the small correction terms needed to achieve extended 
+precision, while overflow can produce nonfinite results. Consequently, users 
+cannot assume that results returned by these libraries satisfy the published 
+error bounds.
 
-We present \FenceDD{}, a verified C library implementing six double-double
-operations and three error-free transformations. Our Rocq development extends
-the earlier numerical analysis to IEEE~754 arithmetic. It accounts for gradual
-underflow through relative error bounds for addition and mixed relative and
-absolute bounds for multiplication and division, and it identifies sufficient
-conditions for finite results. \FenceDD{} provides these guarantees to callers
-through public C functions. Each function performs runtime checks around an
-arithmetic kernel and returns a status indicating whether its numerical
-guarantee applies. Using the Verified Software Toolchain (VST), we prove that
-the kernels implement the analyzed algorithms and that successful runtime
-checks establish the conditions required by the corresponding numerical
-theorems. Consequently, on successful return, each double-double operation
-produces a double-double satisfying its proved error bound, while each
-error-free transformation produces components whose sum is the exact result.
-
-Across generated tests, errors from successful calls reached $0.87$ of their
-proved bounds. Among inputs for which a public function returned a failure
-status, QD rarely produced a result satisfying the corresponding numerical
-properties. Under CompCert, the runtime checks added $2.9$--$9.8$ nanoseconds
-per call relative to the unchecked kernels.
+To address this gap, we present \FenceDD{}, a verified C library providing six
+double-double operations and three error-free transformations. Our Rocq
+analysis accounts for gradual underflow, establishing relative error bounds
+for addition and mixed relative and absolute bounds for multiplication and
+division. Verified runtime checks establish the conditions required by these
+results, ensuring that successful library calls return finite, valid 
+double-double numbers satisfying the corresponding error bounds.
+In generated tests, errors from successful calls reach 87\% of their proved
+bounds. When compiled with CompCert, our runtime checks add $2.9$--$9.8$
+nanoseconds per call relative to the unchecked kernels.
 \end{abstract}
 
 \begin{CCSXML}

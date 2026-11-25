@@ -6,9 +6,9 @@ hardware floating-point arithmetic provides. When additional precision is
 required, libraries such as MPFR provide arbitrary-precision arithmetic
 \citep{Fousse2007}. However, when roughly twice the precision of binary64 is
 sufficient, double-double arithmetic offers a faster alternative. A
-double-double represents a real number as the unevaluated sum of two binary64
-components. Rounding this sum recovers the first component, while the second
-component retains the information lost in the rounding. 
+double-double represents a real number as the unevaluated sum of a pair of 
+binary64 numbers. Rounding this sum recovers the first component of the pair, 
+while the second component captures the information lost in the rounding. 
 Because it uses ordinary binary64 operations, double-double arithmetic
 does not require specialized hardware.
 
@@ -18,13 +18,13 @@ expansion arithmetic are used in numerical linear algebra
 \citep{BaileyBorwein2012}, computational geometry \citep{Shewchuk1997}, fluid
 dynamics \citep{BaileyKrasnyPelz1993,HeDing2001}, quantum calculations
 \citep{Frolov2000,FrolovBailey2003,Aoyama2015}, and correctly rounded
-elementary functions \citep{CRLibm2006,CoreMath2022}. Implementations include
-XBLAS and the QD library for double-double and quad-double arithmetic
-\citep{Li2002,Hida2001,QD}. Each double-double operation is implemented as a
-sequence of rounded binary64 operations, so accuracy depends on how
-rounding errors interact across that sequence. This combination of speed and
-subtle numerical behavior led \citet{Li2002} to call double-double arithmetic
-``an `attractive nuisance,' like an unfenced backyard swimming pool.''
+elementary functions \citep{CRLibm2006,CoreMath2022}. Implementations of 
+double-double arithmetic include XBLAS and the QD library for double-double and 
+quad-double arithmetic \citep{Li2002,Hida2001,QD}. Each double-double operation 
+uses a sequence of binary64 computations to track rounding errors and compute a 
+correction. This subtle numerical behavior, combined with the speed advantage, 
+led \citet{Li2002} to call double-double arithmetic ``an `attractive nuisance,' 
+like an unfenced backyard swimming pool.''
 
 The hazard is that a double-double operation does not behave like a single
 operation performed with twice the precision. Characterizing the resulting
@@ -36,17 +36,18 @@ found inputs producing a relative error of $2.25u^2$, exceeding the claimed
 bound. They gave a revised analysis, which \citet{Rideau2022} subsequently
 mechanized in Rocq.
 
-A mechanized theorem holds only for the particular model of arithmetic in
-which it is stated.
-\citet{Rideau2022} use a format with an unbounded exponent range, where
-underflow and overflow do not occur. IEEE~754 binary64 has a finite exponent
-range, so both can occur. Obtaining verified guarantees for a C library
-therefore requires two steps: extending the numerical analysis to account for
-underflow and overflow, and proving that the public functions establish the
-conditions required by that analysis.
+However, a mechanized theorem holds only for the particular model of
+arithmetic in which it is stated. \citeauthor{Rideau2022} use a format with
+an unbounded exponent range, where underflow and overflow do not occur.
+IEEE~754 binary64 has a finite exponent range, so both can occur. Obtaining
+verified guarantees for a C library implementing double-double arithmetic
+therefore requires two steps: extending the numerical analysis to account
+for underflow and overflow, and proving that the C implementations satisfy
+the resulting guarantees by implementing the analyzed algorithms and checking
+the conditions required by the analysis.
 
-To see how an intermediate underflow affects a double-double operation,
-consider squaring the double-double $x=(a,0)$, where
+To see how an intermediate underflow affects the accuracy of a double-double 
+operation, consider squaring the double-double $x=(a,0)$, where
 \[
  a=2^{-515}(1+2^{-52}).
 \]
@@ -61,60 +62,55 @@ precision as a binary64 multiplication rather than roughly twice that
 precision.
 
 The precision loss occurs in \FastTwoMult{}, a building block used by the
-double-double multiplication algorithm. In this example, it returns a
-rounded product $p_h$ and a correction $p_\ell$ intended to satisfy
+double-double multiplication algorithm. In this example, \FastTwoMult{} returns
+a rounded product $p_h$ and a correction $p_\ell$ intended to satisfy
 $p_h+p_\ell=a^2$.
 Here, $p_h=2^{-1030}$, so the correction would have to be
 \[
  p_\ell=2^{-1081}+2^{-1134}.
 \]
-Let $\eta=2^{-1074}$ be the smallest positive binary64 value. The required
-correction satisfies
-\[
- p_\ell=\eta(2^{-7}+2^{-60})<\frac{\eta}{2}.
-\]
-Under rounding to nearest with ties to even, it therefore rounds to zero. The
-correction is subsequently absent from both the output of \FastTwoMult{} and the value
-returned by the double-double multiplication.
+This correction is less than half the smallest positive binary64 value,
+$\eta=2^{-1074}$, so it rounds to zero under rounding to nearest with ties
+to even. The correction is therefore absent from both the output of 
+\FastTwoMult{} and the value returned by the double-double multiplication.
 
-In this paper, we show that losing this correction does not preclude a useful
+We show that losing this correction does not preclude a useful
 guarantee. For multiplication of two double-doubles, write $r$
 for the exact product and $\widehat r$ for the value represented by the
 returned pair. Our analysis proves
 \[
  |\widehat r-r|\leq 4u^2|r|+2.5\eta.
 \]
-The relative term $4u^2|r|$ comes from the earlier analysis of
-\citet{Joldes2017}. The additional absolute term $2.5\eta$ accounts for
+The relative term $4u^2|r|$ was established by the earlier analysis of
+\citeauthor{Joldes2017} The additional absolute term $2.5\eta$ accounts for
 corrections lost near the lower end of binary64. Sufficiently far from that
 lower end, the relative term dominates and provides roughly twice the
 relative precision of binary64. Near it, the absolute term can dominate; for
 the example above, this term covers the lost correction.
 
-More generally, our Rocq development identifies sufficient conditions for
-these guarantees and proves them in a faithful model of IEEE~754. It covers
+More generally, we identify sufficient conditions and prove in Rocq that
+the algorithms satisfy their accuracy guarantees whenever these conditions
+hold, using a faithful model of IEEE~754 arithmetic. Our analysis covers
 adding a binary64 value to a double-double, adding two double-doubles,
 multiplying a double-double by a binary64 value, multiplying two
 double-doubles, dividing a double-double by a binary64 value, and dividing one
 double-double by another. Under these conditions, addition satisfies relative
-error bounds, while multiplication and division satisfy bounds with relative
-and absolute terms. Each returned pair also satisfies the relation required by
-subsequent operations. For the three error-free transformations used by these
-algorithms---\TwoSum{}, \FastTwoSum{}, and \FastTwoMult{}---we identify
-sufficient conditions for the returned correction to equal the exact rounding
-error in the sum or product.
+error bounds, while multiplication and division satisfy bounds with both 
+relative and absolute error terms; each returned pair also forms a valid double-double. 
+For the three error-free transformations used by these algorithms---\TwoSum{}, 
+\FastTwoSum{}, and \FastTwoMult{}---we identify sufficient conditions for the 
+returned correction to equal the exact rounding error in the sum or product.
 
-We implement these algorithms in \FenceDD{}, a verified C library for
-double-double arithmetic. Each public function returns a status indicating
-success or failure. Using the Verified Software Toolchain (VST)
-\citep{Appel2014}, we prove that the C kernels implement the analyzed
-algorithms and that successful runtime checks imply the corresponding
-numerical conditions. Consequently, on successful return, the output satisfies
-the corresponding proved guarantee.
-
-The numerical and VST proofs are checked in Rocq during development, not
-during library calls. \Cref{fig:proof-runtime-roles} contrasts the proof work
-with the runtime checks performed on each call.
+We implement these algorithms as arithmetic kernels in \FenceDD{}, a verified C 
+library for double-double arithmetic. Each library operation combines a kernel 
+call with runtime checks and returns a status indicating success or failure. 
+Using the Verified Software Toolchain (VST) \citep{Appel2014}, we prove that the 
+kernels implement the analyzed algorithms and that successful runtime checks 
+establish the sufficient conditions under which the proved accuracy guarantees 
+hold. Consequently, on successful return, the output satisfies the corresponding
+numerical guarantee. The numerical and VST proofs are checked in Rocq during 
+development, not during library calls. \Cref{fig:proof-runtime-roles} contrasts 
+the proof work with the runtime checks performed on each call.
 
 \input{figures/proof-runtime-roles}
 
@@ -124,32 +120,55 @@ bounds in some cases. For calls that returned a failure status, QD rarely
 produced a result satisfying the corresponding numerical properties. The
 checks added 2.9--9.8 nanoseconds per call.
 
-In summary, this paper makes the following contributions:
+In summary, we make the following contributions:
 
 \begin{itemize}
- \item \textbf{A public C interface with runtime checks
-  (\Cref{sec:overview}).}
-  We provide public functions whose runtime checks establish the conditions
-  required by their numerical guarantees.
+  \item \textbf{Runtime checks encoding sufficient conditions for
+  numerical guarantees (\Cref{sec:overview}).}
+  For six double-double operations, we develop runtime checks whose
+  success establishes sufficient conditions for returning finite, valid
+  double-doubles satisfying proved error bounds. For three error-free
+  transformations, successful checks establish sufficient conditions for
+  returning a valid double-double whose components sum to the exact sum
+  or product.
 
- \item \textbf{Numerical guarantees over IEEE~754
-  (\Cref{sec:numerics}).}
-  We extend the mechanized analysis of three error-free transformations and
-  six double-double operations to account for gradual underflow and
-  overflow.
+  \item \textbf{Mechanized numerical guarantees accounting for
+  underflow and overflow (\Cref{sec:numerics}).}
+  We extend earlier mechanized analyses of the double-double operations
+  and error-free transformations to account for gradual underflow and
+  overflow. Under sufficient conditions, we prove error bounds and 
+  double-word validity for the double-double operations, and exactness for the 
+  error-free transformations.
 
- \item \textbf{Verification of \FenceDD{}
+  \item \textbf{C implementations with verified numerical guarantees
   (\Cref{sec:mechanization}).}
-  We connect the Rocq numerical results to the binary64 C kernels and prove
-  the public wrapper contracts using VST.
+  We implement the analyzed algorithms and runtime checks in \FenceDD{},
+  a C library for double-double arithmetic. Using VST, we prove that the
+  C kernels implement the analyzed algorithms and that successful runtime
+  checks establish the sufficient conditions required by the numerical
+  theorems. Together, these proofs establish the numerical guarantees on
+  successful return.
 
- \item \textbf{Evaluation of usefulness and cost
+  \item \textbf{Empirical evaluation of error bounds and runtime checks
   (\Cref{sec:evaluation}).}
-  We evaluate the tightness of the error bounds and the usefulness and
-  performance cost of the runtime checks.
+  We measure how closely observed errors approach the proved bounds,
+  assess whether calls rejected by the checks satisfy the corresponding
+  numerical properties when computed with QD, and quantify the
+  performance cost of the checks.
 \end{itemize}
 
-%The accompanying artifact contains the C sources, Rocq development, and
-%evaluation scripts at \url{ARTIFACT-URL}.
-The accompanying anonymized artifact contains the C sources, Rocq development,
-and evaluation scripts.
+The C sources, Rocq proofs, and evaluation scripts are available at
+\url{REPOSITORY-URL}. The version accompanying this paper is archived
+at \url{ARTIFACT-DOI-URL}.
+
+\paragraph{Disclosure of AI Use}
+All definitions and main theorem statements in the accompanying Rocq
+artifact were written by the author. The author used OpenAI Codex
+and Anthropic Claude Code to assist with constructing and debugging
+proof scripts, developing auxiliary lemmas, and implementing and
+debugging portions of the C runtime checks and evaluation code.
+All AI-generated material incorporated into the artifact was reviewed
+by the author and revised as needed. The final proof scripts were
+checked by the Rocq kernel. The author retains responsibility for
+the correctness of the definitions, theorem statements, proofs,
+C implementations, and reported results.
