@@ -335,9 +335,12 @@ in \Cref{sec:mechanization}.
 \subsection{Numerical Guarantees for All Operations and 
 Error-Free Transformations}
 \label{sec:overview-library-guarantees}
-
-\Cref{tab:operation-preview} summarizes the guarantees on successful
-return for all six double-double operations and three error-free
+On successful return, each \FenceDD{} operation provides a numerical
+guarantee: both components of the returned pair are finite, the pair forms a
+double word, and the represented value satisfies a proved error
+bound.
+\Cref{tab:operation-preview} summarizes the error bounds
+ for all six double-double operations and three error-free
 transformations. Addition satisfies relative error bounds, while
 multiplication and division satisfy bounds with relative and absolute
 terms that account for gradual underflow. For the error-free
@@ -353,12 +356,13 @@ corrections lost to underflow in \FastTwoMult{}.
 
 \begin{table}[b]
 \centering
-\caption{Numerical guarantees provided by \FenceDD{} on successful return. Here
-$a$ and $b$ are binary64 operands, $x$ and $y$ are the values represented by
+\caption{Error bounds provided by \FenceDD{} on successful return.
+Here $a$ and $b$ represent binary64 operands, $x$ and $y$ represent 
 double-double operands, $r$ is the exact result, and
-$\widehat r=z_h+z_\ell$ is the value represented by the returned words. For
-binary64, the unit roundoff is $u=2^{-53}$ and the smallest positive
-subnormal value is $\eta=2^{-1074}$. Every returned pair also satisfies
+$\widehat r=z_h+z_\ell$ represents the sum of the returned
+components. For binary64, the unit roundoff is $u=2^{-53}$ and the
+smallest positive subnormal value is $\eta=2^{-1074}$. On successful
+return, both components are finite and the pair satisfies
 \Cref{eq:dw-representation}.}
 \label{tab:operation-preview}
 \setlength{\tabcolsep}{3pt}
