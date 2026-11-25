@@ -19,29 +19,27 @@
 
 % Static verification, performed once.
 \node[anchor=west,font=\small\bfseries] at (-3.85,0)
-  {Proof time \normalfont(once, during development)};
+  {Proof time \normalfont(during development)};
 
-\node[proofbox,text width=3.5cm,minimum height=1.7cm,anchor=north] (numerical)
+\node[proofbox,text width=3.5cm,minimum height=1.3cm,anchor=north] (numerical)
   at (-2.05,-0.35)
   {{\centering\textbf{Numerical proof}\par}\vspace{2pt}
-numerical conditions $\Longrightarrow$\\
-algorithm returns a {double-double}\\
-result satisfying the error bound};
+sufficient conditions $\Longrightarrow$\\ \qquad \qquad \quad numerical guarantee};
 
 \node[proofbox,text width=3.15cm,minimum height=1.7cm,anchor=north] (program)
   at (2.05,-0.35)
-  {{\centering\textbf{C verification}\par}\vspace{2pt}
+  {{\centering\textbf{VST Proofs}\par}\vspace{2pt}
    \emph{Runtime check soundness:}\\[-1pt]
    successful checks establish \\
-   the numerical conditions\\[1pt]
+   the sufficient conditions\\[1pt]
    \emph{Kernel correctness:}\\[-1pt]
    the C kernel implements \\
    the analyzed algorithm};
 
 \node[proofbox,align=center,text width=7.2cm,minimum height=0.85cm,anchor=north] (contract)
   at (0,-2.87)
-  {\textbf{Verified contract for each \FenceDD{} public function}\\[2pt]
-   successful return $\Rightarrow$ corresponding numerical guarantee};
+  {\textbf{Verified guarantee for each \FenceDD{} operation}\\[2pt]
+   successful return $\Rightarrow$ numerical guarantee};
 
 \draw[flow] (numerical.south) -- (numerical.south |- contract.north);
 \draw[flow] (program.south) -- (program.south |- contract.north);
@@ -49,7 +47,7 @@ result satisfying the error bound};
 % Separation between proof time and execution time.
 \draw[gray!65] (-3.85,-3.87) -- (3.85,-3.87);
 \node[anchor=west,font=\small\bfseries] at (-3.85,-4.24)
-  {Runtime \normalfont(on each library call)};
+  {Run time \normalfont(on each library call)};
 \node[anchor=west,font=\scriptsize\itshape,text=black!75]
   at (-3.85,-4.63) {The C program runs; the proofs are not rerun.};
 
@@ -59,21 +57,20 @@ result satisfying the error bound};
 
 \node[runtimebox,text width=3.5cm,minimum height=1.05cm,inner xsep=7pt,anchor=north] (wrapper)
   at (0.65,-4.97)
-  {{\centering\textbf{\FenceDD{} public C wrapper}\par}\vspace{2pt}
+  {{\centering\textbf{\FenceDD{} operation}\par}\vspace{2pt}
    performs runtime checks around
-   a call to the arithmetic kernel};
+   a call to an arithmetic kernel};
 
 \node[runtimebox,text width=3.5cm,minimum height=1.35cm,anchor=north] (success)
   at (-1.95,-7.11)
   {{\centering\textbf{Successful return}\par}\vspace{2pt}
-   caller may use the output;\\
-   proved numerical guarantee holds};
+   output satisfies the corresponding numerical guarantee};
 
 \node[rejectbox,text width=3.5cm,minimum height=1.35cm,anchor=north] (rejection)
   at (1.95,-7.11)
   {{\centering\textbf{Failure status}\par}\vspace{2pt}
-   a runtime check failed;\\
-   caller does not use the output};
+   a runtime check failed;
+   numerical guarantee not established};
 
 \draw[flow] (call.east) -- (call.east -| wrapper.west);
 \coordinate (runtimefork) at (0.65,-6.64);
@@ -87,8 +84,10 @@ result satisfying the error bound};
 \node[edgelabel,above] at (1.25,-6.59) {failure};
 
 \end{tikzpicture}
-\caption{Verification and execution in \FenceDD{}. Proofs establish numerical
-guarantees during library development. During each library call, a wrapper checks the 
-required conditions around the kernel call and reports success or failure.}
+\caption{Proofs and runtime checks in \FenceDD{}. Numerical and VST proofs are
+checked in Rocq during library development. At runtime, each library operation
+combines an arithmetic kernel call with runtime checks and reports success
+or failure. On successful return, the output satisfies the corresponding
+numerical guarantee.}
 \label{fig:proof-runtime-roles}
 \end{figure}
