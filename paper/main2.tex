@@ -60,6 +60,18 @@
   backgroundcolor=\color{gray!5},
 }
 
+\colorlet{CKeyword}{green!50!black}
+\colorlet{CIdentifier}{blue!50!black}
+\lstdefinestyle{csyntax}{
+  language=C,
+  keywordstyle=\bfseries\color{CKeyword},
+  identifierstyle=\color{CIdentifier},
+}
+\newcommand{\ccode}{\lstinline[style=csyntax,basicstyle=\ttfamily,
+  columns=fullflexible,keepspaces=true,showstringspaces=false]}
+% Allow explicit line breaks within long C identifiers.
+\newcommand{\cidentifier}[1]{\texttt{\color{CIdentifier}#1}}
+
 \lstdefinelanguage{Coq}{
   keywords={Theorem,Lemma,Proof,Qed,Definition,Fixpoint,Inductive,
    forall,exists,fun,let,in,match,with,end,if,then,else,
